@@ -4,7 +4,7 @@
  *    Пока приложение открыто на экране, отправляет оно само — помощник только просит его.
  * Номер операции защищает от двойного учёта: если одна и та же операция уйдёт дважды, сервер её узнает. */
 'use strict';
-const VERSION = 'a845cff492b3';
+const VERSION = '430825a792d2';
 const CACHE = 'medpunkt-' + VERSION;
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 const CDN = /^https:\/\/cdn\.jsdelivr\.net\/npm\/(@zxing\/library|qrcode-generator)@/;
@@ -111,18 +111,18 @@ async function flushLocked() {
     const op = mine((await kvGet('queue')) || [])[0];
     if (!op) break;
     if (skip[op.opId]) { await kvRemoveOp(op.opId); continue; } // уже ушла (старая копия очереди) — не повторяем
-    const payload = Object.assign({}, op.payload, { sess: auth.sess });
-    if (op.action === 'formAttach') {
+    const payload = Object.assign({}, op.payload, { sess: auth.sess, noState: true }); // помощнику состояние не нужно — сервер отвечает быстрее
+    if (op.payload && op.payload.idb) { // фото (к форме или акт поставки) хранится отдельно — подставляем перед отправкой
       const b64 = await photoGet(op.payload.idb);
       if (!b64) { await markFailed(op, { code: 'E_BAD_PHOTO', info: {} }); await kvRemoveOp(op.opId); continue; }
       payload.b64 = b64;
     }
     const r = await post(api, op.action, payload); // нет связи — исключение, браузер повторит позже
     if (r && r.ok) {
-      if (op.action === 'formAttach') await photoDel(op.payload.idb);
+      if (op.payload && op.payload.idb) await photoDel(op.payload.idb);
       const done = (await kvGet('swDone')) || [];
       // ответ нужен приложению, чтобы показать то же, что показало бы само (нехватка при списании, отмена)
-      done.push({ id: op.opId, res: (op.action === 'spend' || op.action === 'undo') && r.result ? r.result : null });
+      done.push({ id: op.opId, res: (op.action === 'spend' || op.action === 'undo' || op.action === 'receive') && r.result ? r.result : null });
       await kvSet('swDone', done.slice(-500));
       skip[op.opId] = 1;
       await kvRemoveOp(op.opId);
