@@ -4,7 +4,7 @@
  *    Пока приложение открыто на экране, отправляет оно само — помощник только просит его.
  * Номер операции защищает от двойного учёта: если одна и та же операция уйдёт дважды, сервер её узнает. */
 'use strict';
-const VERSION = '430825a792d2';
+const VERSION = '41f256e4166f';
 const CACHE = 'medpunkt-' + VERSION;
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 const CDN = /^https:\/\/cdn\.jsdelivr\.net\/npm\/(@zxing\/library|qrcode-generator)@/;

@@ -1950,7 +1950,8 @@ function itemStats(it) {
     const have = lots.filter(l => l.locationId === n.locationId && lotStatus(l).cls !== 'expired').reduce((s, l) => s + l.qty, 0);
     return { n, have, short: have < n.norm };
   });
-  const deficit = (it.minTotal > 0 && usable < it.minTotal) || norms.some(x => x.short);
+  const sg = subGroup(it);
+  const deficit = (it.minTotal > 0 && usable < it.minTotal) || norms.some(x => x.short) || (sg.min > 0 && sg.have < sg.min);
   return { lots, usable, expired, norms, deficit };
 }
 function renderStock() {
@@ -2250,6 +2251,7 @@ function editItemModal(id) {
     '<div class="field"><label>' + esc(t('barcodeLabel')) + '</label><div class="row"><input type="text" id="eiBarcode" class="grow" value="' + esc(it.barcode || '') + '"><button class="btn icon" data-act="scan" data-target="edit">📷</button></div></div>' +
     '<div class="grid2"><div class="field"><label>' + esc(t('conditionLabel')) + '</label><select id="eiCond">' + ['normal', 'fridge', 'dark'].map(c => '<option value="' + c + '"' + (c === it.condition ? ' selected' : '') + '>' + esc(t('cond' + c[0].toUpperCase() + c.slice(1))) + '</option>').join('') + '</select></div>' +
     '<div class="field"><label>' + esc(t('minLabel')) + '</label><input type="number" id="eiMin" min="0" value="' + esc(it.minTotal || 0) + '"></div></div>' +
+    subMinHtml(it) +
     '<label class="check"><input type="checkbox" id="eiStrict"' + (it.strict ? ' checked' : '') + '><span>' + esc(t('strictLabel')) + '</span></label>' +
     '<div class="row" style="margin-bottom:6px"><button class="btn ghost small" data-act="photo" data-target="edit">' + esc(t('photoBtn')) + '</button>' + (it.hasThumb ? '<button class="btn ghost small" data-act="photoRemove">' + esc(t('photoRemove')) + '</button>' : '') + '<img id="eiThumb" class="thumb' + (S.thumbs[it.id] ? '' : ' hidden') + '" src="' + esc(S.thumbs[it.id] || '') + '" alt=""></div>' +
     '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="editItemSave" data-id="' + esc(it.id) + '">' + esc(t('save')) + '</button></div>');
@@ -2266,6 +2268,9 @@ async function editItemSave(btn, id) {
   if (formInfo(item.form).cat !== item.category) return toast(t('E_BAD_FORM'), 'bad');
   const r = await busy(btn, () => rpcA('editItem', { item }, { op: true }));
   if (!r) return;
+  // минимум по МНН (все фирмы) — после правки карточки: ключ группы считается уже по новым МНН и дозировке
+  const sm = $('#eiSubMin');
+  if (sm && sm.value !== sm.dataset.was) { try { await rpcA('setSubMin', { itemId: id, minTotal: Number(sm.value || 0) }, { op: true, opId: newOpId() }); } catch (e) { return; } }
   if (S.editThumb !== undefined) { if (S.editThumb) S.thumbs[id] = S.editThumb; else delete S.thumbs[id]; }
   closeModal(); toast(t('saved'));
 }
@@ -4613,7 +4618,7 @@ function itemLabel(x) { return x.name + (x.dosage && x.dosage !== '—' ? ' ' + 
 function reportTable(r) {
   const nm = x => [x.name, x.form ? formName(x.form) : '', x.dosage];
   if (r.type === 'stock') return { title: t('repTitleStock'), header: [t('colName'), t('colForm'), t('colDose'), t('colInn'), t('colLoc'), t('colSeries'), t('colExpiry'), t('colQty'), t('colUnit')], rows: r.rows.map(x => nm(x).concat([x.substance || '', x.locationId ? locName(x.locationId) : '', x.series, x.expiry ? fmtExp(x.expiry) : (x.locationId ? t('noExpiry') : ''), x.qty, unitShort(x.unit)])) };
-  if (r.type === 'deficit') return { title: t('repTitleDeficit'), header: [t('colName'), t('colForm'), t('colDose'), t('colLoc'), t('colHave'), t('colNeed'), t('colMissing'), t('colUnit')], rows: r.rows.map(x => nm(x).concat([(x.locationId ? locName(x.locationId) : t('kindTotal')) + (x.kind === 'kit' ? ' · ' + t('kindKit') + (x.section ? ': ' + x.section : '') : ''), x.have, x.need, x.missing, unitShort(x.unit)])).concat((r.requests || []).map(q => [q.name, q.form ? formName(q.form) : '', q.dosage, t('reqFrom', { doc: q.doctorName }), '', q.qty, q.qty, q.note || ''])) };
+  if (r.type === 'deficit') return { title: t('repTitleDeficit'), header: [t('colName'), t('colForm'), t('colDose'), t('colLoc'), t('colHave'), t('colNeed'), t('colMissing'), t('colUnit')], rows: r.rows.map(x => nm(x).concat([(x.locationId ? locName(x.locationId) : x.kind === 'sub' ? t('kindSub', { b: (x.brands || []).join(', ') }) : t('kindTotal')) + (x.kind === 'kit' ? ' · ' + t('kindKit') + (x.section ? ': ' + x.section : '') : ''), x.have, x.need, x.missing, unitShort(x.unit)])).concat((r.requests || []).map(q => [q.name, q.form ? formName(q.form) : '', q.dosage, t('reqFrom', { doc: q.doctorName }), '', q.qty, q.qty, q.note || ''])) };
   if (r.type === 'expiry') return { title: t('repTitleExpiry'), header: [t('colName'), t('colForm'), t('colDose'), t('colLoc'), t('colSeries'), t('colExpiry'), t('colQty'), t('colStatus')], rows: r.rows.map(x => nm(x).concat([locName(x.locationId), x.series, fmtExp(x.expiry), x.qty, x.expired ? t('expiredTag') : t('daysLeft', { n: daysTo(x.expiry) })])) };
   if (r.type === 'usage') return { title: t('repTitleUsage') + ' ' + fmtDate(r.from) + '–' + fmtDate(r.to), header: [t('colName'), t('colForm'), t('colDose'), t('colPatient'), t('colDisposal'), t('colReceived'), t('colStock'), t('colUnit')], rows: r.rows.map(x => nm(x).concat([x.patient, x.disposal, x.received, x.stock, unitShort(x.unit)])) };
   if (r.type === 'monthly') {
@@ -4707,7 +4712,7 @@ function reportModel(r, th, W) {
     const kit = r.rows.filter(x => x.kind === 'kit').length;
     m.tiles = [[r.rows.length, t('tileMissing'), r.rows.length ? 'warn' : 'good'], [kit, t('kindKit')], [(r.requests || []).length, t('tileRequests')]];
     chart(t('chMissing'), hbarChart(top(r.rows.slice().sort((a, b) => b.missing - a.missing), 12).map(x => ({ label: itemLabel(x), value: x.missing, valueText: x.missing + ' ' + unitShort(x.unit), tip: itemLabel(x) + ' — ' + (x.locationId ? locName(x.locationId) : t('kindTotal')) + ': ' + x.have + ' / ' + x.need })), { th, W, color: th.s1 }));
-    m.body = '<div class="row" style="gap:8px;margin-bottom:10px;flex-wrap:wrap"><button class="btn small primary" data-act="defWaRu">📝 ' + esc(t('reqWaRu')) + '</button><button class="btn small ghost" data-act="defWaAz">📝 ' + esc(t('reqWaAz')) + '</button></div>' + r.rows.map(x => '<div class="rep-row"><div class="t">' + esc(itemLabel(x)) + ' — <span style="color:var(--orange)">' + esc(t('colMissing')) + ': ' + x.missing + '</span></div><div class="s">' + esc(x.locationId ? locName(x.locationId) : t('kindTotal')) + (x.kind === 'kit' ? ' · 🎒 ' + esc(x.section || t('kindKit')) : '') + ' · ' + esc(t('colHave')) + ' ' + x.have + ' / ' + esc(t('colNeed')) + ' ' + x.need + ' ' + esc(unitShort(x.unit)) + '</div></div>').join('') +
+    m.body = '<div class="row" style="gap:8px;margin-bottom:10px;flex-wrap:wrap"><button class="btn small primary" data-act="defWaRu">📝 ' + esc(t('reqWaRu')) + '</button><button class="btn small ghost" data-act="defWaAz">📝 ' + esc(t('reqWaAz')) + '</button></div>' + r.rows.map(x => '<div class="rep-row"><div class="t">' + esc(itemLabel(x)) + ' — <span style="color:var(--orange)">' + esc(t('colMissing')) + ': ' + x.missing + '</span></div><div class="s">' + esc(x.locationId ? locName(x.locationId) : x.kind === 'sub' ? t('kindSub', { b: (x.brands || []).join(', ') }) : t('kindTotal')) + (x.kind === 'kit' ? ' · 🎒 ' + esc(x.section || t('kindKit')) : '') + ' · ' + esc(t('colHave')) + ' ' + x.have + ' / ' + esc(t('colNeed')) + ' ' + x.need + ' ' + esc(unitShort(x.unit)) + '</div></div>').join('') +
       (r.requests || []).map(q => '<div class="rep-row"><div class="t">📌 ' + esc(q.name) + ' ' + esc(q.dosage || '') + ' — ' + q.qty + '</div><div class="s">' + esc(t('reqFrom', { doc: q.doctorName })) + (q.note ? ' · ' + esc(q.note) : '') + '</div></div>').join('');
   } else if (r.type === 'expiry') {
     const exp = r.rows.filter(x => x.expired);
@@ -6744,6 +6749,8 @@ const I18N_V9 = {
     susp_witnessNo: 'Свидетель не подтвердил утилизацию', suspWitnessNo: 'свидетель {w}, {n}',
     susp_witnessMissing: 'Утилизацию никто не подтвердил за сутки', suspWitnessMissing: 'свидетель {w}, {n}',
     susp_handoverDiff: 'При сдаче смены не сошлось', suspHandover: 'по учёту {a}, по факту {b} · принял(а) {to}',
+    subMinLbl: 'Мин. остаток по МНН — все фирмы «{s}»', subMinHint: 'Карточек в группе: {n} ({names}). Годного сейчас всего: {have} {u}. Остатки этих карточек складываются; пусто или 0 — не следить.',
+    kindSub: 'всего по МНН (фирмы: {b})',
     susp_noWitness: 'Утилизация строгого учёта без свидетеля', E_NOT_FROM_KIT: 'Брать для пополнения можно из запаса (шкаф, склад), а не из другой сумки.',
     bulkRevN: 'Строк, которые ревизия этого места могла уже посчитать: {n}. Программа решит по излишку, который нашла ревизия, и покажет итог.',
     bulkRevDone: '🧮 ревизия уже посчитала (по её излишку): {n}.',
@@ -6770,6 +6777,8 @@ const I18N_V9 = {
     susp_witnessNo: 'Şahid utilizasiyanı təsdiqləmədi', suspWitnessNo: 'şahid {w}, {n}',
     susp_witnessMissing: 'Utilizasiyanı bir gün ərzində heç kim təsdiqləmədi', suspWitnessMissing: 'şahid {w}, {n}',
     susp_handoverDiff: 'Növbə təhvilində uyğun gəlmədi', suspHandover: 'uçota görə {a}, faktiki {b} · qəbul etdi {to}',
+    subMinLbl: 'TBA üzrə min. qalıq — bütün firmalar «{s}»', subMinHint: 'Qrupda kart: {n} ({names}). İndi yararlı cəmi: {have} {u}. Bu kartların qalıqları toplanır; boş və ya 0 — izləmə.',
+    kindSub: 'TBA üzrə cəmi (firmalar: {b})',
     susp_noWitness: 'Ciddi uçot utilizasiyası şahidsiz', E_NOT_FROM_KIT: 'Tamamlamaq üçün ehtiyatdan (şkaf, anbar) götürmək olar, başqa çantadan yox.',
     bulkRevN: 'Bu yerin təftişinin artıq saymış ola biləcəyi sətirlər: {n}. Proqram təftişin tapdığı artığa görə qərar verəcək və nəticəni göstərəcək.',
     bulkRevDone: '🧮 təftiş artıq sayıb (artığına görə): {n}.',
@@ -6779,6 +6788,7 @@ const I18N_V9 = {
 Object.assign(I18N.ru, I18N_V9.ru);
 Object.assign(I18N.az, I18N_V9.az);
 Object.assign(OPS, {
+  SET_SUBMIN: ['📏 Минимум по МНН', '📏 TBA üzrə minimum'],
   RESTOCK_OUT: ['🎒 Взято на пополнение сумки', '🎒 Çantanı tamamlamaq üçün götürüldü'], RESTOCK_IN: ['🎒 Пополнение сумки', '🎒 Çantanın tamamlanması'],
   HANDOVER: ['🔁 Сдача смены (пересчёт)', '🔁 Növbə təhvili (sayım)'], HANDOVER_DONE: ['🔁 Смена сдана', '🔁 Növbə təhvil verildi'],
   DOC_PHOTO: ['📄 Фото акта / накладной', '📄 Akt / qaimə fotosu'], WITNESS_OK: ['✓ Свидетель подтвердил', '✓ Şahid təsdiqlədi'], WITNESS_NO: ['⛔ Свидетель не подтвердил', '⛔ Şahid təsdiqləmədi']
@@ -6964,6 +6974,22 @@ function strictBody(r) {
   if (!r.items.length) return '<div class="empty">' + esc(t('strictNone')) + '</div>';
   return r.items.map(it => '<div class="rep-row"><div class="t">🔒 ' + esc(itemLabel(it)) + ' — ' + esc(t('strictStartEnd', { a: it.start, b: it.end, u: unitShort(it.unit) })) + '</div>' +
     it.rows.map(x => '<div class="s">' + esc(fmtDt(x.time)) + ' · ' + esc(opName(x.type)) + ' ' + (x.inQty ? '+' + x.inQty : '−' + x.outQty) + ' → ' + x.balance + ' · ' + esc(x.who || '') + (x.visit ? ' · 🧾 ' + esc(x.visit) : '') + (x.docNo ? ' · № ' + esc(x.docNo) : '') + '</div>').join('') + '</div>').join('');
+}
+
+/* ---------- 7. Минимум по МНН: все фирмы одного вещества (та же дозировка и форма) вместе ---------- */
+/** Ключ группы — как на сервере (subKey_): МНН (или название) + дозировка + форма. */
+function subKey(it) { return skel(it.substance || it.name) + '|' + normDose(it.dosage) + '|' + (it.form || ''); }
+function subGroup(it) {
+  const k = subKey(it);
+  const m = ((S.view && S.view.subMins) || []).find(x => x.key === k);
+  const items = (S.view.items || []).filter(i => subKey(i) === k);
+  const have = S.view.lots.filter(l => items.some(i => i.id === l.itemId) && lotStatus(l).cls !== 'expired').reduce((s, l) => s + l.qty, 0);
+  return { key: k, min: m ? m.minTotal : 0, have, items };
+}
+function subMinHtml(it) {
+  const g = subGroup(it);
+  return '<div class="field"><label>' + esc(t('subMinLbl', { s: (it.substance || it.name) + ' ' + it.dosage })) + '</label><input type="number" id="eiSubMin" min="0" inputmode="numeric" value="' + g.min + '" data-was="' + g.min + '">' +
+    '<div class="muted">' + esc(t('subMinHint', { n: g.items.length, have: g.have, u: unitShort(it.unit), names: g.items.map(i => i.name).slice(0, 5).join(', ') })) + '</div></div>';
 }
 
 
