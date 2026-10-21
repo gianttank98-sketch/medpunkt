@@ -46,6 +46,7 @@
   .pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--soft); color: var(--sub); border: 0; }
   .pill.ok { background: var(--green-soft); color: var(--green); }
   .pill.off { background: var(--amber-soft); color: var(--amber); }
+  input.warn-field { border-color: var(--amber) !important; background: var(--amber-soft); }
   .pill.bad { background: var(--red-soft); color: var(--red); }
   .hdr-ctrl { display: flex; gap: 6px; align-items: center; }
   .hdr-ctrl select, .seg button { height: 34px; border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 0 8px; font-size: 13px; }
@@ -361,6 +362,11 @@
 
     <!-- ===================== ПРИХОД ===================== -->
     <section id="scrReceive" class="hidden">
+      <div class="seg-wide hidden" id="rcvMode">
+        <button data-act="rcvMode" data-mode="receive" class="on"></button>
+        <button data-act="rcvMode" data-mode="opening"></button>
+      </div>
+      <div class="info hidden" id="rcvOpeningInfo"></div>
       <button class="btn ghost block" style="margin-bottom:10px" data-act="bulkModal" data-i18n="bulkBtn"></button>
       <div class="seg-wide" id="rcvCat">
         <button data-act="rcvCat" data-cat="med" class="on" data-i18n="catMed"></button>
@@ -396,6 +402,8 @@
           </div>
           <label class="check"><input type="checkbox" id="rcvNoExp"><span data-i18n="noExpiryChk"></span></label>
         </div>
+        <div class="field"><label id="rcvDateLbl"></label><input type="date" id="rcvDate"></div>
+        <div class="note hidden" id="rcvDateNote"></div>
         <div class="field"><label data-i18n="locationLabel"></label><select id="rcvLoc"></select></div>
         <div class="grid2">
           <div class="field"><label data-i18n="qtyLabel"></label><input type="number" id="rcvQty" min="1" inputmode="numeric"></div>
@@ -425,7 +433,7 @@
         <button class="btn primary block" data-act="receiveCheck" data-i18n="receiveBtn"></button>
       </div>
       <div class="card">
-        <div class="lbl" data-i18n="recentReceipts"></div>
+        <div class="lbl" id="rcvRecentLbl" data-i18n="recentReceipts"></div>
         <div id="rcvRecent"></div>
       </div>
     </section>
@@ -755,7 +763,7 @@ const OPS = {
   REMOVE_DOCTOR: ['👤 Врач убран', '👤 Həkim silindi'], SET_NORM: ['📏 Норма места', '📏 Yerin norması'],
   CHECK: ['✓ Проверено на месте', '✓ Yerində yoxlanıldı'], REJECTED: ['⛔ Сервер не принял', '⛔ Server qəbul etmədi']
 };
-const USER_COMMENT_OPS = ['RECEIVE', 'SPEND', 'DISPOSAL', 'TRANSFER_OUT', 'TRANSFER_IN', 'AUDIT', 'REQUEST', 'CHECK'];
+const USER_COMMENT_OPS = ['RECEIVE', 'SPEND', 'DISPOSAL', 'TRANSFER_OUT', 'TRANSFER_IN', 'AUDIT', 'REQUEST', 'CHECK', 'OPENING', 'RECEIVE_HIST', 'REPORT_NOTE'];
 const STALE_DAYS = 60;
 const ZXING_URL = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
 const QR_URL = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js';
@@ -789,7 +797,7 @@ const S = {
   thumbs: {}, thumbWant: {}, extras: null, notify: null,
   spend: { q: '', loc: 'ALL', showAll: false },
   stock: { q: '', loc: 'ALL', filter: 'all', view: 'inn' },
-  rcv: { cat: 'med', qtyMode: 'units', thumb: '', pickedItemId: '' },
+  rcv: { cat: 'med', qtyMode: 'units', thumb: '', pickedItemId: '', mode: 'receive', date: '' },
   report: null, lastRpcError: null
 };
 if (S.me) S.docId = S.me.id;
@@ -1123,13 +1131,20 @@ function applyOp(v, op) {
     const lot = m && v.lots.find(l => l.id === m.lotId);
     if (lot) lot.qty += back;
     else if (m && back > 0) { const it = v.items.find(i => i.id === m.itemId); if (it) v.lots.push({ id: m.lotId, itemId: m.itemId, series: m.series || '', expiry: m.expiry || '', locationId: m.locationId, qty: back }); }
-  } else if (op.action === 'receive') {
+  } else if (op.action === 'receive' || op.action === 'opening') {
+    // только в отчёт: остаток не меняется (решение — как его запомнили при сохранении)
+    if (op.action === 'receive' && (op.meta && 'hist' in op.meta ? op.meta.hist : rcvIsHist(p))) return;
     const key = itemKey(p.item.name, p.item.form, p.item.dosage);
     let it = v.items.find(i => itemKey(i.name, i.form, i.dosage) === key);
     if (!it) {
       it = Object.assign({ id: 'tmp_' + op.opId, minTotal: 0, hasThumb: false, pharmGroup: '', subGroup: '', specialty: '' }, p.item);
       delete it.thumb;
       v.items.push(it);
+    }
+    if (op.action === 'opening') {
+      const d = p.asOf || bakuToday();
+      if (!it.openFirst || d < it.openFirst) it.openFirst = d;
+      if (!it.openLast || d > it.openLast) it.openLast = d;
     }
     const s = normSeries(p.series), e = p.noExpiry ? '' : p.expiry;
     let lot = v.lots.find(l => l.itemId === it.id && normSeries(l.series) === s && l.expiry === e && l.locationId === p.locationId);
@@ -1673,6 +1688,7 @@ function renderReceiveSelects() {
   dSel.innerHTML = '<option value="">' + esc(t('dayOpt')) + '</option>' + Array.from({ length: 31 }, (_, i) => { const v = String(i + 1).padStart(2, '0'); return '<option value="' + v + '"' + (v === cd ? ' selected' : '') + '>' + v + '</option>'; }).join('');
   updateDoseLabel();
   updateQtyCalc();
+  renderRcvMode();
   renderRcvRecent();
 }
 function updateDoseLabel() {
@@ -1807,7 +1823,8 @@ function collectReceive() {
       packInfo: $('#rcvPackInfo').value.trim(), condition: $('#rcvCond').value, strict: cat === 'med' && $('#rcvStrict').checked,
       minTotal: minRaw === '' ? '' : Number(minRaw), barcode: $('#rcvBarcode').value.trim(), thumb: S.rcv.thumb || ''
     },
-    series: normSeries($('#rcvSeries').value), expiry: exp.expiry, noExpiry: exp.noExpiry, locationId, qty, comment: $('#rcvComment').value.trim()
+    series: normSeries($('#rcvSeries').value), expiry: exp.expiry, noExpiry: exp.noExpiry, locationId, qty, comment: $('#rcvComment').value.trim(),
+    ...rcvDateFields()
   };
 }
 function receiveCheck() {
@@ -1818,27 +1835,35 @@ function receiveCheck() {
   const exist = S.view.items.find(i => itemKey(i.name, i.form, i.dosage) === key);
   const lot = exist && S.view.lots.find(l => l.itemId === exist.id && normSeries(l.series) === p.series && l.expiry === p.expiry && l.locationId === p.locationId);
   const expired = p.expiry && daysTo(p.expiry) < 0;
+  const mode = rcvMode();
+  const ex = rcvCheckExtra(p, mode, exist);
+  const hist = mode === 'receive' && ex.state === 'hist';
   S.pendingReceive = p;
-  openModal('<h3>' + esc(t('checkTitle')) + '</h3><div class="sum">' +
+  S.pendingReceiveMode = mode;
+  openModal('<h3>' + esc(t(mode === 'opening' ? 'openingCheckTitle' : 'checkTitle')) + '</h3><div class="sum">' +
     '<div><b>' + esc(p.item.name) + '</b>' + (p.item.substance && p.item.substance !== p.item.name ? ' <span class="muted">(' + esc(p.item.substance) + ')</span>' : '') + '</div>' +
     '<div>' + esc(formName(p.item.form)) + ' · ' + esc(p.item.dosage) + '</div>' +
     '<div>' + (p.series ? esc(t('seriesShort', { s: p.series })) : esc(t('noSeries'))) + ' · ' + (p.expiry ? esc(t('until', { d: fmtExp(p.expiry) })) : esc(t('noExpiry'))) + '</div>' +
-    '<div>📍 ' + esc(locName(p.locationId)) + '</div>' +
+    '<div>📍 ' + esc(locName(p.locationId)) + '</div>' + ex.lines +
     '<div><b>+' + p.qty + '</b> ' + esc(unitLong(p.item.unit)) + '</div></div>' +
-    '<div class="note" style="margin:10px 0 0">' + esc(exist ? t('existingItem', { name: exist.name + ' · ' + exist.dosage }) : t('newItem')) + ' ' + esc(lot ? t('willAddTo', { n: lot.qty }) : t('newLot')) + '</div>' +
+    '<div class="note" style="margin:10px 0 0">' + esc(exist ? t('existingItem', { name: exist.name + ' · ' + exist.dosage }) : t('newItem')) + (hist || ex.state === 'ask' ? '' : ' ' + esc(lot ? t('willAddTo', { n: lot.qty }) : t('newLot'))) + '</div>' +
+    (ex.warn ? '<div class="info" style="margin-top:10px;background:var(--amber-soft)">' + esc(ex.warn) + '</div>' : '') +
     (expired ? '<div class="info" style="margin-top:10px;background:var(--red-soft)">' + esc(t('expiredOnReceive')) + '</div>' : '') +
-    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="receiveSave">' + esc(t('save')) + '</button></div>');
+    rcvCheckButtons(mode, ex.state));
 }
-function receiveSave() {
+function receiveSave(el) {
   const p = S.pendingReceive;
+  if (p && el && el.dataset.inop) p.inOpening = el.dataset.inop === '1';
   if (!p) return closeModal();
   S.pendingReceive = null;
   closeModal();
-  const op = enqueue('receive', Object.assign({ doctorId: S.docId }, p), { label: p.item.name });
-  S.mine.push({ opId: op.opId, action: 'receive', type: 'RECEIVE', doctorId: S.docId, lotId: '', itemId: '', locationId: p.locationId, name: p.item.name + ' ' + p.item.dosage, qty: p.qty, delta: p.qty, ts: Date.now(), status: 'pending' });
+  const action = S.pendingReceiveMode === 'opening' ? 'opening' : 'receive';
+  const hist = action === 'receive' && rcvIsHist(p);
+  const op = enqueue(action, Object.assign({ doctorId: S.docId }, p), { label: p.item.name, hist });
+  S.mine.push({ opId: op.opId, action, type: action === 'opening' ? 'OPENING' : hist ? 'RECEIVE_HIST' : 'RECEIVE', doctorId: S.docId, lotId: '', itemId: '', locationId: p.locationId, name: p.item.name + ' ' + p.item.dosage, qty: p.qty, delta: p.qty, ts: Date.now(), status: 'pending' });
   saveMine();
   LS.set('MED2_LASTLOC', p.locationId);
-  toast(t('receivedToast', { name: p.item.name, qty: p.qty + ' ' + unitShort(p.item.unit) }) + (!S.online ? ' ' + t('queuedToast') : ''));
+  toast(t(action === 'opening' ? 'openingToast' : hist ? 'histToast' : 'receivedToast', { name: p.item.name, qty: p.qty + ' ' + unitShort(p.item.unit) }) + (!S.online ? ' ' + t('queuedToast') : ''));
   resetReceive();
 }
 function resetReceive() {
@@ -1856,10 +1881,11 @@ function resetReceive() {
   $('#rcvName').focus();
 }
 function renderRcvRecent() {
-  const rows = (S.view.recent || []).filter(r => r.type === 'RECEIVE').slice(0, 12);
-  const pend = S.queue.filter(q => q.action === 'receive');
+  const opening = rcvMode() === 'opening';
+  const rows = (S.view.recent || []).filter(r => opening ? r.type === 'OPENING' : (r.type === 'RECEIVE' || r.type === 'RECEIVE_HIST')).slice(0, 12);
+  const pend = S.queue.filter(q => q.action === (opening ? 'opening' : 'receive'));
   $('#rcvRecent').innerHTML = (pend.map(q => '<div class="list-row"><div class="grow">⏳ <b>' + esc(q.payload.item.name) + '</b> ' + esc(q.payload.item.dosage) + ' +' + q.payload.qty + ' <span class="muted">' + esc(locName(q.payload.locationId)) + '</span></div><span class="tag amber">' + esc(t('pending')) + '</span></div>').join('') +
-    rows.map(r => '<div class="list-row"><div class="grow"><b>' + esc(r.itemName) + '</b> ' + esc(r.dosage) + ' +' + r.delta + ' <span class="muted">' + esc(locName(r.locationId, r.locationName)) + ' · ' + esc(r.time.slice(5).replace('-', '.')) + ' · ' + esc(docName(docById(r.doctorId)) || r.doctorName) + '</span></div></div>').join('')) || '<div class="muted">' + esc(t('mineEmpty')) + '</div>';
+    rows.map(r => '<div class="list-row"><div class="grow">' + (r.type === 'RECEIVE_HIST' ? '🧾 ' : '') + '<b>' + esc(r.itemName) + '</b> ' + esc(r.dosage) + ' +' + r.delta + ' <span class="muted">' + esc(locName(r.locationId, r.locationName)) + ' · ' + esc(r.time.slice(5).replace('-', '.')) + (r.factDate ? ' (' + esc(t(r.type === 'OPENING' ? 'asOfLine' : 'receivedLine', { d: fmtDate(r.factDate) })) + ')' : '') + ' · ' + esc(docName(docById(r.doctorId)) || r.doctorName) + '</span></div></div>').join('')) || '<div class="muted">' + esc(t('mineEmpty')) + '</div>';
 }
 
 /* =====================================================================
@@ -2244,7 +2270,7 @@ function journalRowHtml(r) {
   const d = docById(r.doctorId);
   const comment = USER_COMMENT_OPS.indexOf(r.type) !== -1 && r.comment ? ' · <i>' + esc(r.comment) + '</i>' : '';
   return '<div class="rep-row"><div class="t">' + esc(opName(r.type)) + (r.itemName ? ' · ' + esc(r.itemName) + ' ' + esc(r.dosage || '') : '') + (r.delta ? ' <b>' + (r.delta > 0 ? '+' : '') + r.delta + '</b>' : '') + (r.qtyAfter !== '' ? ' → ' + r.qtyAfter : '') + '</div>' +
-    '<div class="s">' + esc(fmtDate(r.time.slice(0, 10)) + ' ' + r.time.slice(11)) + ' · ' + esc(d ? docName(d) : r.doctorName) + (r.locationId ? ' · ' + esc(locName(r.locationId, r.locationName)) : '') + (r.series ? ' · ' + esc(t('seriesShort', { s: r.series })) : '') + (r.visit ? ' · 🧾 ' + esc(r.visit) : '') + comment + '</div></div>';
+    '<div class="s">' + esc(fmtDate(r.time.slice(0, 10)) + ' ' + r.time.slice(11)) + ' · ' + esc(d ? docName(d) : r.doctorName) + (r.locationId ? ' · ' + esc(locName(r.locationId, r.locationName)) : '') + (r.series ? ' · ' + esc(t('seriesShort', { s: r.series })) : '') + (r.visit ? ' · 🧾 ' + esc(r.visit) : '') + (r.factDate ? ' · ' + esc(t(r.type === 'OPENING' ? 'asOfLine' : 'receivedLine', { d: fmtDate(r.factDate) })) : '') + comment + '</div></div>';
 }
 async function mergeKeep(btn, id, others) {
   const dst = itemById(id);
@@ -2343,12 +2369,13 @@ function repWa() {
   const lines = ['*' + tb.title + '*', S.report.from ? t('periodLine', { a: fmtDate(S.report.from), b: fmtDate(S.report.to) }) : t('todayLine', { d: fmtDate(S.report.today || bakuToday()) }), ''];
   tb.rows.slice(0, 120).forEach(r => lines.push('• ' + r.filter(v => v !== '' && v !== null && v !== undefined).join(' | ')));
   if (tb.rows.length > 120) lines.push('… +' + (tb.rows.length - 120));
+  (tb.notes || []).forEach(n => lines.push('', '_' + n + '_'));
   window.open('https://wa.me/?text=' + encodeURIComponent(lines.join('\n')), '_blank');
 }
 async function repSheet(btn) {
   if (!S.report) return toast(t('repFirst'), 'bad');
   const tb = reportTable(S.report);
-  const r = await busy(btn, () => rpcA('exportTable', tb));
+  const r = await busy(btn, () => rpcA('exportTable', tableWithNotes(tb)));
   if (r && r.url) $('#repLink').innerHTML = '<a class="btn primary block" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="' + esc(r.url) + '" target="_blank" rel="noopener">' + esc(t('sheetReady')) + '</a>';
 }
 function repPrint() {
@@ -2580,8 +2607,9 @@ const H = {
   closeReq: el => busy(el, () => rpcA('closeRequest', { id: el.dataset.id }, { op: true, opId: newOpId() })),
   rcvCat: el => { S.rcv.cat = el.dataset.cat; showBrands(null); $('#rcvForm').value = ''; $('#rcvUnit').value = ''; renderReceiveSelects(); $('#rcvUnit').value = formInfo($('#rcvForm').value).unit; $('#rcvNameNote').innerHTML = ''; $('#rcvRefInfo').innerHTML = ''; },
   qtyMode: el => { S.rcv.qtyMode = el.dataset.mode; updateQtyCalc(); },
+  rcvMode: el => { S.rcv.mode = el.dataset.mode; renderRcvMode(); renderRcvRecent(); },
   receiveCheck: () => receiveCheck(),
-  receiveSave: () => receiveSave(),
+  receiveSave: el => receiveSave(el),
   scan: el => { S.scanTarget = el.dataset.target; const f = $('#fileScan'); f.value = ''; f.click(); },
   photo: el => { S.photoTarget = el.dataset.target; const f = $('#filePhoto'); f.value = ''; f.click(); },
   photoRemove: () => { S.editThumb = ''; const im = $('#eiThumb'); if (im) im.classList.add('hidden'); },
@@ -2621,6 +2649,8 @@ const H = {
   repSheet: el => repSheet(el),
   repPrint: () => repPrint(),
   repPdf: el => repPdf(el),
+  repNote: el => repNoteEdit(el.dataset.id),
+  repNoteSave: el => repNoteSave(el),
   visitClear: () => { setVisit(''); $('#visitInp').value = ''; $('#visitInp').focus(); },
   shortageGo: () => shortageGo(),
   reportUseModal: el => reportUseModal({ itemId: el.dataset.item || '', name: el.dataset.name || '' }),
@@ -2684,6 +2714,7 @@ function bind() {
   $('#rcvNoExp').addEventListener('change', e => $('#rcvExpWrap').classList.toggle('hidden', e.target.checked));
   ['#rcvQty', '#rcvPackCount'].forEach(s => $(s).addEventListener('input', updateQtyCalc));
   $('#rcvUnit').addEventListener('change', updateQtyCalc);
+  $('#rcvDate').addEventListener('change', () => rcvDateChanged());
   $('#rcvName').addEventListener('input', () => { S.rcv.pickedItemId = ''; $('#rcvNameNote').innerHTML = ''; if (!$('#rcvName').value.trim()) { showBrands(null); $('#rcvRefInfo').innerHTML = ''; $('#rcvSub').value = ''; } });
   $('#rcvName').addEventListener('blur', () => setTimeout(canonicalizeName, 220));
   $('#rcvSub').addEventListener('change', () => showRefInfo(refBySubstance($('#rcvSub').value)));
@@ -3004,7 +3035,7 @@ Object.assign(OPS, {
 /* =====================================================================
  * v4: вход по логину и паролю, склады, права, пользователи, передачи между складами
  * ===================================================================== */
-const PERM_LIST = ['spend', 'receive', 'stock', 'move', 'revision', 'edit', 'incidents', 'reports', 'transfer', 'forms', 'formsEdit'];
+const PERM_LIST = ['spend', 'receive', 'stock', 'move', 'revision', 'edit', 'incidents', 'reports', 'transfer', 'forms', 'formsEdit', 'opening'];
 const ROLE_TPL = { doctor: ['spend', 'receive'], doctorForms: ['spend', 'receive', 'forms'], admin: ['spend', 'receive', 'stock', 'move', 'revision', 'edit', 'incidents', 'reports', 'transfer'] };
 
 /** Права на текущем складе — из ответа сервера о входе (обновляются с каждым состоянием). Сервер всё равно проверяет каждое действие. */
@@ -3188,7 +3219,7 @@ function switchStore(id, initial) {
 }
 function screenAllowed(scr) {
   if (scr === 'spend') return can('spend');
-  if (scr === 'receive') return can('receive');
+  if (scr === 'receive') return can('receive') || can('opening');
   if (scr === 'stock') return canStock();
   if (scr === 'revision') return can('revision');
   if (scr === 'reports') return can(['reports', 'incidents']);
@@ -3796,11 +3827,13 @@ function bulkReview() {
   const bad = b.rows.filter(r => r.bad).length;
   openModal('<h3>📋 ' + esc(t('bulkTitle')) + ' — ' + esc(t('bulkRows', { n: b.rows.length })) + '</h3>' +
     (b.preset ? '<div class="info">' + esc(t('bulkPresetHint')) + '</div>' : '') +
+    bulkDateHtml(b) +
     '<div class="field"><label>' + esc(t('bulkLoc')) + '</label><select id="bulkLoc"><option value="__HOLD"' + (b.loc === '__HOLD' ? ' selected' : '') + '>' + esc(t('holdLoc')) + '</option>' + locOptions(b.loc, false) + '</select></div>' +
     '<div class="card" style="max-height:46vh;overflow:auto;padding:4px 12px">' + b.rows.map(bulkRowHtml).join('') + '</div>' +
     (bad ? '<div class="note" style="color:var(--red);margin:0 0 8px">' + esc(t('bulkBad', { n: bad })) + '</div>' : '') +
-    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="bulkSubmit"' + (bad || !b.rows.length ? ' disabled' : '') + '>' + esc(t('bulkSubmit', { n: b.rows.length })) + '</button></div>');
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="bulkSubmit"' + (bad || !b.rows.length || bulkNeedsAnswer(b) ? ' disabled' : '') + '>' + esc(t('bulkSubmit', { n: b.rows.length })) + '</button></div>');
   $('#bulkLoc').addEventListener('change', e => { b.loc = e.target.value; });
+  bulkDateBind(b);
 }
 function bulkEditModal(i) {
   const b = S.bulk; const r = b && b.rows[i]; if (!r) return;
@@ -3834,11 +3867,13 @@ function bulkEditSave(i) {
 }
 async function bulkSubmit(btn, force) {
   const b = S.bulk; if (!b) return;
+  if (bulkNeedsAnswer(b)) return toast(t('bulkAskN', { n: '' }), 'bad');
   b.loc = ($('#bulkLoc') || {}).value || b.loc;
   const rows = b.rows.map(r => ({ item: r.item, qty: r.qty, series: r.series, expiry: r.expiry, noExpiry: r.noExpiry, note: r.note, locationId: b.loc }));
-  const payload = { rows, source: b.source, presetKey: b.presetKey || '', force: !!force };
+  const df = bulkDateFields(b);
+  const payload = Object.assign({ rows, source: b.source, presetKey: b.presetKey || '', force: !!force }, df);
   // номер операции — от содержимого списка и даты: если ответ потерялся и список отправят снова, второй раз он не внесётся
-  const opId = ('b' + hashStr(JSON.stringify(rows) + '|' + bakuToday()) + (force ? 'f' + Date.now().toString(36) : '')).slice(0, 60);
+  const opId = ('b' + hashStr(JSON.stringify(rows) + '|' + bakuToday() + '|' + df.receivedAt + '|' + String(df.inOpening)) + (force ? 'f' + Date.now().toString(36) : '')).slice(0, 60);
   let r;
   try { r = await busy(btn, () => rpcD('bulkReceive', payload, { opId, timeout: 300000, quiet: true }), true); }
   catch (e) {
@@ -3854,7 +3889,7 @@ async function bulkSubmit(btn, force) {
   if (b.loc !== '__HOLD') LS.set('MED2_LASTLOC', b.loc);
   S.bulk = null;
   closeModal();
-  toast(r.duplicate ? t('bulkAlready') : t('bulkDone', { n: r.result.count }));
+  toast(r.duplicate ? t('bulkAlready') : t('bulkDone', { n: r.result.count }) + (r.result.hist ? ' ' + t('bulkHistDone', { n: r.result.hist }) : '') + (r.result.askMissed ? ' ' + t('bulkAskMissed', { n: r.result.askMissed }) : ''));
 }
 
 /* ---------- «Проверить»: позиции с пометкой «уточнить» ---------- */
@@ -4517,14 +4552,61 @@ function reportTable(r) {
   if (r.type === 'deficit') return { title: t('repTitleDeficit'), header: [t('colName'), t('colForm'), t('colDose'), t('colLoc'), t('colHave'), t('colNeed'), t('colMissing'), t('colUnit')], rows: r.rows.map(x => nm(x).concat([(x.locationId ? locName(x.locationId) : t('kindTotal')) + (x.kind === 'kit' ? ' · ' + t('kindKit') + (x.section ? ': ' + x.section : '') : ''), x.have, x.need, x.missing, unitShort(x.unit)])).concat((r.requests || []).map(q => [q.name, q.form ? formName(q.form) : '', q.dosage, t('reqFrom', { doc: q.doctorName }), '', q.qty, q.qty, q.note || ''])) };
   if (r.type === 'expiry') return { title: t('repTitleExpiry'), header: [t('colName'), t('colForm'), t('colDose'), t('colLoc'), t('colSeries'), t('colExpiry'), t('colQty'), t('colStatus')], rows: r.rows.map(x => nm(x).concat([locName(x.locationId), x.series, fmtExp(x.expiry), x.qty, x.expired ? t('expiredTag') : t('daysLeft', { n: daysTo(x.expiry) })])) };
   if (r.type === 'usage') return { title: t('repTitleUsage') + ' ' + fmtDate(r.from) + '–' + fmtDate(r.to), header: [t('colName'), t('colForm'), t('colDose'), t('colPatient'), t('colDisposal'), t('colReceived'), t('colStock'), t('colUnit')], rows: r.rows.map(x => nm(x).concat([x.patient, x.disposal, x.received, x.stock, unitShort(x.unit)])) };
-  if (r.type === 'monthly') return { title: t('repTitleMonthly') + ' — ' + monthName(r.month), header: [t('colName'), t('colForm'), t('colDose'), t('colOpening'), t('colReceived'), t('colPatient'), t('colDisposal'), t('colCorrections'), t('colXfer'), t('colClosing'), t('colUnit')], rows: r.rows.map(x => nm(x).concat([x.opening, x.received, x.patients, x.disposal, x.corrections, x.xfer || 0, x.closing, unitShort(x.unit)])) };
+  if (r.type === 'monthly') {
+    // графы «ввод остатка», «из них до ввода» и «пояснение» — только когда в них что-то есть
+    const any = k => r.rows.some(x => x[k]);
+    const notes = r.notes || {};
+    const hasOp = any('openingIn'), hasHist = any('receivedHist'), hasNote = r.rows.some(x => notes[x.itemId]);
+    const header = [t('colName'), t('colForm'), t('colDose'), t('colOpening')].concat(hasOp ? [t('colOpeningIn')] : [], [t('colReceived')], hasHist ? [t('colReceivedHist')] : [],
+      [t('colPatient'), t('colDisposal'), t('colCorrections'), t('colXfer'), t('colClosing'), t('colUnit')], hasNote ? [t('colNote')] : []);
+    const rows = r.rows.map(x => nm(x).concat([x.opening], hasOp ? [x.openingIn || 0] : [], [x.received], hasHist ? [x.receivedHist || 0] : [],
+      [x.patients, x.disposal, x.corrections, x.xfer || 0, x.closing, unitShort(x.unit)], hasNote ? [notes[x.itemId] ? notes[x.itemId].note : ''] : []));
+    return { title: t('repTitleMonthly') + ' — ' + monthName(r.month), header, rows, notes: monthlyNotices(r) };
+  }
   if (r.type === 'visits') return { title: t('repTitleVisits') + ' ' + fmtDate(r.from) + '–' + fmtDate(r.to), header: [t('colVisit'), t('colTime'), t('colDoctor'), t('colItems')], rows: r.rows.map(v => [v.visit, fmtDt(v.time), v.doctorName, v.items.map(i => itemLabel(i) + ' ×' + i.qty).join('; ')]) };
   if (r.type === 'incidents') return { title: t('repTitleIncidents') + ' ' + fmtDate(r.from) + '–' + fmtDate(r.to), header: [t('colTime'), t('colDoctor'), t('colKind'), t('colName'), t('colDose'), t('colQty'), t('colLoc'), t('colVisit'), t('colStatus'), t('colResolution')], rows: r.rows.map(x => [fmtDt(x.time), x.doctorName, t('incKind_' + x.kind), x.name, x.dosage, x.qty, x.locationId ? locName(x.locationId) : '', x.visit || '', t('incStatus_' + x.status), resolutionText(x.resolution)]) };
   if (r.type === 'suspicious') return { title: t('repTitleSuspicious') + ' ' + fmtDate(r.from) + '–' + fmtDate(r.to), header: [t('colTime'), t('colLevel'), t('colKind'), t('colDoctor'), t('colName'), t('colDetails')], rows: r.rows.map(x => [fmtDt(x.time), t('sev_' + x.sev), t('susp_' + x.kind), x.who, itemLabel(x), suspText(x)]) };
   if (r.type === 'forms') return { title: t('repTitleForms') + ' ' + fmtDate(r.from) + '–' + fmtDate(r.to), header: [t('colTime'), t('colBlank'), t('colPatientName'), t('colAgeSex'), t('colFin'), t('colTriage'), t('colDx'), t('colOutcome'), t('colDoctorF')],
     rows: r.rows.map(x => [fmtDt(x.arrivedAt || x.createdAt), x.blankNo || '—', x.patient, (x.age !== '' ? x.age : '') + (x.sex ? ' ' + t(x.sex === 'm' ? 'sexM' : 'sexF') : ''), x.fin, x.triage ? fdLabel(fdFind(FD.triage, x.triage)) : '', x.dx, x.outcome ? fdLabel(fdFind(FD.outcome, x.outcome)) + (x.outTo ? ': ' + x.outTo : '') : (x.status === 'draft' ? t('formDraft') : ''), x.doctor]) };
   if (r.type === 'revision') return { title: t('repTitleRevision') + ' ' + fmtDt(r.revision.finishedAt), header: [t('colName'), t('colDose'), t('colExpected'), t('colFact'), t('colDiff'), t('colRecorded'), t('colShortage'), t('colSurplus'), t('colFactual'), t('colUnit')], rows: r.rows.map(x => [x.name, x.dosage, x.expected, x.actual, (x.diff > 0 ? '+' : '') + x.diff, x.recorded, x.shortage, x.surplus, x.factual, unitShort(x.unit)]) };
-  return { title: t('repTitleJournal') + ' ' + fmtDate(r.from) + '–' + fmtDate(r.to), header: [t('colTime'), t('colOp'), t('colDoctor'), t('colName'), t('colDose'), t('colLoc'), t('colSeries'), t('colDelta'), t('colAfter'), t('colVisit'), t('colComment')], rows: r.rows.map(x => [fmtDate(x.time.slice(0, 10)) + ' ' + x.time.slice(11), opName(x.type), docName(docById(x.doctorId)) || x.doctorName, x.itemName, x.dosage, x.locationId ? locName(x.locationId, x.locationName) : '', x.series, x.delta || '', x.qtyAfter, x.visit || '', USER_COMMENT_OPS.indexOf(x.type) !== -1 ? x.comment : '']) };
+  return { title: t('repTitleJournal') + ' ' + fmtDate(r.from) + '–' + fmtDate(r.to), header: [t('colTime'), t('colOp'), t('colDoctor'), t('colName'), t('colDose'), t('colLoc'), t('colSeries'), t('colDelta'), t('colAfter'), t('colVisit'), t('colComment')], rows: r.rows.map(x => [fmtDate(x.time.slice(0, 10)) + ' ' + x.time.slice(11), opName(x.type), docName(docById(x.doctorId)) || x.doctorName, x.itemName, x.dosage, x.locationId ? locName(x.locationId, x.locationName) : '', x.series, x.delta || '', x.qtyAfter, x.visit || '', (x.factDate ? t(x.type === 'OPENING' ? 'asOfLine' : 'receivedLine', { d: fmtDate(x.factDate) }) + ' ' : '') + (USER_COMMENT_OPS.indexOf(x.type) !== -1 ? x.comment : '')]) };
+}
+
+/** Пометки к месячному отчёту: когда начат учёт, что значит «до ввода остатка», пояснение ко всему отчёту. */
+function monthlyNotices(r) {
+  const out = [];
+  if (r.openingFirst) out.push(t('repOpeningNote', { d: fmtDate(r.openingFirst) + (r.openingLast && r.openingLast !== r.openingFirst ? '–' + fmtDate(r.openingLast) : '') }));
+  if (r.rows.some(x => x.receivedHist)) out.push(t('repHistNote'));
+  const all = (r.notes || {})['*'];
+  if (all && all.note) out.push(t('colNote') + ': ' + all.note);
+  return out;
+}
+/** Таблица для Google Таблицы: пометки — строками в конце. */
+function tableWithNotes(tb) {
+  if (!tb.notes || !tb.notes.length) return tb;
+  return Object.assign({}, tb, { rows: tb.rows.concat([['']], tb.notes.map(n => [n])) });
+}
+/** Пояснение к строке отчёта (или ко всему отчёту). Цифры не меняются — пояснение видно рядом с ними. */
+function repNoteEdit(itemId) {
+  const r = S.report;
+  if (!r || r.type !== 'monthly' || !can('reports')) return;
+  const cur = ((r.notes || {})[itemId] || {}).note || '';
+  const row = r.rows.find(x => x.itemId === itemId);
+  S.modalOpId = newOpId();
+  openModal('<h3>✏️ ' + esc(t('colNote')) + '</h3><div class="muted" style="margin-bottom:8px">' + esc(itemId === '*' ? t('repNoteAll') : itemLabel(row || { name: '', dosage: '' })) + ' · ' + esc(monthName(r.month)) + '</div>' +
+    '<textarea id="rnText" rows="4" maxlength="600" style="width:100%">' + esc(cur) + '</textarea><div class="muted" style="margin:6px 0 10px">' + esc(t('repNoteHint')) + '</div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="repNoteSave" data-id="' + esc(itemId) + '">' + esc(t('save')) + '</button></div>');
+}
+async function repNoteSave(btn) {
+  const r = S.report;
+  const itemId = btn.dataset.id;
+  const note = $('#rnText').value.trim();
+  const res = await busy(btn, () => rpcA('reportNote', { month: r.month, itemId, note }, { op: true }));
+  if (!res) return;
+  r.notes = r.notes || {};
+  if (note) r.notes[itemId] = { note, byName: S.me ? S.me.name : '', at: nowBakuStr() }; else delete r.notes[itemId];
+  closeModal();
+  renderReport();
 }
 
 /** Модель отчёта: заголовок, плитки, графики, тело для экрана. th/W — тема и ширина графиков. */
@@ -4563,12 +4645,13 @@ function reportModel(r, th, W) {
   } else if (r.type === 'usage' || r.type === 'monthly') {
     const pat = r.type === 'usage' ? 'patient' : 'patients';
     const sum = k => r.rows.reduce((s, x) => s + (Number(x[k]) || 0), 0);
-    m.tiles = [[sum(pat), t('tileSpent')], [sum('received'), t('tileReceived')], [sum('disposal'), t('tileDisposal'), sum('disposal') ? 'warn' : ''], [r.rows.length, t('tileItems')]];
+    m.tiles = (r.type === 'monthly' && sum('openingIn') ? [[sum('openingIn'), t('colOpeningIn')]] : []).concat([[sum(pat), t('tileSpent')], [sum('received'), t('tileReceived')]]).concat([ [sum('disposal'), t('tileDisposal'), sum('disposal') ? 'warn' : ''], [r.rows.length, t('tileItems')]]);
     chart(t('chDaily'), colChart(dailyPoints(r.daily || {}, r.from, r.to), { th, W }));
     chart(r.type === 'monthly' ? t('chMonthlyTop') : t('chTopUsage'), hbarChart(top(r.rows.filter(x => x[pat] > 0).sort((a, b) => b[pat] - a[pat]), 10).map(x => ({ label: itemLabel(x), value: x[pat], valueText: x[pat] + ' ' + unitShort(x.unit) })), { th, W }));
     m.body = r.type === 'usage'
       ? r.rows.map(x => '<div class="rep-row"><div class="t">' + esc(itemLabel(x)) + '</div><div class="s">' + esc(formName(x.form)) + ' · ' + esc(t('patientsLine', { a: x.patient, b: x.disposal, c: x.received, d: x.stock })) + ' ' + esc(unitShort(x.unit)) + '</div></div>').join('')
-      : r.rows.map(x => '<div class="rep-row"><div class="t">' + esc(itemLabel(x)) + '</div><div class="mrow"><span>' + esc(t('colOpening')) + ' <b>' + x.opening + '</b></span><span>+' + x.received + '</span><span>−' + x.patients + ' ' + esc(t('colPatient').toLowerCase()) + '</span>' + (x.disposal ? '<span>−' + x.disposal + ' ' + esc(t('colDisposal').toLowerCase()) + '</span>' : '') + (x.corrections ? '<span>' + (x.corrections > 0 ? '+' : '') + x.corrections + ' ' + esc(t('colCorrections').toLowerCase()) + '</span>' : '') + (x.xfer ? '<span>' + (x.xfer > 0 ? '+' : '') + x.xfer + ' ' + esc(t('colXfer').toLowerCase()) + '</span>' : '') + '<span>= <b>' + x.closing + '</b> ' + esc(unitShort(x.unit)) + '</span></div></div>').join('');
+      : (r.type === 'monthly' ? monthlyNotices(r).map(n => '<div class="info">' + esc(n) + '</div>').join('') + (can('reports') ? '<button class="btn small ghost" style="margin:4px 0 10px" data-act="repNote" data-id="*">✏️ ' + esc(t('repNoteAll')) + '</button>' : '') : '') +
+      r.rows.map(x => '<div class="rep-row"><div class="t">' + esc(itemLabel(x)) + (can('reports') ? ' <button class="btn small ghost" style="padding:2px 8px;min-height:0" data-act="repNote" data-id="' + esc(x.itemId) + '" title="' + esc(t('colNote')) + '">✏️</button>' : '') + '</div><div class="mrow"><span>' + esc(t('colOpening')) + ' <b>' + x.opening + '</b></span>' + (x.openingIn ? '<span>+' + x.openingIn + ' ' + esc(t('colOpeningIn').toLowerCase()) + '</span>' : '') + '<span>+' + x.received + (x.receivedHist ? ' (' + esc(t('histShort', { n: x.receivedHist })) + ')' : '') + '</span><span>−' + x.patients + ' ' + esc(t('colPatient').toLowerCase()) + '</span>' + (x.disposal ? '<span>−' + x.disposal + ' ' + esc(t('colDisposal').toLowerCase()) + '</span>' : '') + (x.corrections ? '<span>' + (x.corrections > 0 ? '+' : '') + x.corrections + ' ' + esc(t('colCorrections').toLowerCase()) + '</span>' : '') + (x.xfer ? '<span>' + (x.xfer > 0 ? '+' : '') + x.xfer + ' ' + esc(t('colXfer').toLowerCase()) + '</span>' : '') + '<span>= <b>' + x.closing + '</b> ' + esc(unitShort(x.unit)) + '</span></div>' + (r.notes && r.notes[x.itemId] ? '<div class="s">📝 ' + esc(r.notes[x.itemId].note) + '</div>' : '') + '</div>').join('');
   } else if (r.type === 'visits') {
     const units = r.rows.reduce((s, v) => s + v.items.reduce((a, i) => a + i.qty, 0), 0);
     m.tiles = [[r.rows.length, t('tileVisits')], [units, t('tileSpent')], [r.noVisitQty || 0, t('tileNoVisit'), r.noVisitQty ? 'warn' : '']];
@@ -4660,6 +4743,9 @@ function suspText(x) {
     case 'formDeletedClosed': return t('suspForm', { b: x.blank || '—' }) + (x.comment ? ' · «' + x.comment + '»' : '');
     case 'rxGivenChanged': return t('suspRx', { d: x.drug || '', b: x.blank || '—' });
     case 'spendNotInRx': return t('suspForm', { b: x.blank || x.visit });
+    case 'openingDup': return t('suspOpeningDup', { n: x.count, qtys: (x.qtys || []).map(q => '+' + q).join(', '), who: (x.whoAll || []).join(', ') });
+    case 'backdated': return t('suspBackdated', { op: opName(x.op), d: fmtDate(x.fact) });
+    case 'openingLate': return t('suspOpeningLate', { d: fmtDate(x.first) });
     case 'formDeleted': return t('suspForm', { b: x.blank || '—' }) + (x.comment ? ' · «' + x.comment + '»' : '');
     default: return x.comment || '';
   }
@@ -4711,6 +4797,7 @@ function pdfHtml(m, imgs) {
     'table.t td{padding:4px 6px;border-bottom:1px solid #e1e0d9;font-size:9.5px;vertical-align:top}td.n,th.n{text-align:right}' +
     '.foot{color:#898781;font-size:9px;margin-top:14px}</style></head><body>' +
     '<div class="brand">' + esc(t('reportFor')) + '</div><h1>' + esc(m.title) + '</h1><div class="sub">' + esc(m.sub) + '</div>' +
+    (tb.notes || []).map(n => '<div style="border-left:3px solid #fab219;padding:4px 8px;margin:0 0 8px;background:#fbf8ef">' + esc(noEmoji(n)) + '</div>').join('') +
     '<table class="tiles"><tr>' + tilesPlain.map(x => '<td style="' + (kc[x.k] ? 'border-left:4px solid ' + kc[x.k] : '') + '"><div class="tv">' + esc(x.v) + '</div><div class="tl">' + esc(x.l) + '</div></td>').join('') + '</tr></table>' +
     imgs.map(c => '<h2>' + esc(noEmoji(c.title)) + '</h2><div class="ch"><img src="' + c.src + '" width="' + c.w + '" height="' + c.h + '"></div>').join('') +
     (tb.rows.length ? '<table class="t"><thead><tr>' + tb.header.map((h, j) => '<th' + (numCol[j] ? ' class="n"' : '') + '>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' +
@@ -5958,6 +6045,263 @@ Object.assign(H, {
   pwaShare: () => pwaShareModal()
 });
 pwaInit();
+
+/* ===================== v7: тексты — начальный остаток, «когда привезли», пояснения к отчёту ===================== */
+const I18N_V7 = {
+  ru: {
+    perm_opening: 'Начальный остаток', permHint_opening: 'первый ввод того, что уже лежит в отделении',
+    rcvModeReceive: '📦 Приход', rcvModeOpening: '📥 Начальный остаток',
+    openingInfo: 'Это не приход. Внесите то, что уже лежит в отделении на эту дату, — по местам (зонам). В месячном отчёте это будет отдельная графа «Ввод остатка».',
+    openingDateLbl: 'Остаток на дату', receivedAtLbl: 'Когда привезли',
+    receivedAtPast: 'Дата не сегодняшняя — приход будет записан на {d}.',
+    histMaybe: 'Начальный остаток внесён {d}. Если этот препарат привезли до того, как его внесли в остаток, приход пойдёт только в отчёт «Получено» — приложение скажет в окне проверки.',
+    histForcedItem: 'Этот препарат внесён в начальный остаток {d}, а привезли его раньше — он уже лежит в остатке. Пойдёт только в отчёт «Получено», к остатку второй раз не прибавится.',
+    histAsk: 'Этот препарат вносили в начальный остаток {d} — в тот же день, что и приход. Выберите: эта поставка уже была на полке при пересчёте или пришла после него?',
+    askHist: 'Уже была при пересчёте — только в отчёт', askAdd: 'Пришла после пересчёта — прибавить',
+    histServerHist: '⚠️ {name}: сервер записал приход только в отчёт — препарат уже внесён в начальный остаток раньше этой даты. Остаток не изменён. Если это ошибка — проверьте «Склад».',
+    histServerAdd: '⚠️ {name}: сервер прибавил приход к остатку — на эту дату препарата в начальном остатке не было. Проверьте «Склад».',
+    bulkHistN: 'Только в отчёт (уже в начальном остатке): {n}', bulkAskN: 'Позиции, которые вносили в начальный остаток в этот же день: {n}. Выберите:',
+    bulkHistDone: '🧾 из них только в отчёт: {n}.',
+    histAskMissed: '⚠️ {name}: в этот день препарат вносили в начальный остаток (видимо, с другого телефона). Приход прибавлен к остатку. Если эта поставка уже была на полке при пересчёте — проверьте «Склад» и поправьте ревизией.',
+    bulkAskMissed: '⚠️ Позиций, которые в этот день вносили в начальный остаток: {n} — они прибавлены к остатку. Если они уже были на полке при пересчёте — проверьте «Склад».',
+    susp_openingDup: 'Начальный остаток дважды в одну партию', suspOpeningDup: '{n} раза: {qtys} · {who}',
+    susp_backdated: 'Записано задним числом', suspBackdated: '{op} на {d}',
+    susp_openingLate: 'Начальный остаток через месяц после начала', suspOpeningLate: 'первый ввод остатка — {d}',
+    openingBtn: '📥 Внести в начальный остаток',
+    openingCheckTitle: 'Проверьте: начальный остаток',
+    openingExists: 'На этом месте уже есть {n} {u} этого препарата. Начальный остаток прибавится к ним. Если это то же самое — не вносите второй раз.',
+    openingQueued: 'Этот препарат на это место уже ждёт отправки в начальный остаток.',
+    openingToast: 'Внесено в начальный остаток: {name} — {qty}',
+    histToast: 'Записано в отчёт «Получено» (остаток не изменён): {name} — {qty}',
+    recentOpening: 'Недавно внесено в начальный остаток',
+    receivedLine: '🚚 Привезли: {d}', asOfLine: '📥 Остаток на {d}', histLine: '🧾 Только в отчёт «Получено»: остаток не изменится',
+    colOpeningIn: 'Ввод остатка', colReceivedHist: 'в т.ч. до ввода остатка', colNote: 'Пояснение',
+    repOpeningNote: 'Учёт начат {d}: в этот день внесён начальный остаток (графа «Ввод остатка»). Расход до этой даты в учёт не попал, поэтому «На начало» у таких позиций — 0.',
+    repHistNote: '«в т.ч. до ввода остатка» — приходы до даты начального остатка. Они уже лежат в начальном остатке и к остатку второй раз не прибавлены.',
+    histShort: 'из них {n} до ввода остатка',
+    repNoteAll: 'Пояснение ко всему отчёту',
+    repNoteHint: 'Цифры отчёта не меняются. Пояснение видно рядом с ними — в приложении, PDF, WhatsApp и таблице. Кто и когда его написал — в журнале.',
+    bulkDateHint: 'Для всего списка.',
+    E_BAD_RECEIVED_AT: 'Дата «Когда привезли»: не в будущем и не раньше чем {max} дней назад.',
+    E_BAD_AS_OF: 'Дата начального остатка: не в будущем и не раньше чем {max} дней назад.'
+  },
+  az: {
+    perm_opening: 'İlkin qalıq', permHint_opening: 'şöbədə artıq olanların ilk daxil edilməsi',
+    rcvModeReceive: '📦 Mədaxil', rcvModeOpening: '📥 İlkin qalıq',
+    openingInfo: 'Bu mədaxil deyil. Bu tarixə şöbədə artıq olanları yerlərə (zonalara) görə daxil edin. Aylıq hesabatda ayrıca «Qalığın daxil edilməsi» sütunu olacaq.',
+    openingDateLbl: 'Qalıq tarixi', receivedAtLbl: 'Nə vaxt gətirilib',
+    receivedAtPast: 'Tarix bu gün deyil — mədaxil {d} tarixinə yazılacaq.',
+    histMaybe: 'İlkin qalıq {d} daxil edilib. Bu dərman qalığa daxil edilməzdən əvvəl gətirilibsə, mədaxil yalnız «Alınıb» hesabatına düşəcək — tətbiq yoxlama pəncərəsində deyəcək.',
+    histForcedItem: 'Bu dərman ilkin qalığa {d} daxil edilib, gətirilməsi isə daha əvvəldir — artıq qalığın içindədir. Yalnız «Alınıb» hesabatına düşəcək, qalığa ikinci dəfə əlavə olunmayacaq.',
+    histAsk: 'Bu dərman ilkin qalığa {d} daxil edilib — mədaxil ilə eyni gündə. Seçin: bu təchizat sayım zamanı rəfdə idi, yoxsa ondan sonra gəlib?',
+    askHist: 'Sayımda var idi — yalnız hesabata', askAdd: 'Sayımdan sonra gəlib — əlavə et',
+    histServerHist: '⚠️ {name}: server mədaxili yalnız hesabata yazdı — dərman bu tarixdən əvvəl ilkin qalığa daxil edilib. Qalıq dəyişmədi. Səhvdirsə — «Anbar»ı yoxlayın.',
+    histServerAdd: '⚠️ {name}: server mədaxili qalığa əlavə etdi — bu tarixdə dərman ilkin qalıqda yox idi. «Anbar»ı yoxlayın.',
+    bulkHistN: 'Yalnız hesabata (artıq ilkin qalıqda): {n}', bulkAskN: 'Eyni gündə ilkin qalığa daxil edilmiş mövqelər: {n}. Seçin:',
+    bulkHistDone: '🧾 onlardan yalnız hesabata: {n}.',
+    histAskMissed: '⚠️ {name}: bu gün dərman ilkin qalığa daxil edilib (yəqin ki, başqa telefondan). Mədaxil qalığa əlavə olundu. Bu təchizat sayımda rəfdə idisə — «Anbar»ı yoxlayın və təftişlə düzəldin.',
+    bulkAskMissed: '⚠️ Bu gün ilkin qalığa daxil edilmiş mövqelər: {n} — qalığa əlavə olundu. Sayımda rəfdə idisə — «Anbar»ı yoxlayın.',
+    susp_openingDup: 'İlkin qalıq eyni partiyaya iki dəfə', suspOpeningDup: '{n} dəfə: {qtys} · {who}',
+    susp_backdated: 'Keçmiş tarixlə yazılıb', suspBackdated: '{op} — {d}',
+    susp_openingLate: 'İlkin qalıq başlanğıcdan bir ay sonra', suspOpeningLate: 'ilk qalıq daxil edilməsi — {d}',
+    openingBtn: '📥 İlkin qalığa daxil et',
+    openingCheckTitle: 'Yoxlayın: ilkin qalıq',
+    openingExists: 'Bu yerdə bu dərmandan artıq {n} {u} var. İlkin qalıq onlara əlavə olunacaq. Eynisidirsə — ikinci dəfə daxil etməyin.',
+    openingQueued: 'Bu dərman bu yer üçün artıq ilkin qalığa göndərilməyi gözləyir.',
+    openingToast: 'İlkin qalığa daxil edildi: {name} — {qty}',
+    histToast: '«Alınıb» hesabatına yazıldı (qalıq dəyişmədi): {name} — {qty}',
+    recentOpening: 'İlkin qalığa son daxil edilənlər',
+    receivedLine: '🚚 Gətirilib: {d}', asOfLine: '📥 Qalıq tarixi {d}', histLine: '🧾 Yalnız «Alınıb» hesabatına: qalıq dəyişməyəcək',
+    colOpeningIn: 'Qalığın daxil edilməsi', colReceivedHist: 'o cümlədən qalıqdan əvvəl', colNote: 'İzah',
+    repOpeningNote: 'Uçot {d} tarixində başlanıb: həmin gün ilkin qalıq daxil edilib («Qalığın daxil edilməsi» sütunu). Bu tarixdən əvvəlki sərf uçota düşməyib, ona görə belə mövqelərdə «Əvvələ» — 0.',
+    repHistNote: '«o cümlədən qalıqdan əvvəl» — ilkin qalıq tarixindən əvvəlki mədaxillər. Onlar artıq ilkin qalığın içindədir və qalığa ikinci dəfə əlavə olunmayıb.',
+    histShort: 'onlardan {n} qalıqdan əvvəl',
+    repNoteAll: 'Bütün hesabata izah',
+    repNoteHint: 'Hesabatın rəqəmləri dəyişmir. İzah onların yanında görünür — tətbiqdə, PDF-də, WhatsApp-da və cədvəldə. Kimin və nə vaxt yazdığı — jurnalda.',
+    bulkDateHint: 'Bütün siyahı üçün.',
+    E_BAD_RECEIVED_AT: '«Nə vaxt gətirilib» tarixi: gələcəkdə yox və {max} gündən əvvəl yox.',
+    E_BAD_AS_OF: 'İlkin qalıq tarixi: gələcəkdə yox və {max} gündən əvvəl yox.'
+  }
+};
+Object.assign(I18N.ru, I18N_V7.ru);
+Object.assign(I18N.az, I18N_V7.az);
+Object.assign(OPS, {
+  OPENING: ['📥 Начальный остаток', '📥 İlkin qalıq'],
+  RECEIVE_HIST: ['🧾 Приход (только в отчёт)', '🧾 Mədaxil (yalnız hesabata)'],
+  REPORT_NOTE: ['📝 Пояснение к отчёту', '📝 Hesabata izah']
+});
+
+/* =====================================================================
+ * v7: начальный остаток и «когда привезли»
+ *  • «📥 Начальный остаток» — то, что уже лежит в отделении на дату, когда начали вести учёт. Не приход: в отчёте отдельной графой.
+ *    Дата пишется в карточку препарата.
+ *  • «Когда привезли» — приход задним числом. Если ЭТОТ препарат привезли до того, как его внесли в начальный остаток,
+ *    это количество уже лежит в остатке: в отчёт «Получено» — да, к остатку второй раз — нет.
+ *    В дни ввода его остатка человек отвечает явно: «уже учтено» или «привезли после пересчёта».
+ *    Сервер решает по тем же правилам; если телефон решил иначе (старые данные), приложение предупредит.
+ * ===================================================================== */
+function openingDates() { return (S.base && S.base.opening) || { first: '', last: '' }; }
+function rcvMode() { return !can('receive') ? 'opening' : (S.rcv.mode === 'opening' && can('opening') ? 'opening' : 'receive'); }
+function addDaysStr(s, n) { return new Date(Date.parse(s + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10); }
+/** Даты начального остатка препарата: из карточки + то, что ещё ждёт отправки в очереди. */
+function itemOpening(item) {
+  const key = itemKey(item.name, item.form, item.dosage);
+  const it = (S.view.items || []).find(i => itemKey(i.name, i.form, i.dosage) === key);
+  let f = it && it.openFirst || '', l = it && (it.openLast || it.openFirst) || '';
+  S.queue.forEach(q => {
+    if (q.action !== 'opening' || itemKey(q.payload.item.name, q.payload.item.form, q.payload.item.dosage) !== key) return;
+    const d = q.payload.asOf || bakuToday();
+    if (!f || d < f) f = d;
+    if (!l || d > l) l = d;
+  });
+  return { first: f, last: l };
+}
+/** 'hist' — только в отчёт; 'ask' — в дни ввода остатка этого препарата, нужен явный ответ; '' — обычный приход. */
+function rcvHistState(item, receivedAt) {
+  const od = itemOpening(item);
+  if (!od.first) return '';
+  const d = receivedAt || bakuToday();
+  if (d < od.first) return 'hist';
+  if (d <= od.last) return 'ask';
+  return '';
+}
+/** То же правило, что на сервере (receiveIsHist_). */
+function rcvIsHist(p) {
+  const st = rcvHistState(p.item, p.receivedAt);
+  return st === 'hist' || (st === 'ask' && p.inOpening === true);
+}
+function opDateKey() { return 'MED7_OPDATE_' + (S.storeId || ''); }
+/** Дата начального остатка «залипает» (вносите по зонам несколько дней — дата одна).
+ *  Дата прихода — только если человек сам её поменял, и только в этот же день. */
+function rcvDateValue() {
+  const today = bakuToday();
+  if (rcvMode() === 'opening') {
+    const v = LS.get(opDateKey(), '');
+    return v && v <= today && v >= addDaysStr(today, -60) ? v : today;
+  }
+  const v = S.rcv.date || '';
+  return v && S.rcv.dateDay === today && v <= today && v >= addDaysStr(today, -120) ? v : today;
+}
+function renderRcvMode() {
+  const wrap = $('#rcvMode');
+  if (!wrap) return;
+  const mode = rcvMode();
+  wrap.classList.toggle('hidden', !(can('opening') && can('receive')));
+  $$('#rcvMode button').forEach(b => { b.classList.toggle('on', b.dataset.mode === mode); b.textContent = t(b.dataset.mode === 'opening' ? 'rcvModeOpening' : 'rcvModeReceive'); });
+  $('[data-act=bulkModal]').classList.toggle('hidden', mode === 'opening');
+  $('#rcvOpeningInfo').classList.toggle('hidden', mode !== 'opening');
+  $('#rcvOpeningInfo').textContent = t('openingInfo');
+  $('#rcvDateLbl').textContent = t(mode === 'opening' ? 'openingDateLbl' : 'receivedAtLbl');
+  const today = bakuToday();
+  const inp = $('#rcvDate');
+  inp.max = today;
+  inp.min = addDaysStr(today, mode === 'opening' ? -60 : -120);
+  const want = rcvDateValue();
+  // новый день или другой режим — дата заново (у прихода — сегодня, пока человек сам не поменяет)
+  if (!inp.value || inp.dataset.mode !== mode || inp.dataset.day !== today || (mode === 'receive' && inp.value !== want)) inp.value = want;
+  inp.dataset.mode = mode;
+  inp.dataset.day = today;
+  $('[data-act=receiveCheck]').textContent = t(mode === 'opening' ? 'openingBtn' : 'receiveBtn');
+  const lbl = $('#rcvRecentLbl');
+  if (lbl) lbl.textContent = t(mode === 'opening' ? 'recentOpening' : 'recentReceipts');
+  rcvDateNote();
+}
+/** Человек сам поменял дату. */
+function rcvDateChanged() {
+  const inp = $('#rcvDate');
+  if (!inp) return;
+  const today = bakuToday();
+  let v = inp.value;
+  if (!v || v > today) v = today;
+  if (rcvMode() === 'opening') LS.set(opDateKey(), v);
+  else { S.rcv.date = v; S.rcv.dateDay = today; }
+  rcvDateNote();
+}
+/** Подсказка под датой. Решение «только в отчёт» — по препарату, в окне проверки. */
+function rcvDateNote() {
+  const inp = $('#rcvDate'), note = $('#rcvDateNote');
+  if (!inp || !note) return;
+  const mode = rcvMode();
+  const today = bakuToday();
+  const v = inp.value && inp.value <= today ? inp.value : today;
+  const od = openingDates();
+  let html = '';
+  if (mode === 'receive' && od.first && v <= od.last) html = t('histMaybe', { d: fmtDate(od.first) + (od.last !== od.first ? '–' + fmtDate(od.last) : '') });
+  else if (v !== today) html = t(mode === 'opening' ? 'asOfLine' : 'receivedAtPast', { d: fmtDate(v) });
+  note.textContent = html;
+  note.classList.toggle('hidden', !html);
+  inp.classList.toggle('warn-field', v !== today);
+}
+/** Поля даты, которые уходят на сервер вместе с приходом / начальным остатком. */
+function rcvDateFields() {
+  const v = ($('#rcvDate') || {}).value || bakuToday();
+  if (rcvMode() === 'opening') return { asOf: v };
+  return { receivedAt: v };
+}
+/** Строки для окна проверки: дата, «только в отчёт», «на этом месте уже есть». */
+function rcvCheckExtra(p, mode, exist) {
+  let h = '';
+  if (mode === 'opening') {
+    h += '<div>' + esc(t('asOfLine', { d: fmtDate(p.asOf) })) + '</div>';
+    const here = exist ? S.view.lots.filter(l => l.itemId === exist.id && l.locationId === p.locationId).reduce((s, l) => s + l.qty, 0) : 0;
+    const key = itemKey(p.item.name, p.item.form, p.item.dosage);
+    const queued = S.queue.some(q => q.action === 'opening' && q.payload.locationId === p.locationId && itemKey(q.payload.item.name, q.payload.item.form, q.payload.item.dosage) === key);
+    const warn = [];
+    if (here > 0) warn.push(t('openingExists', { n: here, u: unitShort(p.item.unit) }));
+    if (queued) warn.push(t('openingQueued'));
+    return { lines: h, warn: warn.join(' '), state: '' };
+  }
+  if (p.receivedAt && p.receivedAt !== bakuToday()) h += '<div>' + esc(t('receivedLine', { d: fmtDate(p.receivedAt) })) + '</div>';
+  const st = rcvHistState(p.item, p.receivedAt);
+  const od = itemOpening(p.item);
+  const dd = od.first ? fmtDate(od.first) + (od.last !== od.first ? '–' + fmtDate(od.last) : '') : '';
+  return { lines: h, warn: st === 'hist' ? t('histForcedItem', { d: dd }) : st === 'ask' ? t('histAsk', { d: dd }) : '', state: st };
+}
+/** Кнопки окна проверки: в дни ввода остатка препарата — два явных ответа, без выбора по умолчанию. */
+function rcvCheckButtons(mode, state) {
+  const cancel = '<button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button>';
+  if (mode === 'receive' && state === 'ask') {
+    return '<div class="acts" style="flex-wrap:wrap">' + cancel +
+      '<button class="btn ghost" data-act="receiveSave" data-inop="1">🧾 ' + esc(t('askHist')) + '</button>' +
+      '<button class="btn primary" data-act="receiveSave" data-inop="0">➕ ' + esc(t('askAdd')) + '</button></div>';
+  }
+  return '<div class="acts">' + cancel + '<button class="btn primary" data-act="receiveSave">' + esc(t('save')) + '</button></div>';
+}
+/** Ответ сервера по приходу: если телефон ждал другого (данные устарели), честно предупредить. */
+DONE.receive = function (op, r) {
+  const x = r && r.result;
+  if (!x) return;
+  const was = !!op.meta.hist;
+  const now = !!x.hist;
+  const m = S.mine.find(y => y.opId === op.opId);
+  if (m) { m.type = now ? 'RECEIVE_HIST' : 'RECEIVE'; saveMine(); }
+  if (was !== now) toast(t(now ? 'histServerHist' : 'histServerAdd', { name: op.meta.label || '' }), 'bad', null, 12000);
+  else if (x.askMissed) toast(t('histAskMissed', { name: op.meta.label || '' }), 'bad', null, 12000);
+};
+
+/* ---------- «Когда привезли» для прихода списком (одна дата на весь список; решение — по каждому препарату) ---------- */
+function bulkRowState(b, r) { return rcvHistState(r.item, b.date || bakuToday()); }
+function bulkDateHtml(b) {
+  const today = bakuToday();
+  const v = b.date || today;
+  const st = b.rows.map(r => bulkRowState(b, r));
+  const nHist = st.filter(x => x === 'hist').length, nAsk = st.filter(x => x === 'ask').length;
+  return '<div class="field"><label>' + esc(t('receivedAtLbl')) + ' <span class="muted">' + esc(t('bulkDateHint')) + '</span></label><input type="date" id="bulkDate" value="' + esc(v) + '" max="' + today + '" min="' + addDaysStr(today, -120) + '"' + (v !== today ? ' class="warn-field"' : '') + '></div>' +
+    (nHist ? '<div class="note">🧾 ' + esc(t('bulkHistN', { n: nHist })) + '</div>' : '') +
+    (nAsk ? '<div class="info" style="background:var(--amber-soft)">' + esc(t('bulkAskN', { n: nAsk })) +
+      '<label class="check"><input type="radio" name="bulkInOp" value="1"' + (b.inOp === true ? ' checked' : '') + '><span>' + esc(t('askHist')) + '</span></label>' +
+      '<label class="check"><input type="radio" name="bulkInOp" value="0"' + (b.inOp === false ? ' checked' : '') + '><span>' + esc(t('askAdd')) + '</span></label></div>' : '');
+}
+function bulkNeedsAnswer(b) { return b.rows.some(r => bulkRowState(b, r) === 'ask') && typeof b.inOp !== 'boolean'; }
+function bulkDateBind(b) {
+  const keep = () => { b.loc = ($('#bulkLoc') || {}).value || b.loc; };
+  const d = $('#bulkDate');
+  if (d) d.addEventListener('change', () => { const v = d.value; keep(); b.date = v && v <= bakuToday() ? v : ''; b.inOp = undefined; bulkReview(); });
+  $$('input[name=bulkInOp]').forEach(x => x.addEventListener('change', () => { keep(); b.inOp = x.value === '1'; bulkReview(); }));
+}
+function bulkDateFields(b) {
+  return { receivedAt: b.date || bakuToday(), inOpening: typeof b.inOp === 'boolean' ? b.inOp : undefined };
+}
 
 
 function init() {
