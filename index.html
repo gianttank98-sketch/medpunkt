@@ -379,6 +379,7 @@
           <input type="text" id="rcvName" autocomplete="off">
         </div>
         <div id="rcvNameNote"></div>
+        <div id="rcvCatVar" class="hidden" style="margin:-4px 0 10px"></div>
         <div class="field hidden" id="rcvBrandWrap">
           <label id="rcvBrandLbl"></label>
           <select id="rcvBrand"></select>
@@ -1116,6 +1117,7 @@ function setBase(st, quiet) {
   if (st.me) setMe(Object.assign({}, S.me || {}, st.me, { perms: undefined }));
   recompute();
   if (!S.ref || (st.refVersion && S.ref.version !== st.refVersion)) loadReference();
+  if (!S.catTried) { S.catTried = true; loadCatalog(); }
   if (!quiet) renderAll();
 }
 
@@ -1252,6 +1254,7 @@ function nameSuggestions(q, cat) {
     S.refIdx.brands.forEach(b => add({ kind: 'brand', label: b.b, sub: t('innTag') + ': ' + b.sub.s, bo: b, pri: 2 }, score(qs, b.sk, false)));
     S.refIdx.subs.forEach(s => add({ kind: 'sub', label: s.s, sub: t('brandsCount', { n: s.brands.length }), so: s, pri: 1 }, score(qs, s.sk, false)));
   }
+  if (cat === 'med') catSuggest(qs, false, false).forEach(o => out.push(o)); // все препараты, зарегистрированные в АР
   let fuzzy = false;
   if (!out.some(o => o.sc >= 50)) {
     fuzzy = true;
@@ -1261,6 +1264,7 @@ function nameSuggestions(q, cat) {
       S.refIdx.brands.forEach(b => add({ kind: 'brand', label: b.b, sub: t('innTag') + ': ' + b.sub.s, bo: b, pri: 2 }, score(qs, b.sk, true)));
       S.refIdx.subs.forEach(s => add({ kind: 'sub', label: s.s, sub: t('brandsCount', { n: s.brands.length }), so: s, pri: 1 }, score(qs, s.sk, true)));
     }
+    if (cat === 'med') catSuggest(qs, true, false).forEach(o => out.push(o));
   }
   out.sort((a, b) => b.sc - a.sc || b.pri - a.pri || a.label.localeCompare(b.label));
   const seen = {};
@@ -1275,6 +1279,7 @@ function shortSuggestions(qs, cat, subsOnly) {
     S.refIdx.subs.forEach(s => { if (s.sk.startsWith(qs)) out.push({ kind: 'sub', label: s.s, sub: t('brandsCount', { n: s.brands.length }), so: s, pri: 2 }); });
     if (!subsOnly) S.refIdx.brands.forEach(b => { if (b.sk.startsWith(qs)) out.push({ kind: 'brand', label: b.b, sub: t('innTag') + ': ' + b.sub.s, bo: b, pri: 1 }); });
   }
+  if (cat === 'med' && !subsOnly) catSuggest(qs, false, true).forEach(o => out.push(o));
   out.sort((a, b) => b.pri - a.pri || a.label.localeCompare(b.label, 'ru'));
   const seen = {};
   return { list: out.filter(o => { const k = o.kind + '|' + o.label + '|' + (o.item ? o.item.id : ''); if (seen[k]) return false; seen[k] = 1; return true; }).slice(0, 40), fuzzy: false };
@@ -1302,7 +1307,7 @@ function attachSuggest(input, provider, onPick) {
     items = res.list;
     if (!items.length) { hide(); return; }
     box.innerHTML = (res.fuzzy ? '<div class="sg-head">' + esc(t('didYouMean')) + '</div>' : '') + items.map((o, i) => {
-      const tag = o.kind === 'item' ? '<span class="tag base">' + esc(t('inBase')) + '</span>' : (o.kind === 'brand' ? '<span class="tag brand">' + esc(t('brandTag')) + '</span>' : '<span class="tag">' + esc(t('innTag')) + '</span>');
+      const tag = o.kind === 'item' ? '<span class="tag base">' + esc(t('inBase')) + '</span>' : o.kind === 'cat' ? '<span class="tag">' + esc(t('catTag')) + '</span>' : (o.kind === 'brand' ? '<span class="tag brand">' + esc(t('brandTag')) + '</span>' : '<span class="tag">' + esc(t('innTag')) + '</span>');
       return '<div class="sg" data-i="' + i + '"><div class="grow"><div class="t">' + esc(o.label) + '</div>' + (o.sub ? '<div class="s">' + esc(o.sub) + '</div>' : '') + '</div>' + tag + '</div>';
     }).join('');
     box.classList.remove('hidden');
@@ -1795,10 +1800,11 @@ function fillFromItem(it) {
   updateDoseLabel(); updateQtyCalc();
 }
 function onPickName(o) {
-  if (o.kind === 'item') { fillFromItem(o.item); $('#rcvSeries').focus(); return; }
+  if (o.kind === 'item') { fillFromItem(o.item); hideCatVariants(); $('#rcvSeries').focus(); return; }
+  if (o.kind === 'cat') { catFill(o.ce); return; }
   S.rcv.pickedItemId = '';
   $('#rcvNameNote').innerHTML = '';
-  if (o.kind === 'brand') { $('#rcvName').value = o.bo.b; $('#rcvSub').value = o.bo.sub.s; showRefInfo(o.bo.sub); showBrands(o.bo.sub, o.bo.b, false); $('#rcvDose').focus(); }
+  if (o.kind === 'brand') { $('#rcvName').value = o.bo.b; $('#rcvSub').value = o.bo.sub.s; showRefInfo(o.bo.sub); showBrands(o.bo.sub, o.bo.b, false); showCatVariants(o.bo.b); $('#rcvDose').focus(); }
   if (o.kind === 'sub') {
     // выбрали вещество — сразу открываем список его торговых названий
     $('#rcvName').value = o.so.s; $('#rcvSub').value = o.so.s; showRefInfo(o.so);
@@ -1911,6 +1917,7 @@ function resetReceive() {
   showBrands(null);
   S.rcv.thumb = ''; S.rcv.pickedItemId = ''; S.rcv.qtyMode = 'units';
   $('#rcvThumb').classList.add('hidden'); $('#rcvThumb').removeAttribute('src');
+  hideCatVariants();
   $('#rcvUnit').value = formInfo($('#rcvForm').value).unit;
   updateQtyCalc();
   renderRcvRecent();
@@ -2345,7 +2352,7 @@ function settingsModal() {
       kitsSettingsHtml() : '') +
     (owner ? '<div class="card"><div class="lbl">' + esc(t('appUrl')) + '</div><div class="row"><input type="text" id="appUrlInp" class="grow" value="' + esc(S.webAppUrl) + '" placeholder="https://script.google.com/macros/s/…/exec"><button class="btn small ghost" data-act="appUrlSave">' + esc(t('save')) + '</button></div><div class="muted" style="margin-top:4px">' + esc(t('appUrlHint')) + '</div></div>' +
       '<div class="card"><div class="lbl">' + esc(t('reference')) + '</div><div class="muted" id="refStat">' + esc(S.ref && S.ref.rows ? t('refInfo', { n: S.ref.rows.length }) : t('refEmpty')) + ' ' + esc(t('refNote')) + '</div>' +
-      '<button class="btn small primary" style="margin-top:8px" data-act="refRefresh">' + esc(t('refRefresh')) + '</button></div>' +
+      '<button class="btn small primary" style="margin-top:8px" data-act="refRefresh">' + esc(t('refRefresh')) + '</button></div>' + catSettingsHtml() +
       '<div class="card"><div class="lbl">' + esc(t('notify')) + '</div><div class="muted" id="notifyStat">…</div><div class="row wrap" style="margin-top:8px">' +
       '<button class="btn small primary" data-act="notify" data-mode="on">' + esc(t('notifyEnable')) + '</button><button class="btn small ghost" data-act="notify" data-mode="off">' + esc(t('notifyDisable')) + '</button><button class="btn small ghost" data-act="notify" data-mode="test">' + esc(t('notifyTest')) + '</button></div></div>' : '') +
     '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
@@ -2707,6 +2714,8 @@ const H = {
   monthReopen: el => monthCloseModal(el.dataset.m, true),
   monthCloseGo: el => monthCloseGo(el),
   revPairsApply: () => revPairsApply(),
+  catVar: el => catVarPick(+el.dataset.i),
+  catRefresh: () => loadCatalog(true).then(() => { if ($('#catStat') && S.catMeta) $('#catStat').textContent = t('catInfo', { n: S.catMeta.n, v: fmtDate(S.catMeta.ver) }); }),
   repNoteSave: el => repNoteSave(el),
   visitClear: () => { setVisit(''); $('#visitInp').value = ''; $('#visitInp').focus(); },
   shortageGo: () => shortageGo(),
@@ -2780,7 +2789,11 @@ function bind() {
   $('#repType').addEventListener('change', repTypeChanged);
   window.addEventListener('resize', () => { if (S.screen === 'reports' && S.report) { clearTimeout(S.rzT); S.rzT = setTimeout(renderReport, 200); } });
   attachSuggest($('#rcvName'), q => nameSuggestions(q, S.rcv.cat), onPickName);
-  attachSuggest($('#rcvSub'), subSuggestions, o => { $('#rcvSub').value = o.so.s; showRefInfo(o.so); if (!$('#rcvName').value.trim()) $('#rcvName').value = o.so.s; showBrands(o.so, $('#rcvName').value, true); });
+  attachSuggest($('#rcvSub'), subSuggestionsCat, o => {
+    if (o.kind === 'inn') { $('#rcvSub').value = o.label; if (!$('#rcvName').value.trim()) $('#rcvName').value = o.label; return; }
+    $('#rcvSub').value = o.so.s; showRefInfo(o.so); if (!$('#rcvName').value.trim()) $('#rcvName').value = o.so.s; showBrands(o.so, $('#rcvName').value, true);
+  });
+  $('#rcvName').addEventListener('change', () => { if (!S.rcv.pickedItemId) showCatVariants($('#rcvName').value.trim()); });
   $('#rcvBrand').addEventListener('change', onBrandChosen);
   attachSuggest($('#reqName'), q => nameSuggestions(q, 'med'), o => { $('#reqName').value = o.label; if (o.item) $('#reqDose').value = o.item.dosage; });
   $('#fileScan').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) onScanFile(f); });
@@ -4158,6 +4171,7 @@ function revFoundModal() {
   $('#rfUnit').value = formInfo($('#rfForm').value).unit;
   $('#rfForm').addEventListener('change', () => { $('#rfUnit').value = formInfo($('#rfForm').value).unit; });
   attachSuggest($('#rfName'), q => nameSuggestions(q, S.rfCat), o => {
+    if (o.kind === 'cat') { if (S.rfCat !== 'med') rfSetCat('med'); catFillFields(o.ce, { name: '#rfName', form: '#rfForm', dose: '#rfDose', unit: '#rfUnit' }); return; }
     if (o.kind === 'item') {
       const it = o.item;
       if (it.category !== S.rfCat) rfSetCat(it.category);
@@ -6990,6 +7004,167 @@ function subMinHtml(it) {
   const g = subGroup(it);
   return '<div class="field"><label>' + esc(t('subMinLbl', { s: (it.substance || it.name) + ' ' + it.dosage })) + '</label><input type="number" id="eiSubMin" min="0" inputmode="numeric" value="' + g.min + '" data-was="' + g.min + '">' +
     '<div class="muted">' + esc(t('subMinHint', { n: g.items.length, have: g.have, u: unitShort(it.unit), names: g.items.map(i => i.name).slice(0, 5).join(', ') })) + '</div></div>';
+}
+
+/* ===================== v10: тексты — каталог препаратов (реестр АР) ===================== */
+const I18N_V10 = {
+  ru: {
+    catTag: 'реестр', catSrc: 'реестр АР (Тарифный совет)', catPicked: 'Заполнено из каталога: {src}. Проверьте дозу и упаковку по коробке.',
+    catVariants: 'Варианты этой фирмы в реестре: {n} — нажмите нужный', catTitle: 'Каталог препаратов (реестр АР)',
+    catInfo: '{n} вариантов: фирма, МНН, доза, ампула/флакон, упаковка, производитель. Список Тарифного совета от {v}. Хранится на телефоне.',
+    catEmpty: 'Ещё не загружен — загрузится сам при связи.', catRefresh: 'Обновить каталог', catLoaded: 'Каталог загружен: {n} вариантов.', catFail: 'Каталог не загрузился — нужна связь.'
+  },
+  az: {
+    catTag: 'reyestr', catSrc: 'AR reyestri (Tarif Şurası)', catPicked: 'Kataloqdan dolduruldu: {src}. Dozanı və qablaşdırmanı qutuya görə yoxlayın.',
+    catVariants: 'Bu firmanın reyestrdəki variantları: {n} — lazım olanı basın', catTitle: 'Dərman kataloqu (AR reyestri)',
+    catInfo: '{n} variant: firma, TBA, doza, ampula/flakon, qablaşdırma, istehsalçı. Tarif Şurasının {v} tarixli siyahısı. Telefonda saxlanılır.',
+    catEmpty: 'Hələ yüklənməyib — şəbəkə olanda özü yüklənəcək.', catRefresh: 'Kataloqu yenilə', catLoaded: 'Kataloq yükləndi: {n} variant.', catFail: 'Kataloq yüklənmədi — şəbəkə lazımdır.'
+  }
+};
+Object.assign(I18N.ru, I18N_V10.ru);
+Object.assign(I18N.az, I18N_V10.az);
+
+/* =====================================================================
+ * v10: каталог всех зарегистрированных в Азербайджане препаратов (Тарифный совет, список цен по торговым названиям).
+ * Фирма, МНН, доза (с объёмом ампулы/флакона), форма, упаковка, сколько в упаковке, производитель.
+ * Файл лежит на GitHub рядом с приложением; телефон скачивает его один раз и хранит у себя (работает без интернета).
+ * Подсказки — с первой буквы, как для карточек базы и справочника; выбор заполняет форму, дозу, единицу, упаковку.
+ * ===================================================================== */
+const CAT_URL = window.PWA_MODE ? './catalog.json' : 'https://gianttank98-sketch.github.io/medpunkt/catalog.json';
+const CAT_MAX_AGE = 7 * 86400000;
+
+function catDb() {
+  if (S.catDbP) return S.catDbP;
+  S.catDbP = new Promise((res, rej) => {
+    try {
+      const rq = indexedDB.open('med10cat', 1);
+      rq.onupgradeneeded = () => rq.result.createObjectStore('kv');
+      rq.onsuccess = () => res(rq.result);
+      rq.onerror = () => rej(rq.error);
+    } catch (e) { rej(e); }
+  });
+  S.catDbP.catch(() => { S.catDbP = null; });
+  return S.catDbP;
+}
+async function catGet() { try { const db = await catDb(); return await new Promise(res => { const rq = db.transaction('kv').objectStore('kv').get('catalog'); rq.onsuccess = () => res(rq.result || null); rq.onerror = () => res(null); }); } catch (e) { return null; } }
+async function catPut(v) { try { const db = await catDb(); await new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, 'catalog'); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); } catch (e) { } }
+
+function catIndex(data) {
+  if (!data || !Array.isArray(data.items)) return;
+  const by = {}, inns = {};
+  S.cat = data.items.map(x => {
+    const e = { b: x[0], inn: x[1], d: x[2], code: FORMS.med.some(f => f[0] === x[3]) ? x[3] : 'med_other', pack: x[4], cnt: x[5], mfr: x[6], sk: skel(x[0]), si: skel(x[1]) };
+    (by[e.sk] = by[e.sk] || []).push(e);
+    if (e.inn && e.inn.indexOf('+') === -1 && !inns[e.si]) inns[e.si] = e.inn;
+    return e;
+  });
+  S.catBy = by;
+  S.catInns = Object.keys(inns).map(k => ({ s: catInnName(inns[k]), sk: k }));
+  S.catMeta = { ver: data.ver, source: data.source, n: S.cat.length, at: data.at || 0 };
+}
+/** «CALCIUM GLUCONATE» → «Calcium gluconate». */
+function catInnName(s) { s = String(s || '').toLowerCase(); return s.charAt(0).toUpperCase() + s.slice(1); }
+/** Загрузить каталог: сначала из памяти телефона, раз в неделю (или по кнопке) — свежий с GitHub. */
+async function loadCatalog(force) {
+  if (S.catLoading) return;
+  S.catLoading = true;
+  try {
+    if (!S.cat) { const c = await catGet(); if (c) catIndex(c); }
+    const old = !S.catMeta || Date.now() - (S.catMeta.at || 0) > CAT_MAX_AGE;
+    if (force || old) {
+      const r = await fetch(CAT_URL, { cache: force ? 'reload' : 'default' });
+      if (r.ok) {
+        const data = await r.json();
+        data.at = Date.now();
+        catIndex(data);
+        await catPut(data);
+        if (force) toast(t('catLoaded', { n: S.cat.length }));
+      } else if (force) toast(t('catFail'), 'bad');
+    }
+  } catch (e) { if (force) toast(t('catFail'), 'bad'); }
+  finally { S.catLoading = false; }
+}
+
+/** Варианты каталога для подсказки: с первой буквы (коротко) или по похожести (3+ буквы). */
+function catSuggest(qs, fuzzy, short) {
+  if (!S.cat || !qs) return [];
+  const out = [];
+  const seen = {};
+  for (const e of S.cat) {
+    let sc = 0;
+    if (short) sc = e.sk.startsWith(qs) ? 60 : (e.si.startsWith(qs) ? 40 : 0);
+    else sc = Math.max(score(qs, e.sk, fuzzy), score(qs, e.si, fuzzy) - 10);
+    if (sc <= 0) continue;
+    const k = e.b + '|' + e.d + '|' + e.code;
+    if (seen[k]) continue;
+    seen[k] = 1;
+    out.push({ kind: 'cat', label: e.b, sub: catLine(e), ce: e, pri: 0, sc: sc - 1 });
+    if (out.length > 400) break;
+  }
+  return out;
+}
+function catLine(e) {
+  return [e.d, formName(e.code), e.pack + (e.cnt ? ' №' + e.cnt : ''), e.inn && e.inn !== e.b ? catInnName(e.inn) : '', e.mfr].filter(Boolean).join(' · ');
+}
+/** Заполнить приход из строки каталога. МНН — по-русски из справочника, если фирма там есть; иначе — международное из реестра. */
+function catFill(e) {
+  if (S.rcv.cat !== 'med') { S.rcv.cat = 'med'; renderReceiveSelects(); }
+  $('#rcvName').value = e.b;
+  let sub = '';
+  if (S.refIdx) { const b = S.refIdx.byBrandSk[e.sk]; if (b && b.length) sub = b[0].sub.s; }
+  $('#rcvSub').value = sub || (e.inn.indexOf('+') === -1 ? catInnName(e.inn) : e.inn);
+  $('#rcvForm').value = e.code;
+  $('#rcvUnit').value = formInfo(e.code).unit;
+  updateDoseLabel();
+  $('#rcvDose').value = e.d;
+  const n = parseInt(String(e.cnt).split(',')[0], 10);
+  $('#rcvPackCount').value = n > 1 ? n : '';
+  $('#rcvPackInfo').value = (e.pack + (e.cnt ? ' №' + e.cnt : '') + (e.mfr ? ' · ' + e.mfr : '')).slice(0, 120);
+  S.rcv.pickedItemId = '';
+  updateQtyCalc();
+  $('#rcvNameNote').innerHTML = '<div class="note fix">✓ ' + esc(t('catPicked', { src: t('catSrc') })) + '</div>';
+  hideCatVariants();
+  $('#rcvSeries').focus();
+}
+/** Под названием: все варианты этой фирмы из каталога (доза, ампула, упаковка) — одним нажатием. */
+function showCatVariants(name) {
+  const box = $('#rcvCatVar');
+  if (!box) return;
+  const list = name && S.catBy ? (S.catBy[skel(name)] || []) : [];
+  const uniq = [];
+  const seen = {};
+  list.forEach(e => { const k = e.d + '|' + e.code + '|' + e.pack; if (!seen[k]) { seen[k] = 1; uniq.push(e); } });
+  if (!uniq.length) { hideCatVariants(); return; }
+  S.catVar = uniq;
+  box.innerHTML = '<div class="lbl" style="margin-bottom:4px">' + esc(t('catVariants', { n: uniq.length })) + '</div>' +
+    uniq.slice(0, 20).map((e, i) => '<button class="chip" style="margin:0 6px 6px 0;text-align:left" data-act="catVar" data-i="' + i + '">' + esc(e.d + ' · ' + formName(e.code) + ' · ' + e.pack + (e.cnt ? ' №' + e.cnt : '')) + '</button>').join('');
+  box.classList.remove('hidden');
+}
+function hideCatVariants() { const box = $('#rcvCatVar'); if (box) { box.innerHTML = ''; box.classList.add('hidden'); } }
+function catVarPick(i) { const e = (S.catVar || [])[i]; if (e) catFill(e); }
+/** Для «Найдено при ревизии» и других окон: заполнить поля названия/формы/дозы. */
+function catFillFields(e, ids) {
+  if ($(ids.name)) $(ids.name).value = e.b;
+  if ($(ids.form)) $(ids.form).value = e.code;
+  if ($(ids.dose)) $(ids.dose).value = e.d;
+  if ($(ids.unit)) $(ids.unit).value = formInfo(e.code).unit;
+}
+function catSettingsHtml() {
+  const m = S.catMeta;
+  return '<div class="card"><div class="lbl">' + esc(t('catTitle')) + '</div><div class="muted" id="catStat">' +
+    esc(m ? t('catInfo', { n: m.n, v: fmtDate(m.ver) }) : t('catEmpty')) + '</div>' +
+    '<button class="btn small ghost" style="margin-top:8px" data-act="catRefresh">' + esc(t('catRefresh')) + '</button></div>';
+}
+/** Подсказки МНН: справочник (по-русски) + международные названия из реестра. */
+function subSuggestionsCat(q) {
+  const base = subSuggestions(q);
+  const qs = skel(q);
+  if (!qs || !S.catInns) return base;
+  const have = {};
+  base.list.forEach(o => { have[skel(o.label)] = 1; });
+  const extra = S.catInns.filter(x => !have[x.sk] && (qs.length <= 2 ? x.sk.startsWith(qs) : score(qs, x.sk, false) > 0)).slice(0, 15)
+    .map(x => ({ kind: 'inn', label: x.s, sub: t('catSrc') }));
+  return { list: base.list.concat(extra).slice(0, 40), fuzzy: base.fuzzy && !extra.length };
 }
 
 
