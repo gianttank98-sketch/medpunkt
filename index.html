@@ -760,10 +760,10 @@ const FORMS = {
   ]
 };
 const UNITS = {
-  amp: ['амп', 'ampulы', 'amp.', 'ampul'], vial: ['фл', 'флаконы', 'flak.', 'flakon'], tab: ['таб', 'таблетки', 'tab.', 'tablet'],
+  amp: ['амп', 'ампулы', 'amp.', 'ampul'], vial: ['фл', 'флаконы', 'flak.', 'flakon'], tab: ['таб', 'таблетки', 'tab.', 'tablet'],
   cap: ['капс', 'капсулы', 'kaps.', 'kapsul'], neb: ['неб', 'небулы', 'neb.', 'nebula'], tube: ['туба', 'тубы', 'tüb.', 'tübik'],
   pcs: ['шт', 'штуки', 'əd.', 'ədəd'], pack: ['уп', 'упаковки', 'qutu', 'qutu'], pair: ['пар', 'пары', 'cüt', 'cüt'],
-  bottle: ['фл', 'флаконы (спрей)', 'şüşə', 'şüşə'], sachet: ['пак', 'пакеты-саше', 'paket', 'paket']
+  bottle: ['фл', 'флаконы / бутылки', 'şüşə', 'şüşə'], sachet: ['пак', 'пакеты-саше', 'paket', 'paket']
 };
 UNITS.amp[1] = 'ампулы';
 const OPS = {
@@ -956,6 +956,7 @@ function newOpId() {
 }
 function formInfo(code) {
   for (const cat of ['med', 'sup']) for (const f of FORMS[cat]) if (f[0] === code) return { code: f[0], dim: f[1], unit: f[2], cat, ru: f[3], az: f[4] };
+  for (const f of (window.FORMS_LEGACY || [])) if (f[0] === code) return { code: f[0], dim: f[1], unit: f[2], cat: f[6], ru: f[3], az: f[4], legacy: true };
   return { code, dim: 'dosage', unit: 'pcs', cat: 'med', ru: code || '', az: code || '' };
 }
 function formName(code) { const f = formInfo(code); return S.lang === 'az' ? f.az : f.ru; }
@@ -1785,7 +1786,7 @@ function renderReceiveSelects() {
   $('#rcvName').placeholder = cat === 'med' ? t('namePhMed') : t('namePhSup');
   const fSel = $('#rcvForm');
   const curF = fSel.value && formInfo(fSel.value).cat === cat ? fSel.value : FORMS[cat][0][0];
-  fSel.innerHTML = FORMS[cat].map(f => '<option value="' + f[0] + '"' + (f[0] === curF ? ' selected' : '') + '>' + esc(S.lang === 'az' ? f[4] : f[3]) + '</option>').join('');
+  fSel.innerHTML = formOptsHtml(FORMS[cat], curF);
   const uSel = $('#rcvUnit');
   const curU = uSel.value || formInfo(curF).unit;
   uSel.innerHTML = Object.keys(UNITS).map(u => '<option value="' + u + '"' + (u === curU ? ' selected' : '') + '>' + esc(unitLong(u)) + '</option>').join('');
@@ -2343,7 +2344,7 @@ function editItemModal(id) {
     '<div class="field"><label>' + esc(t('category')) + '</label><select id="eiCat"><option value="med"' + (it.category === 'med' ? ' selected' : '') + '>' + esc(t('catMed')) + '</option><option value="sup"' + (it.category === 'sup' ? ' selected' : '') + '>' + esc(t('catSup')) + '</option></select></div>' +
     '<div class="field"><label>' + esc(t('nameLabelMed')) + '</label><input type="text" id="eiName" value="' + esc(it.name) + '"></div>' +
     '<div class="field"><label>' + esc(t('substanceLabel')) + '</label><input type="text" id="eiSub" value="' + esc(it.substance || '') + '" autocomplete="off"></div>' +
-    '<div class="grid2 stack"><div class="field"><label>' + esc(t('formLabel')) + '</label><select id="eiForm">' + forms.map(f => '<option value="' + f[0] + '"' + (f[0] === it.form ? ' selected' : '') + '>' + esc(S.lang === 'az' ? f[4] : f[3]) + '</option>').join('') + '</select></div>' +
+    '<div class="grid2 stack"><div class="field"><label>' + esc(t('formLabel')) + '</label><select id="eiForm">' + formOptsHtml(forms, it.form) + '</select></div>' +
     '<div class="field"><label>' + esc(t('dimDosage')) + '</label><input type="text" id="eiDose" value="' + esc(it.dosage) + '"></div></div>' +
     '<div class="grid2"><div class="field"><label>' + esc(t('unitLabel')) + '</label><select id="eiUnit">' + Object.keys(UNITS).map(u => '<option value="' + u + '"' + (u === it.unit ? ' selected' : '') + '>' + esc(unitLong(u)) + '</option>').join('') + '</select></div>' +
     '<div class="field"><label>' + esc(t('packCountLabel')) + '</label><input type="number" id="eiPack" min="1" value="' + esc(it.packCount || '') + '"></div></div>' +
@@ -2823,7 +2824,7 @@ const H = {
   shortageGo: () => shortageGo(),
   reportUseModal: el => reportUseModal({ itemId: el.dataset.item || '', name: el.dataset.name || '' }),
   reportUseSend: el => reportUseSend(el),
-  ruCat: el => { S.ruCat = el.dataset.cat; $$('#ruCat button').forEach(b => b.classList.toggle('on', b.dataset.cat === S.ruCat)); $('#ruForm').innerHTML = FORMS[S.ruCat].map(f => '<option value="' + f[0] + '">' + esc(S.lang === 'az' ? f[4] : f[3]) + '</option>').join(''); },
+  ruCat: el => { S.ruCat = el.dataset.cat; $$('#ruCat button').forEach(b => b.classList.toggle('on', b.dataset.cat === S.ruCat)); $('#ruForm').innerHTML = formOptsHtml(FORMS[S.ruCat]); },
   incList: () => { if (S.screen === 'stock' && S.stock.view === 'chk') { closeModal(); renderStock(); } else incidentsModal(); },
   incConfirm: el => incConfirmModal(el.dataset.id),
   incConfirmSave: el => incConfirmSave(el, el.dataset.id),
@@ -3772,7 +3773,7 @@ function reportUseModal(opts) {
   const it = opts.itemId ? itemById(opts.itemId) : null;
   const cat = it ? it.category : 'med';
   S.ruCat = cat;
-  const formsSel = c => FORMS[c].map(f => '<option value="' + f[0] + '">' + esc(S.lang === 'az' ? f[4] : f[3]) + '</option>').join('');
+  const formsSel = c => formOptsHtml(FORMS[c]);
   openModal('<h3>⚠️ ' + esc(t('reportUseTitle')) + '</h3><div class="info">' + esc(t('reportUseHint')) + '</div>' +
     (it ? '<div class="sum" style="margin-bottom:12px"><div><b>' + esc(it.name) + '</b> · ' + esc(it.dosage) + '</div><div>' + esc(formName(it.form)) + '</div></div>'
       : '<div class="seg-wide" id="ruCat"><button data-act="ruCat" data-cat="med" class="on">' + esc(t('catMed')) + '</button><button data-act="ruCat" data-cat="sup">' + esc(t('catSup')) + '</button></div>' +
@@ -3841,7 +3842,7 @@ function incidentsModal() {
 function incById(id) { return (S.view.incidents || []).find(x => x.id === id); }
 function incConfirmModal(id) {
   const x = incById(id); if (!x) return;
-  const formsSel = FORMS[x.category === 'sup' ? 'sup' : 'med'].map(f => '<option value="' + f[0] + '"' + (f[0] === x.form ? ' selected' : '') + '>' + esc(S.lang === 'az' ? f[4] : f[3]) + '</option>').join('');
+  const formsSel = formOptsHtml(FORMS[x.category === 'sup' ? 'sup' : 'med'], x.form);
   openModal('<h3>' + esc(t('incConfirmTitle')) + '</h3><div class="sum" style="margin-bottom:10px"><div>' + esc(incText(x)) + '</div><div class="muted">' + esc(incDetails(x)) + '</div></div>' +
     '<div class="info">' + esc(t('incConfirmHint', { qty: x.qty })) + '</div>' + incUseLotHtml(x) + '<div class="ic-found">' +
     (x.kind === 'noitem' ? '<div class="field"><label>' + esc(t('nameLabelMed')) + '</label><input type="text" id="icName" value="' + esc(x.name) + '"></div>' +
@@ -4018,7 +4019,7 @@ function bulkEditModal(i) {
   const forms = FORMS.med.concat(FORMS.sup);
   openModal('<h3>✏️ ' + esc(it.name || '') + '</h3>' +
     '<div class="field"><label>' + esc(t('nameLabelMed')) + '</label><input type="text" id="beName" value="' + esc(it.name) + '"></div>' +
-    '<div class="grid2 stack"><div class="field"><label>' + esc(t('formLabel')) + '</label><select id="beForm">' + forms.map(f => '<option value="' + f[0] + '"' + (f[0] === it.form ? ' selected' : '') + '>' + esc(S.lang === 'az' ? f[4] : f[3]) + '</option>').join('') + '</select></div>' +
+    '<div class="grid2 stack"><div class="field"><label>' + esc(t('formLabel')) + '</label><select id="beForm">' + formOptsHtml(forms, it.form) + '</select></div>' +
     '<div class="field"><label>' + esc(t('dimDosage')) + '</label><input type="text" id="beDose" value="' + esc(it.dosage) + '"></div></div>' +
     '<div class="grid2"><div class="field"><label>' + esc(t('qtyLabel')) + '</label><input type="number" id="beQty" min="1" inputmode="numeric" value="' + esc(r.qty || '') + '"></div>' +
     '<div class="field"><label>' + esc(t('unitLabel')) + '</label><select id="beUnit">' + Object.keys(UNITS).map(u => '<option value="' + u + '"' + (u === it.unit ? ' selected' : '') + '>' + esc(unitLong(u)) + '</option>').join('') + '</select></div></div>' +
@@ -4260,7 +4261,7 @@ function revEditSave(el) {
 }
 function revFoundModal() {
   S.rfCat = 'med';
-  const formsSel = c => FORMS[c].map(f => '<option value="' + f[0] + '">' + esc(S.lang === 'az' ? f[4] : f[3]) + '</option>').join('');
+  const formsSel = c => formOptsHtml(FORMS[c]);
   openModal('<h3>' + esc(t('revFoundTitle')) + ' — ' + esc(locName(S.rev.cur)) + '</h3>' +
     '<div class="seg-wide" id="rfCat"><button data-act="rfCat" data-cat="med" class="on">' + esc(t('catMed')) + '</button><button data-act="rfCat" data-cat="sup">' + esc(t('catSup')) + '</button></div>' +
     '<div class="field"><label>' + esc(t('nameLabelMed')) + '</label><input type="text" id="rfName" autocomplete="off"></div>' +
@@ -4286,7 +4287,7 @@ function revFoundModal() {
 function rfSetCat(cat) {
   S.rfCat = cat;
   $$('#rfCat button').forEach(b => b.classList.toggle('on', b.dataset.cat === cat));
-  $('#rfForm').innerHTML = FORMS[cat].map(f => '<option value="' + f[0] + '">' + esc(S.lang === 'az' ? f[4] : f[3]) + '</option>').join('');
+  $('#rfForm').innerHTML = formOptsHtml(FORMS[cat]);
   $('#rfUnit').value = formInfo($('#rfForm').value).unit;
 }
 function revFoundSave() {
@@ -8102,58 +8103,176 @@ Object.assign(I18N.az, I18N_V12.az);
  *  Итог («как записано») собирается сам и остаётся видимым — его можно поправить руками.
  * ===================================================================== */
 (function () {
+  // [код, вид поля, единица, по-русски, по-азербайджански, спец. полей]
   const med = [
-    ['med_amp', 'dosage', 'amp', '💉 Ампулы', '💉 Ampullar'],
-    ['med_vial', 'dosage', 'vial', '🧪 Флаконы с раствором для инъекций', '🧪 İnyeksiya məhlulu, flakon'],
-    ['med_pow', 'dosage', 'vial', '🧂 Порошок / лиофилизат для инъекций', '🧂 İnyeksiya üçün toz / liofilizat'],
-    ['med_inf', 'volume', 'vial', '💧 Инфузионные растворы', '💧 İnfuziya məhlulları'],
-    ['med_pfs', 'dosage', 'pcs', '💉 Шприц-тюбик / готовый шприц', '💉 Doldurulmuş şpris'],
-    ['med_pen', 'dosage', 'pcs', '🖊️ Шприц-ручка / картридж', '🖊️ Şpris-qələm / kartric'],
-    ['med_tab', 'dosage', 'tab', '💊 Таблетки', '💊 Tabletlər'],
-    ['med_loz', 'dosage', 'tab', '🍬 Таблетки для рассасывания, подъязычные, шипучие', '🍬 Sorma, dilaltı, köpüklənən tabletlər'],
-    ['med_cap', 'dosage', 'cap', '💊 Капсулы', '💊 Kapsullar'],
-    ['med_sach', 'dosage', 'sachet', '🧂 Порошок / гранулы в пакетиках', '🧂 Paketdə toz / qranul'],
-    ['med_syrup', 'volume', 'bottle', '🍯 Сироп / раствор внутрь', '🍯 Şərbət / daxilə məhlul'],
-    ['med_susp', 'volume', 'bottle', '🥛 Суспензия', '🥛 Suspenziya'],
-    ['med_neb', 'dosage', 'neb', '🌫️ Небулы / раствор для ингаляций', '🌫️ Nebula / inhalyasiya məhlulu'],
-    ['med_inh', 'dosage', 'bottle', '🫁 Ингалятор (баллончик)', '🫁 İnhalyator (aerozol)'],
-    ['med_spray', 'dosage', 'bottle', '💨 Спрей (нос, горло, кожа)', '💨 Sprey (burun, boğaz, dəri)'],
-    ['med_drop', 'dosage', 'vial', '💧 Капли (глаза, уши, нос, внутрь)', '💧 Damcılar (göz, qulaq, burun, daxilə)'],
-    ['med_oint', 'dosage', 'tube', '🧴 Мазь', '🧴 Məlhəm'],
-    ['med_cream', 'dosage', 'tube', '🧴 Крем', '🧴 Krem'],
-    ['med_gel', 'dosage', 'tube', '🧴 Гель', '🧴 Gel'],
-    ['med_ext', 'volume', 'bottle', '🧪 Раствор наружно (антисептики, спирт)', '🧪 Xarici məhlul (antiseptik, spirt)'],
-    ['med_supp', 'dosage', 'pcs', '🕯️ Свечи', '🕯️ Şamlar'],
-    ['med_patch', 'dosage', 'pcs', '🩹 Пластырь с лекарством', '🩹 Dərmanlı plastır'],
-    ['med_vacc', 'dosage', 'dose', '🧫 Вакцины, сыворотки, иммуноглобулины', '🧫 Peyvənd, zərdab, immunoqlobulin'],
-    ['med_other', 'dosage', 'pcs', '📦 Другое', '📦 Digər']
+    ['#', 'Инъекции и инфузии', 'İnyeksiya və infuziya'],
+    ['med_amp', 'dosage', 'amp', '💉 Ампулы (раствор для инъекций)', '💉 Ampullar (inyeksiya məhlulu)', 'cv'],
+    ['med_vial', 'dosage', 'vial', '🧪 Флакон с раствором для инъекций', '🧪 Flakonda inyeksiya məhlulu', 'cv'],
+    ['med_pow', 'dosage', 'vial', '🧂 Порошок / лиофилизат для инъекций', '🧂 İnyeksiya üçün toz / liofilizat', 'dose'],
+    ['med_conc', 'dosage', 'vial', '🧪 Концентрат для приготовления инфузии', '🧪 İnfuziya üçün konsentrat', 'cv'],
+    ['med_inf', 'volume', 'vial', '💧 Раствор для инфузий (капельница)', '💧 İnfuziya məhlulu', 'cv'],
+    ['med_emul', 'dosage', 'vial', '🥛 Эмульсия для инъекций / инфузий', '🥛 İnyeksiya / infuziya emulsiyası', 'cv'],
+    ['med_injsusp', 'dosage', 'vial', '🧪 Суспензия для инъекций', '🧪 İnyeksiya suspenziyası', 'cv'],
+    ['med_pfs', 'dosage', 'pcs', '💉 Готовый шприц (шприц-тюбик)', '💉 Doldurulmuş şpris', 'cv'],
+    ['med_pen', 'dosage', 'pcs', '🖊️ Шприц-ручка / картридж', '🖊️ Şpris-qələm / kartric', 'cv'],
+    ['med_autoinj', 'dosage', 'pcs', '🖊️ Автоинъектор', '🖊️ Avtoinyektor', 'cv'],
+    ['#', 'Таблетки, капсулы, порошки', 'Tablet, kapsul, toz'],
+    ['med_tab', 'dosage', 'tab', '💊 Таблетки', '💊 Tabletlər', 'dose'],
+    ['med_tabcoat', 'dosage', 'tab', '💊 Таблетки, покрытые оболочкой', '💊 Örtüklü tabletlər', 'dose'],
+    ['med_tabsr', 'dosage', 'tab', '💊 Таблетки пролонгированные (ретард)', '💊 Uzunmüddətli təsirli tabletlər', 'dose'],
+    ['med_tabdisp', 'dosage', 'tab', '🫧 Таблетки шипучие / растворимые / диспергируемые', '🫧 Köpüklənən / həllolan / dispers tabletlər', 'dose'],
+    ['med_tabchew', 'dosage', 'tab', '🦷 Таблетки жевательные', '🦷 Çeynənilən tabletlər', 'dose'],
+    ['med_loz', 'dosage', 'tab', '🍬 Таблетки для рассасывания, пастилки', '🍬 Sorma tabletləri, pastillər', 'dose'],
+    ['med_sub', 'dosage', 'tab', '👅 Под язык и за щеку: таблетки, спреи, плёнки', '👅 Dilaltı və yanaqarxası: tablet, sprey, strip', 'dose'],
+    ['med_drag', 'dosage', 'tab', '⚪ Драже', '⚪ Draje', 'dose'],
+    ['med_cap', 'dosage', 'cap', '💊 Капсулы', '💊 Kapsullar', 'dose'],
+    ['med_capsr', 'dosage', 'cap', '💊 Капсулы пролонгированные', '💊 Uzunmüddətli təsirli kapsullar', 'dose'],
+    ['med_gran', 'dosage', 'pack', '🧂 Гранулы', '🧂 Qranullar', 'dose'],
+    ['med_sach', 'dosage', 'sachet', '🧂 Порошок / гранулы в пакетиках (саше)', '🧂 Paketdə toz / qranul (saşe)', 'dose'],
+    ['med_powsol', 'dosage', 'bottle', '🧂 Порошок для приготовления раствора / суспензии внутрь', '🧂 Daxilə məhlul / suspenziya üçün toz', 'cv'],
+    ['#', 'Жидкие внутрь', 'Daxilə maye'],
+    ['med_syrup', 'volume', 'bottle', '🍯 Сироп', '🍯 Şərbət', 'cv'],
+    ['med_solor', 'volume', 'bottle', '🥄 Раствор / капли для приёма внутрь', '🥄 Daxilə qəbul üçün məhlul / damcı', 'cv'],
+    ['med_susp', 'volume', 'bottle', '🥛 Суспензия внутрь', '🥛 Daxilə suspenziya', 'cv'],
+    ['med_oil', 'volume', 'bottle', '🫒 Масло / масляный раствор', '🫒 Yağ / yağlı məhlul', 'cv'],
+    ['#', 'Дыхание', 'Tənəffüs'],
+    ['med_neb', 'dosage', 'neb', '🌫️ Небулы / раствор для ингаляций (небулайзер)', '🌫️ Nebula / nebulayzer üçün məhlul', 'cv'],
+    ['med_inh', 'dosage', 'bottle', '🫁 Ингалятор дозированный (аэрозоль)', '🫁 Dozalanmış inhalyator (aerozol)', 'inh'],
+    ['med_dpi', 'dosage', 'pcs', '🫁 Порошок для ингаляций (турбухалер, капсулы)', '🫁 İnhalyasiya üçün toz (turbuhaler, kapsul)', 'inh'],
+    ['#', 'Глаза, уши, нос, горло', 'Göz, qulaq, burun, boğaz'],
+    ['med_eye', 'dosage', 'vial', '👁️ Капли глазные', '👁️ Göz damcıları', 'cv'],
+    ['med_eyeoint', 'dosage', 'tube', '👁️ Мазь / гель глазные', '👁️ Göz məlhəmi / geli', 'cm'],
+    ['med_ear', 'dosage', 'vial', '👂 Капли ушные', '👂 Qulaq damcıları', 'cv'],
+    ['med_nasal', 'dosage', 'vial', '👃 Капли назальные', '👃 Burun damcıları', 'cv'],
+    ['med_nspray', 'dosage', 'bottle', '👃 Спрей назальный', '👃 Burun spreyi', 'cv'],
+    ['med_tspray', 'dosage', 'bottle', '🗣️ Для горла и рта: спреи, гели, полоскания', '🗣️ Boğaz və ağız üçün: sprey, gel, qarqara', 'cv'],
+    ['#', 'Кожа, наружно', 'Dəri, xarici'],
+    ['med_oint', 'dosage', 'tube', '🧴 Мазь', '🧴 Məlhəm', 'cm'],
+    ['med_cream', 'dosage', 'tube', '🧴 Крем', '🧴 Krem', 'cm'],
+    ['med_gel', 'dosage', 'tube', '🧴 Гель', '🧴 Gel', 'cm'],
+    ['med_lin', 'dosage', 'tube', '🧴 Линимент / бальзам', '🧴 Liniment / balzam', 'cm'],
+    ['med_paste', 'dosage', 'tube', '🧴 Паста', '🧴 Pasta', 'cm'],
+    ['med_foam', 'dosage', 'bottle', '🫧 Пена / пенка', '🫧 Köpük', 'cv'],
+    ['med_lotion', 'volume', 'bottle', '🧴 Лосьон / эмульсия наружно', '🧴 Losyon / xarici emulsiya', 'cv'],
+    ['med_spray', 'dosage', 'bottle', '💨 Спрей / аэрозоль для кожи и ран', '💨 Dəri və yara üçün sprey / aerozol', 'cv'],
+    ['med_ext', 'volume', 'bottle', '🧪 Раствор наружно (антисептики, спирт, лак)', '🧪 Xarici məhlul (antiseptik, spirt, lak)', 'cv'],
+    ['med_powext', 'dosage', 'bottle', '🧂 Порошок / присыпка наружно', '🧂 Xarici toz / səpmə', 'mass'],
+    ['med_patch', 'dosage', 'pcs', '🩹 Пластырь с лекарством (трансдермальный)', '🩹 Dərmanlı plastır (transdermal)', 'dose'],
+    ['med_dress', 'dosage', 'pcs', '🩹 Губка / салфетка с лекарством', '🩹 Dərmanlı süngər / salfet', 'size2'],
+    ['#', 'Ректально, вагинально', 'Rektal, vaginal'],
+    ['med_supp', 'dosage', 'pcs', '🕯️ Свечи ректальные', '🕯️ Rektal şamlar', 'dose'],
+    ['med_rect', 'dosage', 'pcs', '🧴 Микроклизма / ректальный раствор, пена', '🧴 Mikroimalə / rektal məhlul, köpük', 'cv'],
+    ['med_vag', 'dosage', 'pcs', '🌸 Вагинальные свечи, таблетки, капсулы, гель, кольца', '🌸 Vaginal şam, tablet, kapsul, gel, həlqə', 'dose'],
+    ['#', 'Вакцины, сыворотки, диагностика, газы', 'Peyvənd, zərdab, diaqnostika, qazlar'],
+    ['med_vacc', 'dosage', 'dose', '🧫 Вакцины, анатоксины', '🧫 Peyvəndlər, anatoksinlər', 'vacc'],
+    ['med_serum', 'dosage', 'vial', '🧫 Сыворотки, иммуноглобулины', '🧫 Zərdablar, immunoqlobulinlər', 'vacc'],
+    ['med_irrig', 'volume', 'bottle', '🚿 Растворы для промывания, орошения, диализа', '🚿 Yuma, suvarma, dializ məhlulları', 'cv'],
+    ['med_diag', 'dosage', 'vial', '🔬 Диагностические (аллергены, контраст)', '🔬 Diaqnostik (allergen, kontrast)', 'cv'],
+    ['med_implant', 'dosage', 'pcs', '🔩 Импланты, внутриматочные системы', '🔩 İmplantlar, uşaqlıqdaxili sistemlər', 'dose'],
+    ['med_gas', 'volume', 'cyl', '🫧 Медицинские газы (кислород)', '🫧 Tibbi qazlar (oksigen)', 'gas']
   ];
   const sup = [
-    ['sup_syringe', 'volume', 'pcs', '💉 Шприцы', '💉 Şprislər'],
-    ['sup_needle', 'size', 'pcs', '📌 Иглы, ланцеты', '📌 İynələr, lansetlər'],
-    ['sup_cath', 'size', 'pcs', '📍 Катетеры в/в (канюли)', '📍 Venadaxili kateterlər (kanyula)'],
-    ['sup_tube', 'size', 'pcs', '〰️ Катетеры мочевые, зонды, дренажи', '〰️ Sidik kateterləri, zondlar, drenajlar'],
-    ['sup_ivset', 'size', 'pcs', '➰ Системы, краны, удлинители', '➰ Sistemlər, kranlar, uzadıcılar'],
-    ['sup_airway', 'size', 'pcs', '🫁 Дыхание: маски, воздуховоды, трубки', '🫁 Tənəffüs: maskalar, hava yolları, borular'],
-    ['sup_bandage', 'size', 'pcs', '🩹 Бинты', '🩹 Bintlər'],
-    ['sup_gauze', 'size', 'pack', '🧻 Марля, салфетки', '🧻 Cuna, salfetlər'],
-    ['sup_cotton', 'size', 'pack', '☁️ Вата', '☁️ Pambıq'],
-    ['sup_plaster', 'size', 'pcs', '🩹 Пластыри, повязки', '🩹 Plastırlar, sarğılar'],
-    ['sup_gloves', 'size', 'pair', '🧤 Перчатки', '🧤 Əlcəklər'],
-    ['sup_suture', 'size', 'pcs', '🧵 Шовный материал, скальпели', '🧵 Tikiş materialı, skalpellər'],
-    ['sup_lab', 'size', 'pcs', '🧪 Пробирки, тесты, контейнеры', '🧪 Probirkalar, testlər, konteynerlər'],
-    ['sup_diag', 'size', 'pcs', '📈 Электроды, бумага ЭКГ, датчики', '📈 Elektrodlar, EKQ kağızı, sensorlar'],
-    ['sup_immob', 'size', 'pcs', '🦴 Шины, воротники, иммобилизация', '🦴 Şinlər, yaxalıqlar, immobilizasiya'],
-    ['sup_ppe', 'size', 'pcs', '😷 Маски, халаты, бахилы (защита)', '😷 Maskalar, xalatlar, bahillər (qoruyucu)'],
-    ['sup_other', 'size', 'pcs', '🧰 Прочее', '🧰 Digər']
+    ['#', 'Шприцы и иглы', 'Şpris və iynələr'],
+    ['sup_syringe', 'volume', 'pcs', '💉 Шприцы', '💉 Şprislər', 'syr'],
+    ['sup_syrins', 'volume', 'pcs', '💉 Шприцы инсулиновые', '💉 İnsulin şprisləri', 'syr'],
+    ['sup_syrbig', 'volume', 'pcs', '💉 Шприцы Жане, для перфузора, промывные', '💉 Jane, perfuzor, yuma şprisləri', 'syr'],
+    ['sup_needle', 'size', 'pcs', '📌 Иглы инъекционные', '📌 İnyeksiya iynələri', 'needle'],
+    ['sup_needlesp', 'size', 'pcs', '📌 Иглы спинальные, бабочки, внутрикостные, для шприц-ручек', '📌 Spinal, kəpənək, sümükdaxili iynələr, qələm iynələri', 'needle'],
+    ['sup_lancet', 'size', 'pcs', '🩸 Ланцеты, скарификаторы', '🩸 Lansetlər, skarifikatorlar', 'free'],
+    ['#', 'Катетеры, зонды, дренажи', 'Kateter, zond, drenaj'],
+    ['sup_cath', 'size', 'pcs', '📍 Катетеры в/в периферические (канюли)', '📍 Periferik venadaxili kateterlər (kanyula)', 'cann'],
+    ['sup_cvc', 'size', 'pcs', '📍 Катетеры венозные центральные', '📍 Mərkəzi venoz kateterlər', 'free'],
+    ['sup_urin', 'size', 'pcs', '〰️ Катетеры мочевые (Фолея, Нелатона)', '〰️ Sidik kateterləri (Foley, Nelaton)', 'fr'],
+    ['sup_ngt', 'size', 'pcs', '〰️ Зонды желудочные, питательные', '〰️ Mədə, qidalanma zondları', 'fr'],
+    ['sup_suction', 'size', 'pcs', '〰️ Катетеры аспирационные, наконечники', '〰️ Aspirasiya kateterləri, uclqlar', 'fr'],
+    ['sup_drain', 'size', 'pcs', '〰️ Дренажи, газоотводные трубки', '〰️ Drenajlar, qazçıxaran borular', 'fr'],
+    ['sup_urbag', 'size', 'pcs', '🛍️ Мочеприёмники, калоприёмники', '🛍️ Sidik və nəcis qəbulediciləri', 'free'],
+    ['#', 'Системы и коннекторы', 'Sistem və konnektorlar'],
+    ['sup_ivset', 'size', 'pcs', '➰ Системы для инфузий и переливания крови', '➰ İnfuziya və qan köçürmə sistemləri', 'free'],
+    ['sup_ivacc', 'size', 'pcs', '🔀 Краны, удлинители, заглушки, коннекторы', '🔀 Kranlar, uzadıcılar, tıxaclar, konnektorlar', 'free'],
+    ['#', 'Дыхание', 'Tənəffüs'],
+    ['sup_o2', 'size', 'pcs', '🫁 Кислородные маски, носовые канюли, трубки', '🫁 Oksigen maskaları, burun kanyulaları, borular', 'adult'],
+    ['sup_bvm', 'size', 'pcs', '🫁 Мешки Амбу и лицевые маски к ним', '🫁 Ambu kisələri və üz maskaları', 'adult'],
+    ['sup_airway', 'size', 'pcs', '🫁 Воздуховоды (Гведела, назофарингеальные)', '🫁 Hava yolları (Gvedel, nazofaringeal)', 'free'],
+    ['sup_ett', 'size', 'pcs', '🫁 Эндотрахеальные трубки, ларингеальные маски, i-gel', '🫁 Endotraxeal borular, larinqeal maskalar, i-gel', 'free'],
+    ['sup_intub', 'size', 'pcs', '🔦 Для интубации: клинки, стилеты, бужи', '🔦 İntubasiya: tiyələr, stiletlər, bujlar', 'free'],
+    ['sup_resp', 'size', 'pcs', '🌫️ Дыхательные фильтры, спейсеры, маски для небулайзера', '🌫️ Tənəffüs filtrləri, speyserlər, nebulayzer maskaları', 'adult'],
+    ['#', 'Перевязка', 'Sarğı'],
+    ['sup_bandage', 'size', 'pcs', '🩹 Бинты марлевые', '🩹 Cuna bintlər', 'bandage'],
+    ['sup_elastic', 'size', 'pcs', '🩹 Бинты эластичные и трубчатые', '🩹 Elastik və borulu bintlər', 'bandage'],
+    ['sup_cast', 'size', 'pcs', '🦴 Бинты гипсовые и полимерные', '🦴 Gips və polimer bintlər', 'bandage'],
+    ['sup_gauze', 'size', 'pack', '🧻 Салфетки марлевые, марля', '🧻 Cuna salfetlər, cuna', 'size2'],
+    ['sup_alcohol', 'size', 'pack', '🧻 Салфетки спиртовые', '🧻 Spirtli salfetlər', 'size2'],
+    ['sup_cotton', 'size', 'pack', '☁️ Вата, ватные шарики, палочки', '☁️ Pambıq, kürəciklər, çubuqlar', 'mass'],
+    ['sup_tape', 'size', 'roll', '🩹 Пластыри катушечные (фиксирующие)', '🩹 Rulon plastırlar (fiksasiya)', 'tape'],
+    ['sup_plaster', 'size', 'pcs', '🩹 Пластыри бактерицидные, повязки на рану', '🩹 Bakterisid plastırlar, yara sarğıları', 'size2'],
+    ['sup_burn', 'size', 'pcs', '🔥 Противоожоговые и гемостатические повязки', '🔥 Yanıq və hemostatik sarğılar', 'size2'],
+    ['sup_tourn', 'size', 'pcs', '🩸 Жгуты кровоостанавливающие и венозные', '🩸 Qanaxma və venoz turnalar', 'free'],
+    ['#', 'Перчатки', 'Əlcəklər'],
+    ['sup_gloves', 'size', 'pair', '🧤 Перчатки смотровые', '🧤 Müayinə əlcəkləri', 'glove'],
+    ['sup_glovester', 'size', 'pair', '🧤 Перчатки стерильные хирургические', '🧤 Steril cərrahi əlcəklər', 'glove'],
+    ['#', 'Хирургия', 'Cərrahiyyə'],
+    ['sup_suture', 'size', 'pcs', '🧵 Шовный материал', '🧵 Tikiş materialı', 'suture'],
+    ['sup_scalpel', 'size', 'pcs', '🔪 Скальпели, лезвия, наборы для швов', '🔪 Skalpellər, tiyələr, tikiş dəstləri', 'free'],
+    ['sup_inst', 'size', 'pcs', '✂️ Одноразовые инструменты (пинцеты, зажимы, ножницы, шпатели)', '✂️ Birdəfəlik alətlər (pinset, sıxac, qayçı, şpatel)', 'free'],
+    ['#', 'Лаборатория, диагностика', 'Laboratoriya, diaqnostika'],
+    ['sup_vacutube', 'size', 'pcs', '🧪 Пробирки вакуумные', '🧪 Vakuum probirkalar', 'free'],
+    ['sup_container', 'size', 'pcs', '🧫 Контейнеры для анализов', '🧫 Analiz konteynerləri', 'volume'],
+    ['sup_test', 'size', 'pcs', '🧾 Экспресс-тесты, тест-полоски', '🧾 Ekspress testlər, test zolaqları', 'free'],
+    ['sup_ecg', 'size', 'pcs', '📈 Электроды, бумага и гель для ЭКГ', '📈 EKQ elektrodları, kağızı və geli', 'free'],
+    ['sup_defib', 'size', 'pcs', '⚡ Электроды для дефибриллятора', '⚡ Defibrilyator elektrodları', 'adult'],
+    ['sup_sensor', 'size', 'pcs', '🌡️ Датчики, манжеты, термометры, глюкометры', '🌡️ Sensorlar, manjetlər, termometrlər, qlükometrlər', 'free'],
+    ['#', 'Иммобилизация, спасение', 'İmmobilizasiya, xilasetmə'],
+    ['sup_splint', 'size', 'pcs', '🦴 Шины, воротники, тазовые пояса', '🦴 Şinlər, yaxalıqlar, çanaq kəmərləri', 'free'],
+    ['sup_rescue', 'size', 'pcs', '🧊 Термоодеяла, пакеты холод / тепло', '🧊 Termoörtüklər, soyuq / isti paketlər', 'free'],
+    ['#', 'Защита, уход, отходы', 'Qoruma, qulluq, tullantı'],
+    ['sup_mask', 'size', 'pcs', '😷 Маски медицинские, респираторы', '😷 Tibbi maskalar, respiratorlar', 'free'],
+    ['sup_ppe', 'size', 'pcs', '🥼 Халаты, шапочки, бахилы, очки, щитки', '🥼 Xalatlar, papaqlar, bahillər, eynəklər, ekranlar', 'free'],
+    ['sup_linen', 'size', 'pcs', '🛏️ Пелёнки, простыни, подгузники одноразовые', '🛏️ Birdəfəlik pelenka, mələfə, bez', 'size2'],
+    ['sup_care', 'size', 'pcs', '🪣 Лотки, судна, мешки для рвоты, бритвы, клизмы', '🪣 Nimçələr, yataq qabları, qusma paketləri, ülgüclər, imalə', 'free'],
+    ['sup_waste', 'size', 'pcs', '🗑️ Контейнеры и мешки для медицинских отходов', '🗑️ Tibbi tullantı konteynerləri və kisələri', 'volume'],
+    ['sup_battery', 'size', 'pack', '🔋 Батарейки и расходники к приборам', '🔋 Batareyalar və cihaz sərfiyyatı', 'free'],
+    ['#', 'Приборы, реактивы', 'Cihazlar, reagentlər'],
+    ['sup_equip', 'size', 'pcs', '🩺 Аппараты: небулайзеры, ИВЛ / CPAP, отсосы, дефибрилляторы', '🩺 Aparatlar: nebulayzer, SVA / CPAP, aspirator, defibrilyator', 'free'],
+    ['sup_reagent', 'size', 'pack', '🧪 Реактивы и калибраторы для анализаторов', '🧪 Analizator reagentləri və kalibratorları', 'free'],
+    ['sup_esu', 'size', 'pcs', '🔌 Электроды электрохирургические и лабораторные', '🔌 Elektrocərrahi və laborator elektrodlar', 'free'],
+    ['#', 'Интервенция, импланты', 'İnvaziv, implantlar'],
+    ['sup_endovasc', 'size', 'pcs', '🫀 Катетеры сосудистые и интервенционные, стенты, проводники, клапаны', '🫀 Damar və invaziv kateterlər, stentlər, bələdçilər, qapaqlar', 'fr'],
+    ['sup_implant', 'size', 'pcs', '🔩 Импланты: эндопротезы, якоря, сетки, слинги', '🔩 İmplantlar: endoprotez, ankerlər, torlar, slinqlər', 'free']
   ];
-  FORMS.med.length = 0; med.forEach(x => FORMS.med.push(x));
-  FORMS.sup.length = 0; sup.forEach(x => FORMS.sup.push(x));
+  // старые формы — только чтобы показать уже внесённые карточки (в выборе их нет)
+  window.FORMS_LEGACY = [
+    ['med_drop', 'dosage', 'vial', '💧 Капли (уточните: глазные, ушные, в нос, внутрь)', '💧 Damcılar (dəqiqləşdirin: göz, qulaq, burun, daxilə)', 'cv', 'med'],
+    ['med_other', 'dosage', 'pcs', '📦 Без уточнения (выберите форму)', '📦 Dəqiqləşdirilməyib (formanı seçin)', 'free', 'med'],
+    ['sup_tube', 'size', 'pcs', '〰️ Катетеры мочевые, зонды, дренажи', '〰️ Sidik kateterləri, zondlar, drenajlar', 'fr', 'sup'],
+    ['sup_lab', 'size', 'pcs', '🧪 Пробирки, тесты, контейнеры', '🧪 Probirkalar, testlər, konteynerlər', 'free', 'sup'],
+    ['sup_diag', 'size', 'pcs', '📈 Электроды, бумага ЭКГ, датчики', '📈 Elektrodlar, EKQ kağızı, sensorlar', 'free', 'sup'],
+    ['sup_immob', 'size', 'pcs', '🦴 Шины, воротники', '🦴 Şinlər, yaxalıqlar', 'free', 'sup'],
+    ['sup_other', 'size', 'pcs', '🧰 Без уточнения (выберите вид)', '🧰 Dəqiqləşdirilməyib (növü seçin)', 'free', 'sup']
+  ];
+  // строки ['#', ru, az] — заголовки групп в списке выбора
+  const fill = (dst, rows) => { let g = null; dst.length = 0; rows.forEach(x => { if (x[0] === '#') g = [x[1], x[2]]; else { x[6] = g; dst.push(x); } }); };
+  fill(FORMS.med, med); fill(FORMS.sup, sup);
   Object.assign(UNITS, {
     dose: ['доз', 'дозы', 'doza', 'doza'], set: ['наб', 'наборы', 'dəst', 'dəst'], roll: ['рул', 'рулоны', 'rulon', 'rulon'],
-    m: ['м', 'метры', 'm', 'metr'], g: ['г', 'граммы', 'q', 'qram']
+    m: ['м', 'метры', 'm', 'metr'], g: ['г', 'граммы', 'q', 'qram'], l: ['л', 'литры', 'l', 'litr'], kit: ['к-т', 'комплекты', 'dəst', 'dəst'], cyl: ['бал', 'баллоны', 'balon', 'balon']
   });
 })();
+
+/** Список форм для <select>: по группам; старая форма карточки («без уточнения») видна, только если она уже стоит. */
+function formOptsHtml(list, cur) {
+  const lbl = f => esc(S.lang === 'az' ? f[4] : f[3]);
+  let h = '', g = null, open = false;
+  if (cur && !list.some(f => f[0] === cur)) {
+    const lg = (window.FORMS_LEGACY || []).find(f => f[0] === cur);
+    h += '<option value="' + esc(cur) + '" selected>' + (lg ? lbl(lg) : esc(cur)) + '</option>';
+  }
+  list.forEach(f => {
+    if (f[6] && f[6] !== g) { if (open) h += '</optgroup>'; g = f[6]; h += '<optgroup label="' + esc(S.lang === 'az' ? g[1] : g[0]) + '">'; open = true; }
+    h += '<option value="' + f[0] + '"' + (cur && f[0] === cur ? ' selected' : '') + '>' + lbl(f) + '</option>';
+  });
+  return h + (open ? '</optgroup>' : '');
+}
 
 /* ---------- поля дозы/размера по форме ---------- */
 const NUM = s => String(s || '').trim().replace('.', ',');
@@ -8172,15 +8291,14 @@ const FSPEC_T = {
   mass: { parts: [['m', ['Масса, г', 'Kütlə, q'], '100', 'num']], compose: v => v.m ? NUM(v.m) + ' г' : '', parse: s => { const m = String(s).match(/(\d+(?:[.,]\d+)?)\s*г/); return { m: m ? m[1] : '' }; } },
   glove: { parts: [['z', ['Размер', 'Ölçü'], '', 'sel', ['XS', 'S', 'M', 'L', 'XL', '6,0', '6,5', '7,0', '7,5', '8,0', '8,5', '9,0']]], compose: v => v.z || '', parse: s => ({ z: s }) },
   suture: { parts: [['u', ['Толщина (USP)', 'Qalınlıq (USP)'], '', 'sel', ['6/0', '5/0', '4/0', '3/0', '2/0', '0', '1', '2']], ['n', ['Игла', 'İynə'], '', 'sel', ['с иглой', 'без иглы', 'режущая игла', 'колющая игла']]], compose: v => [v.u, v.n].filter(Boolean).join(' '), parse: s => { const m = String(s).match(/^(\d\/0|\d)\b\s*(.*)$/); return m ? { u: m[1], n: m[2] } : { u: '', n: '' }; } },
+  tape: { parts: [['w', ['Ширина, см', 'En, sm'], '2,5', 'num'], ['l', ['Длина, м', 'Uzunluq, m'], '5', 'num']], compose: v => [v.w ? NUM(v.w) + ' см' : '', v.l ? NUM(v.l) + ' м' : ''].filter(Boolean).join(' × '), parse: s => { const w = String(s).match(/(\d+(?:[.,]\d+)?)\s*см/), l = String(s).match(/(\d+(?:[.,]\d+)?)\s*м(?!м)/); return { w: w ? w[1] : '', l: l ? l[1] : '' }; } },
+  volume: { parts: [['v', ['Объём', 'Həcm'], '', 'sel', ['30 мл', '60 мл', '100 мл', '120 мл', '250 мл', '500 мл', '1 л', '1,5 л', '3 л', '5 л', '10 л', '35 л', '60 л', '120 л']]], compose: v => v.v || '', parse: s => ({ v: s }) },
+  adult: { parts: [['a', ['Для кого', 'Kim üçün'], '', 'sel', ['взрослый', 'детский', 'новорождённый', 'универсальный']], ['z', ['Размер / вид', 'Ölçü / növ'], '']], compose: v => [v.a, v.z].filter(Boolean).join(', '), parse: s => { const m = String(s).match(/^(взрослый|детский|новорождённый|универсальный)(?:,\s*(.*))?$/); return m ? { a: m[1], z: m[2] || '' } : { a: '', z: s }; } },
+  gas: { parts: [['v', ['Объём баллона, л', 'Balon həcmi, l'], '', 'sel', ['1', '2', '5', '10', '20', '40']], ['p', ['Давление / концентрация', 'Təzyiq / qatılıq'], '150 атм · 99,5%']], compose: v => [v.v ? NUM(v.v) + ' л' : '', v.p].filter(Boolean).join(', '), parse: s => { const m = String(s).match(/^(\d+(?:[.,]\d+)?)\s*л(?:,\s*(.*))?$/); return m ? { v: m[1], p: m[2] || '' } : { v: '', p: s }; } },
   free: { parts: [['a', ['Размер / вид', 'Ölçü / növ'], '']], compose: v => v.a || '', parse: s => ({ a: s }) }
 };
-const FSPEC = {
-  med_amp: 'cv', med_vial: 'cv', med_pow: 'dose', med_inf: 'cv', med_pfs: 'cv', med_pen: 'cv', med_tab: 'dose', med_loz: 'dose', med_cap: 'dose', med_sach: 'dose',
-  med_syrup: 'cv', med_susp: 'cv', med_neb: 'cv', med_inh: 'inh', med_spray: 'cv', med_drop: 'cv', med_oint: 'cm', med_cream: 'cm', med_gel: 'cm', med_ext: 'cv',
-  med_supp: 'dose', med_patch: 'dose', med_vacc: 'vacc', med_other: 'free',
-  sup_syringe: 'syr', sup_needle: 'needle', sup_cath: 'cann', sup_tube: 'fr', sup_ivset: 'free', sup_airway: 'free', sup_bandage: 'bandage', sup_gauze: 'size2',
-  sup_cotton: 'mass', sup_plaster: 'size2', sup_gloves: 'glove', sup_suture: 'suture', sup_lab: 'free', sup_diag: 'free', sup_immob: 'free', sup_ppe: 'free', sup_other: 'free'
-};
+const FSPEC = {};
+FORMS.med.concat(FORMS.sup, window.FORMS_LEGACY).forEach(f => { FSPEC[f[0]] = f[5] || 'free'; });
 function fspecOf(code) { return FSPEC_T[FSPEC[code] || 'free']; }
 /** Поля под «Форма выпуска»: свои для каждой формы. Итог пишется в «Как записано» (rcvDose). */
 function renderDoseParts() {
@@ -8224,6 +8342,76 @@ function syncDoseParts() { if ($('#rcvForm')) renderDoseParts(); }
   const wrap = name => { const f = window[name]; if (typeof f !== 'function') return; window[name] = function () { const r = f.apply(this, arguments); try { syncDoseParts(); } catch (e) { } return r; }; };
   ['updateDoseLabel', 'catFill', 'supFill', 'fillFromItem', 'supVarPick', 'catVarPick', 'applyStatic'].forEach(wrap);
   document.addEventListener('change', e => { if (e.target && (e.target.id === 'rcvForm' || e.target.id === 'rcvUnit')) syncDoseParts(); }, true);
+})();
+
+/* ---------- угадать форму по тексту (массовый ввод списком, фото коробки) ---------- */
+const GUESS_SUP = [
+  [/инсулин\S* шприц|шприц.*инсулин|insulin şpris|u-?100|u-?40/i, 'sup_syrins'], [/жане|перфузор|perfuzor|промывн/i, 'sup_syrbig'],
+  [/кран(?![а-яё])|удлинит|заглушк|коннектор|kran\b|uzadıcı|tıxac|konnektor/i, 'sup_ivacc'], [/шприц(?!-ручк|-тюбик)|şpris(?!-qələm)/i, 'sup_syringe'],
+  [/ланцет|скарификат|lanset/i, 'sup_lancet'], [/игл\S* (?:спинал|бабочк|внутрикост|для шприц-ручк|для вакуум)|бабочк|kəpənək|spinal/i, 'sup_needlesp'],
+  [/игл[аыу]|iynə/i, 'sup_needle'], [/катетер\S* (?:центр|подключ)|mərkəzi venoz/i, 'sup_cvc'], [/фоле[йя]|нелатон|foley|nelaton/i, 'sup_urin'],
+  [/зонд|zond/i, 'sup_ngt'], [/аспирац|aspirasiya|янкауэр/i, 'sup_suction'], [/дренаж|газоотвод|drenaj|qazçıxaran/i, 'sup_drain'],
+  [/мочепри[её]мн|калопри[её]мн|sidik qəbul/i, 'sup_urbag'], [/систем\S* (?:для )?(?:инфуз|перелив|вливан)|капельниц|sistem/i, 'sup_ivset'],
+  [/кислород|oksigen|канюл\S* назал/i, 'sup_o2'], [/катетер|канюл|branul|kateter|kanyul|венфлон/i, 'sup_cath'], [/амбу|ambu/i, 'sup_bvm'],
+  [/эндотрах|ларингеал|i-?gel|трахеост|endotraxeal|larinqeal/i, 'sup_ett'], [/клинок|ларингоскоп|стилет|буж(?![а-яё])|larinqoskop/i, 'sup_intub'],
+  [/воздуховод|гведел|hava yolu/i, 'sup_airway'], [/спейсер|фильтр\S* дых|небулайзерн\S* маск|мундштук|speyser|nebulayzer mask/i, 'sup_resp'],
+  [/гипс|полимерн\S* бинт|gips/i, 'sup_cast'], [/бинт\S* (?:эласт|трубч|сетч)|бинт.*эласт|elastik bint|borulu bint/i, 'sup_elastic'], [/бинт|bint|косынк/i, 'sup_bandage'],
+  [/спиртов\S* салфет|spirtli salfet/i, 'sup_alcohol'], [/ожог|гемостат|кровоостанавлив\S* (?:губк|тампон)|yanıq|hemostatik/i, 'sup_burn'],
+  [/салфет|марл|cuna|salfet/i, 'sup_gauze'], [/^ват|ватн|pambıq/i, 'sup_cotton'], [/пластыр\S* (?:катуш|рулон)|катушечн|rulon plast|пластыр.*\d\s*(?:см|cm)?\s*[xх×]\s*\d+(?:[.,]\d+)?\s*м(?![а-ям])/i, 'sup_tape'],
+  [/жгут|turna/i, 'sup_tourn'], [/пластыр|повязк|plastır|sarğı/i, 'sup_plaster'], [/перчат\S* (?:хирург|стерил)|steril cərrahi əlcək/i, 'sup_glovester'],
+  [/перчат|əlcək/i, 'sup_gloves'], [/шовн|викрил|кетгут|нить|tikiş/i, 'sup_suture'], [/скальпел|лезви|skalpel/i, 'sup_scalpel'],
+  [/пинцет|зажим|ножниц|шпател|зеркал\S* гинек|pinset|sıxac|qayçı|şpatel/i, 'sup_inst'], [/пробирк|probirka/i, 'sup_vacutube'],
+  [/контейнер\S* для (?:анализ|мочи|кала)|analiz konteyner/i, 'sup_container'], [/тест|test/i, 'sup_test'], [/экг|ekq|узи/i, 'sup_ecg'],
+  [/электрод\S* (?:для )?дефиб|defibrilyator elektrod/i, 'sup_defib'], [/глюкометр|термометр|тонометр|манжет|датчик|пульсоксим|qlükometr|termometr|tonometr/i, 'sup_sensor'],
+  [/шин[аыу](?![а-яё])|воротник|тазов\S* пояс|şin\b|yaxalıq/i, 'sup_splint'], [/покрывал|термоодеял|пакет\S* (?:охлажд|согрев)|örtük/i, 'sup_rescue'],
+  [/маск\S* (?:мед|хирург)|респиратор|tibbi maska|respirator/i, 'sup_mask'], [/бахил|шапочк|халат|очки|щиток|bahil|xalat/i, 'sup_ppe'],
+  [/пел[её]нк|простын|подгузн|pelenka|mələfə/i, 'sup_linen'], [/отход|tullantı/i, 'sup_waste'], [/лоток|судно|рвот|бритв|клизм|груш|nimçə|ülgüc/i, 'sup_care'],
+  [/батаре|batarey/i, 'sup_battery'], [/небулайзер|отсос|аспиратор|дефибриллятор|nebulayzer/i, 'sup_equip']
+];
+const GUESS_MED = [
+  [/вакцин|анатокс|vaksin|peyvənd/i, 'med_vacc'], [/сыворот|иммуноглоб|zərdab|immunoqlob/i, 'med_serum'], [/кислород(?![а-яё])|oksigen/i, 'med_gas'],
+  [/шприц-ручк|картридж|qələm|kartric/i, 'med_pen'], [/автоинъект/i, 'med_autoinj'], [/шприц-тюбик|предзаполн|doldurulmuş şpris/i, 'med_pfs'],
+  [/саше|пакетик|sachet|saşe/i, 'med_sach'], [/лиофил|порош.*(?:ин[ъь]|в\/в|в\/м|р-ра|раствор)|liofil|inyeksiya üçün toz/i, 'med_pow'],
+  [/концентрат|konsentrat/i, 'med_conc'], [/эмульс\S* (?:для|д\/) (?:ин|инф)/i, 'med_emul'], [/инфуз|капельн|infuziya/i, 'med_inf'],
+  [/амп(?:ул\S*)?(?![а-яё])|ampul/i, 'med_amp'], [/небул|nebul/i, 'med_neb'], [/турбухалер|дискхалер|порош\S* (?:д\/|для )ингал|inhalyasiya üçün toz/i, 'med_dpi'],
+  [/ингалят|аэрозол\S* (?:д\/|для )ингал|inhalyator/i, 'med_inh'], [/глазн\S* (?:мазь|гель)|göz (?:məlhəm|gel)/i, 'med_eyeoint'], [/глазн|göz/i, 'med_eye'],
+  [/ушн|qulaq/i, 'med_ear'], [/спрей\S* назал|назальн\S* спрей|burun (?:üçün )?sprey|nazal sprey/i, 'med_nspray'], [/назальн|в нос|burun/i, 'med_nasal'],
+  [/подъязыч|сублингв|dilaltı/i, 'med_sub'], [/рассас|пастил|леденц|sorma/i, 'med_loz'], [/жеват|çeyn/i, 'med_tabchew'],
+  [/шипуч|растворим\S* таб|диспер|fışıld|dispers/i, 'med_tabdisp'], [/ретард|retard|\b(?:sr|xr|mr|cr|xl)\b|пролонг|uzunmüddətli/i, 'med_tabsr'],
+  [/кишечнораств|п\/о|покрыт|örtük/i, 'med_tabcoat'], [/драже|draje/i, 'med_drag'], [/капс|kaps/i, 'med_cap'], [/таб|tab/i, 'med_tab'],
+  [/гранул|qranul/i, 'med_gran'], [/сироп|şərbət/i, 'med_syrup'], [/суспенз|suspenz/i, 'med_susp'],
+  [/свеч\S* ваг|вагин|vaginal|pessar/i, 'med_vag'], [/свеч|суппоз|şam\b|şamlar/i, 'med_supp'], [/микроклиз|ректальн\S* (?:р-р|раств|пен)/i, 'med_rect'],
+  [/трансдерм|transdermal/i, 'med_patch'], [/спрей|аэрозол|sprey|aerozol/i, 'med_spray'], [/линимент|бальзам|liniment|balzam/i, 'med_lin'],
+  [/мазь|məlhəm/i, 'med_oint'], [/крем|krem/i, 'med_cream'], [/гель|\bgel\b/i, 'med_gel'], [/пена|köpük/i, 'med_foam'], [/лосьон|шампун|losyon|şampun/i, 'med_lotion'],
+  [/присыпк|səpmə/i, 'med_powext'], [/спирт|антисепт|наружн|xarici|xaricə|spirt/i, 'med_ext'], [/капли|damcı/i, 'med_solor'], [/масл|yağ(?![a-zəöüğış])/i, 'med_oil'],
+  [/р-?р(?![а-яё])|раствор|məhlul/i, 'med_solor']
+];
+/** Форма по тексту названия/дозы; cat — 'med' / 'sup' / '' (тогда сначала расходники). */
+function guessForm(text, cat) {
+  const s = String(text || '');
+  const lists = cat === 'med' ? [GUESS_MED] : cat === 'sup' ? [GUESS_SUP] : [GUESS_SUP, GUESS_MED];
+  for (const L of lists) for (const [re, code] of L) if (re.test(s)) return code;
+  return '';
+}
+(function () {
+  if (typeof bulkMatchRow !== 'function') return;
+  const orig = bulkMatchRow;
+  const BY_UNIT = { amp: 'med_amp', vial: 'med_vial', tab: 'med_tab', cap: 'med_cap', neb: 'med_neb', tube: 'med_oint', sachet: 'med_sach', bottle: 'med_solor', dose: 'med_vacc' };
+  window.bulkMatchRow = function (row, unitGiven) {
+    const r = orig.apply(this, arguments);
+    const it = row.item;
+    if (row.match) return r;
+    const txt = it.name + ' ' + (it.dosage || '');
+    const sup = guessForm(it.name, 'sup');
+    if (sup) { it.category = 'sup'; it.form = sup; if (!unitGiven) it.unit = formInfo(sup).unit; return r; }
+    let g = guessForm(txt, 'med');
+    const u = BY_UNIT[unitGiven || ''];
+    if (u && (!g || g === 'med_solor' || g === 'med_tab')) g = u;
+    it.category = 'med';
+    it.form = g || 'med_other'; // «без уточнения» — в списке попросит выбрать форму
+    if (!unitGiven && g) it.unit = formInfo(g).unit;
+    return r;
+  };
 })();
 
 /* =====================================================================
@@ -8348,6 +8536,8 @@ function boxParse(text, gs, bigText) {
   } else {
     res.dose = doses[0] || (vols[0] ? vols[0] + ' мл' : '');
   }
+  // форма не пришла из каталога — по словам на коробке («ампулы», «таблетки, покрытые оболочкой», «göz damcısı»…)
+  if (!res.form && typeof guessForm === 'function') res.form = guessForm(text, S.rcv && S.rcv.cat === 'sup' ? 'sup' : 'med');
   if (!res.series) res.series = boxSeries(text);
   if (!res.expiry) res.expiry = boxExpiry(text);
   if (!res.mfr) { const m = String(text).match(/(?:istehsalçı|производитель|manufacturer|изготовитель|mfd\.?\s*by)\s*[:\-]?\s*([^\n]{3,60})/i); if (m) res.mfr = m[1].trim(); }
@@ -8380,7 +8570,7 @@ function boxReviewModal(r, raw) {
   const alts = r.pick && r.pick.kind === 'cat' && r.pick.alts.length > 1 ? '<div class="lbl" style="margin:4px 0">' + esc(t('boxAlts')) + '</div><div class="chips">' + r.pick.alts.map((e, i) => '<button class="chip' + (i === 0 ? ' on' : '') + '" data-act="boxAlt" data-i="' + i + '">' + esc(e.d + ' · ' + formName(e.code)) + '</button>').join('') + '</div>' : '';
   openModal('<h3>' + esc(t('boxFound')) + '</h3><div class="muted" style="margin-bottom:10px">' + esc(t('scanCheck')) + '</div>' +
     row('name', t('boxName'), inp('name')) + alts +
-    row('form', t('formLabel'), '<select id="bx_form">' + fOpts.map(f => '<option value="' + f[0] + '"' + (f[0] === r.form ? ' selected' : '') + '>' + esc(S.lang === 'az' ? f[4] : f[3]) + '</option>').join('') + '</select>') +
+    row('form', t('formLabel'), '<select id="bx_form">' + formOptsHtml(fOpts, r.form) + '</select>') +
     row('dose', t('doseResult'), inp('dose')) +
     row('series', t('seriesLabel'), inp('series')) +
     row('expiry', t('expiryLabel'), '<input type="date" id="bx_expiry" value="' + esc(r.expiry || '') + '">') +
