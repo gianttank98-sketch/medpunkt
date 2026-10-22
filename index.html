@@ -7216,6 +7216,9 @@ Object.assign(I18N.az, I18N_V10.az);
  * ===================================================================== */
 const CAT_URL = window.PWA_MODE ? './catalog.json' : 'https://gianttank98-sketch.github.io/medpunkt/catalog.json';
 const CAT_MAX_AGE = 7 * 86400000;
+// маленький файл с номером версии справочника: телефон проверяет его (раз в 3 ч при связи) и сразу берёт новый справочник
+const CAT_VER_URL = CAT_URL.replace('catalog.json', 'catalog-ver.json');
+const CAT_VER_EVERY = 3 * 3600000;
 
 function catDb() {
   if (S.catDbP) return S.catDbP;
@@ -7237,7 +7240,7 @@ function catIndex(data) {
   if (!data || !Array.isArray(data.items)) return;
   const by = {}, inns = {};
   S.cat = data.items.map(x => {
-    const e = { b: x[0], inn: x[1], d: x[2], code: FORMS.med.some(f => f[0] === x[3]) ? x[3] : 'med_other', pack: x[4], cnt: x[5], mfr: x[6], ru: x[7] || '', sk: skel(x[0]), qb: qkey(x[0]), qi: qkeyEn(x[1]) };
+    const e = { b: x[0], inn: x[1], d: x[2], code: FORMS.med.some(f => f[0] === x[3]) ? x[3] : 'med_other', pack: x[4], cnt: x[5], mfr: x[6], ru: x[7] || '', atc: x[8] || '', sk: skel(x[0]), qb: qkey(x[0]), qi: qkeyEn(x[1]) };
     e.qr = e.ru ? qkey(e.ru) : ''; // русское название фирмы (из аптечного каталога), если есть
     (by[e.sk] = by[e.sk] || []).push(e);
     if (e.inn && e.inn.indexOf('+') === -1 && !inns[e.qi]) inns[e.qi] = e.inn;
@@ -7245,7 +7248,7 @@ function catIndex(data) {
   });
   S.catBy = by;
   S.catInns = Object.keys(inns).map(k => ({ s: catInnName(inns[k]), q: k }));
-  S.catMeta = { ver: data.ver, source: data.source, n: S.cat.length, at: data.at || 0, nSup: 0, nDev: 0, sources: data.sources || null };
+  S.catMeta = { ver: data.ver, hash: data.hash || '', source: data.source, n: S.cat.length, at: data.at || 0, nSup: 0, nDev: 0, sources: data.sources || null };
   // расходники: стандартные виды и размеры (рус / азерб. / англ.) + названия из реестра медизделий АР
   const supBy = {};
   S.catSup = (data.sup || []).map(x => {
@@ -7346,12 +7349,20 @@ async function loadCatalog(force) {
   S.catLoading = true;
   try {
     if (!S.cat) { const c = await catGet(); if (c) catIndex(c); }
-    const old = !S.catMeta || Date.now() - (S.catMeta.at || 0) > CAT_MAX_AGE;
+    let old = !S.catMeta || Date.now() - (S.catMeta.at || 0) > CAT_MAX_AGE;
+    let ver = '';
+    if (navigator.onLine !== false && (force || !S.catMeta || Date.now() - (S.catVerAt || 0) > CAT_VER_EVERY)) {
+      try {
+        const rv = await fetch(CAT_VER_URL + '?t=' + Date.now(), { cache: 'no-store' });
+        if (rv.ok) { ver = String((await rv.json()).v || ''); S.catVerAt = Date.now(); if (ver && (!S.catMeta || S.catMeta.hash !== ver)) old = true; }
+      } catch (e) { }
+    }
     if (force || old) {
-      const r = await fetch(CAT_URL, { cache: force ? 'reload' : 'default' });
+      const r = await fetch(CAT_URL + (ver ? '?v=' + ver : ''), { cache: force || ver ? 'reload' : 'default' });
       if (r.ok) {
         const data = await r.json();
         data.at = Date.now();
+        if (ver) data.hash = ver;
         catIndex(data);
         await catPut(data);
         if (force) toast(t('catLoaded', { n: S.cat.length }));
@@ -7449,6 +7460,8 @@ function subSuggestionsCat(q) {
     .map(x => ({ kind: 'inn', label: x.s, sub: t('catSrc') }));
   return { list: base.list.concat(extra).slice(0, 40), fuzzy: base.fuzzy && !extra.length };
 }
+// приложение долго открыто: при возврате на экран — проверить, нет ли нового справочника (не чаще раза в 3 ч)
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.catTried) loadCatalog(); });
 
 /* ===================== v11: тексты — исправление ошибок, без серии/срока, не дубли ===================== */
 const I18N_V11 = {
@@ -8880,6 +8893,540 @@ const GUESS_MED_X = [
     return '';
   };
 })();
+
+/* =====================================================================
+ * v14: разделы по показаниям («от температуры», «при аритмии», «противорвотные»…) и памятки по применению.
+ *  IND_SECTIONS — разделы: слова для поиска (рус., азерб., тур., англ.), ATC-группы, виды расходников.
+ *  IND_DRUGS — препараты: в каких разделах, как вводить, дозы взрослым и детям, главное «осторожно».
+ *  Один препарат может быть в нескольких разделах (магния сульфат — аритмия, эклампсия, астма, электролиты).
+ *  Это справка для врача: перед введением сверяйтесь с инструкцией к конкретному препарату.
+ * ===================================================================== */
+// [id, иконка, по-русски, по-азербайджански, слова для поиска, ATC-группы, виды расходников]
+const IND_SECTIONS = [
+  ['arrest', '🛑', 'Реанимация, остановка сердца', 'Reanimasiya, ürəyin dayanması', 'реаним|остановк сердц|клиническ смерт|асистол|фибрилляц желуд|слр|сердечно-легочн|сердечно-лёгочн|reanimasiya|ürəyin dayanması|ürək dayanması|kalp durması|resüsitasyon|cardiac arrest|cpr|resusc', '', 'sup_defib,sup_bvm,sup_ett,sup_airway,sup_intub,sup_cath,sup_ivset,sup_suction'],
+  ['anaphylaxis', '🚨', 'Анафилаксия, анафилактический шок', 'Anafilaksiya, anafilaktik şok', 'анафил|анафилакт|отек квинке|отёк квинке|anafilaksiya|anafilaktik|anafilaksi|anaphyl|angioedema', '', 'sup_syringe,sup_cath,sup_ivset'],
+  ['hypotension', '⬇️', 'Низкое давление, шок, коллапс', 'Aşağı təzyiq, şok, kollaps', 'гипотон|гипотенз|шок|коллапс|низк давлен|давление упал|вазопресс|hipotoniya|hipotenziya|aşağı təzyiq|şok|kollaps|düşük tansiyon|hypotens|shock|vasopress|collapse', 'C01CA,B05AA', 'sup_cath,sup_ivset,sup_ivacc,sup_syrbig'],
+  ['hypertension', '⬆️', 'Высокое давление, гипертонический криз', 'Yüksək təzyiq, hipertonik kriz', 'давлен|гипертон|гипертенз|криз|təzyiq|hipertoniya|hipertenziya|hipertonik|tansiyon|yüksek tansiyon|hypertens|blood pressure|high bp', 'C02,C03,C07,C08,C09', 'sup_sensor'],
+  ['angina', '❤️', 'Боль в сердце, стенокардия, инфаркт (ОКС)', 'Ürəkdə ağrı, stenokardiya, infarkt', 'стенокард|инфаркт|окс|боль в сердц|боли в сердц|загрудин|коронар|stenokardiya|infarkt|ürəkdə ağrı|ürək ağrısı|göğüs ağrısı|kalp krizi|angina pector|myocardial|acs|chest pain', 'C01DA,B01AC,B01AD', 'sup_ecg,sup_defib,sup_cath'],
+  ['hf', '🫀', 'Сердечная недостаточность, отёк лёгких', 'Ürək çatışmazlığı, ağciyər ödemi', 'сердечн недостат|отек легк|отёк лёгк|отек лёгк|кардиальн астм|ürək çatışmazlığı|ağciyər ödemi|kalp yetmezliği|akciğer ödemi|heart failure|pulmonary edema|pulmonary oedema', 'C01AA,C03CA,C01CA07', 'sup_o2,sup_bvm'],
+  ['arrhythmia', '💓', 'Аритмии, фибрилляция предсердий', 'Aritmiya, qulaqcıqların fibrilyasiyası', 'аритм|фибрилл|мерцат|трепетан|экстрасист|пароксизм|aritmiya|fibrilyasiya|ekstrasistol|aritmi|arrhythm|fibrill|atrial', 'C01B,C01AA,C01EB10,C07AB,C08DA', 'sup_ecg,sup_defib'],
+  ['tachy', '⚡', 'Тахикардия, сердцебиение', 'Taxikardiya, ürəkdöyünmə', 'тахикард|сердцебиен|учащ пульс|частый пульс|нжт|наджелуд|taxikardiya|ürəkdöyünmə|çarpıntı|taşikardi|tachycard|palpitat|svt', 'C01EB10,C08DA,C07AB,C01BD', 'sup_ecg'],
+  ['brady', '🐢', 'Брадикардия, АВ-блокада', 'Bradikardiya, AV-blokada', 'брадикард|блокад|редкий пульс|редкий ритм|bradikardiya|blokada|bradikardi|bradycard|heart block|av block', 'A03BA01,C01CA', 'sup_defib,sup_ecg'],
+  ['thrombo', '🩸', 'Тромбозы, ТЭЛА, антикоагулянты', 'Trombozlar, antikoaqulyantlar', 'тромб|тэла|антикоаг|антиагрег|эмбол|tromboz|antikoaqulyant|tromb|emboli|antikoagülan|anticoag|thromb|embol|dvt|pe ', 'B01A', ''],
+  ['bleeding', '🩹', 'Кровотечение (кровоостанавливающие)', 'Qanaxma (qanı dayandıran)', 'кровотеч|кровоостан|гемостат|носов кровотеч|qanaxma|qanayan|qanı dayandır|kanama|bleed|hemostat|haemostat|epistaxis', 'B02', 'sup_tourn,sup_burn,sup_gauze,sup_bandage'],
+  ['allergy', '🌼', 'Аллергия, крапивница, зуд', 'Allergiya, övrə, qaşınma', 'аллерг|крапивн|зуд|антигистамин|сенна лихорад|поллин|allergiya|övrə|qaşınma|alerji|kaşıntı|kurdeşen|allerg|urticar|antihist|itch|hay fever', 'R06A,D04', ''],
+  ['asthma', '🫁', 'Астма, бронхоспазм, одышка, ХОБЛ', 'Astma, bronxospazm, nəfəs darlığı, XOAX', 'астм|бронхосп|бронхообстр|удушь|одышк|хобл|свистящ|astma|bronxospazm|nəfəs darlığı|təngnəfəslik|astım|nefes darlığı|koah|asthma|bronchospasm|wheez|copd|dyspn', 'R03', 'sup_resp,sup_o2'],
+  ['croup', '👶', 'Ложный круп, стеноз гортани', 'Yalançı krup, qırtlaq stenozu', 'круп|ларингит|стеноз гортан|лающ|krup|larinqit|qırtlaq|larenjit|croup|laryngit|stridor', '', 'sup_resp'],
+  ['oxygen', '🫧', 'Кислород, дыхательные пути, интубация', 'Oksigen, tənəffüs yolları, intubasiya', 'кислород|гипокс|сатурац|ивл|интубац|амбу|дыхательн пут|воздуховод|oksigen|intubasiya|hipoksiya|oksijen|entübasyon|oxygen|hypox|airway|intubat|ventilat', 'V03AN', 'sup_o2,sup_bvm,sup_airway,sup_ett,sup_intub,sup_resp,sup_suction,sup_equip'],
+  ['cough', '😮‍💨', 'Кашель, мокрота', 'Öskürək, bəlğəm', 'кашл|мокрот|отхаркив|муколит|öskürək|bəlğəm|öksürük|balgam|cough|mucolyt|expector|sputum', 'R05', ''],
+  ['nose', '👃', 'Насморк, заложенность носа, синусит', 'Zökəm, burun tutulması, sinusit', 'насморк|заложен нос|заложенн|ринит|синусит|гайморит|в нос|zökəm|burun axması|burun tutulması|sinusit|burun tıkanıklığı|nezle|rhinit|nasal|congestion|sinusit', 'R01', ''],
+  ['throat', '🗣️', 'Боль в горле, полость рта, зубы', 'Boğaz ağrısı, ağız boşluğu, dişlər', 'горл|тонзил|фарингит|полоскан|стоматит|зуб|десн|boğaz|diş|ağız boşluğu|boğaz ağrısı|ağız|sore throat|pharyng|tonsil|mouth|dental|tooth', 'R02,A01', ''],
+  ['cold', '🤧', 'Простуда, ОРВИ, грипп', 'Soyuqdəymə, KRVİ, qrip', 'простуд|орви|орз|грипп|soyuqdəymə|qrip|krvi|nezle|grip|soğuk algınlığı|cold|flu|influenza', 'J05AH', ''],
+  ['fever', '🌡️', 'Жаропонижающие (температура)', 'Qızdırmasalıcılar (hərarət)', 'температур|жар|лихорад|жаропониж|qızdırma|hərarət|istilik|ateş|yüksek ateş|fever|antipyret|pyrexia', 'N02BE,N02BB,N02BA01', 'sup_sensor'],
+  ['pain', '💥', 'Обезболивающие (боль)', 'Ağrıkəsicilər (ağrı)', 'боль|болит|обезбол|анальгет|ağrı|ağrıkəsici|ağrıyır|ağrı kesici|analjezik|pain|analges', 'N02A,N02B,M01A', ''],
+  ['headache', '🤕', 'Головная боль, мигрень', 'Baş ağrısı, miqren', 'голов боль|головн боль|болит голов|мигрен|baş ağrısı|baş ağrıyır|miqren|migren|headache|migraine', 'N02C', ''],
+  ['spasm', '🌀', 'Колика, спазм (спазмолитики)', 'Sancı, spazm (spazmolitiklər)', 'спазм|колик|спазмолит|почечн колик|желчн колик|spazm|sancı|kolik|spazmolitik|spasm|colic|antispasm', 'A03A,A03B,G04BD', ''],
+  ['vomit', '🤢', 'Противорвотные (тошнота, рвота)', 'Qusmaya qarşı (ürəkbulanma, qusma)', 'рвот|тошн|противорвот|укачив|qusma|ürəkbulanma|ürək bulanma|bulantı|kusma|vomit|nausea|antiemet|emesis', 'A04,A03FA', 'sup_care'],
+  ['heartburn', '🔥', 'Изжога, гастрит, язва, ЖКК', 'Qıcqırma, qastrit, xora', 'изжог|гастрит|язв|желудочн кровотеч|рефлюкс|qıcqırma|mədə yanması|qastrit|xora|mide yanması|ülser|reflü|heartburn|gastrit|ulcer|reflux|gerd', 'A02', ''],
+  ['diarrhea', '💧', 'Диарея, отравление пищевое', 'İshal, qida zəhərlənməsi', 'диаре|понос|жидк стул|кишечн инфекц|ishal|diareya|qida zəhərlənməsi|diyare|diarr', 'A07', ''],
+  ['constipation', '🚽', 'Запор, клизма', 'Qəbizlik, imalə', 'запор|клизм|слабит|эсмарх|qəbizlik|imalə|kabızlık|lavman|müshil|constip|enema|laxat', 'A06', 'sup_care'],
+  ['dehydr', '🚰', 'Обезвоживание, инфузии, растворы', 'Susuzlaşma, infuziyalar, məhlullar', 'обезвож|дегидрат|регидрат|инфузи|капельниц|раствор|susuzlaşma|dehidratasiya|infuziya|dehidrasyon|serum|sıvı|dehydrat|infusion|rehydr|fluids', 'A07CA,B05B,B05AA', 'sup_ivset,sup_cath,sup_ivacc'],
+  ['electrolytes', '⚗️', 'Калий, магний, кальций, натрий, сода', 'Kalium, maqnezium, kalsium, natrium, soda', 'калий|калия|гиперкали|гипокали|магни|кальци|натри|электролит|ацидоз|сода|kalium|kalium|elektrolit|asidoz|potasyum|hiperkalemi|hyperkal|hypokal|electrolyt|acidosis|bicarbonat', 'A12,B05XA', ''],
+  ['diabetes', '🍬', 'Диабет, высокий сахар, кетоацидоз', 'Diabet, yüksək şəkər, ketoasidoz', 'диабет|гипергликем|кетоацид|высок сахар|сахар высок|инсулин|diabet|yüksək şəkər|şəkərli|ketoasidoz|insulin|şeker hastalığı|yüksek şeker|hypergly|dka|insulin', 'A10', 'sup_syrins,sup_sensor,sup_test,sup_lancet'],
+  ['hypo', '🍭', 'Гипогликемия, низкий сахар', 'Hipoqlikemiya, aşağı şəkər', 'гипогликем|низк сахар|сахар упал|сахар низк|hipoqlikemiya|aşağı şəkər|şəkər düşüb|hipoglisemi|düşük şeker|hypogly|low sugar', 'H04AA', 'sup_sensor,sup_test,sup_lancet'],
+  ['convuls', '⚡', 'Судороги, эпилепсия, эпистатус', 'Qıcolmalar, epilepsiya', 'судорог|эпилеп|припад|конвульс|эпистатус|qıcolma|epilepsiya|tutma|nöbet|havale|epilepsi|seizure|epilep|convuls|status epilept', 'N03', ''],
+  ['agitation', '😤', 'Возбуждение, агрессия, психоз', 'Həyəcanlanma, aqressiya, psixoz', 'возбужд|агресс|психоз|бред|галлюц|делир|aqressiya|psixoz|həyəcanlanma|sayıqlama|ajitasyon|saldırgan|psikoz|agitation|aggress|psychos|delirium', 'N05A', ''],
+  ['anxiety', '😟', 'Тревога, паника, успокоительные', 'Narahatlıq, panika, sakitləşdiricilər', 'тревог|паник|успокоит|седатив|нервн|стресс|невроз|narahatlıq|panika|sakitləşdirici|həyəcan|anksiyete|panik|sakinleştirici|anxiety|panic|sedative|stress', 'N05B,N05CM', ''],
+  ['insomnia', '🌙', 'Бессонница, снотворные', 'Yuxusuzluq, yuxugətiricilər', 'бессон|снотвор|не спит|yuxusuzluq|yuxugətirici|uykusuzluk|uyku|insomnia|sleep', 'N05C', ''],
+  ['alcohol', '🍺', 'Алкоголь: интоксикация, абстиненция', 'Alkoqol: intoksikasiya, abstinensiya', 'алкогол|абстинен|похмел|запой|белая горячк|alkoqol|abstinensiya|alkol|yoksunluk|alcohol|withdrawal|hangover', 'N07BB', ''],
+  ['poison', '☠️', 'Отравления, передозировка, антидоты', 'Zəhərlənmələr, antidotlar', 'отравл|антидот|передозир|яд|интоксик|zəhərlənmə|antidot|doza aşımı|zehirlenme|zehir|poison|overdose|antidote|intoxic|toxic', 'V03AB,A07BA', 'sup_ngt,sup_suction'],
+  ['stroke', '🧠', 'Инсульт (ОНМК)', 'İnsult', 'инсульт|онмк|парализ|гемипар|insult|iflic|felç|inme|stroke|cva|hemipar', 'B01AD', 'sup_sensor'],
+  ['cerebral', '🧠', 'Отёк мозга, черепно-мозговая травма', 'Beyin ödemi, kəllə-beyin travması', 'отек мозг|отёк мозг|чмт|черепно|сотрясен|внутричерепн|beyin ödemi|kəllə-beyin|beyin silkələnməsi|beyin sarsıntısı|kafa travması|head injury|cerebral edema|tbi|concussion', 'B05BC', 'sup_splint'],
+  ['infection', '🦠', 'Антибиотики (бактериальные инфекции)', 'Antibiotiklər (bakterial infeksiyalar)', 'антибиот|инфекц|бактер|пневмон|сепсис|менингит|ангина|antibiotik|infeksiya|bakterial|pnevmoniya|sepsis|meningit|enfeksiyon|zatürre|antibiot|infection|bacter|pneumon|sepsis|mening', 'J01', ''],
+  ['uti', '🚻', 'Цистит, инфекция мочевых путей', 'Sistit, sidik yolları infeksiyası', 'цистит|мочев инфекц|инфекц мочев|пиелонеф|sistit|sidik yolu|pielonefrit|idrar yolu|cystit|uti|urinary infect|pyelonephr', 'J01XE,J01XX01,G04BX', ''],
+  ['urinary', '🚻', 'Задержка мочи, катетеризация', 'Sidik ləngiməsi, kateterizasiya', 'задержк моч|катетеризац|мочев катетер|мочевой пузыр|sidik ləngiməsi|kateterizasiya|idrar retansiyonu|sonda|urinary retention|catheteris|catheteriz', '', 'sup_urin,sup_urbag'],
+  ['antiviral', '🧬', 'Противовирусные, герпес', 'Antivirus, herpes', 'вирус|герпес|опояс|ветрян|virus|herpes|zona|suçiçəyi|antiviral|zoster|varicella', 'J05', ''],
+  ['fungal', '🍄', 'Противогрибковые, молочница', 'Göbələyə qarşı, kandidoz', 'грибк|молочниц|кандид|микоз|göbələk|kandidoz|mantar|pamukçuk|fungal|candid|mycos|thrush', 'J02,D01,G01AF', ''],
+  ['worms', '🪱', 'Глисты, чесотка, вши', 'Qurdlar, qotur, bit', 'глист|гельминт|паразит|чесотк|вши|педикул|qurd|helmint|parazit|qotur|bit|bağırsak kurdu|uyuz|worm|helminth|scabies|lice|parasit', 'P01,P02,P03', ''],
+  ['steroids', '💊', 'Гормоны (глюкокортикоиды)', 'Hormonlar (qlükokortikoidlər)', 'гормон|глюкокорт|стероид|кортикост|надпочечн|hormon|steroid|kortikosteroid|kortizon|corticoster|adrenal insuff|addison', 'H02', ''],
+  ['vitamins', '🍊', 'Витамины', 'Vitaminlər', 'витамин|vitamin', 'A11', ''],
+  ['anemia', '🩸', 'Анемия, железо', 'Anemiya, dəmir', 'анеми|железо|малокров|anemiya|dəmir|qansızlıq|anemi|demir|anemia|iron', 'B03', ''],
+  ['joints', '🦴', 'Суставы, мышцы, ушиб, растяжение, спина', 'Oynaqlar, əzələlər, əzik, burxulma, bel', 'сустав|мышц|ушиб|растяж|спин|поясниц|радикулит|остеохонд|артрит|oynaq|əzələ|əzik|burxulma|bel ağrısı|eklem|kas|incinme|joint|muscle|sprain|bruise|back pain|arthrit', 'M01,M02,M03', 'sup_elastic,sup_rescue'],
+  ['gout', '🦶', 'Подагра', 'Podaqra', 'подагр|podaqra|gut|gout', 'M04', ''],
+  ['trauma', '🦴', 'Травма, переломы, иммобилизация', 'Travma, sınıqlar, immobilizasiya', 'травм|перелом|вывих|иммобил|шинир|политравм|travma|sınıq|çıxıq|kırık|çıkık|fracture|trauma|splint|dislocat', '', 'sup_splint,sup_tourn,sup_rescue,sup_bandage,sup_elastic,sup_cast'],
+  ['wounds', '🩹', 'Раны, антисептики, перевязка, швы', 'Yaralar, antiseptiklər, sarğı, tikiş', 'ран|ссадин|порез|антисепт|перевяз|обработк|шов|швы|ушив|yara|antiseptik|sarğı|tikiş|kəsik|kesik|dikiş|wound|antisept|dressing|suture|lacerat', 'D08,D03,D06', 'sup_bandage,sup_gauze,sup_plaster,sup_alcohol,sup_suture,sup_scalpel,sup_cotton,sup_gloves,sup_glovester,sup_inst'],
+  ['burns', '🔥', 'Ожоги', 'Yanıqlar', 'ожог|обожж|yanıq|yanık|burn', 'D03,D06BA', 'sup_burn,sup_rescue,sup_gauze'],
+  ['skin', '🧴', 'Кожа: дерматит, экзема, сыпь', 'Dəri: dermatit, ekzema, səpgi', 'дерматит|экзем|сыпь|кожн|псориаз|dermatit|ekzema|səpgi|dəri|cilt|egzama|döküntü|rash|eczema|skin|psoria', 'D05,D07', ''],
+  ['eyes', '👁️', 'Глаза', 'Gözlər', 'глаз|конъюнктив|коньюнктив|ячмень|göz|konyunktivit|gözler|eye|conjunctiv|ophthalm', 'S01', ''],
+  ['ears', '👂', 'Уши', 'Qulaqlar', 'ухо|уши|ушн|отит|qulaq|otit|kulak|ear|otitis', 'S02', ''],
+  ['veins', '🍑', 'Геморрой, вены', 'Babasil, venalar', 'геморро|варикоз|вен|тромбофлеб|babasil|hemoroy|varikoz|basur|hemorrhoid|varicose|venous', 'C05', ''],
+  ['obstetrics', '🤰', 'Роды, эклампсия, послеродовое кровотечение', 'Doğuş, eklampsiya, doğuşdan sonrakı qanaxma', 'роды|родах|акушер|эклампс|преэклампс|беремен|маточн|послеродов|doğuş|hamilə|eklampsiya|doğum|gebelik|labor|obstetr|eclamps|pregnan|postpartum', 'G02A,H01BB', ''],
+  ['contracept', '💊', 'Контрацепция', 'Kontrasepsiya', 'контрацеп|противозачат|kontrasepsiya|doğum kontrol|contracept', 'G03A', ''],
+  ['vaccines', '💉', 'Вакцины, столбняк, бешенство, укусы', 'Peyvəndlər, tetanus, quduzluq, dişləmələr', 'вакцин|прививк|столбняк|бешенств|укус|сыворот|peyvənd|tetanus|quduz|dişləmə|aşı|kuduz|ısırık|vaccin|rabies|bite|toxoid', 'J07,J06', 'sup_syringe'],
+  ['localanest', '💉', 'Местная анестезия', 'Yerli keyitmə (anesteziya)', 'местн анест|местное обезбол|анестети|лидока|новока|yerli keyitmə|yerli anesteziya|lokal anestezi|local anest', 'N01B', 'sup_syringe,sup_needle'],
+  ['sedation', '😴', 'Седация, наркоз, интубация (препараты)', 'Sedasiya, narkoz', 'седац|наркоз|анестез|интубац|sedasiya|narkoz|anesteziya|sedasyon|sedation|anaesth|anesth|induction', 'N01A,N05CD', 'sup_ett,sup_intub,sup_bvm'],
+  ['vertigo', '💫', 'Головокружение, обморок', 'Başgicəllənmə, huşun itməsi', 'головокруж|обморок|вертиго|синкоп|укачив|başgicəllənmə|huşunu itirmə|huşun itməsi|baş dönmesi|bayılma|vertigo|dizz|syncope|faint', 'N07CA', ''],
+  ['coldheat', '🌡️', 'Переохлаждение, обморожение, перегрев', 'Soyuqvurma, donma, istivurma', 'переохлажд|гипотерм|обморож|теплов удар|перегрев|солнечн удар|soyuqvurma|donma|istivurma|günvurma|hipotermi|sıcak çarpması|hypotherm|frostbite|heat stroke|heatstroke', '', 'sup_rescue,sup_ivset'],
+  ['access', '💉', 'Уколы, капельницы, венозный доступ (расходники)', 'İynələr, sistemlər, venaya giriş', 'венозн доступ|укол|инъекц|капельниц|шприц|катетер|канюл|iynə|şpris|kateter|damar yolu|enjeksiyon|iv access|injection|syringe|cannula', '', 'sup_cath,sup_ivset,sup_ivacc,sup_syringe,sup_syrins,sup_syrbig,sup_needle,sup_needlesp,sup_alcohol,sup_tourn,sup_plaster'],
+  ['diagnostics', '📈', 'Диагностика: ЭКГ, сахар, тесты, давление', 'Diaqnostika: EKQ, şəkər, testlər', 'экг|кардиогр|глюкометр|тест|экспресс|сатурац|пульсоксим|тонометр|ekq|test|qlükometr|ekg|tansiyon aleti|diagnost|ecg|glucometer|oximeter', 'V04', 'sup_ecg,sup_test,sup_sensor,sup_defib,sup_vacutube,sup_container,sup_lancet'],
+  ['ppe', '🧤', 'Защита, гигиена, дезинфекция, отходы', 'Qoruma, gigiyena, dezinfeksiya, tullantılar', 'защит|сиз|маск|перчат|дезинф|гигиен|отход|qoruyucu|dezinfeksiya|gigiyena|maska|əlcək|tullantı|maske|eldiven|atık|protect|ppe|disinfect|waste|glove', 'D08AC,D08AX', 'sup_mask,sup_ppe,sup_gloves,sup_glovester,sup_waste,sup_linen,sup_care']
+];
+
+/* Препараты. Поля: k — ключ (МНН латиницей), n — названия для поиска (через |), ru/az — как называть, sec — разделы,
+ * d — строки [путь введения, взрослым, детям], max — предел, w — осторожно / противопоказания. */
+const IND_DRUGS = [
+  // ---------- реанимация, шок, анафилаксия ----------
+  { k: 'EPINEPHRINE', n: 'epinephrine|epinefrin|adrenalin|адреналин|эпинефрин', ru: 'Эпинефрин (адреналин) 1 мг/мл', az: 'Epinefrin (adrenalin)', sec: 'arrest,anaphylaxis,hypotension,brady,croup', d: [
+    ['Анафилаксия: в/м в переднебоковую поверхность бедра', '0,5 мг (0,5 мл раствора 1 мг/мл); повтор через 5 мин, если нет улучшения', '0,01 мг/кг (макс. 0,5 мг): >12 лет — 0,5 мг; 6–12 лет — 0,3 мг; до 6 лет — 0,15 мг'],
+    ['Остановка сердца: в/в или в/к струйно', '1 мг каждые 3–5 мин', '0,01 мг/кг (10 мкг/кг), макс. 1 мг'],
+    ['Брадикардия / шок: в/в инфузия', '2–10 мкг/мин, подбирать по эффекту', '0,05–1 мкг/кг/мин'],
+    ['Круп, тяжёлый отёк гортани: небулайзер', '—', '0,5 мл/кг раствора 1 мг/мл (макс. 5 мл), неразведённым']
+  ], w: 'В/в болюсом (кроме остановки сердца) не вводить — риск аритмии и ишемии. При анафилаксии в/м — первая и главная мера.' },
+  { k: 'AMIODARONE', n: 'amiodarone|amiodaron|амиодарон|кордарон|cordarone', ru: 'Амиодарон 50 мг/мл', az: 'Amiodaron', sec: 'arrest,arrhythmia,tachy', d: [
+    ['Остановка сердца (ФЖ / ЖТ без пульса): в/в струйно', '300 мг после 3-го разряда; ещё 150 мг после 5-го', '5 мг/кг после 3-го и 5-го разряда'],
+    ['Тахиаритмия со стабильной гемодинамикой: в/в', '300 мг за 10–60 мин в 5% глюкозе, затем 900 мг за 24 ч', '5 мг/кг за 20–60 мин'],
+    ['Внутрь (насыщение)', '200 мг 3 р/сут 1 нед., 200 мг 2 р/сут 1 нед., далее 100–200 мг/сут', '—']
+  ], max: 'в/в — до 1,2 г за сутки', w: 'Разводить только 5% глюкозой. Гипотензия, брадикардия, удлинение QT. Флебит — лучше в крупную вену.' },
+  { k: 'ADENOSINE', n: 'adenosine|adenozin|аденозин|аденокор|adenocor|atf|атф', ru: 'Аденозин 3 мг/мл', az: 'Adenozin', sec: 'tachy,arrhythmia', d: [
+    ['НЖТ: в/в очень быстро в локтевую вену, сразу промыть 20 мл NaCl', '6 мг; если нет эффекта — 12 мг, затем ещё 18 мг (по 1–2 мин между)', '0,1 мг/кг (макс. 6 мг), затем 0,2 мг/кг (макс. 12 мг)']
+  ], w: 'Противопоказан: астма / бронхоспазм, АВ-блокада II–III ст., СССУ, ФП при WPW. Предупредить пациента о кратком «замирании». Запись ЭКГ во время введения.' },
+  { k: 'VERAPAMIL', n: 'verapamil|верапамил|изоптин|isoptin|finoptin|финоптин', ru: 'Верапамил 2,5 мг/мл', az: 'Verapamil', sec: 'tachy,arrhythmia,hypertension', d: [
+    ['НЖТ, контроль ЧСС при ФП: в/в медленно за 2 мин (пожилым — за 3 мин)', '2,5–5 мг; через 15–30 мин можно 5–10 мг', 'обычно не применяют; с 1 года — 0,1 мг/кг (макс. 5 мг) только в стационаре'],
+    ['Внутрь', '40–80 мг 3 р/сут', '—']
+  ], max: 'в/в — 20 мг', w: 'Нельзя: ФП / трепетание при WPW, широкие QRS-тахикардии (ЖТ), гипотензия, тяжёлая СН, вместе с в/в бета-блокатором. Антидот — кальций.' },
+  { k: 'METOPROLOL', n: 'metoprolol|метопролол|беталок|betaloc|эгилок|egilok', ru: 'Метопролол', az: 'Metoprolol', sec: 'tachy,arrhythmia,hypertension,angina', d: [
+    ['В/в медленно (1 мг/мин)', '2,5–5 мг; повтор каждые 5 мин', '—'],
+    ['Внутрь (тартрат)', '25–100 мг 2 р/сут', '—']
+  ], max: 'в/в — 15 мг', w: 'Нельзя: брадикардия, АВ-блокада, шок, острая СН, бронхоспазм. Осторожно с верапамилом.' },
+  { k: 'BISOPROLOL', n: 'bisoprolol|бисопролол|конкор|concor', ru: 'Бисопролол', az: 'Bisoprolol', sec: 'hypertension,arrhythmia,tachy,angina,hf', d: [['Внутрь 1 раз в сутки', '2,5–10 мг', '—']], w: 'Брадикардия, АВ-блокада, бронхоспазм — противопоказания.' },
+  { k: 'DIGOXIN', n: 'digoxin|digoksin|дигоксин', ru: 'Дигоксин', az: 'Diqoksin', sec: 'arrhythmia,hf', d: [
+    ['ФП с высокой ЧСС, СН: в/в медленно', '0,25–0,5 мг, затем по 0,25 мг каждые 4–6 ч (суммарно до 1–1,5 мг за сутки)', '—'],
+    ['Внутрь (поддерживающая)', '0,125–0,25 мг 1 р/сут', '—']
+  ], w: 'Гипокалиемия усиливает токсичность. Нельзя при WPW, АВ-блокаде, ЖТ. Признаки передозировки: рвота, брадикардия, жёлто-зелёное зрение.' },
+  { k: 'LIDOCAINE', n: 'lidocaine|lidokain|лидокаин|xylocaine|ксилокаин|versatis', ru: 'Лидокаин 1–2%, спрей 10%', az: 'Lidokain', sec: 'localanest,arrhythmia,arrest', d: [
+    ['Местная анестезия: инфильтрация 1–2%', 'без адреналина — не более 200 мг (около 3 мг/кг; по инструкциям США до 4,5 мг/кг, 300 мг); с адреналином — до 7 мг/кг (не более 500 мг)', 'до 3 мг/кг'],
+    ['Аритмия (ЖТ / ФЖ, если нет амиодарона): в/в', '1–1,5 мг/кг (около 100 мг); можно ещё 0,5–0,75 мг/кг', '1 мг/кг'],
+    ['Спрей 10% местно', '1–3 впрыска (10–30 мг)', '—']
+  ], max: 'антиаритмически — 3 мг/кг за час', w: 'Проба на переносимость. Передозировка: онемение языка, звон в ушах, судороги, брадикардия.' },
+  { k: 'PROCAINAMIDE', n: 'procainamide|prokainamid|прокаинамид|новокаинамид', ru: 'Прокаинамид (новокаинамид) 100 мг/мл', az: 'Prokainamid', sec: 'arrhythmia,tachy', d: [
+    ['ФП, тахикардия с широким QRS при стабильной гемодинамике: в/в медленно', '20–50 мг/мин до эффекта (обычно 500–1000 мг), не более 17 мг/кг', '—']
+  ], w: 'Гипотензия (иметь наготове фенилэфрин), удлинение QT, расширение QRS > 50% — прекратить.' },
+  { k: 'MAGNESIUM SULFATE', n: 'magnesium sulfate|magnesium sulphate|maqnezium sulfat|магния сульфат|магнезия|kormagnezin', ru: 'Магния сульфат 25%', az: 'Maqnezium sulfat', sec: 'arrhythmia,obstetrics,asthma,electrolytes,convuls', d: [
+    ['Torsades de pointes, гипомагниемия: в/в', '2 г (8 мл 25%) за 1–2 мин при остановке, иначе за 10–15 мин', '25–50 мг/кг (макс. 2 г)'],
+    ['Эклампсия / тяжёлая преэклампсия: в/в', '4 г (16 мл 25%, разведя) за 15–20 мин, далее 1 г/ч', '—'],
+    ['Тяжёлый приступ астмы: в/в капельно', '2 г за 20 мин', '40 мг/кг (макс. 2 г) за 20 мин']
+  ], w: '25% 5 мл = 1,25 г; 10 мл = 2,5 г. Следить за дыханием, рефлексами, давлением. Антидот — кальция глюконат 10% 10 мл.' },
+  // ---------- давление, сосуды, сердце ----------
+  { k: 'NOREPINEPHRINE', n: 'norepinephrine|norepinefrin|noradrenalin|норадреналин|норэпинефрин|cardenor|кардинор', ru: 'Норэпинефрин (норадреналин)', az: 'Norepinefrin (noradrenalin)', sec: 'hypotension', d: [
+    ['Шок: в/в через перфузор, лучше в крупную вену', 'начать 0,05–0,1 мкг/кг/мин (около 5–10 мкг/мин), подбирать до САД ≥ 65 мм рт. ст.', '0,05–1 мкг/кг/мин'],
+    ['Разведение (пример)', 'дозы — по основанию: норэпинефрина тартрат 2 мг/мл = 1 мг/мл основания. 4 мг основания (8 мг = 4 мл тартрата 2 мг/мл) в 50 мл 5% глюкозы = 80 мкг/мл; 5 мл/ч ≈ 6,7 мкг/мин', '—']
+  ], w: 'Смотрите на ампуле, что указано: тартрат или основание (разница вдвое). Сначала восполнить объём. Экстравазация — некроз (обколоть фентоламином). Только через дозатор.' },
+  { k: 'DOPAMINE', n: 'dopamine|dopamin|допамин|дофамин', ru: 'Допамин 40 мг/мл', az: 'Dopamin', sec: 'hypotension,brady', d: [['В/в через перфузор', '2–20 мкг/кг/мин; при брадикардии — 5–20 мкг/кг/мин', '5–20 мкг/кг/мин']], w: 'Тахиаритмии. Норэпинефрин при шоке предпочтительнее.' },
+  { k: 'DOBUTAMINE', n: 'dobutamine|dobutamin|добутамин', ru: 'Добутамин', az: 'Dobutamin', sec: 'hf,hypotension', d: [['В/в через перфузор', '2–20 мкг/кг/мин', '2–20 мкг/кг/мин']], w: 'Тахикардия, аритмии.' },
+  { k: 'PHENYLEPHRINE', n: 'phenylephrine|fenilefrin|фенилэфрин|мезатон|mezaton', ru: 'Фенилэфрин (мезатон) 1%', az: 'Fenilefrin (mezaton)', sec: 'hypotension', d: [['Гипотензия: в/в медленно', '50–100 мкг болюсом (разведённым), инфузия 0,1–0,5 мкг/кг/мин', '—'], ['П/к, в/м', '2–5 мг', '—']], w: 'Рефлекторная брадикардия.' },
+  { k: 'GLYCERYL TRINITRATE', n: 'nitroglycerin|nitroqliserin|glyceryl trinitrate|нитроглицерин|нитроминт|nitromint|перлинганит|perlinganit|нитроспрей|nitrospray|nitrocor', ru: 'Нитроглицерин (спрей 0,4 мг, таблетки 0,5 мг, ампулы 1 мг/мл)', az: 'Nitroqliserin', sec: 'angina,hf,hypertension', d: [
+    ['Стенокардия, ОКС: под язык', '0,4–0,5 мг (1 впрыск / 1 таб.); повтор через 5 мин, до 3 раз', '—'],
+    ['Отёк лёгких, гипертензия при ОКС: в/в через перфузор', '10–20 мкг/мин, увеличивать на 5–10 мкг/мин каждые 3–5 мин (до 200 мкг/мин)', '—']
+  ], w: 'Нельзя: САД < 90, инфаркт правого желудочка, силденафил / тадалафил за 24–48 ч, тяжёлый аортальный стеноз.' },
+  { k: 'ISOSORBIDE DINITRATE', n: 'isosorbide|izosorbid|изосорбид|изокет|isoket|кардикет|cardiket', ru: 'Изосорбида динитрат', az: 'İzosorbid dinitrat', sec: 'angina,hf', d: [['Спрей под язык', '1–3 впрыска (1,25–3,75 мг) с интервалом 30 с', '—'], ['В/в через перфузор', '1–10 мг/ч', '—']], w: 'Как у нитроглицерина: гипотензия, ингибиторы ФДЭ-5.' },
+  { k: 'CAPTOPRIL', n: 'captopril|kaptopril|каптоприл|капотен|capoten', ru: 'Каптоприл', az: 'Kaptopril', sec: 'hypertension,hf', d: [['Неосложнённый подъём давления: внутрь или под язык', '12,5–25 мг; через 30–60 мин можно повторить', '—'], ['Постоянно', '25–50 мг 2–3 р/сут', '—']], max: '150 мг/сут', w: 'Нельзя при беременности, ангионевротическом отёке в анамнезе, двустороннем стенозе почечных артерий. Снижать АД не более чем на 25% за первый час.' },
+  { k: 'CLONIDINE', n: 'clonidine|klonidin|клонидин|клофелин|clofelin', ru: 'Клонидин (клофелин)', az: 'Klonidin', sec: 'hypertension,alcohol', d: [['Внутрь', '0,075–0,15 мг; можно повторить через 1 ч', '—'], ['В/в медленно за 3–5 мин', '0,05–0,15 мг (0,5–1,5 мл 0,01%), разведя в 10–20 мл NaCl; после введения лежать 1,5–2 ч', '—']], w: 'Сонливость, брадикардия, ортостатическая гипотензия, синдром отмены. Пожилым осторожно.' },
+  { k: 'URAPIDIL', n: 'urapidil|урапидил|эбрантил|ebrantil', ru: 'Урапидил', az: 'Urapidil', sec: 'hypertension', d: [['Гипертонический криз: в/в медленно', '10–25 мг; через 5 мин можно повторить, затем инфузия 9–30 мг/ч', '—']], w: 'Резкая гипотензия при гиповолемии.' },
+  { k: 'ENALAPRILAT', n: 'enalaprilat|эналаприлат|энап р|enap r', ru: 'Эналаприлат 1,25 мг/мл', az: 'Enalaprilat', sec: 'hypertension,hf', d: [['В/в медленно за 5 мин', '1,25 мг; при необходимости повтор через 1 ч, далее каждые 6 ч', '—']], w: 'Беременность, ангионевротический отёк — нельзя.' },
+  { k: 'NIFEDIPINE', n: 'nifedipine|nifedipin|нифедипин|коринфар|corinfar|кордафлекс|cordaflex', ru: 'Нифедипин', az: 'Nifedipin', sec: 'hypertension,obstetrics', d: [['Внутрь, проглотить (не под язык)', '10 мг; пролонгированный — 20–30 мг', '—']], w: 'Короткий нифедипин под язык не применять при ОКС и у пожилых: резкое падение давления, ишемия. При тяжёлой гипертензии беременных — внутрь 10 мг.' },
+  { k: 'AMLODIPINE', n: 'amlodipine|amlodipin|амлодипин|норваск|norvasc', ru: 'Амлодипин', az: 'Amlodipin', sec: 'hypertension,angina', d: [['Внутрь 1 раз в сутки', '5–10 мг', '—']], w: 'Отёки голеней. Для быстрого снижения в кризе не подходит.' },
+  { k: 'ENALAPRIL', n: 'enalapril|эналаприл|энап|enap|ренитек|renitec', ru: 'Эналаприл', az: 'Enalapril', sec: 'hypertension,hf', d: [['Внутрь', '5–20 мг 1–2 р/сут', '—']], max: '40 мг/сут', w: 'Беременность — нельзя. Кашель, гиперкалиемия.' },
+  { k: 'FUROSEMIDE', n: 'furosemide|furosemid|фуросемид|лазикс|lasix', ru: 'Фуросемид 10 мг/мл', az: 'Furosemid', sec: 'hf,hypertension,electrolytes,cerebral', d: [
+    ['Отёк лёгких, острая СН: в/в медленно', '20–40 мг (если уже принимает — 1–2,5 дозы, принимаемой внутрь)', '0,5–1 мг/кг'],
+    ['Отёки: внутрь', '20–40 мг утром', '1–2 мг/кг']
+  ], w: 'Гипокалиемия, гиповолемия, гипотензия. Не при анурии.' },
+  { k: 'SPIRONOLACTONE', n: 'spironolactone|spironolakton|спиронолактон|верошпирон|veroshpiron', ru: 'Спиронолактон', az: 'Spironolakton', sec: 'hf,hypertension', d: [['Внутрь', '25–50 мг 1 р/сут (отёки — до 100–200 мг)', '1–3 мг/кг/сут']], w: 'Гиперкалиемия; не с препаратами калия.' },
+  { k: 'MANNITOL', n: 'mannitol|mannit|маннит|маннитол', ru: 'Маннитол 15–20%', az: 'Mannitol', sec: 'cerebral', d: [['Отёк мозга, внутричерепная гипертензия: в/в за 15–30 мин', '0,25–1 г/кг', '0,25–1 г/кг']], w: 'Нельзя при гиповолемии, анурии, отёке лёгких. Кристаллы во флаконе — согреть.' },
+  // ---------- кровь ----------
+  { k: 'HEPARIN', n: 'heparin|heparin|гепарин|indar|индар', ru: 'Гепарин 5000 ЕД/мл', az: 'Heparin', sec: 'thrombo,angina,stroke', d: [
+    ['ОКС: в/в болюс', '60–70 ЕД/кг (макс. 5000 ЕД), далее 12–15 ЕД/кг/ч (макс. 1000 ЕД/ч)', '—'],
+    ['ТЭЛА, тромбоз: в/в', '80 ЕД/кг болюс, далее 18 ЕД/кг/ч под АЧТВ', '75 ЕД/кг, далее 20 ЕД/кг/ч'],
+    ['Профилактика: п/к', '5000 ЕД 2–3 р/сут', '—']
+  ], w: 'Кровотечение, тромбоцитопения. Антидот — протамина сульфат (1 мг на 100 ЕД).' },
+  { k: 'ENOXAPARIN', n: 'enoxaparin|enoksaparin|эноксапарин|клексан|clexane|ловенокс|lovenox|anfibra|анфибра', ru: 'Эноксапарин', az: 'Enoksaparin', sec: 'thrombo,angina', d: [
+    ['Лечение тромбоза / ТЭЛА: п/к', '1 мг/кг каждые 12 ч', '—'],
+    ['ОКС: п/к', '1 мг/кг каждые 12 ч. ИМпST с тромболизисом: до 75 лет — 30 мг в/в + 1 мг/кг п/к (первые 2 дозы не более 100 мг); с 75 лет — без в/в болюса, 0,75 мг/кг п/к каждые 12 ч (первые 2 дозы не более 75 мг)', '—'],
+    ['Профилактика: п/к', '40 мг 1 р/сут', '—']
+  ], w: 'Клиренс креатинина < 30 мл/мин — 1 мг/кг 1 р/сут. Кровотечение.' },
+  { k: 'ACETYLSALICYLIC ACID', n: 'acetylsalicylic|asetilsalisil|aspirin|аспирин|ацетилсалицил|кардиомагнил|cardiomagnyl|тромбо асс|thrombo ass', ru: 'Ацетилсалициловая кислота (аспирин)', az: 'Asetilsalisil turşusu (aspirin)', sec: 'angina,thrombo,stroke,fever,pain', d: [
+    ['ОКС: разжевать', '150–300 мг (не кишечнорастворимую)', '—'],
+    ['Постоянно', '75–100 мг 1 р/сут', '—'],
+    ['Боль, температура: внутрь', '500–1000 мг до 3–4 р/сут', 'до 16 лет — нельзя (синдром Рея)']
+  ], max: '4 г/сут', w: 'Язва, кровотечение, аллергия на НПВП, астма, вызванная аспирином.' },
+  { k: 'CLOPIDOGREL', n: 'clopidogrel|klopidoqrel|клопидогрел|плавикс|plavix', ru: 'Клопидогрел', az: 'Klopidoqrel', sec: 'angina,thrombo,stroke', d: [['ОКС: внутрь', 'нагрузка 300–600 мг (при ЧКВ — 600 мг в любом возрасте; при тромболизисе с 75 лет — без нагрузки, 75 мг), далее 75 мг/сут', '—']], w: 'Кровотечение.' },
+  { k: 'TENECTEPLASE', n: 'tenecteplase|tenekteplaza|тенектеплаза|метализе|metalyse', ru: 'Тенектеплаза (тромболизис)', az: 'Tenekteplaza', sec: 'angina,thrombo', d: [['ИМпST: в/в болюсом за 5–10 с', 'по массе: < 60 кг — 30 мг; 60–69 — 35 мг; 70–79 — 40 мг; 80–89 — 45 мг; ≥ 90 — 50 мг. С 75 лет — половина дозы', '—']], w: 'Строго по чек-листу противопоказаний (кровотечение, инсульт, операция, травма, АД > 180/110). Вместе с гепарином / эноксапарином и антиагрегантами.' },
+  { k: 'ALTEPLASE', n: 'alteplase|alteplaza|алтеплаза|актилизе|actilyse', ru: 'Алтеплаза (тромболизис)', az: 'Alteplaza', sec: 'stroke,thrombo,angina', d: [['Ишемический инсульт (до 4,5 ч): в/в', '0,9 мг/кг (макс. 90 мг): 10% болюсом за 1 мин, остальное за 60 мин', '—']], w: 'Только по протоколу и после КТ. Строгие противопоказания.' },
+  { k: 'TRANEXAMIC ACID', n: 'tranexamic|traneksam|транексам|transamin|трансамин|tranexam|exacyl', ru: 'Транексамовая кислота 50–100 мг/мл', az: 'Traneksam turşusu', sec: 'bleeding,trauma,obstetrics', d: [
+    ['Травма с кровотечением (в первые 3 ч): в/в', '1 г за 10 мин, затем 1 г за 8 ч', '15 мг/кг (макс. 1 г), затем 2 мг/кг/ч'],
+    ['Послеродовое кровотечение: в/в', '1 г за 10 мин; через 30 мин — ещё 1 г, если кровит', '—'],
+    ['Носовое кровотечение: местно', 'тампон, смоченный раствором (500 мг)', '—']
+  ], w: 'Не позже 3 ч от травмы. Судороги при высоких дозах, тромбоз в анамнезе.' },
+  { k: 'ETAMSYLATE', n: 'etamsylate|etamzilat|этамзилат|дицинон|dicynone', ru: 'Этамзилат 125 мг/мл', az: 'Etamzilat', sec: 'bleeding', d: [['В/в или в/м', '250–500 мг (2–4 мл); повтор каждые 4–6 ч (10–20 мг/кг в сутки)', 'половина взрослой дозы; 10–15 мг/кг — это суточная доза на 3–4 введения; новорождённым 10 мг/кг в/м каждые 6 ч']], w: 'Доказательная база слабая; при серьёзном кровотечении — транексамовая кислота.' },
+  { k: 'AMINOCAPROIC ACID', n: 'aminocaproic|aminokapron|аминокапрон', ru: 'Аминокапроновая кислота 5%', az: 'Aminokapron turşusu', sec: 'bleeding', d: [['В/в капельно', '4–5 г (80–100 мл 5%) за 1 ч, далее 1 г/ч', '100 мг/кг за 1 ч']], w: 'ДВС, тромбоз — нельзя.' },
+  { k: 'PHYTOMENADIONE', n: 'phytomenadione|vitamin k|витамин к|фитоменадион|канавит|kanavit|konakion|викасол|vikasol|menadione', ru: 'Витамин K (фитоменадион; викасол)', az: 'K vitamini', sec: 'bleeding,vitamins', d: [['Передозировка варфарина с кровотечением: в/в медленно', '5–10 мг (фитоменадион)', '—'], ['Новорождённым: в/м', '—', '1 мг однократно'], ['Викасол 1%: в/м', '10–30 мг (1–3 мл) в сутки', '—']], w: 'В/в — медленно (анафилактоидные реакции).' },
+  { k: 'OXYTOCIN', n: 'oxytocin|oksitosin|окситоцин|pitocin', ru: 'Окситоцин 5 МЕ/мл', az: 'Oksitosin', sec: 'obstetrics,bleeding', d: [['Послеродовое кровотечение / профилактика: в/м или в/в медленно', '10 МЕ в/м или 5 МЕ в/в медленно; затем 40 МЕ в 500 мл со скоростью 125 мл/ч', '—']], w: 'Только после рождения ребёнка (при кровотечении). Гипотензия при быстром в/в.' },
+  { k: 'METHYLERGOMETRINE', n: 'methylergometrine|metilerqometrin|метилэргометрин|methergin|метергин', ru: 'Метилэргометрин 0,2 мг/мл', az: 'Metilerqometrin', sec: 'obstetrics,bleeding', d: [['Послеродовое кровотечение: в/м', '0,2 мг; можно повторить через 2–4 ч', '—']], w: 'Нельзя при гипертензии, преэклампсии.' },
+  // ---------- аллергия, гормоны ----------
+  { k: 'DEXAMETHASONE', n: 'dexamethasone|deksametazon|дексаметазон|dexa|декса', ru: 'Дексаметазон 4 мг/мл', az: 'Deksametazon', sec: 'allergy,anaphylaxis,asthma,croup,cerebral,steroids,vomit', d: [
+    ['Аллергия, отёк Квинке, астма: в/в или в/м', '4–8 мг (до 12–20 мг при тяжёлом течении)', '0,15–0,6 мг/кг'],
+    ['Ложный круп: внутрь, в/м или в/в', '—', '0,15–0,6 мг/кг однократно (макс. 10–12 мг)'],
+    ['Отёк мозга при опухоли: в/в', '10 мг, далее 4 мг каждые 6 ч', '—'],
+    ['Профилактика рвоты после операции', '4–8 мг в/в', '0,15 мг/кг']
+  ], w: 'Анафилаксия: рутинно не нужны (UK RC 2021) — только при затяжной/рефрактерной анафилаксии, шоке или сопутствующей астме, и всегда после адреналина. Действует через часы. Гипергликемия.' },
+  { k: 'PREDNISOLONE', n: 'prednisolone|prednizolon|преднизолон|medopred|медопред|solupred', ru: 'Преднизолон 30 мг/мл, таблетки 5 мг', az: 'Prednizolon', sec: 'allergy,anaphylaxis,asthma,steroids,hypotension', d: [
+    ['Тяжёлая аллергия, шок: в/в или в/м', '60–90 мг (до 1–2 мг/кг)', '1–2 мг/кг'],
+    ['Обострение астмы / ХОБЛ: внутрь', '40–50 мг 1 р/сут 5 дней', '1–2 мг/кг/сут (макс. 40 мг) 3–5 дней']
+  ], w: 'Анафилаксия: рутинно не нужны (UK RC 2021) — только при затяжной/рефрактерной анафилаксии, шоке или сопутствующей астме, и всегда после адреналина. Гипергликемия, обострение язвы. Короткий курс не требует постепенной отмены.' },
+  { k: 'METHYLPREDNISOLONE', n: 'methylprednisolone|metilprednizolon|метилпреднизолон|солу-медрол|solu-medrol|medrol|медрол|метипред|metypred', ru: 'Метилпреднизолон', az: 'Metilprednizolon', sec: 'allergy,anaphylaxis,asthma,steroids', d: [['В/в или в/м', '40–125 мг', '1–2 мг/кг']], w: 'Анафилаксия: рутинно не нужны (UK RC 2021) — только при затяжной/рефрактерной анафилаксии, шоке или сопутствующей астме, и всегда после адреналина. Как у преднизолона.' },
+  { k: 'HYDROCORTISONE', n: 'hydrocortisone|hidrokortizon|гидрокортизон|солу-кортеф|solu-cortef', ru: 'Гидрокортизон', az: 'Hidrokortizon', sec: 'allergy,anaphylaxis,asthma,steroids,hypotension', d: [['Анафилаксия, астма, надпочечниковая недостаточность: в/в или в/м', '100–200 мг; при надпочечниковом кризе — 100 мг, затем 200 мг/сут', 'до 6 мес. — 25 мг; 6 мес.–6 лет — 50 мг; 6–12 лет — 100 мг']], w: 'Анафилаксия: рутинно не нужны (UK RC 2021) — только при затяжной/рефрактерной анафилаксии, шоке или сопутствующей астме, и всегда после адреналина. Мазь / крем 1% — местно 1–2 р/сут (дерматит).' },
+  { k: 'DIPHENHYDRAMINE', n: 'diphenhydramine|difenhidramin|дифенгидрамин|димедрол|dimedrol', ru: 'Дифенгидрамин (димедрол) 10 мг/мл', az: 'Difenhidramin (dimedrol)', sec: 'allergy,insomnia,vomit', d: [['В/м или в/в медленно', '10–50 мг (1–5 мл 1%)', 'в/м: 7–12 мес. — 3–5 мг; 1–3 года — 5–10 мг; 4–6 лет — 10–15 мг; 7–14 лет — 15–30 мг'], ['Внутрь', '25–50 мг до 3–4 р/сут', '—']], max: 'парентерально 200 мг/сут; внутрь 250 мг/сут', w: 'Сонливость, сухость во рту, задержка мочи. Не при глаукоме, аденоме простаты. Новорождённым нельзя.' },
+  { k: 'CHLOROPYRAMINE', n: 'chloropyramine|xloropiramin|хлоропирамин|супрастин|suprastin', ru: 'Хлоропирамин (супрастин) 20 мг/мл', az: 'Xloropiramin (suprastin)', sec: 'allergy', d: [['В/м или в/в медленно', '20–40 мг (1–2 мл)', 'по возрасту: 1–12 мес. — 5 мг; 1–6 лет — 10 мг; 6–14 лет — 10–20 мг'], ['Внутрь', '25 мг 3–4 р/сут', '—']], max: '2 мг/кг/сут', w: 'Сонливость.' },
+  { k: 'CLEMASTINE', n: 'clemastine|klemastin|клемастин|тавегил|tavegil', ru: 'Клемастин (тавегил)', az: 'Klemastin (tavegil)', sec: 'allergy', d: [['В/м или в/в', '2 мг 2 р/сут', '0,025 мг/кг/сут в 2 приёма'], ['Внутрь', '1 мг 2 р/сут', '—']], w: 'Сонливость.' },
+  { k: 'PROMETHAZINE', n: 'promethazine|prometazin|прометазин|пипольфен|pipolfen|фенерган', ru: 'Прометазин (пипольфен)', az: 'Prometazin', sec: 'allergy,vomit,sedation,insomnia', d: [['В/м', '25–50 мг', 'с 2 лет — 0,25–0,5 мг/кг']], w: 'До 2 лет нельзя (угнетение дыхания). Сонливость, гипотензия.' },
+  { k: 'CETIRIZINE', n: 'cetirizine|setirizin|цетиризин|зиртек|zyrtec|цетрин|cetrin|zodak|зодак', ru: 'Цетиризин 10 мг', az: 'Setirizin', sec: 'allergy', d: [['Внутрь 1 раз в сутки', '10 мг', '2–6 лет — 2,5 мг 2 р/сут; 6–12 лет — 5 мг 2 р/сут (или 10 мг 1 р)']], w: 'Почечная недостаточность — половина дозы.' },
+  { k: 'LORATADINE', n: 'loratadine|loratadin|лоратадин|кларитин|claritin', ru: 'Лоратадин 10 мг', az: 'Loratadin', sec: 'allergy', d: [['Внутрь 1 раз в сутки', '10 мг', '2–12 лет: < 30 кг — 5 мг, > 30 кг — 10 мг']], w: '—' },
+  { k: 'DESLORATADINE', n: 'desloratadine|desloratadin|дезлоратадин|эриус|aerius', ru: 'Дезлоратадин 5 мг', az: 'Desloratadin', sec: 'allergy', d: [['Внутрь 1 раз в сутки', '5 мг', '1–5 лет — 1,25 мг; 6–11 лет — 2,5 мг (сироп)']], w: '—' },
+  // ---------- дыхание ----------
+  { k: 'SALBUTAMOL', n: 'salbutamol|сальбутамол|вентолин|ventolin|albuterol|asthalin', ru: 'Сальбутамол (небулы 2,5 мг/2,5 мл; ингалятор 100 мкг)', az: 'Salbutamol', sec: 'asthma,electrolytes', d: [
+    ['Приступ астмы / ХОБЛ: небулайзер', '2,5–5 мг; в первый час — каждые 20 мин', 'до 5 лет — 2,5 мг; старше — 2,5–5 мг'],
+    ['Дозированный ингалятор через спейсер', '4–10 вдохов по 100 мкг каждые 20 мин в первый час', '2–10 вдохов'],
+    ['Гиперкалиемия: небулайзер', '10–20 мг', '—']
+  ], w: 'Тахикардия, тремор, гипокалиемия.' },
+  { k: 'IPRATROPIUM BROMIDE + SALBUTAMOL', n: 'ipratropium|ipratropium bromid|ипратропи|беродуал|berodual|salipra|салипра|combivent|комбивент|fenoterol|фенотерол|атровент|atrovent', ru: 'Ипратропий + сальбутамол / фенотерол (беродуал, салипра)', az: 'İpratropium + salbutamol / fenoterol', sec: 'asthma', d: [
+    ['Небула 2,5 мл (0,5 мг ипратропия + 2,5 мг сальбутамола)', '1 небула; при приступе — до 3 раз с интервалом 20 мин, далее 3–4 р/сут', 'с 12 лет — как взрослым; младше — ипратропий 0,25 мг + сальбутамол 2,5 мг'],
+    ['Беродуал раствор (1 мл = 20 капель): небулайзер, развести NaCl до 3–4 мл', '1–2,5 мл (20–50 кап.); тяжёлый приступ — до 4 мл', '6–12 лет — 0,5–2 мл; до 6 лет (< 22 кг) — 0,5 мл (10 кап.) до 3 р/сут']
+  ], w: 'Беречь глаза от аэрозоля (глаукома). Тахикардия.' },
+  { k: 'BUDESONIDE', n: 'budesonide|budesonid|будесонид|пульмикорт|pulmicort|pulmares|пульмарес|буденит|budenit', ru: 'Будесонид (небулы 0,25 и 0,5 мг/мл)', az: 'Budesonid', sec: 'asthma,croup', d: [['Ложный круп: небулайзер', '—', '2 мг однократно (или 1 мг 2 раза с интервалом 30 мин)'], ['Астма: небулайзер', '1–2 мг 2 р/сут', '0,25–0,5 мг 2 р/сут (до 1 мг)']], w: 'Полоскать рот после ингаляции.' },
+  { k: 'AMINOPHYLLINE', n: 'aminophylline|aminofillin|аминофиллин|эуфиллин|eufillin|euphyllin', ru: 'Аминофиллин (эуфиллин) 24 мг/мл', az: 'Aminofillin (eufillin)', sec: 'asthma', d: [['Тяжёлая астма (вторая линия): в/в медленно за 20–30 мин', '5 мг/кг (если не принимал теофиллин), далее 0,5 мг/кг/ч', '5 мг/кг, далее 1 мг/кг/ч']], w: 'Узкое окно: аритмии, судороги, рвота. Не вместе с теофиллином внутрь.' },
+  { k: 'AMBROXOL', n: 'ambroxol|amboksol|амброксол|лазолван|lasolvan|ambrobene|амбробене|флавамед|flavamed', ru: 'Амброксол', az: 'Ambroksol', sec: 'cough', d: [['Внутрь', '30 мг 3 р/сут 2–3 дня, далее 2 р/сут', 'до 2 лет — 7,5 мг 2 р/сут; 2–5 лет — 7,5 мг 3 р/сут; 6–12 лет — 15 мг 2–3 р/сут']], w: 'Не вместе с противокашлевыми.' },
+  { k: 'ACETYLCYSTEINE', n: 'acetylcysteine|asetilsistein|ацетилцистеин|ацц|acc|флуимуцил|fluimucil', ru: 'Ацетилцистеин', az: 'Asetilsistein', sec: 'cough,poison', d: [
+    ['Мокрота: внутрь', '600 мг 1 р/сут или 200 мг 3 р/сут', '2–5 лет — 100 мг 2–3 р/сут; 6–14 лет — 200 мг 2 р/сут'],
+    ['Отравление парацетамолом: в/в', '150 мг/кг за 1 ч, затем 50 мг/кг за 4 ч, затем 100 мг/кг за 16 ч (или схема SNAP: 200 мг/кг за 4 ч, затем 100 мг/кг за 16 ч)', 'так же по массе']
+  ], w: 'Бронхоспазм при ингаляции у астматиков.' },
+  { k: 'XYLOMETAZOLINE', n: 'xylometazoline|ksilometazolin|ксилометазолин|отривин|otrivin|галазолин|galazolin|ксимелин|ximelin|anta', ru: 'Ксилометазолин 0,05–0,1%', az: 'Ksilometazolin', sec: 'nose,cold', d: [['В нос', '0,1%: 1–2 впрыска / 2–3 капли в каждую ноздрю до 3 р/сут', '2–12 лет — 0,05%: 1–2 капли / 1 впрыск до 2–3 р/сут']], w: 'Не дольше 5–7 дней (медикаментозный ринит).' },
+  { k: 'OXYMETAZOLINE', n: 'oxymetazoline|oksimetazolin|оксиметазолин|називин|nazivin|afrin', ru: 'Оксиметазолин 0,01–0,05%', az: 'Oksimetazolin', sec: 'nose,cold', d: [['В нос', '0,05%: 1–2 впрыска 2 р/сут', 'до 1 года — 0,01%; 1–6 лет — 0,025%; по 1–2 капли 2 р/сут']], w: 'Не дольше 5–7 дней.' },
+  { k: 'OXYGEN', n: 'oxygen|oksigen|кислород|oksijen', ru: 'Кислород медицинский', az: 'Tibbi oksigen', sec: 'oxygen,asthma,hf,arrest,poison', d: [['Ингаляция', 'цель SpO₂ 94–98% (ХОБЛ — 88–92%); носовые канюли 1–6 л/мин, маска 5–10 л/мин, маска с резервуаром 10–15 л/мин', 'цель SpO₂ 94–98%'], ['Отравление угарным газом', '100% (маска с резервуаром 15 л/мин) независимо от SpO₂', 'так же']], w: 'Пульсоксиметр при отравлении CO завышает сатурацию.' },
+  // ---------- температура, боль ----------
+  { k: 'PARACETAMOL', n: 'paracetamol|parasetamol|парацетамол|acetaminophen|панадол|panadol|эффералган|efferalgan|калпол|calpol|perfalgan|перфалган|tylol|parol', ru: 'Парацетамол', az: 'Parasetamol', sec: 'fever,pain,headache,cold', d: [
+    ['Внутрь', '500–1000 мг каждые 4–6 ч', '10–15 мг/кг каждые 4–6 ч'],
+    ['В/в за 15 мин', '≥ 50 кг: 1 г каждые 6 ч (макс. 4 г/сут); 33–50 кг: 15 мг/кг (макс. 60 мг/кг/сут, не более 3 г)', '≤ 10 кг — 7,5 мг/кг, макс. 30 мг/кг/сут; 10–33 кг — 15 мг/кг, макс. 60 мг/кг/сут и не более 2 г'],
+    ['Свечи', '500–1000 мг', '15–20 мг/кг']
+  ], max: '4 г/сут (при болезни печени, алкоголе, весе < 50 кг — 3 г); детям внутрь 60 мг/кг/сут; в/в при массе ≤ 10 кг — 30 мг/кг/сут', w: 'Передозировка — поражение печени; антидот — ацетилцистеин.' },
+  { k: 'METAMIZOLE SODIUM', n: 'metamizole|metamizol|метамизол|анальгин|analgin|баралгин|baralgin|novalgin', ru: 'Метамизол (анальгин) 500 мг/мл', az: 'Metamizol (analgin)', sec: 'fever,pain,spasm', d: [['В/м или в/в медленно', '500–1000 мг (1–2 мл 50%) 2–3 р/сут', '0,1–0,2 мл 50% на 10 кг массы (5–10 мг/кг) 2–3 р/сут; до 1 года — только в/м'], ['Внутрь', '500–1000 мг до 3–4 р/сут', '8–16 мг/кг']], max: 'парентерально 2 г/сут (по инструкции СНГ); внутрь до 3–4 г/сут', w: 'Агранулоцитоз, гипотензия при быстром в/в. До 3 мес. и при массе < 5 кг нельзя.' },
+  { k: 'IBUPROFEN', n: 'ibuprofen|ибупрофен|нурофен|nurofen|адвил|advil|brufen|бруфен|ibufen', ru: 'Ибупрофен', az: 'İbuprofen', sec: 'fever,pain,headache,joints', d: [['Внутрь после еды', '200–400 мг каждые 6–8 ч', 'с 3 мес. (> 5 кг): 5–10 мг/кг каждые 6–8 ч']], max: '1200 мг/сут без врача (до 2400 мг); детям 30 мг/кг/сут', w: 'Язва, кровотечение, почечная недостаточность, 3-й триместр беременности. Осторожно при обезвоживании.' },
+  { k: 'KETOROLAC', n: 'ketorolac|ketorolak|кеторолак|кеторол|ketorol|кетанов|ketanov|offdol|оффдол|toradol', ru: 'Кеторолак 30 мг/мл, таблетки 10 мг', az: 'Ketorolak', sec: 'pain,spasm,trauma', d: [['В/м или в/в медленно (≥ 15 с)', '10–30 мг каждые 4–6 ч (старше 65 лет и < 50 кг — до 15 мг)', 'до 16 лет не рекомендован'], ['Внутрь', '10 мг каждые 4–6 ч', '—']], max: 'парентерально 90 мг/сут (пожилым 60 мг), не дольше 2 дней; внутрь 40 мг/сут, всего не дольше 5 дней', w: 'Язва, кровотечение, почки, астма, беременность. Не с другими НПВП.' },
+  { k: 'DICLOFENAC', n: 'diclofenac|diklofenak|диклофенак|вольтарен|voltaren|ортофен|ortofen|наклофен|naklofen|dikloberl|диклоберл', ru: 'Диклофенак 25 мг/мл, таблетки, свечи, гель', az: 'Diklofenak', sec: 'pain,joints,spasm,gout', d: [['В/м глубоко', '75 мг 1 р/сут (при необходимости 2 р/сут)', '—'], ['Внутрь / свечи', '50 мг 2–3 р/сут или 100 мг в свече', 'с 6 лет внутрь 1–2 мг/кг/сут'], ['Гель местно', '3–4 р/сут', '—']], max: '150 мг/сут', w: 'Сердечно-сосудистый риск, язва, почки. В/м — не дольше 2 дней.' },
+  { k: 'NIMESULIDE', n: 'nimesulide|nimesulid|нимесулид|найз|nise|nimesil|нимесил', ru: 'Нимесулид', az: 'Nimesulid', sec: 'pain,joints', d: [['Внутрь после еды', '100 мг 2 р/сут', 'до 12 лет нельзя']], w: 'Гепатотоксичность; курс не дольше 15 дней.' },
+  { k: 'TRAMADOL', n: 'tramadol|трамадол|трамал|tramal', ru: 'Трамадол 50 мг/мл (строгий учёт)', az: 'Tramadol', sec: 'pain,trauma', d: [['В/в медленно, в/м, внутрь', '50–100 мг каждые 4–6 ч', 'до 12 лет не применять; старше — 1–2 мг/кг']], max: '400 мг/сут', w: 'Судороги, серотониновый синдром, тошнота. Угнетение дыхания с другими седативными.' },
+  { k: 'MORPHINE', n: 'morphine|morfin|морфин', ru: 'Морфин 10 мг/мл (строгий учёт)', az: 'Morfin', sec: 'pain,angina,trauma', d: [['В/в медленно (развести до 1 мг/мл)', '2–5 мг; при необходимости по 2–3 мг каждые 5 мин до эффекта', '0,05–0,1 мг/кг'], ['П/к или в/м', '5–10 мг', '0,1–0,2 мг/кг']], w: 'Угнетение дыхания (антидот — налоксон), гипотензия, рвота. При ОКС — только при сильной боли.' },
+  { k: 'FENTANYL', n: 'fentanyl|fentanil|фентанил', ru: 'Фентанил 50 мкг/мл (строгий учёт)', az: 'Fentanil', sec: 'pain,trauma,sedation', d: [['В/в медленно', '1 мкг/кг (50–100 мкг), повтор 25–50 мкг через 5 мин', '1 мкг/кг'], ['Интраназально (через атомайзер)', '1,5 мкг/кг', '1,5 мкг/кг (макс. 100 мкг)']], w: 'Угнетение дыхания, ригидность грудной клетки при быстром в/в. Антидот — налоксон.' },
+  { k: 'KETAMINE', n: 'ketamine|ketamin|кетамин|калипсол|calypsol|ketalar', ru: 'Кетамин 50 мг/мл (строгий учёт)', az: 'Ketamin', sec: 'pain,sedation,trauma', d: [['Обезболивание: в/в медленно', '0,1–0,3 мг/кг', '0,1–0,3 мг/кг'], ['Наркоз: в/в', '1–2 мг/кг', '1–2 мг/кг'], ['Наркоз: в/м', '4–5 мг/кг', '4–5 мг/кг']], w: 'Гипертензия, тахикардия, галлюцинации при пробуждении (мидазолам). Дыхательные пути сохраняются, но следить.' },
+  { k: 'DROTAVERINE', n: 'drotaverine|drotaverin|дротаверин|но-шпа|ноышпа|no-spa|nospa|spazmol', ru: 'Дротаверин (но-шпа) 20 мг/мл', az: 'Drotaverin (no-şpa)', sec: 'spasm', d: [['В/м или в/в медленно', '40–80 мг (2–4 мл)', '—'], ['Внутрь', '40–80 мг 2–3 р/сут', '6–12 лет: 40 мг 1–2 р/сут']], max: '240 мг/сут', w: 'Гипотензия при в/в.' },
+  { k: 'HYOSCINE BUTYLBROMIDE', n: 'hyoscine|butylscopolamine|butilskopolamin|бутилскополамин|бускопан|buscopan|spazmobru', ru: 'Гиосцина бутилбромид (бускопан) 20 мг/мл', az: 'Hiosin butilbromid (buskopan)', sec: 'spasm', d: [['В/в медленно или в/м', '20 мг; можно повторить через 30 мин', '—'], ['Внутрь', '10–20 мг 3–5 р/сут', 'с 6 лет — 10 мг 3 р/сут']], max: '100 мг/сут', w: 'Глаукома, тахиаритмия, задержка мочи, миастения.' },
+  { k: 'PAPAVERINE', n: 'papaverine|papaverin|папаверин', ru: 'Папаверин 20 мг/мл', az: 'Papaverin', sec: 'spasm', d: [['П/к, в/м или в/в очень медленно', '20–40 мг (1–2 мл 2%)', '—']], w: 'АВ-блокада, гипотензия.' },
+  { k: 'SUMATRIPTAN', n: 'sumatriptan|суматриптан|имигран|imigran|amigrenin|амигренин', ru: 'Суматриптан', az: 'Sumatriptan', sec: 'headache', d: [['Приступ мигрени: внутрь', '50–100 мг; через 2 ч можно повторить', '—']], max: '300 мг/сут', w: 'ИБС, неконтролируемая гипертензия — нельзя.' },
+  // ---------- ЖКТ ----------
+  { k: 'ONDANSETRON', n: 'ondansetron|ondansetron|ондансетрон|зофран|zofran|латран|latran|emeset', ru: 'Ондансетрон 2 мг/мл, таблетки 4–8 мг', az: 'Ondansetron', sec: 'vomit', d: [['В/в медленно (≥ 30 с) или в/м', '4–8 мг', '0,1–0,15 мг/кг (макс. 4 мг)'], ['Внутрь', '8 мг до 2 р/сут', '8–15 кг — 2 мг; 15–30 кг — 4 мг; > 30 кг — 8 мг']], max: '16 мг однократно в/в', w: 'Удлинение QT, запор, головная боль.' },
+  { k: 'METOCLOPRAMIDE', n: 'metoclopramide|metoklopramid|метоклопрамид|церукал|cerucal|реглан|reglan|perinorm', ru: 'Метоклопрамид 5 мг/мл, таблетки 10 мг', az: 'Metoklopramid', sec: 'vomit', d: [['В/в медленно (≥ 3 мин) или в/м', '10 мг до 3 р/сут', 'с 1 года — только вторая линия (рвота после операции или химиотерапии): 0,1–0,15 мг/кг до 3 р/сут; при гастроэнтерите у детей — ондансетрон'], ['Внутрь', '10 мг до 3 р/сут', '—']], max: '30 мг/сут (0,5 мг/кг); курс до 5 дней', w: 'Экстрапирамидные реакции (лечение — дифенгидрамин). Нельзя: кишечная непроходимость, кровотечение ЖКТ, эпилепсия, феохромоцитома; детям до 1 года.' },
+  { k: 'OMEPRAZOLE', n: 'omeprazole|omeprazol|омепразол|омез|omez|лосек|losec|ultop|ультоп', ru: 'Омепразол', az: 'Omeprazol', sec: 'heartburn', d: [['Внутрь до еды', '20–40 мг 1 р/сут', '1 мг/кг/сут (макс. 20–40 мг)'], ['Желудочное кровотечение: в/в', '80 мг, далее 40 мг 2 р/сут (или 8 мг/ч)', '—']], w: '—' },
+  { k: 'PANTOPRAZOLE', n: 'pantoprazole|pantoprazol|пантопразол|контролок|controloc|нольпаза|nolpaza', ru: 'Пантопразол', az: 'Pantoprazol', sec: 'heartburn', d: [['Внутрь или в/в', '40 мг 1–2 р/сут; кровотечение — 80 мг в/в, далее 40 мг 2 р/сут', '—']], w: '—' },
+  { k: 'FAMOTIDINE', n: 'famotidine|famotidin|фамотидин|квамател|kvamatel', ru: 'Фамотидин', az: 'Famotidin', sec: 'heartburn', d: [['Внутрь', '20 мг 2 р/сут или 40 мг на ночь', '—'], ['В/в медленно', '20 мг каждые 12 ч', '—']], w: 'Почки — снизить дозу.' },
+  { k: 'ANTACID', n: 'almagel|алмагель|maalox|маалокс|фосфалюгель|phosphalugel|гевискон|gaviscon|rennie|ренни|антацид|antacid', ru: 'Антациды (алмагель, маалокс, фосфалюгель, гевискон)', az: 'Antasidlər', sec: 'heartburn', d: [['Внутрь через 1 ч после еды и на ночь', '1–2 пакетика / 10–15 мл / 1–2 таб. до 3–4 р/сут', 'по инструкции, обычно с 10–12 лет']], w: 'Разносить с другими лекарствами на 2 ч.' },
+  { k: 'LOPERAMIDE', n: 'loperamide|loperamid|лоперамид|имодиум|imodium', ru: 'Лоперамид 2 мг', az: 'Loperamid', sec: 'diarrhea', d: [['Внутрь', '4 мг, затем 2 мг после каждого жидкого стула', 'до 6 лет нельзя; 6–12 лет — 2 мг, затем 1 мг после стула (макс. 6 мг/сут)']], max: '16 мг/сут', w: 'Нельзя при крови в стуле, высокой температуре, подозрении на колит.' },
+  { k: 'ORAL REHYDRATION SALTS', n: 'oral rehydration|регидрон|regidron|rehydron|орс|ors|гидровит|humana elektrolit|регисол|regisol', ru: 'Соли для пероральной регидратации (регидрон)', az: 'Oral rehidratasiya duzları (regidron)', sec: 'diarrhea,dehydr', d: [['Внутрь: 1 пакет на 1 л воды (по инструкции)', 'после каждого жидкого стула 200–400 мл; при обезвоживании 50–100 мл/кг за 4 ч', 'до 2 лет — 50–100 мл, 2–10 лет — 100–200 мл после стула; обезвоживание 50–100 мл/кг за 4 ч мелкими глотками']], w: 'При рвоте — по 5–10 мл каждые 2–3 мин.' },
+  { k: 'DIOSMECTITE', n: 'diosmectite|diosmektit|диосмектит|смекта|smecta|neosmectin|неосмектин', ru: 'Диосмектит (смекта) 3 г', az: 'Diosmektit (smekta)', sec: 'diarrhea', d: [['Внутрь, развести в 1/2 стакана воды', '3 г 3 р/сут', 'до 1 года — 3 г/сут; 1–2 года — 3–6 г/сут; старше — 6–9 г/сут']], w: 'Разносить с другими лекарствами на 1–2 ч.' },
+  { k: 'ACTIVATED CHARCOAL', n: 'activated charcoal|activated carbon|aktivləşdirilmiş kömür|активированн уголь|уголь активированн|карболен|carbolen|сорбекс|sorbex|enterosgel|энтеросгель', ru: 'Активированный уголь', az: 'Aktivləşdirilmiş kömür', sec: 'poison,diarrhea', d: [['Отравление (в первые 1–2 ч): внутрь или через зонд, взвесь в воде', '50 г (25–100 г)', '1 г/кг (макс. 50 г)']], w: 'Таблетки 250 мг неудобны: 50 г = 200 таблеток — лучше порошок. Не помогает при спиртах, кислотах / щелочах, железе, литии. Нельзя при угнетённом сознании без защиты дыхательных путей.' },
+  { k: 'LACTULOSE', n: 'lactulose|laktuloza|лактулоза|дюфалак|duphalac|нормазе|normase', ru: 'Лактулоза', az: 'Laktuloza', sec: 'constipation', d: [['Внутрь', '15–45 мл/сут (печёночная энцефалопатия — 30–45 мл 3–4 р/сут)', 'до 1 года — 5 мл; 1–6 лет — 5–10 мл; 7–14 лет — 15 мл']], w: 'Вздутие в первые дни.' },
+  { k: 'BISACODYL', n: 'bisacodyl|bisakodil|бисакодил|дульколакс|dulcolax', ru: 'Бисакодил', az: 'Bisakodil', sec: 'constipation', d: [['Внутрь на ночь', '5–10 мг', 'с 6 лет — 5 мг'], ['Свеча утром', '10 мг', 'с 6 лет — 5 мг']], w: 'Нельзя при кишечной непроходимости, остром животе.' },
+  { k: 'GLYCEROL', n: 'glycerol|glycerin|qliserin|глицерин|глицерол|микролакс|microlax|glicerolo', ru: 'Глицериновые свечи, микроклизмы', az: 'Qliserin şamları, mikroimalə', sec: 'constipation', d: [['Ректально', '1 свеча (2–3 г) или 1 микроклизма', 'детские свечи / микроклизмы по возрасту']], w: '—' },
+  { k: 'SIMETICONE', n: 'simeticone|simethicone|simetikon|симетикон|эспумизан|espumisan|боботик|bobotik|sab simplex', ru: 'Симетикон', az: 'Simetikon', sec: 'spasm', d: [['Внутрь', '80 мг (2 капс. / 50 капель) 3–5 р/сут', 'грудным — 40 мг (25 кап.) в каждое кормление']], w: '—' },
+  // ---------- глюкоза, электролиты, растворы ----------
+  { k: 'GLUCOSE', n: 'glucose|dextrose|qlükoza|глюкоза|декстроза', ru: 'Глюкоза 5%, 10%, 40%', az: 'Qlükoza', sec: 'hypo,dehydr,diabetes,electrolytes', d: [
+    ['Гипогликемия: в/в', '10% 150–200 мл (15–20 г) за 15 мин или 40% 40–50 мл в крупную вену; повторить, если сахар < 4 ммоль/л', '10% 2 мл/кг (0,2 г/кг)'],
+    ['В сознании', 'внутрь 15–20 г быстрых углеводов', 'внутрь 0,3 г/кг'],
+    ['Гиперкалиемия (с инсулином)', '10 ЕД короткого инсулина + 25 г глюкозы (250 мл 10%) за 15–30 мин', '—']
+  ], w: '40% — только в крупную вену (флебит, некроз при экстравазации). При алкоголизме и истощении дать и тиамин, но глюкозу при гипогликемии ради него не задерживать.' },
+  { k: 'GLUCAGON', n: 'glucagon|qlükaqon|глюкагон|гипокит|hypokit|glucagen|глюкаген', ru: 'Глюкагон 1 мг', az: 'Qlükaqon', sec: 'hypo,poison', d: [['Гипогликемия, нет доступа к вене: в/м или п/к', '1 мг', '< 25 кг (или до 6–8 лет) — 0,5 мг; больше — 1 мг'], ['Отравление бета-блокаторами: в/в', '5–10 мг за 1–2 мин, далее 1–5 мг/ч', '—']], w: 'Не поможет при истощении запасов гликогена (алкоголь, голод). Рвота.' },
+  { k: 'INSULIN', n: 'insulin|insulin|инсулин|актрапид|actrapid|хумулин|humulin|novorapid|новорапид|lantus|лантус|rinsulin|ринсулин', ru: 'Инсулин (короткий)', az: 'İnsulin (qısa təsirli)', sec: 'diabetes,electrolytes', d: [['Кетоацидоз: в/в через перфузор', '0,1 ЕД/кг/ч (после начала инфузии растворов, калий ≥ 3,5)', '0,05–0,1 ЕД/кг/ч'], ['Гиперкалиемия: в/в', '10 ЕД + 25 г глюкозы за 15–30 мин', '0,1 ЕД/кг + глюкоза 0,5 г/кг']], w: 'Гипогликемия, гипокалиемия — контроль сахара и калия.' },
+  { k: 'SODIUM CHLORIDE', n: 'sodium chloride|natrium xlorid|натрия хлорид|физраствор|nacl|izotonik|serum fizyolojik', ru: 'Натрия хлорид 0,9%', az: 'Natrium xlorid 0,9%', sec: 'dehydr,hypotension,electrolytes', d: [['Шок, обезвоживание: в/в струйно', '500 мл за 15 мин, оценить и повторить', '10–20 мл/кг (при сепсисе / травме), оценить и повторить'], ['Разведение и промывание', 'по задаче', '—']], w: 'Большие объёмы — гиперхлоремический ацидоз; при СН — осторожно.' },
+  { k: 'RINGER', n: 'ringer|ringer lactate|рингер|рингера лактат|hartmann|гартман|sterofundin', ru: 'Раствор Рингера / Рингера лактат', az: 'Ringer məhlulu', sec: 'dehydr,hypotension,trauma', d: [['В/в', '500 мл за 15 мин при шоке; при обезвоживании 20–30 мл/кг', '10–20 мл/кг']], w: 'Содержит калий и кальций — не с цитратной кровью в одной системе.' },
+  { k: 'SODIUM BICARBONATE', n: 'sodium bicarbonate|natrium hidrokarbonat|natrium bikarbonat|натрия гидрокарбонат|сода|bikarbonat', ru: 'Натрия гидрокарбонат 4–8,4%', az: 'Natrium hidrokarbonat', sec: 'electrolytes,poison,arrest', d: [['Гиперкалиемия с ацидозом, отравление трициклическими антидепрессантами: в/в', '1 ммоль/кг (50–100 мл 8,4%)', '1 ммоль/кг (8,4% развести вдвое)']], w: 'При остановке сердца рутинно не вводить. Нельзя смешивать с кальцием и катехоламинами в одной системе.' },
+  { k: 'CALCIUM GLUCONATE', n: 'calcium gluconate|kalsium qlükonat|кальция глюконат|кальция хлорид|calcium chloride|kalsium xlorid', ru: 'Кальция глюконат 10% (кальция хлорид 10%)', az: 'Kalsium qlükonat 10%', sec: 'electrolytes,poison,arrest', d: [['Гиперкалиемия с изменениями ЭКГ: в/в за 5–10 мин', '30 мл 10% глюконата (или 10 мл 10% хлорида)', '0,5 мл/кг 10% глюконата (макс. 20 мл)'], ['Гипокальциемия, передозировка магния / блокаторов кальциевых каналов: в/в медленно', '10–20 мл 10% глюконата', '0,5 мл/кг']], w: 'Не с гидрокарбонатом. Осторожно при приёме дигоксина. Кальция хлорид — только в крупную вену.' },
+  { k: 'POTASSIUM CHLORIDE', n: 'potassium chloride|kalium xlorid|калия хлорид|kcl', ru: 'Калия хлорид 4–7,5%', az: 'Kalium xlorid', sec: 'electrolytes', d: [['Гипокалиемия: в/в только разведённым, капельно', 'не быстрее 10 ммоль/ч в периферическую вену (до 20 ммоль/ч только под ЭКГ-монитором); концентрация в периферическую вену не более 40 ммоль/л', 'не быстрее 0,2 ммоль/кг/ч (до 0,5 — только в реанимации под монитором, через центральную вену); не более 40 ммоль/л в периферическую вену']], w: 'Никогда не вводить струйно! 7,5% 10 мл = 10 ммоль. Контроль калия.' },
+  { k: 'THIAMINE', n: 'thiamine|tiamin|тиамин|витамин b1|vitamin b1', ru: 'Тиамин (витамин B1) 50 мг/мл', az: 'Tiamin (B1 vitamini)', sec: 'alcohol,vitamins,hypo', d: [['Алкоголизм, истощение: в/в или в/м (вместе с глюкозой; глюкозу при гипогликемии не откладывать)', '100 мг', '—'], ['Энцефалопатия Вернике: в/в', '200–500 мг 3 р/сут', '—']], w: 'Редко анафилаксия при в/в.' },
+  // ---------- антидоты ----------
+  { k: 'NALOXONE', n: 'naloxone|nalokson|налоксон|narcan|наркан', ru: 'Налоксон 0,4 мг/мл', az: 'Nalokson', sec: 'poison', d: [['Передозировка опиоидов: в/в, в/м, интраназально', '0,4 мг; повтор каждые 2–3 мин до 2 мг (у зависимых — начать с 0,04–0,1 мг в/в)', '0,01 мг/кг (при остановке дыхания — 0,1 мг/кг, макс. 2 мг)']], w: 'Действует короче многих опиоидов — наблюдать, может понадобиться повтор. Синдром отмены у зависимых.' },
+  { k: 'FLUMAZENIL', n: 'flumazenil|флумазенил|анексат|anexate', ru: 'Флумазенил 0,1 мг/мл', az: 'Flumazenil', sec: 'poison', d: [['Передозировка бензодиазепинов: в/в', '0,2 мг за 15 с, затем по 0,1 мг каждые 60 с', '0,01 мг/кг (макс. 0,2 мг)']], max: '1 мг', w: 'Судороги у принимающих бензодиазепины постоянно и при отравлении трициклическими антидепрессантами — не применять вслепую.' },
+  { k: 'ATROPINE', n: 'atropine|atropin|атропин', ru: 'Атропин 1 мг/мл', az: 'Atropin', sec: 'brady,poison,sedation', d: [
+    ['Брадикардия с нарушением гемодинамики: в/в', '0,5 мг; повтор каждые 3–5 мин', '0,02 мг/кг (не менее 0,1 мг, макс. 0,5 мг на дозу)'],
+    ['Отравление ФОС (инсектициды): в/в', '1–2 мг, затем удваивать каждые 5 мин до сухих лёгких и ЧСС > 80', '0,02–0,05 мг/кг, повторять'],
+    ['Премедикация', '0,3–0,6 мг', '0,01–0,02 мг/кг']
+  ], max: 'при брадикардии 3 мг', w: 'При ФОС ограничений по общей дозе нет. Глаукома, тахиаритмия.' },
+  // ---------- нервная система ----------
+  { k: 'DIAZEPAM', n: 'diazepam|диазепам|сибазон|sibazon|реланиум|relanium|седуксен|seduxen|valium', ru: 'Диазепам 5 мг/мл (строгий учёт)', az: 'Diazepam', sec: 'convuls,agitation,anxiety,alcohol,sedation', d: [['Судороги: в/в медленно (≤ 5 мг/мин)', '10 мг (0,15–0,2 мг/кг); через 5 мин можно повторить', '0,2–0,3 мг/кг (макс. 10 мг)'], ['Ректально', '10–20 мг', '0,5 мг/кг (макс. 20 мг)'], ['Тревога, возбуждение: в/м, в/в, внутрь', '5–10 мг', '—']], w: 'Угнетение дыхания (особенно с опиоидами, алкоголем). Антидот — флумазенил.' },
+  { k: 'MIDAZOLAM', n: 'midazolam|мидазолам|дормикум|dormicum|fulsed', ru: 'Мидазолам 5 мг/мл (строгий учёт)', az: 'Midazolam', sec: 'convuls,sedation,agitation', d: [['Судороги: в/м', '> 40 кг — 10 мг; 13–40 кг — 5 мг', '0,2 мг/кг (макс. 10 мг)'], ['Судороги: за щеку / в нос', '10 мг', '0,3 мг/кг (макс. 10 мг)'], ['Седация: в/в медленно', '1–2,5 мг, добавлять по 1 мг', '0,05–0,1 мг/кг']], w: 'Угнетение дыхания. Пожилым — меньшие дозы.' },
+  { k: 'HALOPERIDOL', n: 'haloperidol|галоперидол|haldol|галдол', ru: 'Галоперидол 5 мг/мл', az: 'Haloperidol', sec: 'agitation,vomit,alcohol', d: [['Возбуждение, психоз: в/м', '2,5–5 мг; через 30–60 мин можно повторить', '—'], ['Тошнота (паллиативно)', '0,5–1,5 мг', '—']], max: '20 мг/сут (пожилым меньше)', w: 'Экстрапирамидные реакции, удлинение QT, злокачественный нейролептический синдром. Деменция у пожилых — осторожно.' },
+  { k: 'CHLORPROMAZINE', n: 'chlorpromazine|xlorpromazin|хлорпромазин|аминазин|aminazin', ru: 'Хлорпромазин (аминазин)', az: 'Xlorpromazin (aminazin)', sec: 'agitation', d: [['В/м', '25–50 мг', '—']], w: 'Выраженная гипотензия, QT. Лежать после введения.' },
+  { k: 'PHENOBARBITAL', n: 'phenobarbital|fenobarbital|фенобарбитал|корвалол|corvalol|валокордин|valocordin|барбовал', ru: 'Фенобарбитал; корвалол, валокордин', az: 'Fenobarbital; korvalol', sec: 'anxiety,insomnia,convuls', d: [['Корвалол / валокордин: внутрь с водой', '15–30 капель 2–3 р/сут', '—'], ['Фенобарбитал при эпистатусе (вторая линия): в/в', '15–20 мг/кг не быстрее 50–100 мг/мин', '20 мг/кг']], w: 'Сонливость, зависимость, угнетение дыхания с другими седативными. Корвалол — не для экстренной помощи.' },
+  { k: 'VALPROIC ACID', n: 'valproic|valproate|valproat|вальпроат|вальпроев|депакин|depakine|конвулекс|convulex', ru: 'Вальпроевая кислота', az: 'Valproy turşusu', sec: 'convuls', d: [['Эпистатус (вторая линия): в/в за 5–10 мин', '40 мг/кг (макс. 3 г)', '40 мг/кг'], ['Постоянно: внутрь', '10–20 мг/кг/сут в 2 приёма', '—']], w: 'Беременность (пороки развития), печень, панкреатит.' },
+  { k: 'BETAHISTINE', n: 'betahistine|betahistin|бетагистин|бетасерк|betaserc|вестибо|vestibo', ru: 'Бетагистин', az: 'Betahistin', sec: 'vertigo', d: [['Внутрь с едой', '8–16 мг 3 р/сут (или 24 мг 2 р/сут)', '—']], w: 'Язва, феохромоцитома.' },
+  { k: 'AMMONIA', n: 'ammonia|ammonyak|нашатыр|аммиак', ru: 'Раствор аммиака 10% (нашатырь)', az: 'Ammonyak məhlulu 10%', sec: 'vertigo', d: [['Обморок: вата, смоченная раствором, на 5–10 см от носа', 'несколько вдохов', '—']], w: 'Доказательной пользы мало: при обмороке главное — уложить, ноги поднять. Не прикладывать вплотную (ожог слизистой).' },
+  // ---------- инфекции ----------
+  { k: 'CEFTRIAXONE', n: 'ceftriaxone|seftriakson|цефтриаксон|роцефин|rocephin|lendacin|лендацин|forcef', ru: 'Цефтриаксон 1 г', az: 'Seftriakson', sec: 'infection,uti', d: [['В/в или в/м (в/м — на 1% лидокаине)', '1–2 г 1 р/сут; менингит — 2 г каждые 12 ч', '50–80 мг/кг/сут; менингит — 100 мг/кг/сут (макс. 4 г)']], w: 'Новорождённым — не вместе с кальцием в/в. Аллергия на пенициллины — осторожно. Лидокаин не вводить в/в.' },
+  { k: 'AMOXICILLIN', n: 'amoxicillin|amoksisillin|амоксициллин|флемоксин|flemoxin|оспамокс|ospamox|амоксиклав|amoxiclav|аугментин|augmentin|клавулан|clavulan', ru: 'Амоксициллин (± клавулановая кислота)', az: 'Amoksisillin (± klavulan turşusu)', sec: 'infection,throat,uti', d: [['Внутрь', '500 мг 3 р/сут (пневмония — 1 г 3 р/сут); с клавуланатом 875/125 мг 2 р/сут', '40–90 мг/кг/сут в 2–3 приёма']], w: 'Аллергия на пенициллины. Сыпь при мононуклеозе.' },
+  { k: 'AZITHROMYCIN', n: 'azithromycin|azitromisin|азитромицин|сумамед|sumamed|зитролид|azitrox', ru: 'Азитромицин', az: 'Azitromisin', sec: 'infection', d: [['Внутрь 1 р/сут', '500 мг 3 дня (или 500 мг в 1-й день, затем 250 мг 4 дня)', '10 мг/кг 1 р/сут 3 дня']], w: 'Удлинение QT.' },
+  { k: 'CIPROFLOXACIN', n: 'ciprofloxacin|siprofloksasin|ципрофлоксацин|ципролет|ciprolet|ципробай|ciprobay|cifran', ru: 'Ципрофлоксацин', az: 'Siprofloksasin', sec: 'infection,uti,diarrhea', d: [['Внутрь', '250–750 мг 2 р/сут (цистит — 250 мг 2 р/сут 3 дня)', 'детям — только по особым показаниям'], ['В/в', '400 мг 2–3 р/сут', '—']], w: 'Тендиниты (разрывы сухожилий), QT, беременность. Не вместе с антацидами.' },
+  { k: 'METRONIDAZOLE', n: 'metronidazole|metronidazol|метронидазол|трихопол|trichopol|флагил|flagyl', ru: 'Метронидазол', az: 'Metronidazol', sec: 'infection,diarrhea', d: [['Внутрь или в/в', '500 мг 3 р/сут', '7,5 мг/кг 3 р/сут']], w: 'Алкоголь нельзя (дисульфирамоподобная реакция).' },
+  { k: 'NITROFURANTOIN', n: 'nitrofurantoin|нитрофурантоин|фурадонин|furadonin|furamag|фурамаг|furazidin|фуразидин', ru: 'Нитрофурантоин (фурадонин), фуразидин', az: 'Nitrofurantoin', sec: 'uti', d: [['Цистит: внутрь', 'нитрофурантоин 100 мг 2 р/сут (пролонг.) 5 дней; фуразидин 50–100 мг 3 р/сут', '—']], w: 'СКФ < 45 — не эффективен. Конец беременности — нельзя.' },
+  { k: 'FOSFOMYCIN', n: 'fosfomycin|fosfomisin|фосфомицин|монурал|monural', ru: 'Фосфомицин 3 г', az: 'Fosfomisin', sec: 'uti', d: [['Цистит: внутрь натощак, растворить', '3 г однократно', '—']], w: '—' },
+  { k: 'FLUCONAZOLE', n: 'fluconazole|flukonazol|флуконазол|дифлюкан|diflucan|микосист|mycosyst', ru: 'Флуконазол', az: 'Flukonazol', sec: 'fungal', d: [['Внутрь', 'вагинальный кандидоз — 150 мг однократно; другие — 50–400 мг/сут', '3–6 мг/кг/сут']], w: 'Взаимодействия (варфарин, статины), QT.' },
+  { k: 'ACICLOVIR', n: 'aciclovir|acyclovir|asiklovir|ацикловир|зовиракс|zovirax|virolex|виролекс', ru: 'Ацикловир', az: 'Asiklovir', sec: 'antiviral,skin', d: [['Внутрь', 'герпес — 400 мг 3 р/сут (или 200 мг 5 р/сут) 5 дней; опоясывающий лишай — 800 мг 5 р/сут 7 дней', '—'], ['Крем 5% местно', '5 р/сут 5 дней', 'так же']], w: 'Почки — снизить дозу, пить больше.' },
+  { k: 'OSELTAMIVIR', n: 'oseltamivir|осельтамивир|тамифлю|tamiflu', ru: 'Осельтамивир 75 мг', az: 'Oseltamivir', sec: 'antiviral,cold', d: [['Внутрь, в первые 48 ч', '75 мг 2 р/сут 5 дней', 'до 1 года — 3 мг/кг 2 р/сут; с 1 года: ≤ 15 кг — 30 мг; 15–23 кг — 45 мг; 23–40 кг — 60 мг; > 40 кг — 75 мг 2 р/сут']], w: '—' },
+  { k: 'ALBENDAZOLE', n: 'albendazole|albendazol|албендазол|немозол|nemozol|zentel|зентел', ru: 'Альбендазол', az: 'Albendazol', sec: 'worms', d: [['Внутрь', '400 мг однократно (по показаниям — 3 дня)', 'с 2 лет — 400 мг; 1–2 года — 200 мг']], w: 'Беременность — нельзя.' },
+  { k: 'PERMETHRIN', n: 'permethrin|permetrin|перметрин|медифокс|medifox|nittifor|ниттифор', ru: 'Перметрин 5% крем / 1% раствор', az: 'Permetrin', sec: 'worms,skin', d: [['Чесотка: крем 5% на всё тело от шеи, смыть через 8–12 ч', 'однократно, повтор через 7 дней', 'с 2 мес. — так же'], ['Вши: 1% на волосы на 10 мин', 'повтор через 7–10 дней', '—']], w: '—' },
+  // ---------- антисептики, раны, ожоги ----------
+  { k: 'POVIDONE-IODINE', n: 'povidone|povidon|повидон|бетадин|betadin|betadine|йодопирон|yodopiron', ru: 'Повидон-йод (бетадин) 10%', az: 'Povidon-yod (betadin)', sec: 'wounds,burns,ppe', d: [['Кожа, рана: местно', 'неразведённым на кожу; для промывания ран — развести 1:10', 'так же; новорождённым — осторожно']], w: 'Аллергия на йод, болезни щитовидной железы, большие площади у детей и беременных.' },
+  { k: 'CHLORHEXIDINE', n: 'chlorhexidine|xlorheksidin|хлоргексидин|hibiscrub|хибискраб|sebidin', ru: 'Хлоргексидин 0,05% водный, 0,5% спиртовой', az: 'Xlorheksidin', sec: 'wounds,ppe,throat', d: [['Рана, кожа, слизистые: местно', '0,05% — промывание ран, слизистых; 0,5% спиртовой — кожа рук и операционного поля', 'так же']], w: 'Не в глаза и в ухо при перфорации.' },
+  { k: 'HYDROGEN PEROXIDE', n: 'hydrogen peroxide|hidrogen peroksid|перекись водорода|пероксид водорода|перекись', ru: 'Перекись водорода 3%', az: 'Hidrogen peroksid 3%', sec: 'wounds,bleeding', d: [['Рана: промывание, тампон при капиллярном кровотечении', 'местно', 'так же']], w: 'Не в глубокие и закрытые полости (газовая эмболия). Повреждает грануляции — не для постоянной обработки.' },
+  { k: 'ETHANOL', n: 'ethanol|etil spirt|tibbi spirt|спирт этилов|этиловый спирт|медицинский спирт|alcohol 70', ru: 'Спирт этиловый 70% / 96%', az: 'Etil spirti 70% / 96%', sec: 'ppe,wounds', d: [['Кожа, руки, инъекционное поле', '70% — для обработки кожи и рук', '—']], w: 'Не на рану (жжение, некроз).' },
+  { k: 'BRILLIANT GREEN', n: 'brilliant green|brilliant yaşılı|бриллиантов зелен|зелёнка|зеленка|viride nitens', ru: 'Бриллиантовый зелёный 1%', az: 'Brilliant yaşılı 1%', sec: 'wounds', d: [['Края ран, ссадины: местно', '1–2 р/сут', 'так же']], w: 'Не на слизистые, не в рану.' },
+  { k: 'SILVER SULFADIAZINE', n: 'sulfadiazine|sulfadiazin|сульфадиазин|аргосульфан|argosulfan|сульфаргин|sulfargin|dermazin|дермазин|flamazine', ru: 'Сульфадиазин серебра 1% крем', az: 'Gümüş sulfadiazin', sec: 'burns,wounds', d: [['Ожог: местно слоем 2–4 мм под повязку', '1–2 р/сут', 'с 2 мес.']], w: 'Беременность в конце срока, новорождённые — нельзя. Аллергия на сульфаниламиды.' },
+  { k: 'DEXPANTHENOL', n: 'dexpanthenol|dekspantenol|декспантенол|пантенол|panthenol|бепантен|bepanthen|d-panthenol', ru: 'Декспантенол (пантенол) спрей / крем', az: 'Dekspantenol (pantenol)', sec: 'burns,skin,wounds', d: [['Поверхностный ожог, ссадины: местно', '1–несколько раз в сутки', 'так же']], w: 'Для глубоких ожогов не подходит — сначала охладить водой 20 мин.' },
+  { k: 'TETANUS', n: 'tetanus toxoid|столбнячн анатоксин|анатоксин столб|ас-анатоксин|адс-м|ads-m|tetanus anatoksin|tetanus immunoglobulin|противостолбнячн|антитоксин столб|tetanus antitoksin', ru: 'Столбняк: анатоксин (АС, АДС-М), иммуноглобулин, сыворотка', az: 'Tetanus: anatoksin, immunoqlobulin, zərdab', sec: 'vaccines,wounds,trauma', d: [['Анатоксин: в/м', '0,5 мл (по схеме экстренной профилактики)', 'по возрасту, по схеме'], ['Иммуноглобулин человека: в/м', '250 МЕ (загрязнённая рана, не привит); 500 МЕ — если прошло больше 24 ч, рана сильно загрязнена или ожог', 'так же'], ['Сыворотка (лошадиная): п/к после пробы по Безредке', '3000 МЕ', '3000 МЕ']], w: 'Решение — по прививочному анамнезу и типу раны. Сыворотка — риск анафилаксии, иметь адреналин.' },
+  { k: 'RABIES VACCINE', n: 'rabies|antirabik|антирабическ|бешенств|quduz|kuduz|кокав|kokav|verorab|вероваб|rabipur|рабипур', ru: 'Бешенство: вакцина и иммуноглобулин', az: 'Quduzluq: peyvənd və immunoqlobulin', sec: 'vaccines,wounds', d: [['Вакцина: в/м в дельтовидную мышцу (детям — в бедро)', 'по схеме вакцины: ВОЗ (Essen) — дни 0, 3, 7, 14–28; КОКАВ по инструкции — дни 0, 3, 7, 14, 30, 90', 'так же'], ['Иммуноглобулин (III категория; II категория — при иммунодефиците)', 'человеческий 20 МЕ/кг, лошадиный 40 МЕ/кг — всю дозу в рану и вокруг неё (остаток в/м вдали вводить не обязательно)', 'так же']], w: 'Рану сразу промыть водой с мылом 15 мин. Иммуноглобулин — не в одну точку с вакциной.' },
+  // ---------- глаза, разное ----------
+  { k: 'PROXYMETACAINE', n: 'proxymetacaine|proksimetakain|проксиметакаин|alcaine|алкаин|оксибупрокаин|oxybuprocaine|инокаин|inocaine', ru: 'Проксиметакаин 0,5% (глазные капли, анестезия)', az: 'Proksimetakain 0,5%', sec: 'eyes,localanest', d: [['В глаз', '1–2 капли за 1–2 мин до осмотра / удаления инородного тела', 'так же']], w: 'Не давать на руки пациенту (повреждение роговицы при частом закапывании).' },
+  { k: 'SULFACETAMIDE', n: 'sulfacetamide|sulfasetamid|сульфацетамид|альбуцид|albucid', ru: 'Сульфацетамид (альбуцид) 20%', az: 'Sulfasetamid (albusid)', sec: 'eyes', d: [['Конъюнктивит: в глаз', '1–2 капли 4–6 р/сут', 'так же']], w: 'Жжение.' },
+  { k: 'TETRACYCLINE EYE OINTMENT', n: 'tetracycline|tetrasiklin|тетрациклин', ru: 'Тетрациклиновая глазная мазь 1%', az: 'Tetrasiklin göz məlhəmi 1%', sec: 'eyes', d: [['За веко', '3–5 р/сут', 'так же']], w: '—' },
+  { k: 'COLCHICINE', n: 'colchicine|kolxisin|колхицин|колхикум|colchicum', ru: 'Колхицин 0,5 мг', az: 'Kolxisin', sec: 'gout', d: [['Приступ подагры: внутрь', '1 мг, через 1 ч 0,5 мг; далее 0,5 мг 2–3 р/сут', '—']], max: 'в первый день 1,5 мг', w: 'Диарея, взаимодействия (кларитромицин), почки.' },
+  { k: 'METFORMIN', n: 'metformin|метформин|глюкофаж|glucophage|сиофор|siofor', ru: 'Метформин', az: 'Metformin', sec: 'diabetes', d: [['Внутрь с едой', '500 мг 1–2 р/сут, постепенно до 2 г/сут', '—']], w: 'Отменить перед контрастом, при обезвоживании, почечной недостаточности (лактоацидоз).' },
+  { k: 'IRON', n: 'iron|ferrous|ferr|dəmir|железо|сорбифер|sorbifer|мальтофер|maltofer|ferrum lek|феррум лек|тардиферон|tardyferon', ru: 'Препараты железа', az: 'Dəmir preparatları', sec: 'anemia', d: [['Внутрь', '100–200 мг элементарного железа в сутки', '3–6 мг/кг/сут']], w: 'Тёмный стул, запор. Разносить с антацидами, чаем.' }
+];
+
+/* =====================================================================
+ * v14: поиск по разделам (показаниям). Пишешь «температура», «противорвотное», «qusma», «aritmiya» —
+ *  сверху появляется раздел; в нём: что есть на складе, как применять (дозы, способ), что закончилось,
+ *  что ещё применяют при этом, расходники и что есть в справочнике АР. Разделы есть и пустые.
+ * ===================================================================== */
+const I18N_V14 = {
+  ru: {
+    indBtn: '📂 Разделы', indTitle: '📂 Разделы по показаниям', indSearchPh: 'Например: температура, рвота, аритмия, qusma…',
+    indHits: 'Разделы по запросу', indInStock: 'на складе: {n}', indNone: 'на складе нет',
+    indStockH: '✅ На складе', indZeroH: '⛔ Закончились (0)', indMoreH: '📖 Что ещё применяют (нет в учёте)', indSupH: '🧰 Расходники',
+    indCatH: '🇦🇿 В справочнике АР — по группе ATC', indCatBrands: 'фирм: {n}', indHowTo: '💊 Как применять', indAdult: 'Взрослым', indChild: 'Детям',
+    indMax: 'Не больше', indWarn: 'Осторожно', indNoMemo: 'Памятки нет — сверяйтесь с инструкцией к препарату.',
+    indDisclaimer: 'Справка для врача: перед введением сверьте дозу с инструкцией к конкретному препарату.', indSpend: '⚡ Списать',
+    indEmpty: 'В этом разделе на складе ничего нет.', indSupCat: 'Есть в справочнике', indNothing: 'Ничего не найдено. Попробуйте другое слово.',
+    indAlso: 'Также в разделах:', indTotal: 'всего {n} {u}', indNear: 'ближайший срок {d}'
+  },
+  az: {
+    indBtn: '📂 Bölmələr', indTitle: '📂 Göstərişlər üzrə bölmələr', indSearchPh: 'Məsələn: hərarət, qusma, aritmiya, температура…',
+    indHits: 'Sorğuya uyğun bölmələr', indInStock: 'anbarda: {n}', indNone: 'anbarda yoxdur',
+    indStockH: '✅ Anbarda', indZeroH: '⛔ Qurtarıb (0)', indMoreH: '📖 Daha nə tətbiq olunur (uçotda yoxdur)', indSupH: '🧰 Sərf materialları',
+    indCatH: '🇦🇿 AR məlumat kitabçasında — ATC qrupu üzrə', indCatBrands: 'firma: {n}', indHowTo: '💊 Necə tətbiq etməli', indAdult: 'Böyüklərə', indChild: 'Uşaqlara',
+    indMax: 'Ən çox', indWarn: 'Ehtiyat', indNoMemo: 'Yaddaş qeydi yoxdur — preparatın təlimatı ilə yoxlayın.',
+    indDisclaimer: 'Həkim üçün arayış: yeritməzdən əvvəl dozanı konkret preparatın təlimatı ilə yoxlayın (mətn rus dilindədir).', indSpend: '⚡ Silmək',
+    indEmpty: 'Bu bölmədə anbarda heç nə yoxdur.', indSupCat: 'Məlumat kitabçasında var', indNothing: 'Heç nə tapılmadı. Başqa söz yoxlayın.',
+    indAlso: 'Həmçinin bölmələrdə:', indTotal: 'cəmi {n} {u}', indNear: 'ən yaxın müddət {d}'
+  }
+};
+Object.assign(I18N.ru, I18N_V14.ru);
+Object.assign(I18N.az, I18N_V14.az);
+
+/** Для поиска разделов: строчные, без диакритики (qızdırma = qizdirma = «кызырма» не надо — только латиница/кириллица как есть). */
+function indNorm(s) {
+  return String(s || '').toLowerCase().replace(/i̇/g, 'i').replace(/ё/g, 'е').replace(/ı/g, 'i').replace(/ə/g, 'e').replace(/ğ/g, 'g')
+    .replace(/ş/g, 's').replace(/ç/g, 'c').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/[^a-zа-я0-9\s-]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+let IND_IDX = null;
+function indIdx() {
+  if (IND_IDX) return IND_IDX;
+  const secs = IND_SECTIONS.map(x => ({ id: x[0], ic: x[1], ru: x[2], az: x[3], words: x[4].split('|').map(indNorm).filter(Boolean), atc: x[5] ? x[5].split(',') : [], sup: x[6] ? x[6].split(',') : [] }));
+  const byId = {};
+  secs.forEach(s => { byId[s.id] = s; s.nameW = indNorm(s.ru + ' ' + s.az); });
+  const drugs = IND_DRUGS.map(d => ({ d, sec: d.sec.split(','), keys: d.n.split('|').map(x => qk(x)).filter(k => k.length >= 4).sort((a, b) => b.length - a.length) }));
+  IND_IDX = { secs, byId, drugs };
+  return IND_IDX;
+}
+/** Разделы, подходящие к запросу (по словам раздела и по названию). */
+function indMatch(q) {
+  const n = indNorm(q);
+  if (n.length < 3) return [];
+  const toks = n.split(' ').filter(Boolean);
+  const hit = w => {
+    if (w.indexOf(' ') !== -1) return n.indexOf(w) !== -1;
+    return toks.some(t => (t.startsWith(w) && (w.length > 3 || t.length <= w.length + 2)) || (t.length >= 5 && w.startsWith(t)));
+  };
+  return indIdx().secs.filter(s => s.words.some(hit));
+}
+/* ---------- позиция склада → препарат-памятка, ATC, разделы ---------- */
+const IND_LEGACY_SUP = { sup_tube: ['sup_urin', 'sup_ngt', 'sup_drain'], sup_lab: ['sup_vacutube', 'sup_container', 'sup_test'], sup_diag: ['sup_ecg', 'sup_sensor'], sup_immob: ['sup_splint'] };
+const IND_FORM_SEC = { med_eye: 'eyes', med_eyeoint: 'eyes', med_ear: 'ears', med_nasal: 'nose', med_nspray: 'nose', med_tspray: 'throat', med_vacc: 'vaccines', med_serum: 'vaccines', med_gas: 'oxygen', med_irrig: 'dehydr', med_inf: 'dehydr', med_vag: '', med_supp: '' };
+let IND_MEMO = { v: null, m: {} };
+function indCatOf(it) {
+  if (!S.catBy) return null;
+  const l = S.catBy[skel(it.name)] || S.catBy[skel(String(it.name).split(/[\s,(]/)[0])];
+  return l && l.length ? l[0] : null;
+}
+function indInfo(it) {
+  const v = S.view && S.view.items;
+  if (IND_MEMO.v !== v || IND_MEMO.cat !== S.cat) IND_MEMO = { v, cat: S.cat, m: {} };
+  if (IND_MEMO.m[it.id]) return IND_MEMO.m[it.id];
+  const idx = indIdx();
+  const ce = it.category === 'med' ? indCatOf(it) : null;
+  const text = ' ' + [qk(it.name), qk(it.substance || ''), ce ? qkeyEn(ce.inn) : '', ce && ce.ru ? qk(ce.ru) : ''].join(' ') + ' ';
+  let drug = null;
+  if (it.category === 'med') {
+    for (const x of idx.drugs) { if (x.keys.some(k => text.indexOf(' ' + k) !== -1)) { drug = x; break; } }
+  }
+  const atc = ce && ce.atc ? ce.atc : '';
+  const secs = new Set(drug ? drug.sec : []);
+  if (atc) idx.secs.forEach(s => { if (s.atc.some(p => atc.startsWith(p))) secs.add(s.id); });
+  if (it.category === 'sup') {
+    const codes = IND_LEGACY_SUP[it.form] || [it.form];
+    idx.secs.forEach(s => { if (s.sup.some(c => codes.indexOf(c) !== -1)) secs.add(s.id); });
+  } else if (IND_FORM_SEC[it.form]) secs.add(IND_FORM_SEC[it.form]);
+  const r = { drug: drug ? drug.d : null, atc, secs: Array.from(secs) };
+  IND_MEMO.m[it.id] = r;
+  return r;
+}
+/** Позиции склада в разделе (с остатком и без). */
+function indItems(secId) {
+  return (S.view.items || []).filter(it => String(it.id).indexOf('tmp_') !== 0 && indInfo(it).secs.indexOf(secId) !== -1);
+}
+function indStockCount(secId) { return indItems(secId).filter(it => itemStats(it).usable > 0).length; }
+
+/* ---------- поиск: раздел по запросу → позиции этого раздела тоже в списке ---------- */
+(function () {
+  const orig = matchItems;
+  window.matchItems = function (q) {
+    const m = orig(q);
+    const secs = indMatch(q);
+    S.indHits = secs;
+    // по названию ничего не нашлось («противорвотное», «температура») — показать позиции найденных разделов
+    if (m && secs.length && !Object.keys(m.items).length) secs.forEach(s => indItems(s.id).forEach(it => { m.items[it.id] = 'section'; }));
+    return m;
+  };
+})();
+function indRowHtml(s) {
+  const n = indStockCount(s.id);
+  return '<button class="list-row" style="width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line, #e5e7eb);padding:10px 4px;cursor:pointer;display:flex;align-items:center;gap:8px;color:inherit;font:inherit" data-act="indOpen" data-id="' + s.id + '">' +
+    '<span style="font-size:20px">' + s.ic + '</span><span class="grow" style="flex:1;min-width:0"><b>' + esc(S.lang === 'az' ? s.az : s.ru) + '</b>' + (S.lang === 'az' ? '' : '<br><span class="muted">' + esc(s.az) + '</span>') + '</span>' +
+    '<span class="tag' + (n ? ' green' : '') + '" style="white-space:nowrap">' + esc(n ? t('indInStock', { n }) : t('indNone')) + '</span><span class="muted">›</span></button>';
+}
+function indHitsCard() {
+  const secs = S.indHits || [];
+  if (!secs.length) return '';
+  return '<div class="card" id="indHitsCard"><div class="lbl">' + esc(t('indHits')) + '</div>' + secs.slice(0, 8).map(indRowHtml).join('') + '</div>';
+}
+(function () {
+  const wrapR = (name, boxSel, qOf) => {
+    const f = window[name]; if (typeof f !== 'function') return;
+    window[name] = function () {
+      const r = f.apply(this, arguments);
+      try {
+        const q = qOf();
+        const box = $(boxSel);
+        if (box && q && q.trim().length >= 3) { indMatch(q); S.indHits = indMatch(q); const old = $('#indHitsCard', box); if (old) old.remove(); box.insertAdjacentHTML('afterbegin', indHitsCard()); }
+      } catch (e) { }
+      return r;
+    };
+  };
+  wrapR('renderSpend', '#spendList', () => (S.spend && S.spend.q) || '');
+  wrapR('renderStock', '#stockList', () => (S.stock && S.stock.q && ['inn', 'loc', undefined].indexOf(S.stock.view) !== -1 ? S.stock.q : ''));
+})();
+/** Кнопка «📂 Разделы» рядом с поиском в «Списании» и на «Складе». */
+function indInjectButtons() {
+  [['#spendQ', 'indBtnSpend'], ['#stockQ', 'indBtnStock']].forEach(([inp, id]) => {
+    const i = $(inp); if (!i || $('#' + id)) return;
+    const b = document.createElement('button');
+    b.className = 'btn small ghost'; b.id = id; b.dataset.act = 'indBrowse'; b.dataset.i18n = 'indBtn'; b.textContent = t('indBtn');
+    b.style.whiteSpace = 'nowrap';
+    i.parentNode.insertBefore(b, i.nextSibling);
+  });
+}
+
+/* ---------- окна ---------- */
+function indDoseHtml(d, open) {
+  if (!d) return '<div class="muted" style="margin-top:4px">' + esc(t('indNoMemo')) + '</div>';
+  const rows = (d.d || []).map(r => '<div style="margin:6px 0"><div><b>' + esc(r[0]) + '</b></div>' +
+    (r[1] && r[1] !== '—' ? '<div>👤 ' + esc(t('indAdult')) + ': ' + esc(r[1]) + '</div>' : '') +
+    (r[2] && r[2] !== '—' ? '<div>🧒 ' + esc(t('indChild')) + ': ' + esc(r[2]) + '</div>' : '') + '</div>').join('');
+  return '<details class="ind-dose"' + (open ? ' open' : '') + '><summary>' + esc(t('indHowTo')) + ' — ' + esc(d.ru) + '</summary><div style="padding:4px 2px 2px">' + rows +
+    (d.max ? '<div style="margin-top:4px">⛔ ' + esc(t('indMax')) + ': ' + esc(d.max) + '</div>' : '') +
+    (d.w && d.w !== '—' ? '<div class="hint" style="margin-top:6px">⚠️ ' + esc(t('indWarn')) + ': ' + esc(d.w) + '</div>' : '') + '</div></details>';
+}
+function indItemCard(it, secId) {
+  const st = itemStats(it);
+  const inf = indInfo(it);
+  const lots = S.view.lots.filter(l => l.itemId === it.id && l.qty > 0 && lotStatus(l).cls !== 'expired').sort((a, b) => String(a.expiry || '9999').localeCompare(String(b.expiry || '9999')));
+  const near = lots.find(l => l.expiry);
+  const locs = {};
+  lots.forEach(l => { locs[l.locationId] = (locs[l.locationId] || 0) + l.qty; });
+  const other = inf.secs.filter(s => s !== secId).map(s => indIdx().byId[s]).filter(Boolean);
+  return '<div class="grp" style="padding:10px 12px"><div class="brand-row"><div class="grow"><div class="nm">' + nameHtml(it) + '</div><div class="fd">' + esc(formName(it.form)) + ' · ' + esc(it.dosage || '') + '</div>' +
+    '<div class="fd">' + esc(t('indTotal', { n: st.usable, u: unitShort(it.unit) })) + (near ? ' · ' + esc(t('indNear', { d: fmtDate(String(near.expiry).slice(0, 10)) })) : '') + '</div>' +
+    (Object.keys(locs).length ? '<div class="fd">📍 ' + Object.keys(locs).map(l => esc(locName(l)) + ' — ' + locs[l]).join('; ') + '</div>' : '') + '</div>' +
+    (st.usable > 0 && can('spend') ? '<button class="btn small primary" data-act="indSpend" data-q="' + esc(it.name) + '">' + esc(t('indSpend')) + '</button>' : '') + '</div>' +
+    (it.category === 'med' ? indDoseHtml(inf.drug, false) : '') +
+    (other.length ? '<div class="muted" style="margin-top:4px">' + esc(t('indAlso')) + ' ' + other.map(s => '<a href="#" data-act="indOpen" data-id="' + s.id + '">' + s.ic + ' ' + esc(S.lang === 'az' ? s.az : s.ru) + '</a>').join(', ') + '</div>' : '') + '</div>';
+}
+function indSectionHtml(id) {
+  const idx = indIdx(), s = idx.byId[id]; if (!s) return '';
+  const items = indItems(id);
+  const inStock = items.filter(it => itemStats(it).usable > 0);
+  const zero = items.filter(it => itemStats(it).usable <= 0);
+  const usedDrugs = new Set(items.map(it => indInfo(it).drug).filter(Boolean));
+  const more = idx.drugs.filter(x => x.sec.indexOf(id) !== -1 && !usedDrugs.has(x.d)).map(x => x.d);
+  const meds = inStock.filter(it => it.category === 'med'), sups = inStock.filter(it => it.category === 'sup');
+  let h = S.lang === 'az' ? '' : '<div class="muted" style="margin-bottom:10px">' + esc(s.az) + '</div>';
+  h += '<div class="hint" style="margin-bottom:10px">ℹ️ ' + esc(t('indDisclaimer')) + '</div>';
+  h += '<div class="lbl">' + esc(t('indStockH')) + ' (' + inStock.length + ')</div>';
+  h += inStock.length ? meds.concat(sups).map(it => indItemCard(it, id)).join('') : '<div class="empty" style="padding:10px">' + esc(t('indEmpty')) + '</div>';
+  if (zero.length) h += '<div class="lbl" style="margin-top:12px">' + esc(t('indZeroH')) + '</div>' + zero.map(it => '<div class="grp" style="padding:8px 12px;opacity:.85"><div class="nm">' + nameHtml(it) + '</div><div class="fd">' + esc(formName(it.form)) + ' · ' + esc(it.dosage || '') + '</div>' + (it.category === 'med' ? indDoseHtml(indInfo(it).drug, false) : '') + '</div>').join('');
+  if (more.length) h += '<div class="lbl" style="margin-top:12px">' + esc(t('indMoreH')) + '</div>' + more.map(d => '<div class="grp" style="padding:8px 12px"><div class="nm">' + esc(S.lang === 'az' ? d.az : d.ru) + '</div>' + indDoseHtml(d, false) + '</div>').join('');
+  // расходники из справочника для этого раздела
+  if (s.sup.length && S.catSup) {
+    const seen = {}, names = [];
+    S.catSup.forEach(e => { if (s.sup.indexOf(e.code) !== -1 && !seen[e.ru]) { seen[e.ru] = 1; names.push(S.lang === 'az' && e.az ? e.az : e.ru); } });
+    if (names.length) h += '<details style="margin-top:12px"><summary class="lbl">' + esc(t('indSupH')) + ' — ' + esc(t('indSupCat')) + ' (' + names.length + ')</summary><div class="muted" style="padding:6px 2px">' + names.slice(0, 80).map(esc).join(' · ') + '</div></details>';
+  }
+  // препараты справочника АР по группе ATC
+  if (s.atc.length && S.cat) {
+    const g = {};
+    S.cat.forEach(e => { if (e.atc && s.atc.some(p => e.atc.startsWith(p))) { const k = catInnName(e.inn); (g[k] = g[k] || new Set()).add(e.b); } });
+    const list = Object.keys(g).map(k => [k, g[k].size]).sort((a, b) => b[1] - a[1]);
+    if (list.length) h += '<details style="margin-top:12px"><summary class="lbl">' + esc(t('indCatH')) + ' (' + list.length + ')</summary><div style="padding:6px 2px">' + list.slice(0, 120).map(x => '<div class="fd">' + esc(x[0]) + ' — ' + esc(t('indCatBrands', { n: x[1] })) + '</div>').join('') + '</div></details>';
+  }
+  return h;
+}
+function indOpen(id) {
+  const s = indIdx().byId[id]; if (!s) return;
+  openModal('<h3>' + s.ic + ' ' + esc(S.lang === 'az' ? s.az : s.ru) + '</h3><div id="indSec">' + indSectionHtml(id) + '</div><div class="acts"><button class="btn ghost" data-act="indBrowse">' + esc(t('indBtn')) + '</button><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+}
+function indListHtml(q) {
+  const idx = indIdx();
+  let secs = q && indNorm(q).length >= 2 ? indMatch(q) : idx.secs;
+  if (q && !secs.length) { const n = indNorm(q); secs = idx.secs.filter(s => s.nameW.indexOf(n) !== -1); }
+  if (!secs.length) return '<div class="empty">' + esc(t('indNothing')) + '</div>';
+  return secs.map(indRowHtml).join('');
+}
+function indBrowse() {
+  openModal('<h3>' + esc(t('indTitle')) + '</h3><div class="field"><input type="search" id="indQ" autocomplete="off" placeholder="' + esc(t('indSearchPh')) + '"></div><div id="indList">' + indListHtml('') + '</div><div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+  const i = $('#indQ');
+  if (i) i.addEventListener('input', () => { $('#indList').innerHTML = indListHtml(i.value); });
+}
+Object.assign(H, {
+  indBrowse: () => indBrowse(),
+  indOpen: (el, e) => { if (e && e.preventDefault) e.preventDefault(); indOpen(el.dataset.id); },
+  indSpend: el => { closeModal(); S.spend.q = el.dataset.q; S.spend.loc = 'ALL'; setScreen('spend'); const i = $('#spendQ'); if (i) i.value = el.dataset.q; renderSpend(); }
+});
+indInjectButtons();
 
 
 function init() {
