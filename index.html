@@ -892,6 +892,8 @@ function qkeyEn(s) {
 function qkey(s) {
   // украинское написание → русское (Натрію хлорид = Натрия хлорид, Аскорбінова = Аскорбиновая)
   let v = String(s || '').toLowerCase().replace(/ё/g, 'е').replace(/[іїі]/g, 'и').replace(/є/g, 'е').replace(/ґ/g, 'г').replace(/['’ʼ]/g, '');
+  // турецкие, немецкие, английские слова → русские / азербайджанские (enjektör = шприц, sodyum klorür = natrium xlorid)
+  if (typeof qkeyLatin === 'function') v = qkeyLatin(v);
   if (/[а-я]/.test(v)) QALIAS.forEach(a => { v = v.replace(a[0], a[1]); });
   // международные МНН из реестра: sodium = натрия, calcium = кальция; «-ine/-ole/-ide» без конечной e (metamizole = метамизол)
   v = v.replace(/\bsodium\b/g, 'natrium').replace(/\bpotassium\b/g, 'kalium').replace(/\bcalcium\b/g, 'kalsium').replace(/\bmagnesium\b/g, 'maqnezium')
@@ -1875,7 +1877,7 @@ function fillFromItem(it) {
   $('#rcvBarcode').value = it.barcode || '';
   $('#rcvCond').value = it.condition || 'normal';
   $('#rcvStrict').checked = !!it.strict;
-  $('#rcvMin').value = it.minTotal || '';
+  $('#rcvMin').value = (it.minManual !== undefined ? it.minManual : it.minTotal) || '';
   $('#rcvNameNote').innerHTML = '<div class="note fix">✓ ' + esc(t('existingItem', { name: it.name + ' · ' + it.dosage })) + '</div>';
   const sub = refBySubstance(it.substance) || refSubOf(it.name);
   showRefInfo(sub);
@@ -2101,7 +2103,7 @@ function stockItemHtml(it, lots) {
   if (st.expired) tags.push('<span class="tag red">' + esc(t('expiredTag')) + ': ' + st.expired + '</span>');
   const stats = [];
   if (st.usable + st.expired) stats.push(esc(t('totalShort', { n: st.usable + st.expired })) + ' ' + esc(unitShort(it.unit)));
-  if (it.minTotal) stats.push(esc(t('minShort', { n: it.minTotal })));
+  if (it.minTotal) stats.push(esc(t(it.minEff === 'auto' && it.minMonths ? 'minShortAuto' : 'minShort', { n: it.minTotal })));
   if (u) { stats.push(esc(t('usage30', { n: u }))); if (st.usable) stats.push(esc(t('forecast', { n: Math.floor(st.usable / (u / 30)) }))); }
   const hints = st.norms.filter(x => x.short).map(x => {
     const src = S.view.lots.filter(l => l.itemId === it.id && l.locationId !== x.n.locationId && lotStatus(l).cls !== 'expired' && (locById(l.locationId) || {}).zone === 'storage').sort((a, b) => (a.expiry || '9').localeCompare(b.expiry || '9'))[0];
@@ -2351,7 +2353,8 @@ function editItemModal(id) {
     '<div class="field"><label>' + esc(t('packInfoLabel')) + '</label><input type="text" id="eiPackInfo" value="' + esc(it.packInfo || '') + '"></div>' +
     '<div class="field"><label>' + esc(t('barcodeLabel')) + '</label><div class="row"><input type="text" id="eiBarcode" class="grow" value="' + esc(it.barcode || '') + '"><button class="btn icon" data-act="scan" data-target="edit">📷</button></div></div>' +
     '<div class="grid2"><div class="field"><label>' + esc(t('conditionLabel')) + '</label><select id="eiCond">' + ['normal', 'fridge', 'dark'].map(c => '<option value="' + c + '"' + (c === it.condition ? ' selected' : '') + '>' + esc(t('cond' + c[0].toUpperCase() + c.slice(1))) + '</option>').join('') + '</select></div>' +
-    '<div class="field"><label>' + esc(t('minLabel')) + '</label><input type="number" id="eiMin" min="0" value="' + esc(it.minTotal || 0) + '"></div></div>' +
+    '<div class="field"><label>' + esc(t('minLabel')) + '</label><input type="number" id="eiMin" min="0" value="' + esc((it.minManual !== undefined ? it.minManual : it.minTotal) || 0) + '"></div></div>' +
+    (typeof minModeHtml === 'function' ? minModeHtml(it) : '') +
     subMinHtml(it) +
     '<label class="check"><input type="checkbox" id="eiStrict"' + (it.strict ? ' checked' : '') + '><span>' + esc(t('strictLabel')) + '</span></label>' +
     '<div class="row" style="margin-bottom:6px"><button class="btn ghost small" data-act="photo" data-target="edit">' + esc(t('photoBtn')) + '</button>' + (it.hasThumb ? '<button class="btn ghost small" data-act="photoRemove">' + esc(t('photoRemove')) + '</button>' : '') + '<img id="eiThumb" class="thumb' + (S.thumbs[it.id] ? '' : ' hidden') + '" src="' + esc(S.thumbs[it.id] || '') + '" alt=""></div>' +
@@ -2366,6 +2369,7 @@ async function editItemSave(btn, id) {
     condition: $('#eiCond').value, minTotal: Number($('#eiMin').value || 0), strict: $('#eiStrict').checked
   };
   if (S.editThumb !== undefined) item.thumb = S.editThumb;
+  if ($('#eiMinMode')) item.minMode = $('#eiMinMode').value;
   if (formInfo(item.form).cat !== item.category) return toast(t('E_BAD_FORM'), 'bad');
   const r = await busy(btn, () => rpcA('editItem', { item }, { op: true }));
   if (!r) return;
@@ -2441,7 +2445,7 @@ async function deleteItem(btn, id) {
 function settingsModal() {
   const locs = S.view.locations || [];
   const owner = isOwner();
-  openModal('<h3>⚙️ ' + esc(t('storeSettings', { s: storeName(S.base && S.base.store) })) + '</h3>' + themeCardHtml() +
+  openModal('<h3>⚙️ ' + esc(t('storeSettings', { s: storeName(S.base && S.base.store) })) + '</h3>' + themeCardHtml() + (typeof minCardHtml === 'function' ? minCardHtml() : '') +
     (can('edit') ? '<div class="card"><div class="lbl">' + esc(t('places')) + '</div>' + locs.map(l => '<div class="list-row" style="flex-wrap:wrap"><div class="grow" style="min-width:140px">' + esc(locName(l.id)) + ' <span class="tag">' + esc(l.zone === 'work' ? t('zoneWork') : t('zoneStorage')) + '</span></div>' +
       '<button class="btn small ghost" data-act="placeModal" data-id="' + esc(l.id) + '">✏️</button><button class="btn small ghost" data-act="placeRemove" data-id="' + esc(l.id) + '">' + esc(t('removePlace')) + '</button></div>').join('') +
       '<div class="row wrap" style="margin-top:8px"><button class="btn small primary" data-act="placeModal" data-id="">' + esc(t('addPlace')) + '</button><button class="btn small ghost" data-act="qrModal">' + esc(t('printQr')) + '</button></div></div>' +
@@ -4357,10 +4361,27 @@ async function revApply(btn) {
 /* =====================================================================
  * v3: Укладки — что должно лежать в сумке / месте (эталон и проверка)
  * ===================================================================== */
+const FORM_FAMILY = {
+  med_tab: ['med_tabcoat', 'med_tabsr', 'med_tabdisp', 'med_tabchew', 'med_drag'], med_cap: ['med_capsr'], med_vial: ['med_conc', 'med_emul', 'med_injsusp'],
+  med_pen: ['med_autoinj'], med_drop: ['med_eye', 'med_ear', 'med_nasal', 'med_solor'], med_spray: ['med_nspray', 'med_tspray'], med_inh: ['med_dpi'],
+  med_oint: ['med_eyeoint', 'med_lin', 'med_paste'], med_ext: ['med_lotion', 'med_foam', 'med_powext'], med_supp: ['med_vag', 'med_rect'], med_vacc: ['med_serum'],
+  med_syrup: ['med_solor'], med_sach: ['med_gran', 'med_powsol'], med_loz: ['med_sub'], med_inf: ['med_irrig'],
+  sup_syringe: ['sup_syrins', 'sup_syrbig'], sup_needle: ['sup_needlesp', 'sup_lancet'], sup_cath: ['sup_cvc', 'sup_endovasc'],
+  sup_tube: ['sup_urin', 'sup_ngt', 'sup_suction', 'sup_drain', 'sup_urbag'], sup_ivset: ['sup_ivacc'], sup_airway: ['sup_o2', 'sup_bvm', 'sup_ett', 'sup_intub', 'sup_resp'],
+  sup_bandage: ['sup_elastic', 'sup_cast'], sup_gauze: ['sup_alcohol', 'sup_burn'], sup_plaster: ['sup_tape', 'sup_burn'], sup_gloves: ['sup_glovester'], sup_suture: ['sup_scalpel'],
+  sup_lab: ['sup_vacutube', 'sup_container', 'sup_test', 'sup_reagent'], sup_diag: ['sup_ecg', 'sup_defib', 'sup_sensor', 'sup_esu'], sup_immob: ['sup_splint', 'sup_rescue'],
+  sup_ppe: ['sup_mask', 'sup_linen']
+};
+/** Строка укладки с формой «таблетки» берёт и таблетки п/о, ретард и т.п. (как на сервере). */
+function kitFormOk(forms, f) {
+  const list = String(forms || '').split(',').map(x => x.trim()).filter(Boolean);
+  if (!list.length) return true;
+  return list.some(x => x === f || (FORM_FAMILY[x] || []).indexOf(f) !== -1 || (x === 'med_other' && /^med_/.test(f)) || (x === 'sup_other' && /^sup_/.test(f)));
+}
 /** Та же проверка, что на сервере: название или МНН начинается с ключевого слова, форма и дозировка — если заданы. */
 function kitMatch(line, item) {
   if (line.category && item.category && line.category !== item.category) return false;
-  if (line.forms && String(line.forms).split(',').indexOf(item.form) === -1) return false;
+  if (!kitFormOk(line.forms, item.form)) return false;
   const kws = String(line.keywords || '').split(';').map(k => skel(k)).filter(Boolean);
   const sn = skel(item.name), ss = skel(item.substance);
   if (!kws.some(k => sn.indexOf(k) === 0 || (ss && ss.indexOf(k) === 0))) return false;
@@ -8626,6 +8647,238 @@ Object.assign(H, {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
   const rr = window.resetReceive;
   if (typeof rr === 'function') window.resetReceive = function () { const x = rr.apply(this, arguments); try { rcvLooseApply(false); syncDoseParts(); } catch (e) { } return x; };
+})();
+
+/* =====================================================================
+ * v13: рекомендуемый минимум по расходу.
+ *  В карточке: «Рекомендуется N» (расход по месяцам × запас), режим «свой / авто / как на складе».
+ *  В настройках склада: за сколько месяцев считать, на сколько месяцев запас, по умолчанию авто или свой,
+ *  и список всех позиций с рекомендуемым минимумом.
+ * ===================================================================== */
+const I18N_V13 = {
+  ru: {
+    minModeLbl: 'Минимум считать', minModeStore: 'как на складе (сейчас: {m})', minModeManual: 'свой — число выше', minModeAuto: 'авто — по расходу, меняется каждый месяц',
+    minAutoW: 'авто', minManualW: 'свой', minRecLine: 'Рекомендуется: {n} — средний расход {avg} в мес. × запас {c} мес.', minRecNoUse: 'Расхода пациентам за {k} мес. не было — рекомендуемый минимум 0.',
+    minRecNew: 'Карточка новая — расход ещё не набрался, пока действует свой минимум.', minUseBy: 'Расход по месяцам: {list}', minTakeRec: 'Взять {n}',
+    minCardTitle: '📉 Минимальный запас по расходу', minCardHint: 'Рекомендуемый минимум = средний расход пациентам в месяц × запас. В режиме «авто» минимум сам меняется с каждым новым месяцем.',
+    minMonthsLbl: 'Считать расход за', minCoverLbl: 'Запас на', minMonthsN: '{n} мес.', minDefaultLbl: 'Для позиций без своей отметки',
+    minListBtn: '📋 Список: рекомендуемый и текущий минимум', minSaved: 'Настройки минимума сохранены', minAllAuto: 'Всем — авто', minAllManual: 'Всем — свой',
+    minAllConfirm: 'Снять отметки со всех позиций — все пойдут по общей настройке?', minListTitle: '📉 Рекомендуемый минимум',
+    minListHint: 'Расход за {m} мес. (по месяцам), запас {c} мес. «Записать» — сделать рекомендуемое своим минимумом.', minColHave: 'есть {n}', minColNow: 'сейчас мин. {n}',
+    minColRec: 'реком. {n}', minWrite: 'Записать {n}', minToAuto: '⟳ Авто', minToManual: '✋ Свой', minOnlyDiff: 'Только где отличается', minAllRows: 'Все',
+    minEmpty: 'Нет позиций.', minShortAuto: 'мин. {n} (авто)', minModeChanged: 'Минимум обновлён'
+  },
+  az: {
+    minModeLbl: 'Minimumu hesabla', minModeStore: 'anbardakı kimi (indi: {m})', minModeManual: 'özüm — yuxarıdakı rəqəm', minModeAuto: 'avto — sərfə görə, hər ay dəyişir',
+    minAutoW: 'avto', minManualW: 'özüm', minRecLine: 'Tövsiyə: {n} — ayda orta sərf {avg} × ehtiyat {c} ay.', minRecNoUse: '{k} ayda pasiyentlərə sərf olmayıb — tövsiyə olunan minimum 0.',
+    minRecNew: 'Kart yenidir — sərf hələ yığılmayıb, hələlik öz minimumunuz qüvvədədir.', minUseBy: 'Aylar üzrə sərf: {list}', minTakeRec: '{n} götür',
+    minCardTitle: '📉 Sərfə görə minimum ehtiyat', minCardHint: 'Tövsiyə olunan minimum = ayda pasiyentlərə orta sərf × ehtiyat. «Avto» rejimində minimum hər yeni ayla özü dəyişir.',
+    minMonthsLbl: 'Sərfi hesabla', minCoverLbl: 'Ehtiyat', minMonthsN: '{n} ay', minDefaultLbl: 'Öz qeydi olmayan mövqelər üçün',
+    minListBtn: '📋 Siyahı: tövsiyə olunan və cari minimum', minSaved: 'Minimum ayarları saxlanıldı', minAllAuto: 'Hamısı — avto', minAllManual: 'Hamısı — özüm',
+    minAllConfirm: 'Bütün mövqelərdən qeyd götürülsün — hamısı ümumi ayarla getsin?', minListTitle: '📉 Tövsiyə olunan minimum',
+    minListHint: '{m} ay sərf (aylar üzrə), ehtiyat {c} ay. «Yaz» — tövsiyəni öz minimumunuz edin.', minColHave: 'var {n}', minColNow: 'indi min. {n}',
+    minColRec: 'tövsiyə {n}', minWrite: '{n} yaz', minToAuto: '⟳ Avto', minToManual: '✋ Özüm', minOnlyDiff: 'Yalnız fərqli olanlar', minAllRows: 'Hamısı',
+    minEmpty: 'Mövqe yoxdur.', minShortAuto: 'min. {n} (avto)', minModeChanged: 'Minimum yeniləndi'
+  }
+};
+Object.assign(I18N.ru, I18N_V13.ru);
+Object.assign(I18N.az, I18N_V13.az);
+
+function minCfgC() { return (S.base && S.base.minCfg) || { months: 3, cover: 1, auto: false, yms: [] }; }
+const MIN_MON_RU = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+const MIN_MON_AZ = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avq', 'sen', 'okt', 'noy', 'dek'];
+function monShort(ym) { const m = Number(String(ym).slice(5, 7)) - 1; return (S.lang === 'az' ? MIN_MON_AZ : MIN_MON_RU)[m] || ym; }
+function numFmt(x) { return String(Math.round(x * 10) / 10).replace('.', ','); }
+/** Строки подсказки под минимумом в карточке. */
+function minRecHtml(it) {
+  const c = minCfgC();
+  if (it.minRec === undefined) return '';
+  const use = it.minUse || [];
+  const k = it.minMonths || 0;
+  let line;
+  if (!k) line = t('minRecNew');
+  else {
+    const used = use.slice(use.length - k);
+    const avg = used.reduce((s, x) => s + x, 0) / k;
+    line = avg ? t('minRecLine', { n: it.minRec, avg: numFmt(avg), c: numFmt(c.cover) }) : t('minRecNoUse', { k });
+  }
+  const by = (c.yms || []).map((ym, i) => monShort(ym) + ' ' + (use[i] || 0)).join(', ');
+  return '<div class="muted" id="minRecBox" style="margin:-4px 0 10px">' + esc(line) + (by ? '<br>' + esc(t('minUseBy', { list: by })) : '') +
+    (k ? ' <button class="btn small ghost" style="padding:2px 8px;min-height:0" data-act="minTakeRec" data-n="' + it.minRec + '">' + esc(t('minTakeRec', { n: it.minRec })) + '</button>' : '') + '</div>';
+}
+function minModeHtml(it) {
+  const c = minCfgC();
+  const cur = it.minMode || '';
+  const o = (v, l) => '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + esc(l) + '</option>';
+  return '<div class="field"><label>' + esc(t('minModeLbl')) + '</label><select id="eiMinMode">' +
+    o('', t('minModeStore', { m: c.auto ? t('minAutoW') : t('minManualW') })) + o('manual', t('minModeManual')) + o('auto', t('minModeAuto')) + '</select></div>' + minRecHtml(it);
+}
+/** Карточка в настройках склада. */
+function minCardHtml() {
+  if (!can('edit')) return '';
+  const c = minCfgC();
+  const chips = (name, vals, cur, lbl) => '<div class="lbl" style="margin-top:8px">' + esc(lbl) + '</div><div class="chips">' + vals.map(v => '<button class="chip' + (Number(cur) === v ? ' on' : '') + '" data-act="minCfgChip" data-k="' + name + '" data-v="' + v + '">' + esc(t('minMonthsN', { n: numFmt(v) })) + '</button>').join('') + '</div>';
+  return '<div class="card" id="minCard"><div class="lbl">' + esc(t('minCardTitle')) + '</div><div class="muted" style="margin-bottom:6px">' + esc(t('minCardHint')) + '</div>' +
+    chips('months', [1, 2, 3, 6, 12], c.months, t('minMonthsLbl')) + chips('cover', [0.5, 1, 1.5, 2, 3], c.cover, t('minCoverLbl')) +
+    '<div class="lbl" style="margin-top:8px">' + esc(t('minDefaultLbl')) + '</div><div class="chips">' +
+    '<button class="chip' + (!c.auto ? ' on' : '') + '" data-act="minCfgChip" data-k="auto" data-v="0">' + esc(t('minManualW')) + '</button>' +
+    '<button class="chip' + (c.auto ? ' on' : '') + '" data-act="minCfgChip" data-k="auto" data-v="1">' + esc(t('minAutoW')) + '</button></div>' +
+    '<div class="row wrap" style="margin-top:10px"><button class="btn small primary" data-act="minListModal">' + esc(t('minListBtn')) + '</button></div></div>';
+}
+async function minCfgSet(patch, resetItems) {
+  const c = Object.assign({ months: minCfgC().months, cover: minCfgC().cover, auto: !!minCfgC().auto }, patch);
+  const r = await busy(null, () => rpcA('setMinCfg', { months: c.months, cover: c.cover, auto: c.auto, resetItems: !!resetItems }, { op: true, opId: newOpId() }));
+  if (!r) return false;
+  toast(t('minSaved'));
+  await refreshState(true);
+  return true;
+}
+function minRows(onlyDiff) {
+  const items = (S.view.items || []).filter(it => it.minRec !== undefined && String(it.id).indexOf('tmp_') !== 0);
+  return items.map(it => ({ it, have: itemStats(it).usable, diff: (it.minManual || 0) !== it.minRec }))
+    .filter(r => !onlyDiff || r.diff)
+    .sort((a, b) => (b.it.minRec - b.have) - (a.it.minRec - a.have) || a.it.name.localeCompare(b.it.name, 'ru'));
+}
+function minListHtml(onlyDiff) {
+  const c = minCfgC();
+  const rows = minRows(onlyDiff);
+  const head = '<div class="muted" style="margin-bottom:8px">' + esc(t('minListHint', { m: c.months, c: numFmt(c.cover) })) + '</div>' +
+    '<div class="chips" style="margin-bottom:8px"><button class="chip' + (onlyDiff ? ' on' : '') + '" data-act="minListFilter" data-v="1">' + esc(t('minOnlyDiff')) + '</button><button class="chip' + (!onlyDiff ? ' on' : '') + '" data-act="minListFilter" data-v="0">' + esc(t('minAllRows')) + '</button>' +
+    '<button class="chip" data-act="minAllMode" data-v="1">' + esc(t('minAllAuto')) + '</button><button class="chip" data-act="minAllMode" data-v="0">' + esc(t('minAllManual')) + '</button></div>';
+  if (!rows.length) return head + '<div class="empty">' + esc(t('minEmpty')) + '</div>';
+  return head + rows.slice(0, 300).map(({ it, have }) => {
+    const auto = it.minEff === 'auto';
+    const use = (it.minUse || []).map((x, i) => monShort((c.yms || [])[i]) + ' ' + x).join(' · ');
+    return '<div class="list-row" style="flex-wrap:wrap;align-items:flex-start"><div class="grow" style="min-width:170px"><div class="nm">' + nameHtml(it) + '</div><div class="fd">' + esc(it.dosage || '') + ' · ' + esc(use) + '</div>' +
+      '<div class="fd"><span class="tag' + (have < it.minTotal ? ' orange' : '') + '">' + esc(t('minColHave', { n: have })) + '</span> <span class="tag">' + esc(auto ? t('minShortAuto', { n: it.minTotal }) : t('minColNow', { n: it.minTotal })) + '</span> <b>' + esc(t('minColRec', { n: it.minRec })) + '</b></div></div>' +
+      '<div class="btns">' + (auto ? '<button class="btn small ghost" data-act="minRowMode" data-id="' + esc(it.id) + '" data-m="manual">' + esc(t('minToManual')) + '</button>'
+        : '<button class="btn small ghost" data-act="minRowMode" data-id="' + esc(it.id) + '" data-m="auto">' + esc(t('minToAuto')) + '</button>' +
+        (it.minRec !== (it.minManual || 0) ? '<button class="btn small primary" data-act="minRowWrite" data-id="' + esc(it.id) + '" data-n="' + it.minRec + '">' + esc(t('minWrite', { n: it.minRec })) + '</button>' : '')) + '</div></div>';
+  }).join('');
+}
+function minListModal(onlyDiff) {
+  S.minOnlyDiff = onlyDiff === undefined ? (S.minOnlyDiff !== undefined ? S.minOnlyDiff : true) : onlyDiff;
+  openModal('<h3>' + esc(t('minListTitle')) + '</h3><div id="minList">' + minListHtml(S.minOnlyDiff) + '</div><div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+}
+function minListRefresh() { const b = $('#minList'); if (b) b.innerHTML = minListHtml(S.minOnlyDiff); }
+async function minRowSet(btn, id, mode, minTotal) {
+  const p = { itemId: id, mode };
+  if (minTotal !== undefined) p.minTotal = minTotal;
+  const r = await busy(btn, () => rpcA('setMinMode', p, { op: true, opId: newOpId() }));
+  if (!r) return;
+  toast(t('minModeChanged'));
+  await refreshState(true);
+  minListRefresh();
+}
+Object.assign(H, {
+  minTakeRec: el => { const i = $('#eiMin'); if (i) { i.value = el.dataset.n; const m = $('#eiMinMode'); if (m && m.value === 'auto') m.value = 'manual'; } },
+  minCfgChip: async el => {
+    const k = el.dataset.k, v = Number(el.dataset.v);
+    const ok = await minCfgSet(k === 'auto' ? { auto: v === 1 } : { [k]: v });
+    if (ok) { const card = $('#minCard'); if (card) card.outerHTML = minCardHtml(); }
+  },
+  minListModal: () => minListModal(),
+  minListFilter: el => { S.minOnlyDiff = el.dataset.v === '1'; minListRefresh(); },
+  minAllMode: async el => { if (!confirm(t('minAllConfirm'))) return; if (await minCfgSet({ auto: el.dataset.v === '1' }, true)) minListRefresh(); },
+  minRowMode: (el) => minRowSet(el, el.dataset.id, el.dataset.m),
+  minRowWrite: (el) => minRowSet(el, el.dataset.id, 'manual', Number(el.dataset.n))
+});
+
+/* =====================================================================
+ * v13: поиск на турецком, немецком и английском (и дальше — по тому же принципу).
+ *  Препараты и расходники из Турции, Германии и других стран подписаны на своём языке:
+ *  «enjektör», «gazlı bez», «sodyum klorür», «Spritze», «Natriumchlorid», «syringe», «gauze»…
+ *  Ключ поиска переводит такие слова в русские / азербайджанские, поэтому находится то же, что по-русски.
+ *  На ключи карточек и сверку дублей не влияет (только поиск).
+ * ===================================================================== */
+function qkeyLatinRules() {
+  if (window.__LAT_RULES) return window.__LAT_RULES;
+  const W = (re, to) => [new RegExp(re.replace(/ı/g, 'i'), 'g'), to];
+  const B = '(?![a-zçğıöşüəäß])'; // конец слова (латиница с турецкими/немецкими буквами)
+  const A = '(?<![a-zçğıöşüəäß])'; // начало слова
+  const R = [
+    // ---- соли и кислоты (турецкий, немецкий) ----
+    W(A + 'serum fizyolojik' + B + '|' + A + 'fizyolojik serum' + B + '|' + A + 'izotonik' + B, 'natrium xlorid'),
+    W('(natrium|kalium|calcium|magnesium)(chlorid|sulfat|carbonat|hydrogencarbonat|citrat|lactat|gluconat|bromid|jodid|acetat)' + B, '$1 $2'),
+    W(A + 'sodyum' + B, 'natrium'), W(A + 'potasyum' + B, 'kalium'), W(A + 'kalsiyum' + B, 'kalsium'), W(A + 'magnezyum' + B, 'maqnezium'),
+    W(A + 'hidroklorür' + B, 'hidroxlorid'), W(A + 'klorür' + B, 'xlorid'), W(A + 'bromür' + B, 'bromid'), W(A + 'iyodür' + B, 'yodid'), W(A + 'florür' + B, 'florid'),
+    W(A + 'hydrochlorid' + B, 'hidroxlorid'), W(A + 'chlorid' + B, 'xlorid'),
+    W(A + 'folik asit' + B, 'fol turşusu'), W(A + 'askorbik asit' + B, 'askorbin turşusu'), W(A + '([a-zçğıöşü]+)ik asit' + B, '$1 turşusu'),
+    W(A + '([a-zöü]+)saure' + B, '$1 turşusu'), W(A + 'demir' + B, 'dəmir'), W(A + 'çinko' + B, 'sink'), W(A + 'hidrojen peroksit' + B, 'hidrogen peroksid'),
+    // ---- расходники: турецкий ----
+    W(A + 'insülin (?:enjektörü|şırıngası)' + B, 'шприц инсулиновый'), W(A + '(?:enjektör|enjektörü|şırınga|şırıngası)' + B, 'шприц'),
+    W(A + 'kelebek (?:iğne|set)\\S*', 'игла-бабочка'), W(A + '(?:iğne|iğnesi|kanül iğne)' + B, 'игла'), W(A + 'lanset' + B, 'ланцет'),
+    W(A + '(?:branül|branul|intraket|anjiyokat|iv kanül|damar yolu kanülü)' + B, 'катетер внутривенный'),
+    W(A + '(?:foley sonda|foley kateter)\\S*', 'катетер фолея'), W(A + '(?:idrar sondası|nelaton sonda)\\S*', 'катетер нелатона'),
+    W(A + '(?:nazogastrik sonda|mide sondası|beslenme sondası)\\S*', 'зонд назогастральный'), W(A + 'aspirasyon (?:sondası|kateteri)\\S*', 'катетер аспирационный'),
+    W(A + 'idrar torbası' + B, 'мочеприёмник'), W(A + '(?:göğüs tüpü|dren)' + B, 'дренаж'),
+    W(A + '(?:serum seti|infüzyon seti|sıvı seti)' + B, 'система для инфузий'), W(A + '(?:kan seti|transfüzyon seti)' + B, 'система для переливания крови'),
+    W(A + '(?:üç yollu musluk|üçlü musluk)' + B, 'кран трёхходовой'), W(A + 'uzatma (?:hattı|seti)' + B, 'удлинитель'),
+    W(A + 'oksijen maskesi' + B, 'маска кислородная'), W(A + '(?:nazal kanül|oksijen kanülü)' + B, 'канюля назальная кислородная'), W(A + 'nebülizatör maskesi' + B, 'маска небулайзерная'),
+    W(A + '(?:ambu|ambu balonu|ambu çantası)' + B, 'мешок амбу'), W(A + '(?:endotrakeal tüp|entübasyon tüpü)' + B, 'трубка эндотрахеальная'),
+    W(A + 'laringeal maske' + B, 'маска ларингеальная'), W(A + 'laringoskop(?: bıçağı)?' + B, 'клинок для ларингоскопа'), W(A + '(?:airway|ağız airway|guedel)' + B, 'воздуховод'),
+    W(A + 'elastik bandaj' + B, 'бинт эластичный'), W(A + '(?:alçılı sargı|alçı bandı)' + B, 'бинт гипсовый'), W(A + '(?:sargı bezi|rulo gazlı bez|bandaj)' + B, 'бинт'),
+    W(A + '(?:gazlı bez|gaz kompres|steril kompres|spanç)' + B, 'салфетки марлевые'), W(A + '(?:alkollü (?:pamuk|mendil|ped))' + B, 'салфетки спиртовые'),
+    W(A + 'pamuk' + B, 'вата'), W(A + '(?:yara bandı)' + B, 'пластырь бактерицидный'), W(A + '(?:flaster|rulo flaster|bant)' + B, 'пластырь катушечный'),
+    W(A + '(?:cerrahi eldiven|steril eldiven)' + B, 'перчатки хирургические стерильные'), W(A + '(?:muayene eldiveni|nitril eldiven|eldiven)' + B, 'перчатки'),
+    W(A + '(?:dikiş ipliği|sütür)' + B, 'шовный материал'), W(A + '(?:bistüri|neşter)(?: ucu)?' + B, 'скальпель'), W(A + 'turnike' + B, 'жгут'),
+    W(A + '(?:vakumlu tüp|kan tüpü|biyokimya tüpü|hemogram tüpü)' + B, 'пробирка вакуумная'), W(A + '(?:idrar kabı|gaita kabı)' + B, 'контейнер для анализа мочи'),
+    W(A + '(?:test çubuğu|stribi|strip)' + B, 'тест-полоски'), W(A + '(?:ekg elektrodu|ekg elektrotu)' + B, 'электроды экг'), W(A + 'ekg kağıdı' + B, 'бумага для экг'),
+    W(A + 'termometre' + B, 'термометр'), W(A + '(?:tansiyon aleti|tansiyon manşonu)' + B, 'тонометр'), W(A + '(?:şeker ölçüm cihazı|glukometre)' + B, 'глюкометр'),
+    W(A + 'atel' + B, 'шина'), W(A + '(?:boyunluk|servikal boyunluk)' + B, 'воротник шейный'), W(A + '(?:cerrahi maske|tıbbi maske)' + B, 'маска медицинская'),
+    W(A + '(?:önlük|cerrahi önlük)' + B, 'халат'), W(A + 'bone' + B, 'шапочка'), W(A + '(?:galoş|ayakkabı kılıfı)' + B, 'бахилы'), W(A + '(?:alez|hasta altı bezi)' + B, 'пелёнка'),
+    W(A + 'çarşaf' + B, 'простыня'), W(A + '(?:tıbbi atık|kesici alet kutusu|atık kutusu)' + B, 'контейнер для острых отходов'), W(A + 'lavman' + B, 'клизма'),
+    W(A + 'pil' + B, 'батарейки'), W(A + '(?:dil basacağı|abeslang)' + B, 'шпатель'), W(A + 'pens' + B, 'пинцет'), W(A + 'makas' + B, 'ножницы'), W(A + 'termal battaniye' + B, 'покрывало спасательное'),
+    // ---- расходники: немецкий ----
+    W(A + '(?:spritze|spritzen|einmalspritze)' + B, 'шприц'), W(A + '(?:venenverweilkanüle|braunüle|viggo)' + B, 'катетер внутривенный'), W(A + '(?:kanüle|nadel|injektionsnadel)' + B, 'игла'),
+    W(A + 'infusionsbesteck' + B, 'система для инфузий'), W(A + '(?:elastische binde|elastikbinde)' + B, 'бинт эластичный'), W(A + '(?:mullbinde|binde|verband)' + B, 'бинт'),
+    W(A + '(?:kompresse|mullkompresse)' + B, 'салфетки марлевые'), W(A + '(?:pflaster|heftpflaster)' + B, 'пластырь'), W(A + '(?:handschuhe|untersuchungshandschuhe)' + B, 'перчатки'),
+    W(A + 'op-handschuhe' + B, 'перчатки хирургические стерильные'), W(A + 'watte' + B, 'вата'), W(A + 'nahtmaterial' + B, 'шовный материал'), W(A + 'skalpell' + B, 'скальпель'),
+    W(A + 'blasenkatheter' + B, 'катетер фолея'), W(A + 'magensonde' + B, 'зонд назогастральный'), W(A + 'sauerstoffmaske' + B, 'маска кислородная'), W(A + 'beatmungsbeutel' + B, 'мешок амбу'),
+    W(A + 'stauschlauch' + B, 'жгут'), W(A + 'schiene' + B, 'шина'), W(A + 'halskrause' + B, 'воротник шейный'), W(A + 'rettungsdecke' + B, 'покрывало спасательное')
+  ];
+  window.__LAT_RULES = R;
+  return R;
+}
+/** Латинские слова турецкого / немецкого / английского → те же, что в русских и азербайджанских названиях. */
+function qkeyLatin(v) {
+  if (!/[a-zçğıöşüäß]/.test(v)) return v;
+  // турецкие İ/ı и немецкие ä/ß: «İĞNE», «ŞIRINGA», «Säure» пишут по-разному — приводим к одному
+  v = v.replace(/i\u0307/g, 'i').replace(/ı/g, 'i').replace(/ä/g, 'a').replace(/ß/g, 'ss');
+  qkeyLatinRules().forEach(r => { v = v.replace(r[0], r[1]); });
+  return v;
+}
+
+/* Форма выпуска по словам на турецком / немецком / английском (фото коробки, приход списком). */
+const GUESS_MED_X = [
+  [/retard|uzatılmış salım|uzun etkili|prolonged.release|modified.release|extended.release/i, 'med_tabsr'],
+  [/film (?:kaplı )?tablet|filmtablette|film.coated/i, 'med_tabcoat'], [/efervesan|brausetablette|effervescent/i, 'med_tabdisp'],
+  [/çiğneme|kautablette|chewable/i, 'med_tabchew'], [/dil ?altı|sublingual/i, 'med_sub'], [/pastil|lutschtablette|lozenge/i, 'med_loz'],
+  [/göz merhem|augensalbe|eye ointment|eye gel/i, 'med_eyeoint'], [/göz damla|augentropfen|eye drops?/i, 'med_eye'],
+  [/kulak damla|ohrentropfen|ear drops?/i, 'med_ear'], [/burun sprey|nasenspray|nasal spray/i, 'med_nspray'], [/burun damla|nasentropfen|nasal drops?/i, 'med_nasal'],
+  [/liyofilize|powder for (?:solution|injection|concentrate)|pulver zur herstellung/i, 'med_pow'], [/konsantre|konzentrat|concentrate/i, 'med_conc'],
+  [/infüzyon|infuzyon|infusionslösung|for infusion/i, 'med_inf'], [/enjeksiyonluk|enjeksiyon|injektionslösung|for injection|injection/i, 'med_amp'],
+  [/inhaler|dosieraerosol|inhalation aerosol/i, 'med_inh'], [/nebül|nebule/i, 'med_neb'],
+  [/şurup|sirup|syrup/i, 'med_syrup'], [/süspansiyon|suspension/i, 'med_susp'], [/oral çözelti|lösung zum einnehmen|oral solution|damla|tropfen|oral drops/i, 'med_solor'],
+  [/merhem|pomad|salbe|ointment/i, 'med_oint'], [/creme|cream/i, 'med_cream'], [/(?<![a-zçğıöşü])jel(?![a-zçğıöşü])/i, 'med_gel'],
+  [/vajinal|vaginal/i, 'med_vag'], [/fitil|zäpfchen|suppositor/i, 'med_supp'], [/kapsül|kapseln|capsules?/i, 'med_cap'],
+  [/granül|granulat|granules/i, 'med_gran'], [/(?<![a-zçğıöşü])aşı(?![a-zçğıöşü])|impfstoff|vaccine/i, 'med_vacc'], [/tabletten|tablets?/i, 'med_tab']
+];
+(function () {
+  if (typeof guessForm !== 'function') return;
+  const orig = guessForm;
+  window.guessForm = function (text, cat) {
+    const s = String(text || '');
+    const r = orig(s, cat);
+    // турецкие / немецкие / английские слова точнее общих («film kaplı tablet» — не просто «таблетки»)
+    let x = '';
+    if (cat !== 'sup') for (const [re, code] of GUESS_MED_X) if (re.test(s)) { x = code; break; }
+    if (x && !(r && ['med_tab', 'med_cap', 'med_gran', 'med_solor', 'med_gel', 'med_cream'].indexOf(x) !== -1)) return x;
+    if (r) return r;
+    // слова расходников: «enjektör» → «шприц», «Spritze» → «шприц»
+    if (cat !== 'med') { const tr = qkeyLatin(s.toLowerCase()); if (tr !== s.toLowerCase()) return orig(tr, 'sup'); }
+    return '';
+  };
 })();
 
 
