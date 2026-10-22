@@ -1884,7 +1884,7 @@ function fillFromItem(it) {
 function onPickName(o) {
   if (o.kind === 'item') { fillFromItem(o.item); hideCatVariants(); $('#rcvSeries').focus(); return; }
   if (o.kind === 'cat') { catFill(o.ce); return; }
-  if (o.kind === 'sup') { supFill(o.se); return; }
+  if (o.kind === 'sup') { supFill(o.se, o.multi); return; }
   if (o.kind === 'dev') { if (S.rcv.cat !== 'sup') { S.rcv.cat = 'sup'; renderReceiveSelects(); } $('#rcvName').value = o.de.n; $('#rcvForm').value = o.de.code; $('#rcvUnit').value = formInfo(o.de.code).unit; updateDoseLabel(); hideCatVariants(); $('#rcvDose').focus(); return; }
   S.rcv.pickedItemId = '';
   $('#rcvNameNote').innerHTML = '';
@@ -1942,6 +1942,7 @@ function collectReceive() {
       minTotal: minRaw === '' ? '' : Number(minRaw), barcode: $('#rcvBarcode').value.trim(), thumb: S.rcv.thumb || ''
     },
     series: normSeries($('#rcvSeries').value), expiry: exp.expiry, noExpiry: exp.noExpiry, locationId, qty, comment: $('#rcvComment').value.trim(),
+    ...(S.rcv.loose ? { memo: t('looseMemo') } : {}),
     ...rcvDateFields()
   };
 }
@@ -7214,7 +7215,8 @@ function catIndex(data) {
   if (!data || !Array.isArray(data.items)) return;
   const by = {}, inns = {};
   S.cat = data.items.map(x => {
-    const e = { b: x[0], inn: x[1], d: x[2], code: FORMS.med.some(f => f[0] === x[3]) ? x[3] : 'med_other', pack: x[4], cnt: x[5], mfr: x[6], sk: skel(x[0]), qb: qkey(x[0]), qi: qkeyEn(x[1]) };
+    const e = { b: x[0], inn: x[1], d: x[2], code: FORMS.med.some(f => f[0] === x[3]) ? x[3] : 'med_other', pack: x[4], cnt: x[5], mfr: x[6], ru: x[7] || '', sk: skel(x[0]), qb: qkey(x[0]), qi: qkeyEn(x[1]) };
+    e.qr = e.ru ? qkey(e.ru) : ''; // русское название фирмы (из аптечного каталога), если есть
     (by[e.sk] = by[e.sk] || []).push(e);
     if (e.inn && e.inn.indexOf('+') === -1 && !inns[e.qi]) inns[e.qi] = e.inn;
     return e;
@@ -7241,22 +7243,39 @@ function supSuggest(qs, fuzzy, short, qFull) {
   if (!S.catSup || !qs) return [];
   const out = [], seen = {};
   const qz = qFull ? qk(qFull) : '';
+  // размер в запросе («перчатки 7», «канюля 18», «шприц 5»): число из запроса есть в размере — выше
+  const qd = (String(qFull || '').match(/\d+(?:[.,]\d+)?/g) || []).map(x => x.replace('.', ','));
+  const sizeHit = z => qd.some(d => new RegExp('(^|[^\\d,])' + d.replace(',', '[.,]') + '([.,]0)?([^\\d,]|$)').test(String(z || '')));
   for (const e of S.catSup) {
     let sc = 0;
     if (short) sc = e.qs.some(k => k.startsWith(qs)) ? 55 : 0;
-    else { sc = Math.max.apply(null, e.qs.map(k => score(qs, k, fuzzy))); if (qz && qz !== qs && e.qz.indexOf(qz) !== -1) sc += 15; }
+    else { sc = Math.max.apply(null, e.qs.map(k => score(qs, k, fuzzy))); if (sc > 0 && ((qz && qz !== qs && e.qz.indexOf(qz) !== -1) || sizeHit(e.z))) sc += 15; }
     if (sc <= 0) continue;
-    const k = e.ru + '|' + e.z;
+    // без размера в запросе — один ряд на вид («Бинт эластичный — 24 размера»), размер выбирается кнопками после выбора;
+    // с размером («канюля 18», «шприц 5») — конкретные размеры
+    const many = (S.supBy[e.sk] || []).filter(x => x.ru === e.ru).length > 1;
+    const collapse = many && !/\d/.test(String(qFull || ''));
+    const k = collapse ? e.ru : e.ru + '|' + e.z;
     if (seen[k]) continue;
     seen[k] = 1;
-    out.push({ kind: 'sup', label: e.ru + ' ' + e.z, sub: e.az + ' ' + e.z + ' · ' + formName(e.code), se: e, pri: 0, sc: sc - 1 });
+    if (collapse) {
+      const n = (S.supBy[e.sk] || []).filter(x => x.ru === e.ru).length;
+      out.push({ kind: 'sup', label: e.ru, sub: e.az + ' · ' + t('supNSizes', { n }) + ' · ' + formName(e.code), se: e, multi: true, pri: 0, sc: sc - 1 });
+    } else out.push({ kind: 'sup', label: e.ru + (e.z ? ' ' + e.z : ''), sub: e.az + (e.z ? ' ' + e.z : '') + ' · ' + formName(e.code), se: e, pri: 0, sc: sc - 1 });
     if (out.length > 300) break;
   }
   if (!short || qs.length >= 2) {
+    // фирменные изделия из реестра медизделий: по их названию (латиницей) и по виду, который нашёлся по-русски/по-азербайджански
+    // («система для инфузий» → все зарегистрированные infusion set разных фирм)
+    const fam = [];
+    out.forEach(o => { if (o.kind !== 'sup' || !o.se.en) return; const w = o.se.en.toLowerCase().replace(/\(.*?\)/g, '').split(/\s+/).filter(x => x && !/^(\d|iv$|2-way|3-way|disposable|sterile|non-sterile|adult|pediatric)/.test(x)); const k = w.slice(-2).join(' '); if (k && fam.indexOf(k) === -1) fam.push(k); });
     let n = 0;
+    const seenDev = {};
     for (const d of S.catDev || []) {
-      const sc = short ? (d.q.startsWith(qs) ? 30 : 0) : score(qs, d.q, false) - 20;
-      if (sc <= 0) continue;
+      let sc = short ? (d.q.startsWith(qs) ? 30 : 0) : score(qs, d.q, false) - 20;
+      if (sc <= 0 && fam.length && !short) { const low = d.n.toLowerCase(); if (fam.some(k => low.indexOf(k) !== -1)) sc = 25; }
+      if (sc <= 0 || seenDev[d.n]) continue;
+      seenDev[d.n] = 1;
       out.push({ kind: 'dev', label: d.n, sub: formName(d.code) + ' · ' + t('devTag'), de: d, pri: 0, sc });
       if (++n >= 40) break;
     }
@@ -7264,24 +7283,27 @@ function supSuggest(qs, fuzzy, short, qFull) {
   return out;
 }
 /** Выбрали расходник: название, вид, размер, единица; под названием — другие размеры этого же. */
-function supFill(e) {
+function supFill(e, multi) {
   if (S.rcv.cat !== 'sup') { S.rcv.cat = 'sup'; renderReceiveSelects(); }
   $('#rcvName').value = e.ru;
   $('#rcvForm').value = e.code;
   $('#rcvUnit').value = e.unit || formInfo(e.code).unit;
   updateDoseLabel();
-  $('#rcvDose').value = e.z;
+  $('#rcvDose').value = multi ? '' : e.z;
   S.rcv.pickedItemId = '';
   updateQtyCalc();
-  $('#rcvNameNote').innerHTML = '<div class="note fix">✓ ' + esc(t('supPicked')) + '</div>';
+  $('#rcvNameNote').innerHTML = '<div class="note fix">✓ ' + esc(t(multi ? 'supPickSize' : 'supPicked')) + '</div>';
   showSupVariants(e.ru);
-  $('#rcvSeries').focus();
+  if (!multi) $('#rcvSeries').focus();
 }
 function showSupVariants(name) {
   const box = $('#rcvCatVar');
   if (!box) return;
-  const list = (S.supBy && S.supBy[skel(name)]) || [];
+  const list = ((S.supBy && S.supBy[skel(name)]) || []).filter((x, i, arr) => arr.findIndex(y => y.ru === x.ru && y.z === x.z) === i);
   if (list.length < 2) { hideCatVariants(); return; }
+  // уже показаны кнопки этого же вида — не перерисовываем (иначе нажатие на кнопку теряется, когда поле названия теряет фокус)
+  if (S.supVarName === skel(name) && !box.classList.contains('hidden') && box.querySelector('[data-act=supVar]')) return;
+  S.supVarName = skel(name);
   S.supVar = list;
   box.innerHTML = '<div class="lbl" style="margin-bottom:4px">' + esc(t('supSizes', { n: list.length })) + '</div>' +
     list.slice(0, 40).map((e, i) => '<button class="chip" style="margin:0 6px 6px 0" data-act="supVar" data-i="' + i + '">' + esc(e.z) + '</button>').join('');
@@ -7324,8 +7346,8 @@ function catSuggest(qs, fuzzy, short) {
   const seen = {};
   for (const e of S.cat) {
     let sc = 0;
-    if (short) sc = e.qb.startsWith(qs) ? 60 : (e.qi.startsWith(qs) ? 40 : 0);
-    else sc = Math.max(score(qs, e.qb, fuzzy), score(qs, e.qi, fuzzy) - 10);
+    if (short) sc = e.qb.startsWith(qs) || (e.qr && e.qr.startsWith(qs)) ? 60 : (e.qi.startsWith(qs) ? 40 : 0);
+    else sc = Math.max(score(qs, e.qb, fuzzy), e.qr ? score(qs, e.qr, fuzzy) : 0, score(qs, e.qi, fuzzy) - 10);
     if (sc <= 0) continue;
     const k = e.b + '|' + e.d + '|' + e.code;
     if (seen[k]) continue;
@@ -7351,8 +7373,10 @@ function catFill(e) {
   $('#rcvUnit').value = formInfo(e.code).unit;
   updateDoseLabel();
   $('#rcvDose').value = e.d;
+  // сколько в упаковке — пишет человек (по коробке); из реестра — только подсказка
   const n = parseInt(String(e.cnt).split(',')[0], 10);
-  $('#rcvPackCount').value = n > 1 ? n : '';
+  $('#rcvPackCount').value = '';
+  $('#rcvPackCount').placeholder = n > 1 ? t('packRegHint', { n }) : '';
   $('#rcvPackInfo').value = (e.pack + (e.cnt ? ' №' + e.cnt : '') + (e.mfr ? ' · ' + e.mfr : '')).slice(0, 120);
   S.rcv.pickedItemId = '';
   updateQtyCalc();
@@ -7370,12 +7394,14 @@ function showCatVariants(name) {
   const seen = {};
   list.forEach(e => { const k = e.d + '|' + e.code + '|' + e.pack; if (!seen[k]) { seen[k] = 1; uniq.push(e); } });
   if (!uniq.length) { hideCatVariants(); return; }
+  if (S.catVarName === skel(name) && !box.classList.contains('hidden') && box.querySelector('[data-act=catVar]')) return;
+  S.catVarName = skel(name);
   S.catVar = uniq;
   box.innerHTML = '<div class="lbl" style="margin-bottom:4px">' + esc(t('catVariants', { n: uniq.length })) + '</div>' +
     uniq.slice(0, 20).map((e, i) => '<button class="chip" style="margin:0 6px 6px 0;text-align:left" data-act="catVar" data-i="' + i + '">' + esc(e.d + ' · ' + formName(e.code) + ' · ' + e.pack + (e.cnt ? ' №' + e.cnt : '')) + '</button>').join('');
   box.classList.remove('hidden');
 }
-function hideCatVariants() { const box = $('#rcvCatVar'); if (box) { box.innerHTML = ''; box.classList.add('hidden'); } }
+function hideCatVariants() { const box = $('#rcvCatVar'); if (box) { box.innerHTML = ''; box.classList.add('hidden'); } S.catVarName = ''; S.supVarName = ''; }
 function catVarPick(i) { const e = (S.catVar || [])[i]; if (e) catFill(e); }
 /** Для «Найдено при ревизии» и других окон: заполнить поля названия/формы/дозы. */
 function catFillFields(e, ids) {
@@ -7521,7 +7547,7 @@ function altName(name, substance) {
     const inn = reg && reg.length ? reg[0].inn : '';
     const ruSub = (refSubOf(name) || {}).s || (isCyr(substance) ? substance : '');
     const generic = inn && inn.indexOf('+') === -1 && qkeyEn(inn).slice(0, 6) === qk(name).slice(0, 6);
-    alt = generic && ruSub ? ruSub : azToRu(name);
+    alt = generic && ruSub ? ruSub : (reg && reg.length && reg[0].ru) ? reg[0].ru : azToRu(name);
   }
   if (alt && skel(alt) === sk && !isCyr(name) === !isCyr(alt)) alt = '';
   if (ALT_MEMO.size > 4000) ALT_MEMO.clear();
@@ -7871,12 +7897,13 @@ async function ocrCanvas(file, rot) {
   ctx.putImageData(d, 0, 0);
   return c;
 }
-async function ocrText(file, langs, rot) {
+async function ocrData(file, langs, rot) {
   const w = await ocrWorker(langs);
   const c = await ocrCanvas(file, rot || 0);
   const r = await w.recognize(c);
-  return String((r && r.data && r.data.text) || '');
+  return (r && r.data) || { text: '' };
 }
+async function ocrText(file, langs, rot) { return String((await ocrData(file, langs, rot)).text || ''); }
 
 /* ---------- FİN: штрихкод → MRZ → надпись ---------- */
 const FIN_RE = /^[0-9A-Z]{7}$/;
@@ -8047,6 +8074,369 @@ Object.assign(H, {
   fScanBlank: el => { S.scanKind = el && el.dataset.kind || 'blank'; const f = $('#fileScanBlank'); f.value = ''; f.click(); },
   scanApply: () => scanApply()
 });
+
+/* ===================== v12: тексты — формы выпуска, без коробки, фото коробки ===================== */
+const I18N_V12 = {
+  ru: {
+    doseResult: 'Как записано (итог)', packCountOf: 'Сколько в упаковке ({u})', packRegHint: 'в реестре №{n}',
+    looseChk: '📦 Без коробки — только ампулы, блистеры, штуки', looseMemo: 'без коробки',
+    boxPhotoBtn: '📷 Заполнить с фото коробки (камера или галерея)', boxReading: 'Читаю коробку…', boxFound: 'Нашлось на коробке',
+    boxName: 'Название', boxMfr: 'Производитель', boxAlts: 'Варианты этой фирмы в реестре — нажмите нужный:',
+    boxPackNote: 'Сколько в упаковке — впишите сами, по коробке.', boxApplied: 'Заполнено с фото. Проверьте и впишите количество.', supNSizes: 'размеров: {n}', supPickSize: 'Теперь выберите размер кнопкой ниже.'
+  },
+  az: {
+    doseResult: 'Necə yazılıb (nəticə)', packCountOf: 'Qablaşdırmada neçə ({u})', packRegHint: 'reyestrdə №{n}',
+    looseChk: '📦 Qutusuz — yalnız ampul, blister, ədəd', looseMemo: 'qutusuz',
+    boxPhotoBtn: '📷 Qutunun fotosundan doldur (kamera və ya qalereya)', boxReading: 'Qutu oxunur…', boxFound: 'Qutuda tapıldı',
+    boxName: 'Ad', boxMfr: 'İstehsalçı', boxAlts: 'Bu firmanın reyestrdəki variantları — lazım olanı basın:',
+    boxPackNote: 'Qablaşdırmada neçə olduğunu özünüz yazın (qutuya görə).', boxApplied: 'Fotodan dolduruldu. Yoxlayın və sayı yazın.', supNSizes: 'ölçü: {n}', supPickSize: 'İndi aşağıdakı düymə ilə ölçünü seçin.'
+  }
+};
+Object.assign(I18N.ru, I18N_V12.ru);
+Object.assign(I18N.az, I18N_V12.az);
+
+/* =====================================================================
+ * v12: формы выпуска — больше видов, и у каждой свой способ записать дозу/размер:
+ *  ампулы — концентрация + объём («100 мг/мл, 10 мл»), таблетки — доза, мазь — % + масса тубы, ингалятор — доза + число доз,
+ *  шприц — объём, игла — G × длина, катетер — G с цветом, зонд — Fr, бинт — ширина × длина, перчатки — размер, нить — USP…
+ *  Итог («как записано») собирается сам и остаётся видимым — его можно поправить руками.
+ * ===================================================================== */
+(function () {
+  const med = [
+    ['med_amp', 'dosage', 'amp', '💉 Ампулы', '💉 Ampullar'],
+    ['med_vial', 'dosage', 'vial', '🧪 Флаконы с раствором для инъекций', '🧪 İnyeksiya məhlulu, flakon'],
+    ['med_pow', 'dosage', 'vial', '🧂 Порошок / лиофилизат для инъекций', '🧂 İnyeksiya üçün toz / liofilizat'],
+    ['med_inf', 'volume', 'vial', '💧 Инфузионные растворы', '💧 İnfuziya məhlulları'],
+    ['med_pfs', 'dosage', 'pcs', '💉 Шприц-тюбик / готовый шприц', '💉 Doldurulmuş şpris'],
+    ['med_pen', 'dosage', 'pcs', '🖊️ Шприц-ручка / картридж', '🖊️ Şpris-qələm / kartric'],
+    ['med_tab', 'dosage', 'tab', '💊 Таблетки', '💊 Tabletlər'],
+    ['med_loz', 'dosage', 'tab', '🍬 Таблетки для рассасывания, подъязычные, шипучие', '🍬 Sorma, dilaltı, köpüklənən tabletlər'],
+    ['med_cap', 'dosage', 'cap', '💊 Капсулы', '💊 Kapsullar'],
+    ['med_sach', 'dosage', 'sachet', '🧂 Порошок / гранулы в пакетиках', '🧂 Paketdə toz / qranul'],
+    ['med_syrup', 'volume', 'bottle', '🍯 Сироп / раствор внутрь', '🍯 Şərbət / daxilə məhlul'],
+    ['med_susp', 'volume', 'bottle', '🥛 Суспензия', '🥛 Suspenziya'],
+    ['med_neb', 'dosage', 'neb', '🌫️ Небулы / раствор для ингаляций', '🌫️ Nebula / inhalyasiya məhlulu'],
+    ['med_inh', 'dosage', 'bottle', '🫁 Ингалятор (баллончик)', '🫁 İnhalyator (aerozol)'],
+    ['med_spray', 'dosage', 'bottle', '💨 Спрей (нос, горло, кожа)', '💨 Sprey (burun, boğaz, dəri)'],
+    ['med_drop', 'dosage', 'vial', '💧 Капли (глаза, уши, нос, внутрь)', '💧 Damcılar (göz, qulaq, burun, daxilə)'],
+    ['med_oint', 'dosage', 'tube', '🧴 Мазь', '🧴 Məlhəm'],
+    ['med_cream', 'dosage', 'tube', '🧴 Крем', '🧴 Krem'],
+    ['med_gel', 'dosage', 'tube', '🧴 Гель', '🧴 Gel'],
+    ['med_ext', 'volume', 'bottle', '🧪 Раствор наружно (антисептики, спирт)', '🧪 Xarici məhlul (antiseptik, spirt)'],
+    ['med_supp', 'dosage', 'pcs', '🕯️ Свечи', '🕯️ Şamlar'],
+    ['med_patch', 'dosage', 'pcs', '🩹 Пластырь с лекарством', '🩹 Dərmanlı plastır'],
+    ['med_vacc', 'dosage', 'dose', '🧫 Вакцины, сыворотки, иммуноглобулины', '🧫 Peyvənd, zərdab, immunoqlobulin'],
+    ['med_other', 'dosage', 'pcs', '📦 Другое', '📦 Digər']
+  ];
+  const sup = [
+    ['sup_syringe', 'volume', 'pcs', '💉 Шприцы', '💉 Şprislər'],
+    ['sup_needle', 'size', 'pcs', '📌 Иглы, ланцеты', '📌 İynələr, lansetlər'],
+    ['sup_cath', 'size', 'pcs', '📍 Катетеры в/в (канюли)', '📍 Venadaxili kateterlər (kanyula)'],
+    ['sup_tube', 'size', 'pcs', '〰️ Катетеры мочевые, зонды, дренажи', '〰️ Sidik kateterləri, zondlar, drenajlar'],
+    ['sup_ivset', 'size', 'pcs', '➰ Системы, краны, удлинители', '➰ Sistemlər, kranlar, uzadıcılar'],
+    ['sup_airway', 'size', 'pcs', '🫁 Дыхание: маски, воздуховоды, трубки', '🫁 Tənəffüs: maskalar, hava yolları, borular'],
+    ['sup_bandage', 'size', 'pcs', '🩹 Бинты', '🩹 Bintlər'],
+    ['sup_gauze', 'size', 'pack', '🧻 Марля, салфетки', '🧻 Cuna, salfetlər'],
+    ['sup_cotton', 'size', 'pack', '☁️ Вата', '☁️ Pambıq'],
+    ['sup_plaster', 'size', 'pcs', '🩹 Пластыри, повязки', '🩹 Plastırlar, sarğılar'],
+    ['sup_gloves', 'size', 'pair', '🧤 Перчатки', '🧤 Əlcəklər'],
+    ['sup_suture', 'size', 'pcs', '🧵 Шовный материал, скальпели', '🧵 Tikiş materialı, skalpellər'],
+    ['sup_lab', 'size', 'pcs', '🧪 Пробирки, тесты, контейнеры', '🧪 Probirkalar, testlər, konteynerlər'],
+    ['sup_diag', 'size', 'pcs', '📈 Электроды, бумага ЭКГ, датчики', '📈 Elektrodlar, EKQ kağızı, sensorlar'],
+    ['sup_immob', 'size', 'pcs', '🦴 Шины, воротники, иммобилизация', '🦴 Şinlər, yaxalıqlar, immobilizasiya'],
+    ['sup_ppe', 'size', 'pcs', '😷 Маски, халаты, бахилы (защита)', '😷 Maskalar, xalatlar, bahillər (qoruyucu)'],
+    ['sup_other', 'size', 'pcs', '🧰 Прочее', '🧰 Digər']
+  ];
+  FORMS.med.length = 0; med.forEach(x => FORMS.med.push(x));
+  FORMS.sup.length = 0; sup.forEach(x => FORMS.sup.push(x));
+  Object.assign(UNITS, {
+    dose: ['доз', 'дозы', 'doza', 'doza'], set: ['наб', 'наборы', 'dəst', 'dəst'], roll: ['рул', 'рулоны', 'rulon', 'rulon'],
+    m: ['м', 'метры', 'm', 'metr'], g: ['г', 'граммы', 'q', 'qram']
+  });
+})();
+
+/* ---------- поля дозы/размера по форме ---------- */
+const NUM = s => String(s || '').trim().replace('.', ',');
+const FSPEC_T = {
+  cv: { parts: [['c', ['Концентрация', 'Qatılıq'], '100 мг/мл · 0,9% · 5000 ЕД/мл'], ['v', ['Объём, мл', 'Həcm, ml'], '10', 'num']], compose: v => [v.c, v.v ? NUM(v.v) + ' мл' : ''].filter(Boolean).join(', '), parse: s => { const m = String(s).match(/^(.*?)(?:,\s*)?(\d+(?:[.,]\d+)?)\s*(?:мл|ml)\s*$/i); return m && m[1].trim() ? { c: m[1].trim().replace(/,$/, ''), v: m[2] } : m ? { c: '', v: m[2] } : { c: s, v: '' }; } },
+  dose: { parts: [['d', ['Доза', 'Doza'], '500 мг · 1 г · 1000 ЕД']], compose: v => v.d || '', parse: s => ({ d: s }) },
+  cm: { parts: [['c', ['Концентрация', 'Qatılıq'], '1% · 0,1% · 50 мг/г'], ['m', ['Масса тубы, г', 'Tübik, q'], '30', 'num']], compose: v => [v.c, v.m ? NUM(v.m) + ' г' : ''].filter(Boolean).join(', '), parse: s => { const m = String(s).match(/^(.*?)(?:,\s*)?(\d+(?:[.,]\d+)?)\s*(?:г|q|g)\s*$/i); return m ? { c: m[1].trim().replace(/,$/, ''), m: m[2] } : { c: s, m: '' }; } },
+  inh: { parts: [['d', ['Доза на впрыск', 'Bir vurumda doza'], '100 мкг'], ['n', ['Доз в баллоне', 'Balonda doza'], '200', 'num']], compose: v => [v.d ? v.d + '/доза' : '', v.n ? v.n + ' доз' : ''].filter(Boolean).join(', '), parse: s => { const m = String(s).match(/^(.*?)\/доза(?:,\s*(\d+)\s*доз)?/); return m ? { d: m[1].trim(), n: m[2] || '' } : { d: s, n: '' }; } },
+  vacc: { parts: [['d', ['Доза', 'Doza'], '0,5 мл · 1500 МЕ'], ['n', ['Доз во флаконе', 'Flakonda doza'], '1', 'num']], compose: v => [v.d, v.n && v.n !== '1' ? v.n + ' доз во фл.' : ''].filter(Boolean).join(', '), parse: s => { const m = String(s).match(/^(.*?),\s*(\d+)\s*доз/); return m ? { d: m[1], n: m[2] } : { d: s, n: '' }; } },
+  syr: { parts: [['v', ['Объём, мл', 'Həcm, ml'], '', 'sel', ['1', '2', '2,5', '3', '5', '10', '20', '50', '60', '100', '150']]], compose: v => v.v ? NUM(v.v) + ' мл' : '', parse: s => { const m = String(s).match(/(\d+(?:[.,]\d+)?)\s*мл/); return { v: m ? NUM(m[1]) : '' }; } },
+  needle: { parts: [['g', ['Размер (G)', 'Ölçü (G)'], '', 'sel', ['14G', '16G', '18G', '19G', '20G', '21G', '22G', '23G', '24G', '25G', '26G', '27G', '28G', '29G', '30G', '31G', '32G']], ['l', ['Длина, мм', 'Uzunluq, mm'], '40', 'num']], compose: v => [v.g, v.l ? v.l + ' мм' : ''].filter(Boolean).join(' × '), parse: s => { const m = String(s).match(/(\d{2}G)(?:.*?(\d+)\s*мм)?/); return m ? { g: m[1], l: m[2] || '' } : { g: '', l: '' }; } },
+  cann: { parts: [['g', ['Размер (G) и цвет', 'Ölçü (G) və rəng'], '', 'sel', ['14G (оранжевый)', '16G (серый)', '17G (белый)', '18G (зелёный)', '20G (розовый)', '22G (синий)', '24G (жёлтый)', '26G (фиолетовый)']]], compose: v => v.g || '', parse: s => { const m = String(s).match(/(\d{2})G/); const o = m && FSPEC_T.cann.parts[0][4].find(x => x.startsWith(m[1] + 'G')); return { g: o || '' }; } },
+  fr: { parts: [['n', ['Размер (Fr / Ch)', 'Ölçü (Fr / Ch)'], '', 'sel', ['6', '8', '10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32']], ['k', ['Вид', 'Növ'], '', 'sel', ['', '2-ходовой', '3-ходовой']]], compose: v => [v.n ? 'Fr ' + v.n : '', v.k].filter(Boolean).join(', '), parse: s => { const m = String(s).match(/Fr\s*(\d+)/i); const k = /3-ход/.test(s) ? '3-ходовой' : /2-ход/.test(s) ? '2-ходовой' : ''; return { n: m ? m[1] : '', k }; } },
+  bandage: { parts: [['w', ['Ширина, см', 'En, sm'], '10', 'num'], ['l', ['Длина, м', 'Uzunluq, m'], '5', 'num']], compose: v => [v.w ? NUM(v.w) + ' см' : '', v.l ? NUM(v.l) + ' м' : ''].filter(Boolean).join(' × '), parse: s => { const w = String(s).match(/(\d+(?:[.,]\d+)?)\s*см/), l = String(s).match(/(\d+(?:[.,]\d+)?)\s*м(?!м)/); return { w: w ? w[1] : '', l: l ? l[1] : '' }; } },
+  size2: { parts: [['a', ['Размер, см', 'Ölçü, sm'], '10 × 10']], compose: v => v.a ? (/см/.test(v.a) ? v.a : v.a + ' см') : '', parse: s => ({ a: String(s).replace(/\s*см\s*$/, '') }) },
+  mass: { parts: [['m', ['Масса, г', 'Kütlə, q'], '100', 'num']], compose: v => v.m ? NUM(v.m) + ' г' : '', parse: s => { const m = String(s).match(/(\d+(?:[.,]\d+)?)\s*г/); return { m: m ? m[1] : '' }; } },
+  glove: { parts: [['z', ['Размер', 'Ölçü'], '', 'sel', ['XS', 'S', 'M', 'L', 'XL', '6,0', '6,5', '7,0', '7,5', '8,0', '8,5', '9,0']]], compose: v => v.z || '', parse: s => ({ z: s }) },
+  suture: { parts: [['u', ['Толщина (USP)', 'Qalınlıq (USP)'], '', 'sel', ['6/0', '5/0', '4/0', '3/0', '2/0', '0', '1', '2']], ['n', ['Игла', 'İynə'], '', 'sel', ['с иглой', 'без иглы', 'режущая игла', 'колющая игла']]], compose: v => [v.u, v.n].filter(Boolean).join(' '), parse: s => { const m = String(s).match(/^(\d\/0|\d)\b\s*(.*)$/); return m ? { u: m[1], n: m[2] } : { u: '', n: '' }; } },
+  free: { parts: [['a', ['Размер / вид', 'Ölçü / növ'], '']], compose: v => v.a || '', parse: s => ({ a: s }) }
+};
+const FSPEC = {
+  med_amp: 'cv', med_vial: 'cv', med_pow: 'dose', med_inf: 'cv', med_pfs: 'cv', med_pen: 'cv', med_tab: 'dose', med_loz: 'dose', med_cap: 'dose', med_sach: 'dose',
+  med_syrup: 'cv', med_susp: 'cv', med_neb: 'cv', med_inh: 'inh', med_spray: 'cv', med_drop: 'cv', med_oint: 'cm', med_cream: 'cm', med_gel: 'cm', med_ext: 'cv',
+  med_supp: 'dose', med_patch: 'dose', med_vacc: 'vacc', med_other: 'free',
+  sup_syringe: 'syr', sup_needle: 'needle', sup_cath: 'cann', sup_tube: 'fr', sup_ivset: 'free', sup_airway: 'free', sup_bandage: 'bandage', sup_gauze: 'size2',
+  sup_cotton: 'mass', sup_plaster: 'size2', sup_gloves: 'glove', sup_suture: 'suture', sup_lab: 'free', sup_diag: 'free', sup_immob: 'free', sup_ppe: 'free', sup_other: 'free'
+};
+function fspecOf(code) { return FSPEC_T[FSPEC[code] || 'free']; }
+/** Поля под «Форма выпуска»: свои для каждой формы. Итог пишется в «Как записано» (rcvDose). */
+function renderDoseParts() {
+  const form = $('#rcvForm').value;
+  let box = $('#rcvDoseParts');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'rcvDoseParts';
+    const doseField = $('#rcvDose').closest('.field');
+    const grid = doseField.parentNode;
+    grid.parentNode.insertBefore(box, grid.nextSibling);
+    // порядок: форма → поля этой формы → итог «как записано»
+    box.parentNode.insertBefore(doseField, box.nextSibling);
+    $('#rcvDose').addEventListener('input', () => { S.rcvDoseManual = true; });
+  }
+  const sp = fspecOf(form);
+  const vals = sp.parse($('#rcvDose').value.trim()) || {};
+  box.innerHTML = '<div class="grid2">' + sp.parts.map(p => {
+    const id = 'rdp_' + p[0], lbl = L(p[1]);
+    const v = vals[p[0]] || '';
+    const ctl = p[3] === 'sel'
+      ? '<select id="' + id + '" data-dp="' + p[0] + '"><option value=""></option>' + p[4].map(o => '<option' + (o === v ? ' selected' : '') + '>' + esc(o) + '</option>').join('') + (v && p[4].indexOf(v) === -1 ? '<option selected>' + esc(v) + '</option>' : '') + '</select>'
+      : '<input type="' + (p[3] === 'num' ? 'text" inputmode="decimal' : 'text') + '" id="' + id + '" data-dp="' + p[0] + '" value="' + esc(v) + '" placeholder="' + esc(p[2] || '') + '" autocomplete="off">';
+    return '<div class="field"><label>' + esc(lbl) + '</label>' + ctl + '</div>';
+  }).join('') + '</div>';
+  const doseLbl = $('#rcvDoseLbl');
+  if (doseLbl) doseLbl.textContent = t('doseResult');
+  $$('[data-dp]', box).forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => {
+    const v = {};
+    $$('[data-dp]', box).forEach(x => { v[x.dataset.dp] = x.value.trim(); });
+    $('#rcvDose').value = sp.compose(v);
+    S.rcvDoseManual = false;
+  }));
+  // подпись «сколько в упаковке» — по единице формы
+  const pcL = $('#rcvPackCount') && $('#rcvPackCount').closest('.field').querySelector('label');
+  if (pcL) pcL.textContent = t('packCountOf', { u: unitLong($('#rcvUnit').value || formInfo(form).unit) });
+}
+/** Доза поставлена программно (из каталога, из базы, с фото) — разложить её по полям формы. */
+function syncDoseParts() { if ($('#rcvForm')) renderDoseParts(); }
+(function () {
+  const wrap = name => { const f = window[name]; if (typeof f !== 'function') return; window[name] = function () { const r = f.apply(this, arguments); try { syncDoseParts(); } catch (e) { } return r; }; };
+  ['updateDoseLabel', 'catFill', 'supFill', 'fillFromItem', 'supVarPick', 'catVarPick', 'applyStatic'].forEach(wrap);
+  document.addEventListener('change', e => { if (e.target && (e.target.id === 'rcvForm' || e.target.id === 'rcvUnit')) syncDoseParts(); }, true);
+})();
+
+/* =====================================================================
+ * v12: приход — «без коробки» и «📷 с фото коробки».
+ *  Без коробки: только ампулы/блистеры/штуки — поля упаковки скрыты, партии ставится заметка «без коробки».
+ *  Фото коробки (камера или галерея): штрихкод GS1 (код, серия, срок — точно) + распознавание текста:
+ *  фирма и доза — сверяем с каталогом АР, форма, производитель, серия, срок годности. Всё — на проверку.
+ *  Количество в упаковке не подставляется — его пишет человек.
+ * ===================================================================== */
+function rcvLooseInit() {
+  if ($('#rcvLooseWrap')) return;
+  const qtyGrid = $('#rcvQty').closest('.grid2');
+  const w = document.createElement('label');
+  w.className = 'check'; w.id = 'rcvLooseWrap';
+  w.innerHTML = '<input type="checkbox" id="rcvLoose"><span data-i18n="looseChk">' + esc(t('looseChk')) + '</span>';
+  qtyGrid.parentNode.insertBefore(w, qtyGrid.nextSibling);
+  $('#rcvLoose').addEventListener('change', () => rcvLooseApply($('#rcvLoose').checked));
+  // кнопка «с фото коробки» — над названием
+  const nameField = $('#rcvName').closest('.field');
+  const b = document.createElement('div');
+  b.className = 'row'; b.style.cssText = 'gap:8px;margin-bottom:10px';
+  b.innerHTML = '<button type="button" class="btn ghost grow" data-act="boxPhoto" data-i18n="boxPhotoBtn">' + esc(t('boxPhotoBtn')) + '</button>';
+  nameField.parentNode.insertBefore(b, nameField);
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*'; inp.id = 'fileBoxPhoto'; inp.className = 'hidden'; // без capture — телефон предложит камеру или галерею
+  document.body.appendChild(inp);
+  inp.addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) boxPhotoFile(f); });
+}
+function rcvLooseApply(on) {
+  S.rcv.loose = !!on;
+  const pcField = $('#rcvPackCount').closest('.field');
+  pcField.classList.toggle('hidden', S.rcv.loose);
+  if (S.rcv.loose) { $('#rcvPackCount').value = ''; S.rcv.qtyMode = 'units'; if (!$('#rcvPackInfo').value.trim()) $('#rcvPackInfo').value = t('looseMemo'); }
+  else if ($('#rcvPackInfo').value.trim() === t('looseMemo')) $('#rcvPackInfo').value = '';
+  if ($('#rcvLoose')) $('#rcvLoose').checked = S.rcv.loose;
+  updateQtyCalc();
+}
+
+/* ---------- фото коробки ---------- */
+const MON_AZ = { yan: 1, fev: 2, mar: 3, apr: 4, may: 5, iyn: 6, iyl: 7, avq: 8, sen: 9, okt: 10, noy: 11, dek: 12, jan: 1, feb: 2, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+/** Срок годности из текста: «Son istifadə tarixi / Годен до / EXP 03.2028 / 2028-03 / 31.03.2028». Дата изготовления — не срок. */
+function boxExpiry(text) {
+  const t0 = String(text || '');
+  const lab = /(son\s*istifad[əe]\s*tarixi|istifad[əe]\s*m[üu]dd[əe]ti|yararl[ıi]l[ıi]q|годен\s*до|срок\s*годности|годен|exp(?:iry|\.|iration)?|use\s*by|best\s*before|s\.?\s*i\.?\s*t\.?)/ig;
+  const mk = (y, m, d) => { y = +y; if (y < 100) y += 2000; m = +m; if (!(m >= 1 && m <= 12) || y < 2000 || y > 2100) return ''; const dd = d ? Math.min(+d, 31) : lastDay(y, m); return y + '-' + String(m).padStart(2, '0') + '-' + String(dd).padStart(2, '0'); };
+  const dateAt = s => {
+    let m = s.match(/(\d{1,2})[.\/\-](\d{1,2})[.\/\-](\d{2,4})/); if (m && +m[2] <= 12) return mk(m[3], m[2], m[1]);
+    m = s.match(/(\d{4})[.\/\-](\d{1,2})(?:[.\/\-](\d{1,2}))?/); if (m) return mk(m[1], m[2], m[3]);
+    m = s.match(/(\d{1,2})[.\/\-](\d{2,4})/); if (m) return mk(m[2], m[1]);
+    m = s.match(/([a-zа-я]{3})[a-zа-я]*[.\s\/-]*(\d{2,4})/i); if (m && MON_AZ[m[1].toLowerCase()]) return mk(m[2], MON_AZ[m[1].toLowerCase()]);
+    return '';
+  };
+  let mm;
+  while ((mm = lab.exec(t0))) { const d = dateAt(t0.slice(mm.index + mm[0].length, mm.index + mm[0].length + 30)); if (d) return d; }
+  // без надписи: самая поздняя дата в будущем (дата изготовления — раньше)
+  const all = [];
+  t0.replace(/\b(\d{1,2})[.\/](\d{1,2})[.\/](\d{2,4})\b|\b(\d{1,2})[.\/](20\d{2})\b/g, (m0, d, mo, y, mo2, y2) => { const v = y ? mk(y, mo, d) : mk(y2, mo2); if (v) all.push(v); return m0; });
+  const fut = all.filter(d => d > bakuToday()).sort();
+  return fut.length ? fut[fut.length - 1] : '';
+}
+/** Серия: «Seriya / Серия / LOT / Batch / Partiya / B.N.» и код после неё. */
+function boxSeries(text) {
+  const m = String(text || '').match(/(?:seriya|seria|серия|сер\.|lot|batch|partiya|партия|b\.?\s?n\.?|ch\.?-?b\.?)\s*[:№#.]?\s*([A-Z0-9][A-Z0-9\-\/]{2,15})/i);
+  return m ? m[1].toUpperCase() : '';
+}
+/** Доза с коробки: «500 mg», «100 мг/мл», «0,9%», «5 ml». */
+function boxDoses(text) {
+  const out = [];
+  String(text || '').replace(/(\d+(?:[.,]\d+)?)\s*(mq|mg|мг|mkq|mcg|мкг|q|g|г|IU|ME|МЕ|ЕД|BV|%)(?:\s*\/\s*(\d+(?:[.,]\d+)?)?\s*(ml|мл|doza|доза|dose))?/gi, (m) => { out.push(normDose(m)); return m; });
+  const vols = [];
+  String(text || '').replace(/(\d+(?:[.,]\d+)?)\s*(ml|мл)\b/gi, (m, n) => { vols.push(n.replace('.', ',')); return m; });
+  return { doses: out, vols };
+}
+/** Фирма с коробки: самое длинное совпадение слов текста с названиями каталога (и с карточками базы). */
+// слова формы выпуска и упаковки — не фирма (в реестре есть даже «İNYEKSİYA ÜÇÜN MƏHLUL»)
+const BOX_GENERIC = /^(inyeksiya|infuziya|ucun|üçün|mehlul|məhlul|tablet|tabletler|kapsul|ampul|ampulada|flakon|damci|damcı|melhem|məlhəm|krem|gel|sprey|toz|serbet|şərbət|suspenziya|istifade|istifadə|tarixi|seriya|son|xarici|daxile|раствор|для|инъекций|таблетки|капсулы|ампулы|мазь|крем|гель|серия|годен|до|solution|for|injection|tablets|capsules|film|coated|mg|ml)$/i;
+function boxBrand(text, bigText) {
+  const split = s => String(s || '').replace(/[®™©]/g, ' ').split(/[^A-Za-zА-Яа-яЁёƏəÖöÜüĞğİıŞşÇçІіЇїЄєҐґ0-9\-]+/).filter(w => w.length >= 3);
+  const words = split(text);
+  const big = {}; split(bigText).forEach(w => { big[skel(w)] = 1; });
+  const { doses, vols } = boxDoses(text);
+  let best = null;
+  const take = (cand, n) => { if (!best || n > best.n) best = Object.assign(cand, { n }); };
+  for (let i = 0; i < words.length; i++) for (let k = 3; k >= 1; k--) {
+    if (i + k > words.length) continue;
+    const ws = words.slice(i, i + k);
+    if (ws.every(w => BOX_GENERIC.test(w.replace(/İ/g, 'I').toLowerCase()))) continue;
+    if (BOX_GENERIC.test(ws[0].replace(/İ/g, 'I').toLowerCase())) continue;
+    const sk = skel(ws.join(' '));
+    if (sk.length < 4) continue;
+    // очки: длина совпадения + крупный шрифт (обычно это фирма) + доза на коробке совпадает с вариантом реестра
+    const bonus = (ws.some(w => big[skel(w)]) ? 15 : 0);
+    const base = S.view.items.find(it => skel(it.name) === sk);
+    if (base) take({ kind: 'item', item: base }, sk.length + bonus + 5);
+    const reg = S.catBy && S.catBy[sk];
+    if (reg && reg.length) {
+      const dm = reg.some(e => doses.some(d => normDose(e.d).indexOf(d) !== -1)) ? 10 : 0;
+      take({ kind: 'cat', list: reg }, sk.length + bonus + dm);
+    }
+    const sup = S.supBy && S.supBy[sk];
+    if (sup && sup.length) take({ kind: 'sup', list: sup }, sk.length + bonus);
+  }
+  return best;
+}
+/** Что нашлось на фото коробки → варианты для окна проверки. */
+function boxParse(text, gs, bigText) {
+  const res = { name: '', form: '', dose: '', series: '', expiry: '', mfr: '', barcode: '', pick: null };
+  if (gs) { res.series = gs.series || ''; res.expiry = gs.expiry || ''; res.barcode = gs.gtin || gs.ean || ''; }
+  const bb = boxBrand(text, bigText);
+  const { doses, vols } = boxDoses(text);
+  if (bb && bb.kind === 'item') { res.pick = { kind: 'item', item: bb.item }; res.name = bb.item.name; res.form = bb.item.form; res.dose = bb.item.dosage; }
+  else if (bb && bb.kind === 'cat') {
+    // из вариантов фирмы — тот, чья доза (и объём) есть на коробке
+    const sc = e => { const d = normDose(e.d); let s = 0; doses.forEach(x => { if (d.indexOf(x) !== -1) s += 3; }); vols.forEach(v => { if (e.d.indexOf(v + ' мл') !== -1) s += 2; }); return s; };
+    const list = bb.list.slice().sort((a, b) => sc(b) - sc(a));
+    const e = list[0];
+    res.pick = { kind: 'cat', e, alts: list.slice(0, 12) };
+    res.name = e.b; res.form = e.code; res.dose = e.d; res.mfr = e.mfr || '';
+  } else if (bb && bb.kind === 'sup') {
+    const e = bb.list.find(x => vols.some(v => x.z.indexOf(v) !== -1) || doses.some(d => normDose(x.z).indexOf(d) !== -1)) || bb.list[0];
+    res.pick = { kind: 'sup', e }; res.name = e.ru; res.form = e.code; res.dose = e.z;
+  } else {
+    res.dose = doses[0] || (vols[0] ? vols[0] + ' мл' : '');
+  }
+  if (!res.series) res.series = boxSeries(text);
+  if (!res.expiry) res.expiry = boxExpiry(text);
+  if (!res.mfr) { const m = String(text).match(/(?:istehsalçı|производитель|manufacturer|изготовитель|mfd\.?\s*by)\s*[:\-]?\s*([^\n]{3,60})/i); if (m) res.mfr = m[1].trim(); }
+  return res;
+}
+async function boxPhotoFile(file) {
+  openModal('<h3>' + esc(t('boxReading')) + '</h3><div class="muted" id="ocrProg">' + esc(t('ocrLoading')) + '</div><div class="muted" style="margin-top:8px">' + esc(t('ocrFirstTime')) + '</div>');
+  ocrProgress(t('ocrReading'));
+  let gs = null, txt = '';
+  try { const code = await decodeBarcode(file); if (code) gs = parseGs1(code) || { ean: String(code).trim() }; } catch (e) { }
+  let big = '';
+  try {
+    const data = await ocrData(file, 'aze+rus+eng');
+    txt = String(data.text || '');
+    // самые крупные строки на коробке — обычно название
+    const lines = (data.lines || []).map(l => ({ t: l.text, h: l.bbox ? l.bbox.y1 - l.bbox.y0 : 0 })).filter(l => l.t && l.t.trim());
+    lines.sort((a, b) => b.h - a.h);
+    big = lines.slice(0, 2).map(l => l.t).join(' ');
+  } catch (e) { if (!gs) { closeModal(); return toast(t('ocrNoNet'), 'bad', null, 8000); } }
+  S.ocrNote = null;
+  const r = boxParse(txt, gs, big);
+  S.boxFound = r;
+  S.boxFile = file;
+  boxReviewModal(r, txt);
+}
+function boxReviewModal(r, raw) {
+  const fOpts = FORMS[S.rcv.cat === 'sup' || (r.pick && r.pick.kind === 'sup') ? 'sup' : 'med'];
+  const row = (k, lbl, ctl) => '<div class="field"><label class="check" style="margin:0 0 4px"><input type="checkbox" id="bxOn_' + k + '"' + (r[k] ? ' checked' : '') + '><span>' + esc(lbl) + '</span></label>' + ctl + '</div>';
+  const inp = (k, ph) => '<input type="text" id="bx_' + k + '" value="' + esc(r[k] || '') + '" placeholder="' + esc(ph || '') + '">';
+  const alts = r.pick && r.pick.kind === 'cat' && r.pick.alts.length > 1 ? '<div class="lbl" style="margin:4px 0">' + esc(t('boxAlts')) + '</div><div class="chips">' + r.pick.alts.map((e, i) => '<button class="chip' + (i === 0 ? ' on' : '') + '" data-act="boxAlt" data-i="' + i + '">' + esc(e.d + ' · ' + formName(e.code)) + '</button>').join('') + '</div>' : '';
+  openModal('<h3>' + esc(t('boxFound')) + '</h3><div class="muted" style="margin-bottom:10px">' + esc(t('scanCheck')) + '</div>' +
+    row('name', t('boxName'), inp('name')) + alts +
+    row('form', t('formLabel'), '<select id="bx_form">' + fOpts.map(f => '<option value="' + f[0] + '"' + (f[0] === r.form ? ' selected' : '') + '>' + esc(S.lang === 'az' ? f[4] : f[3]) + '</option>').join('') + '</select>') +
+    row('dose', t('doseResult'), inp('dose')) +
+    row('series', t('seriesLabel'), inp('series')) +
+    row('expiry', t('expiryLabel'), '<input type="date" id="bx_expiry" value="' + esc(r.expiry || '') + '">') +
+    row('mfr', t('boxMfr'), inp('mfr')) +
+    (r.barcode ? row('barcode', t('barcodeLabel'), inp('barcode')) : '') +
+    '<div class="note">' + esc(t('boxPackNote')) + '</div>' +
+    (raw ? '<details class="card f-sec" style="margin-top:8px"><summary>' + esc(t('scanRaw')) + '</summary><pre style="white-space:pre-wrap;font-size:12px;max-height:200px;overflow:auto">' + esc(String(raw).slice(0, 3000)) + '</pre></details>' : '') +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="boxApply">' + esc(t('scanApply')) + '</button></div>');
+}
+function boxAltPick(i) {
+  const r = S.boxFound; if (!r || !r.pick || !r.pick.alts) return;
+  const e = r.pick.alts[i]; if (!e) return;
+  r.pick.e = e;
+  $('#bx_dose').value = e.d; $('#bx_form').value = e.code; $('#bx_name').value = e.b;
+  $$('[data-act=boxAlt]').forEach((b, k) => b.classList.toggle('on', k === i));
+}
+function boxApply() {
+  const r = S.boxFound; if (!r) return closeModal();
+  const on = k => { const c = $('#bxOn_' + k); return c && c.checked; };
+  const val = k => { const el = $('#bx_' + k); return el ? el.value.trim() : ''; };
+  // выбранная строка каталога / карточка базы — как будто её выбрали в подсказке (форма, МНН, единица, упаковка)
+  if (on('name') && r.pick) {
+    if (r.pick.kind === 'item') fillFromItem(r.pick.item);
+    else if (r.pick.kind === 'cat') catFill(r.pick.e);
+    else if (r.pick.kind === 'sup') supFill(r.pick.e);
+  }
+  if (on('name')) $('#rcvName').value = val('name');
+  if (on('form') && val('form')) { const cat = formInfo(val('form')).cat; if (S.rcv.cat !== cat) { S.rcv.cat = cat; renderReceiveSelects(); } $('#rcvForm').value = val('form'); $('#rcvUnit').value = formInfo(val('form')).unit; }
+  if (on('dose')) $('#rcvDose').value = val('dose');
+  if (on('series')) $('#rcvSeries').value = val('series').toUpperCase();
+  if (on('expiry') && /^\d{4}-\d{2}-\d{2}$/.test(val('expiry'))) {
+    const e = val('expiry');
+    $('#rcvNoExp').checked = false; $('#rcvExpWrap').classList.remove('hidden');
+    $('#rcvExpY').value = e.slice(0, 4); $('#rcvExpM').value = e.slice(5, 7);
+    $('#rcvExpD').value = +e.slice(8, 10) === lastDay(+e.slice(0, 4), +e.slice(5, 7)) ? '' : e.slice(8, 10);
+  }
+  if (on('mfr') && val('mfr') && !$('#rcvPackInfo').value.includes(val('mfr'))) $('#rcvPackInfo').value = ($('#rcvPackInfo').value ? $('#rcvPackInfo').value + ' · ' : '') + val('mfr');
+  if (on('barcode') && val('barcode')) $('#rcvBarcode').value = val('barcode');
+  // количество в упаковке — только человек
+  $('#rcvPackCount').value = '';
+  updateDoseLabel(); updateQtyCalc();
+  closeModal();
+  $('#rcvNameNote').innerHTML = '<div class="note fix">✓ ' + esc(t('boxApplied')) + '</div>';
+  ($('#rcvPackCount').closest('.field').classList.contains('hidden') ? $('#rcvQty') : $('#rcvPackCount')).focus();
+}
+Object.assign(H, {
+  boxPhoto: () => { const f = $('#fileBoxPhoto'); f.value = ''; f.click(); },
+  boxApply: () => boxApply(),
+  boxAlt: el => boxAltPick(+el.dataset.i)
+});
+(function () {
+  const go = () => { try { rcvLooseInit(); renderDoseParts(); } catch (e) { } };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
+  const rr = window.resetReceive;
+  if (typeof rr === 'function') window.resetReceive = function () { const x = rr.apply(this, arguments); try { rcvLooseApply(false); syncDoseParts(); } catch (e) { } return x; };
+})();
 
 
 function init() {
