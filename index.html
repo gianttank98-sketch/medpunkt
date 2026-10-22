@@ -1376,8 +1376,8 @@ function attachSuggest(input, provider, onPick) {
     items = res.list;
     if (!items.length) { hide(); return; }
     box.innerHTML = (res.fuzzy ? '<div class="sg-head">' + esc(t('didYouMean')) + '</div>' : '') + items.map((o, i) => {
-      const tag = o.kind === 'item' ? '<span class="tag base">' + esc(t('inBase')) + '</span>' : o.kind === 'cat' ? '<span class="tag">' + esc(t('catTag')) + '</span>' : o.kind === 'sup' ? '<span class="tag">' + esc(t('supTag')) + '</span>' : o.kind === 'dev' ? '<span class="tag">' + esc(t('devTag')) + '</span>' : (o.kind === 'brand' ? '<span class="tag brand">' + esc(t('brandTag')) + '</span>' : '<span class="tag">' + esc(t('innTag')) + '</span>');
-      const lab = o.kind === 'sub' || o.kind === 'inn' ? subWithAlt(o.label) : o.kind === 'sup' ? o.label + ' (' + o.se.az + ')' : o.kind === 'dev' ? o.label : (o.kind === 'item' ? nameWithAlt(o.label, o.item && o.item.substance) : nameWithAlt(o.label));
+      const tag = o.kind === 'icd' ? '<span class="tag">' + esc(t('icdTag')) + '</span>' : o.kind === 'item' ? '<span class="tag base">' + esc(t('inBase')) + '</span>' : o.kind === 'cat' ? '<span class="tag">' + esc(t('catTag')) + '</span>' : o.kind === 'sup' ? '<span class="tag">' + esc(t('supTag')) + '</span>' : o.kind === 'dev' ? '<span class="tag">' + esc(t('devTag')) + '</span>' : (o.kind === 'brand' ? '<span class="tag brand">' + esc(t('brandTag')) + '</span>' : '<span class="tag">' + esc(t('innTag')) + '</span>');
+      const lab = o.kind === 'sub' || o.kind === 'inn' ? subWithAlt(o.label) : o.kind === 'sup' ? o.label + ' (' + o.se.az + ')' : o.kind === 'dev' || o.kind === 'icd' ? o.label : (o.kind === 'item' ? nameWithAlt(o.label, o.item && o.item.substance) : nameWithAlt(o.label));
       return '<div class="sg" data-i="' + i + '"><div class="grow"><div class="t">' + esc(lab) + '</div>' + (o.sub ? '<div class="s">' + esc(o.sub) + '</div>' : '') + '</div>' + tag + '</div>';
     }).join('');
     box.classList.remove('hidden');
@@ -5420,7 +5420,7 @@ function fSummary(f) {
   const d = f.data || {};
   return { id: f.id, blankNo: d.blankNo || f.blankNo || '', status: f.status, createdAt: f.createdAt, updatedAt: f.updatedAt || f.createdAt, arrivedAt: String(d.arrivedAt || '').replace('T', ' '),
     patient: [d.pName, d.pFather].filter(Boolean).join(' '), fin: String(d.fin || '').toUpperCase(), birthDate: d.pBirth || '', sex: d.pSex || '', triage: d.triage || '',
-    dx: [d.dx1, d.dx2].filter(Boolean).join('; '), outcome: d.outcome || '', allergy: d.allergyNone ? '—' : (d.allergy || ''), compl: String(d.compl || '').slice(0, 120), local: !!f.local };
+    dx: [d.dx1, d.dx2].filter(Boolean).join('; '), icd: [d.dx1c, d.dx2c].filter(Boolean).join(', '), outcome: d.outcome || '', allergy: d.allergyNone ? '—' : (d.allergy || ''), compl: String(d.compl || '').slice(0, 120), local: !!f.local };
 }
 
 /* ---------- Защита от двойного пациента ----------
@@ -7354,7 +7354,7 @@ async function loadCatalog(force) {
     if (navigator.onLine !== false && (force || !S.catMeta || Date.now() - (S.catVerAt || 0) > CAT_VER_EVERY)) {
       try {
         const rv = await fetch(CAT_VER_URL + '?t=' + Date.now(), { cache: 'no-store' });
-        if (rv.ok) { ver = String((await rv.json()).v || ''); S.catVerAt = Date.now(); if (ver && (!S.catMeta || S.catMeta.hash !== ver)) old = true; }
+        if (rv.ok) { const vj = await rv.json(); S.catVerJson = vj; ver = String(vj.v || ''); S.catVerAt = Date.now(); if (ver && (!S.catMeta || S.catMeta.hash !== ver)) old = true; }
       } catch (e) { }
     }
     if (force || old) {
@@ -9209,6 +9209,89 @@ const IND_DRUGS = [
 ];
 
 /* =====================================================================
+ * v15: разделы — полный охват справочника + МКБ-10 + турецкие слова.
+ *  1) новые разделы для групп, которых не было (антидепрессанты, онкология, статины, урология, гормоны, печень, ТБ…);
+ *  2) дополнительные ATC-группы к прежним разделам — чтобы каждый препарат справочника был хотя бы в одном разделе;
+ *  3) диапазоны МКБ-10 для каждого раздела (поиск «I48», «R50», диагноз в форме пациента → раздел);
+ *  4) турецкие слова для поиска во всех разделах.
+ * ===================================================================== */
+// новые разделы: [id, иконка, по-русски, по-азербайджански, слова, ATC, расходники]
+[
+  ['depression', '🌧️', 'Депрессия, антидепрессанты', 'Depressiya, antidepressantlar', 'депресс|антидепресс|подавленн|апати|depressiya|antidepressant|depresyon|antidepresan|depression|antidepress', 'N06A', ''],
+  ['cognitive', '🧩', 'Память, деменция, ноотропы, мозговое кровообращение', 'Yaddaş, demensiya, nootroplar, beyin qan dövranı', 'памят|деменц|альцгейм|ноотроп|когнитив|энцефалопат|мозгов кровообращ|yaddaş|demensiya|alzheimer|nootrop|beyin qan|hafıza|bunama|nootropik|memory|dementia|cognitive|nootropic', 'N06B,N06D,N07XX', ''],
+  ['oncology', '🎗️', 'Онкология, противоопухолевые', 'Onkologiya, şişəleyhinə', 'онколог|рак|опухол|химиотерап|метастаз|лимфом|лейкоз|onkologiya|xərçəng|şiş|kimyaterapiya|kanser|tümör|kemoterapi|cancer|tumou?r|oncolog|chemotherap|leukemia|lymphoma', 'L01,L02', ''],
+  ['lipids', '🧈', 'Холестерин, статины', 'Xolesterin, statinlər', 'холестер|статин|липид|дислипид|атероскл|xolesterin|statin|lipid|kolesterol|cholesterol|dyslipid|atheroscl', 'C10', ''],
+  ['urology', '🚹', 'Урология: простата, мочевой пузырь, потенция', 'Urologiya: prostat, sidik kisəsi, potensiya', 'простат|аденом|мочеиспуск|недержан|гиперактивн мочев|эректил|потенц|почечнокам|мочекамен|prostat|sidik kisəsi|sidiyi saxlaya|potensiya|erektil|böyrək daşı|idrar kaçırma|prostat|ereksiyon|böbrek taşı|prostate|bph|incontinence|erectile|kidney stone|urolith', 'G04B,G04C', 'sup_urin,sup_urbag'],
+  ['sexhormones', '⚥', 'Половые гормоны, климакс, бесплодие, цикл', 'Cinsi hormonlar, klimaks, sonsuzluq, tsikl', 'климакс|менопауз|бесплод|эстроген|прогестер|тестостер|менструац|менструальн цикл|нарушен цикл|аменорея|klimaks|menopauza|sonsuzluq|estrogen|progesteron|testosteron|menstruasiya|aybaşı|menopoz|kısırlık|adet|menopause|infertil|estrogen|progesteron|testosteron|menstrua', 'G03', ''],
+  ['immuno', '🛡️', 'Иммунодепрессанты: ревматология, трансплантация', 'İmmunodepressantlar: revmatologiya, transplantasiya', 'иммунодепресс|ревматоид|волчанк|трансплант|аутоиммун|болезнь крона|язвенн колит|псориатическ артрит|revmatoid|qırmızı qurdeşənəyi|transplantasiya|autoimmun|romatoid|lupus|nakil|otoimmün|immunosuppress|rheumatoid|lupus|transplant|autoimmun|crohn', 'L04', ''],
+  ['immunostim', '🧪', 'Иммуномодуляторы, интерфероны', 'İmmunomodulyatorlar, interferonlar', 'иммуномод|иммуностим|интерферон|иммунитет|immunomodulyator|interferon|immunitet|bağışıklık|immünomodülatör|immunomodul|interferon|immunostim', 'L03', ''],
+  ['liver', '🫒', 'Печень и желчь (гепатопротекторы)', 'Qaraciyər və öd (hepatoprotektorlar)', 'печен|гепат|желчн|холецист|холестаз|желтух|цирроз|qaraciyər|hepatit|öd kisəsi|sarılıq|siroz|karaciğer|safra|hepatit|liver|hepat|bile|biliary|cholecyst|jaundice|cirrhos', 'A05', ''],
+  ['tb', '🫁', 'Туберкулёз', 'Vərəm (tuberkulyoz)', 'туберкул|тубик|тб|чахотк|vərəm|tuberkulyoz|verem|tüberküloz|tuberculos|tb ', 'J04', ''],
+  ['endocrine', '🦋', 'Щитовидная железа, гипофиз, паращитовидные', 'Qalxanabənzər vəzi, hipofiz', 'щитовидн|тиреоид|гипотиреоз|гипертиреоз|тиреотокс|зоб|гипофиз|паращитовидн|qalxanabənzər|tiroid|hipotireoz|hipertireoz|zob|hipofiz|tiroid|guatr|thyroid|hypothyroid|hyperthyroid|goit|pituitar|parathyroid', 'H01,H03,H05', ''],
+  ['parkinson', '🤲', 'Болезнь Паркинсона, тремор', 'Parkinson xəstəliyi, tremor', 'паркинсон|тремор|дрожан|экстрапирамид|parkinson|tremor|titrəmə|titreme|parkinson|tremor', 'N04', ''],
+  ['osteoporosis', '🦴', 'Остеопороз, кости', 'Osteoporoz, sümüklər', 'остеопор|кост|остеопен|osteoporoz|sümük|kemik erimesi|kemik|osteoporos|bone loss|osteopen', 'M05', ''],
+  ['digestion', '🥣', 'Пищеварение, ферменты, поджелудочная', 'Həzm, fermentlər, mədəaltı vəzi', 'пищевар|фермент|панкреат|поджелудочн|вздут|метеоризм|диспепс|həzm|ferment|pankreatit|mədəaltı|köp|sindirim|enzim|pankreas|şişkinlik|digest|enzyme|pancrea|bloating|dyspeps', 'A09,A07F', ''],
+  ['metabolism', '⚙️', 'Обмен веществ, ожирение, питание', 'Maddələr mübadiləsi, piylənmə, qidalanma', 'обмен вещест|метаболи|ожирен|похуд|аппетит|истощен|питан|maddələr mübadiləsi|metabolizm|piylənmə|arıqla|iştah|obezite|kilo|beslenme|metabol|obesity|weight loss|appetite|nutrition', 'A16,A08,A14,A15,V06', ''],
+  ['neuro', '🧠', 'Неврология: нейропатия, миастения, рассеянный склероз', 'Nevrologiya: neyropatiya, miasteniya', 'нейропат|полинейр|неврит|невралг|миастен|рассеян склер|онемен|neyropatiya|polineyropatiya|nevralgiya|miasteniya|dağınıq skleroz|nöropati|nevralji|miyasteni|multipl skleroz|neuropath|neuralg|myasthen|multiple sclerosis|numbness', 'N07A,N07X', ''],
+  ['gyn', '🌸', 'Гинекология: вагинит, молочница, выделения', 'Ginekologiya: vaginit, kandidoz', 'вагинит|кольпит|молочниц|выделен|гинеколог|бактериальн вагиноз|vaginit|kolpit|ginekologiya|ifrazat|vajinit|akıntı|jinekoloji|vaginit|vaginosis|gynecolog|discharge', 'G01,G02B,G02C', ''],
+  ['addiction', '🚭', 'Зависимости: курение, опиоиды', 'Asılılıqlar: siqaret, opioidlər', 'курен|никотин|зависимост|наркоман|опиоидн зависим|siqaret|nikotin|asılılıq|narkomaniya|sigara|bağımlılık|smoking|nicotine|addiction|dependence', 'N07B', '']
+].forEach(x => IND_SECTIONS.push(x));
+
+// дополнительные ATC-группы к прежним разделам (то, что раньше ни в какой раздел не попадало)
+const IND_ATC_MORE = {
+  poison: 'V03A', dehydr: 'B05,V07', spasm: 'A03', angina: 'C01E,C01DX,C01M', hypotension: 'C01C', vertigo: 'N07C', bleeding: 'B06A', metabolism: 'A13', gyn: 'G02', allergy: 'V01,B06AC', diagnostics: 'V08,V04', skin: 'D02,D10,D11,B06AA',
+  joints: 'M09', asthma: 'R07', eyes: 'S03', ears: 'S03', veins: 'C04', vitamins: 'A11,A12C'
+};
+Object.keys(IND_ATC_MORE).forEach(id => { const s = IND_SECTIONS.find(x => x[0] === id); if (s) s[5] = [s[5], IND_ATC_MORE[id]].filter(Boolean).join(','); });
+
+// турецкие слова (и ещё синонимы) — дописываются к словам поиска раздела
+const IND_TR = {
+  arrest: 'kalp durması|kardiyak arrest|canlandırma|kalp masajı', anaphylaxis: 'anafilaktik şok|anjiyoödem|alerjik şok', hypotension: 'tansiyon düşüklüğü|hipotansiyon|şok|bayılma',
+  hypertension: 'yüksek tansiyon|hipertansiyon|tansiyon|hipertansif kriz', angina: 'göğüs ağrısı|kalp krizi|enfarktüs|anjina|koroner', hf: 'kalp yetmezliği|akciğer ödemi|nefes darlığı kalp',
+  arrhythmia: 'aritmi|ritim bozukluğu|atriyal fibrilasyon|ekstrasistol', tachy: 'taşikardi|çarpıntı|hızlı nabız', brady: 'bradikardi|yavaş nabız|kalp bloğu',
+  thrombo: 'tromboz|pıhtı|emboli|kan sulandırıcı|antikoagülan', bleeding: 'kanama|kanamayı durdurma|burun kanaması|hemostatik', allergy: 'alerji|kaşıntı|kurdeşen|ürtiker|antihistaminik',
+  asthma: 'astım|nefes darlığı|hırıltı|koah|bronkospazm', croup: 'krup|larenjit|stridor|havlar öksürük', oxygen: 'oksijen|hava yolu|entübasyon|solunum desteği|ambu',
+  cough: 'öksürük|balgam|balgam söktürücü', nose: 'burun akıntısı|burun tıkanıklığı|nezle|sinüzit|rinit', throat: 'boğaz ağrısı|bademcik|farenjit|diş ağrısı|ağız yarası',
+  cold: 'soğuk algınlığı|grip|nezle|üşütme', fever: 'ateş|yüksek ateş|ateş düşürücü|hararet', pain: 'ağrı|ağrı kesici|analjezik|sızı', headache: 'baş ağrısı|migren',
+  spasm: 'kramp|spazm|kolik|karın ağrısı|böbrek koliği|safra koliği', vomit: 'kusma|bulantı|mide bulantısı|kusturmayı önleyen|antiemetik', heartburn: 'mide yanması|reflü|gastrit|ülser|hazımsızlık',
+  diarrhea: 'ishal|sulu dışkı|gıda zehirlenmesi', constipation: 'kabızlık|lavman|müshil|laksatif', dehydr: 'sıvı kaybı|dehidrasyon|serum|damar içi sıvı',
+  electrolytes: 'potasyum|magnezyum|kalsiyum|sodyum|elektrolit|asidoz', diabetes: 'şeker hastalığı|diyabet|yüksek şeker|insülin|ketoasidoz', hypo: 'düşük şeker|hipoglisemi|şeker düşmesi',
+  convuls: 'nöbet|havale|sara|epilepsi|kasılma', agitation: 'ajitasyon|saldırganlık|psikoz|deliryum|huzursuzluk', anxiety: 'kaygı|panik|anksiyete|sakinleştirici|stres',
+  insomnia: 'uykusuzluk|uyku ilacı', alcohol: 'alkol|sarhoşluk|alkol yoksunluğu|akşamdan kalma', poison: 'zehirlenme|zehir|panzehir|doz aşımı|antidot',
+  stroke: 'inme|felç|serebrovasküler', cerebral: 'beyin ödemi|kafa travması|beyin sarsıntısı', infection: 'antibiyotik|enfeksiyon|zatürre|sepsis|menenjit|bakteriyel',
+  uti: 'idrar yolu enfeksiyonu|sistit|piyelonefrit', urinary: 'idrar tutulması|sonda takma|idrar yapamama', antiviral: 'virüs|uçuk|zona|antiviral|suçiçeği',
+  fungal: 'mantar|pamukçuk|kandida', worms: 'bağırsak kurdu|parazit|uyuz|bit', steroids: 'kortizon|steroid|hormon', vitamins: 'vitamin', anemia: 'kansızlık|anemi|demir eksikliği',
+  joints: 'eklem ağrısı|kas ağrısı|burkulma|incinme|bel ağrısı|romatizma', gout: 'gut|ürik asit', trauma: 'travma|kırık|çıkık|atel|kaza', wounds: 'yara|kesik|dikiş|pansuman|antiseptik',
+  burns: 'yanık', skin: 'cilt|döküntü|egzama|dermatit|sedef', eyes: 'göz|göz damlası|konjonktivit', ears: 'kulak|kulak ağrısı|otit', veins: 'hemoroid|basur|varis|toplardamar',
+  obstetrics: 'doğum|gebelik|eklampsi|doğum sonrası kanama|lohusa', contracept: 'doğum kontrol|gebelik önleyici', vaccines: 'aşı|tetanoz|kuduz|ısırık|hayvan ısırığı',
+  localanest: 'lokal anestezi|uyuşturma', sedation: 'sedasyon|narkoz|anestezi|entübasyon ilacı', vertigo: 'baş dönmesi|bayılma|vertigo|senkop', coldheat: 'donma|hipotermi|sıcak çarpması|güneş çarpması',
+  access: 'enjeksiyon|iğne|damar yolu|serum seti|kateter|şırınga', diagnostics: 'ekg|şeker ölçümü|test|tansiyon ölçümü|satürasyon', ppe: 'koruyucu|maske|eldiven|dezenfeksiyon|tıbbi atık'
+};
+Object.keys(IND_TR).forEach(id => { const s = IND_SECTIONS.find(x => x[0] === id); if (s) s[4] += '|' + IND_TR[id]; });
+
+/* МКБ-10 для раздела: коды и диапазоны (I47-I49 — все коды от I47 до I49.9; R00.0 — только эта подрубрика и глубже). */
+const IND_ICD = {
+  arrest: 'I46,I49.0', anaphylaxis: 'T78.2,T78.3,T80.5,T88.6', hypotension: 'I95,R57,T79.4', hypertension: 'I10-I15,I67.4',
+  angina: 'I20-I25,R07.2-R07.4', hf: 'I50,J81,I11.0', arrhythmia: 'I47-I49,R00.2,R00.8', tachy: 'R00.0,I47', brady: 'R00.1,I44-I45,I49.5',
+  thrombo: 'I26,I74,I80-I82', bleeding: 'R58,R04,K92.0-K92.2,D65-D69,N92-N93,O72', allergy: 'T78.3,T78.4,L50,L23,L27,J30.1-J30.4',
+  asthma: 'J44-J46,R06.0,R06.2', croup: 'J04-J05,J38.4', oxygen: 'J96,R09.0,T71,T17,R06.0', cough: 'R05,J20-J22,J40-J42',
+  nose: 'J00-J01,J30-J32', throat: 'J02-J03,J35-J36,K00-K14', cold: 'J00-J06,J09-J11', fever: 'R50,R56.0', pain: 'R52,M79.6,R07,M54',
+  headache: 'R51,G43-G44', spasm: 'R10,N23,K80,K82,K58', vomit: 'R11,T75.3,O21', heartburn: 'K20-K31,R12', diarrhea: 'A00-A09,K52,R19.7,K59.1',
+  constipation: 'K59.0', dehydr: 'E86', electrolytes: 'E87,E83.4,E83.5', diabetes: 'E10-E14,R73', hypo: 'E15,E16.0-E16.2',
+  convuls: 'R56,G40-G41,O15', agitation: 'F05,F20-F31,R45.1', anxiety: 'F40-F43,F45,R45.0', insomnia: 'G47.0,F51', alcohol: 'F10,T51,K70',
+  poison: 'T36-T65', stroke: 'I60-I64,G45-G46,I69', cerebral: 'S06,G93.2,G93.6', infection: 'J12-J18,A40-A41,G00-G03,L01-L08,A46,J01,H66',
+  uti: 'N30,N39.0,N10-N12,N34', urinary: 'R33,N32.0', antiviral: 'B00-B02,B15-B24,B27,J09-J11', fungal: 'B35-B49,N77.1', worms: 'B65-B89',
+  steroids: 'E27', vitamins: 'E50-E56', anemia: 'D50-D64', joints: 'M00-M25,M45-M54,M60-M79,S13,S23,S33,S43,S53,S63,S73,S83,S93', gout: 'M10,E79.0',
+  trauma: 'S00-T14,T79', wounds: 'S01,S11,S21,S31,S41,S51,S61,S71,S81,S91,T14.0,T14.1', burns: 'T20-T32', skin: 'L20-L30,L40-L45,L70-L75',
+  eyes: 'H00-H59', ears: 'H60-H95', veins: 'I83-I87,K64,I73', obstetrics: 'O00-O99', contracept: 'Z30', vaccines: 'A33-A35,A82,Z20.3,Z23-Z27',
+  vertigo: 'R42,R55,H81', coldheat: 'T33-T35,T67-T69', diagnostics: 'Z00-Z13', ppe: 'Z20',
+  depression: 'F32-F34,F38-F39', cognitive: 'F00-F03,F07,G30-G31,R41,I67.8', oncology: 'C00-D48', lipids: 'E78', urology: 'N40-N51,N20-N21,R32,N39.3-N39.4',
+  sexhormones: 'N91-N95,N97,E28-E29', immuno: 'M05-M06,M30-M36,K50-K51,Z94', immunostim: 'D80-D84', liver: 'K70-K87', tb: 'A15-A19',
+  endocrine: 'E00-E07,E20-E35', parkinson: 'G20-G26', osteoporosis: 'M80-M82', digestion: 'K85-K86,K90,K30', metabolism: 'E66,E70-E90,E40-E46',
+  neuro: 'G35,G50-G64,G70', gyn: 'N70-N77', addiction: 'F11-F19'
+};
+
+/* =====================================================================
  * v14: поиск по разделам (показаниям). Пишешь «температура», «противорвотное», «qusma», «aritmiya» —
  *  сверху появляется раздел; в нём: что есть на складе, как применять (дозы, способ), что закончилось,
  *  что ещё применяют при этом, расходники и что есть в справочнике АР. Разделы есть и пустые.
@@ -9427,6 +9510,241 @@ Object.assign(H, {
   indSpend: el => { closeModal(); S.spend.q = el.dataset.q; S.spend.loc = 'ALL'; setScreen('spend'); const i = $('#spendQ'); if (i) i.value = el.dataset.q; renderSpend(); }
 });
 indInjectButtons();
+
+/* =====================================================================
+ * v15: МКБ-10.
+ *  — Справочник МКБ-10 (14 641 код: русские названия НСИ Минздрава РФ, английские ВОЗ) лежит рядом со справочником
+ *    препаратов на GitHub, телефон скачивает его один раз и хранит у себя (работает без интернета).
+ *  — Поиск: «I48», «r50», «фибрилляция предсердий», «pneumonia» → коды МКБ и разделы с препаратами на складе.
+ *  — Формы пациентов: диагноз выбирается из МКБ-10 с подсказками, код сохраняется (отбор и отчёт по кодам).
+ *  — Отчёт «По формам»: обращения по рубрикам и классам МКБ и какие препараты вводили при каждой рубрике.
+ * ===================================================================== */
+const I18N_V15 = {
+  ru: {
+    icdTag: 'МКБ-10', icdLoading: 'Загружается МКБ-10…', icdHitsLbl: '🏷 МКБ-10', icdSecH: '🏷 МКБ-10 для этого раздела', icdMore: 'и ещё {n}',
+    ffIcd: 'Код МКБ-10', ffIcdPh: 'например I48 или J', chIcd: 'Диагнозы по МКБ-10 (рубрики)', chIcdCh: 'Классы МКБ-10', icdNoCode: 'без кода МКБ',
+    icdDrugsBy: 'Препараты по диагнозам МКБ-10', icdPickHint: 'Начните вводить диагноз или код МКБ-10 — выберите из списка'
+  },
+  az: {
+    icdTag: 'XBT-10', icdLoading: 'XBT-10 yüklənir…', icdHitsLbl: '🏷 XBT-10', icdSecH: '🏷 Bu bölmə üçün XBT-10', icdMore: 'və daha {n}',
+    ffIcd: 'XBT-10 kodu', ffIcdPh: 'məsələn I48 və ya J', chIcd: 'XBT-10 üzrə diaqnozlar (rubrikalar)', chIcdCh: 'XBT-10 sinifləri', icdNoCode: 'XBT kodu olmadan',
+    icdDrugsBy: 'XBT-10 diaqnozları üzrə preparatlar', icdPickHint: 'Diaqnozu və ya XBT-10 kodunu yazmağa başlayın — siyahıdan seçin'
+  }
+};
+Object.assign(I18N.ru, I18N_V15.ru);
+Object.assign(I18N.az, I18N_V15.az);
+
+const ICD_URL = CAT_URL.replace('catalog.json', 'icd10.json');
+const ICD_RE = /^[A-Z]\d\d(\.\d{1,2})?$/;
+/** Классы МКБ-10 по первой букве (для итогов отчёта). */
+const ICD_CH = {
+  A: ['Инфекции', 'İnfeksiyalar'], B: ['Инфекции, паразиты', 'İnfeksiyalar, parazitlər'], C: ['Новообразования', 'Yenitörəmələr'], D: ['Новообразования, кровь', 'Yenitörəmələr, qan'],
+  E: ['Эндокринные, обмен', 'Endokrin, mübadilə'], F: ['Психические', 'Psixi pozuntular'], G: ['Нервная система', 'Sinir sistemi'], H: ['Глаз, ухо', 'Göz, qulaq'],
+  I: ['Кровообращение', 'Qan dövranı'], J: ['Дыхание', 'Tənəffüs'], K: ['Пищеварение', 'Həzm'], L: ['Кожа', 'Dəri'], M: ['Кости, мышцы, суставы', 'Sümük, əzələ, oynaq'],
+  N: ['Мочеполовая', 'Sidik-cinsiyyət'], O: ['Беременность, роды', 'Hamiləlik, doğuş'], P: ['Перинатальные', 'Perinatal'], Q: ['Врождённые', 'Anadangəlmə'],
+  R: ['Симптомы и признаки', 'Simptomlar və əlamətlər'], S: ['Травмы', 'Travmalar'], T: ['Травмы, отравления, ожоги', 'Travma, zəhərlənmə, yanıq'],
+  V: ['Внешние причины', 'Xarici səbəblər'], W: ['Внешние причины', 'Xarici səbəblər'], X: ['Внешние причины', 'Xarici səbəblər'], Y: ['Внешние причины', 'Xarici səbəblər'],
+  Z: ['Обращения, факторы', 'Müraciətlər, amillər'], U: ['Особые коды', 'Xüsusi kodlar']
+};
+
+/* ---------- загрузка и хранение ---------- */
+async function icdGet() { try { const db = await catDb(); return await new Promise(res => { const rq = db.transaction('kv').objectStore('kv').get('icd10'); rq.onsuccess = () => res(rq.result || null); rq.onerror = () => res(null); }); } catch (e) { return null; } }
+async function icdPut(v) { try { const db = await catDb(); await new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, 'icd10'); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); } catch (e) { } }
+function icdIndex(data) {
+  if (!data || !Array.isArray(data.c)) return;
+  const by = {};
+  const list = data.c.map(x => { const e = { c: x[0], ru: x[1], en: x[2] || '' }; by[e.c] = e; return e; });
+  S.icd = { list, by, blocks: data.b || [], hash: data.hash || '', n: list.length };
+  if (S.indHitsRefresh) S.indHitsRefresh();
+}
+async function icdLoad(force) {
+  if (S.icdLoading) return S.icdLoading;
+  S.icdLoading = (async () => {
+    try {
+      if (!S.icd) { const c = await icdGet(); if (c) icdIndex(c); }
+      const want = S.catVerJson && S.catVerJson.icd;
+      if (force || !S.icd || (want && S.icd.hash !== want)) {
+        const r = await fetch(ICD_URL + (want ? '?v=' + want : ''), { cache: want || force ? 'reload' : 'default' });
+        if (r.ok) { const data = await r.json(); data.hash = want || ''; icdIndex(data); await icdPut(data); }
+      }
+    } catch (e) { }
+    finally { S.icdLoading = null; }
+  })();
+  return S.icdLoading;
+}
+function icdName(e) { return S.lang === 'az' && e.en ? e.en : e.ru; }
+/** Ключи поиска — по требованию (первый поиск), чтобы не тормозить запуск. */
+function icdKeys() {
+  if (!S.icd || S.icd.keyed) return;
+  S.icd.list.forEach(e => { e.q = qk(e.ru); e.qe = e.en ? qkeyEn(e.en) : ''; });
+  S.icd.keyed = true;
+}
+/** Поиск по МКБ: код (I48, i48.0, J) или слова диагноза (рус., англ.). */
+function icdFind(q, limit) {
+  if (!S.icd) { icdLoad(); return []; }
+  const s = String(q || '').trim();
+  const code = s.toUpperCase().replace(',', '.');
+  if (/^[A-Z](\d{0,2}(\.\d{0,2})?)?$/.test(code) && code.length >= 2) {
+    return S.icd.list.filter(e => e.c.indexOf(code) === 0).slice(0, limit || 30);
+  }
+  const toks = s.split(/\s+/).map(w => qk(w)).filter(w => w.length >= 3);
+  if (!toks.length) return [];
+  icdKeys();
+  const out = [];
+  for (const e of S.icd.list) {
+    const ok = toks.every(w => e.q.indexOf(w) !== -1) || (e.qe && toks.every(w => e.qe.indexOf(w) !== -1));
+    if (ok) out.push(e);
+  }
+  out.sort((a, b) => (a.c.length - b.c.length) || (a.ru.length - b.ru.length));
+  return out.slice(0, limit || 30);
+}
+/** Входит ли код в диапазон раздела: «I47-I49», «R07.2-R07.4», «R00.0». */
+function icdIn(code, spec) {
+  const p = spec.split('-');
+  if (p.length === 2) return code >= p[0] && (code <= p[1] || code.indexOf(p[1]) === 0);
+  return code.indexOf(spec) === 0 || spec.indexOf(code + '.') === 0;
+}
+function icdSecs(code) {
+  if (!code) return [];
+  return Object.keys(IND_ICD).filter(id => IND_ICD[id].split(',').some(sp => icdIn(code, sp)));
+}
+
+/* ---------- поиск: код или диагноз → МКБ и разделы ---------- */
+(function () {
+  const orig = indMatch;
+  window.indMatch = function (q) {
+    const r = orig(q);
+    const s = String(q || '').trim();
+    let hits = [];
+    const isCode = /^[A-Za-z]\d{1,2}([.,]\d{0,2})?$/.test(s);
+    if (isCode || (!r.length && s.length >= 5)) hits = icdFind(s, isCode ? 6 : 5);
+    S.indIcd = hits;
+    if (hits.length) {
+      const have = new Set(r.map(x => x.id));
+      hits.forEach(e => icdSecs(e.c).forEach(id => { if (!have.has(id)) { const sx = indIdx().byId[id]; if (sx) { r.push(sx); have.add(id); } } }));
+    }
+    return r;
+  };
+  const origCard = indHitsCard;
+  window.indHitsCard = function () {
+    const h = origCard();
+    const ic = S.indIcd || [];
+    if (!ic.length) return h;
+    const lines = '<div class="lbl">' + esc(t('icdHitsLbl')) + '</div>' + ic.map(e => {
+      const sec = icdSecs(e.c)[0];
+      return '<div class="fd" style="margin:4px 0">' + (sec ? '<a href="#" style="color:inherit;text-decoration:none" data-act="indOpen" data-id="' + sec + '">' : '') + '<b>' + esc(e.c) + '</b> — ' + esc(icdName(e)) + (sec ? '</a>' : '') + '</div>';
+    }).join('');
+    return h ? h.replace('<div class="card" id="indHitsCard">', '<div class="card" id="indHitsCard">' + lines) : '<div class="card" id="indHitsCard">' + lines + '</div>';
+  };
+  // МКБ загрузилась, пока человек уже что-то ввёл, — обновить подсказки на экране
+  S.indHitsRefresh = () => { try { if (S.screen === 'spend' && S.spend.q) renderSpend(); else if (S.screen === 'stock' && S.stock.q) renderStock(); } catch (e) { } };
+  const origSec = indSectionHtml;
+  window.indSectionHtml = function (id) {
+    let h = origSec(id);
+    const specs = (IND_ICD[id] || '').split(',').filter(Boolean);
+    if (!specs.length) return h;
+    if (!S.icd) { icdLoad(); return h + '<div class="muted" style="margin-top:10px">' + esc(t('icdLoading')) + '</div>'; }
+    const cats = S.icd.list.filter(e => e.c.length === 3 && specs.some(sp => icdIn(e.c, sp)));
+    const exact = specs.filter(sp => sp.length > 3 && sp.indexOf('-') === -1).map(sp => S.icd.by[sp]).filter(Boolean);
+    const all = exact.concat(cats.filter(c => !exact.some(x => x.c.indexOf(c.c) === 0)));
+    h += '<details style="margin-top:12px"><summary class="lbl">' + esc(t('icdSecH')) + ': ' + esc(specs.join(', ')) + '</summary><div style="padding:6px 2px">' +
+      all.slice(0, 60).map(e => '<div class="fd"><b>' + esc(e.c) + '</b> — ' + esc(icdName(e)) + '</div>').join('') +
+      (all.length > 60 ? '<div class="muted">' + esc(t('icdMore', { n: all.length - 60 })) + '</div>' : '') + '</div></details>';
+    return h;
+  };
+})();
+
+/* ---------- формы пациентов: диагноз из МКБ-10 ---------- */
+function icdSuggestProvider(q) {
+  const s = String(q || '').trim();
+  if (s.length < 2) return { list: [] };
+  // уже выбранный «I48.0 — …»: искать по словам после кода
+  const m = s.match(/^([A-Za-z]\d\d(?:\.\d{1,2})?)\s*[—-]\s*(.*)$/);
+  const list = icdFind(m ? m[2] || m[1] : s, 25);
+  return { list: list.map(e => ({ kind: 'icd', label: e.c + ' — ' + e.ru, sub: e.en || '', icd: e })) };
+}
+function icdAttachForm() {
+  ['dx1', 'dx2'].forEach(k => {
+    const el = $('#formsBox [data-f=' + k + ']');
+    if (!el || el.dataset.icd) return;
+    el.dataset.icd = '1';
+    el.placeholder = t('icdPickHint');
+    if (!S.icd) icdLoad();
+    attachSuggest(el, icdSuggestProvider, o => {
+      el.value = o.icd.c + ' — ' + o.icd.ru;
+      fSet({ [k]: el.value, [k + 'c']: o.icd.c });
+    });
+  });
+}
+(function () {
+  if (typeof fRenderEditor === 'function') {
+    const orig = fRenderEditor;
+    window.fRenderEditor = function () { const r = orig.apply(this, arguments); try { icdAttachForm(); } catch (e) { } return r; };
+  }
+  if (typeof fOnInput === 'function') {
+    const orig = fOnInput;
+    window.fOnInput = function (el) {
+      const r = orig.apply(this, arguments);
+      try {
+        const k = el && el.dataset && el.dataset.f;
+        if ((k === 'dx1' || k === 'dx2') && S.fv) {
+          const v = String(el.value || '').trim();
+          const m = v.match(/^([A-Za-z]\d\d(?:\.\d{1,2})?)(?![\d.])/);
+          const code = m ? m[1].toUpperCase() : '';
+          const cur = (fData(S.fv.id) || {})[k + 'c'] || null;
+          // код в начале диагноза — тот, что в МКБ; стёрли код — снять и его
+          const want = code && (!S.icd || S.icd.by[code]) ? code : null;
+          if (want !== cur) fSet({ [k + 'c']: want });
+        }
+      } catch (e) { }
+      return r;
+    };
+  }
+})();
+
+/* ---------- отбор и отчёт «По формам» ---------- */
+(function () {
+  if (typeof FF_FIELDS !== 'undefined' && FF_FIELDS.indexOf('icd') === -1) FF_FIELDS.push('icd');
+  if (typeof ffHtml === 'function') {
+    const orig = ffHtml;
+    window.ffHtml = function (pfx, f) {
+      const h = orig(pfx, f);
+      const fld = '<div class="field"><label>' + esc(t('ffIcd')) + '</label><input type="text" id="' + pfx + '_icd" value="' + esc((f && f.icd) || '') + '" placeholder="' + esc(t('ffIcdPh')) + '" maxlength="8" autocomplete="off" autocapitalize="characters"></div>';
+      return h.replace(/<\/div>$/, fld + '</div>');
+    };
+  }
+  if (typeof ffLocal === 'function') {
+    const orig = ffLocal;
+    window.ffLocal = function (rows, f) {
+      const r = orig.apply(this, arguments);
+      const c = String((f && f.icd) || '').toUpperCase().replace(/[^A-Z0-9.]/g, '');
+      return c ? r.filter(x => String(x.icd || '').split(', ').some(k => k && k.indexOf(c) === 0)) : r;
+    };
+  }
+  const nm = c => { const e = S.icd && S.icd.by[c]; return c + (e ? ' ' + icdName(e) : ''); };
+  if (typeof ffStatsCharts === 'function') {
+    const orig = ffStatsCharts;
+    window.ffStatsCharts = function (r, chart, th, W) {
+      orig.apply(this, arguments);
+      const s = r && r.stats; if (!s) return;
+      if (s.icd && s.icd.length) chart(t('chIcd'), hbarChart(s.icd.slice(0, 15).map(x => ({ label: nm(x.code).slice(0, 60), value: x.n })), { th, W }));
+      if (s.icdCh && Object.keys(s.icdCh).length) chart(t('chIcdCh'), hbarChart(Object.keys(s.icdCh).map(k => ({ label: k + ' — ' + L(ICD_CH[k] || [k, k]), value: s.icdCh[k] })).sort((a, b) => b.value - a.value), { th, W }));
+    };
+  }
+  if (typeof ffStatsLines === 'function') {
+    const orig = ffStatsLines;
+    window.ffStatsLines = function (r) {
+      const out = orig.apply(this, arguments);
+      const s = r && r.stats; if (!s || !s.icd) return out;
+      if (s.icd.length) out.push([t('chIcd'), s.icd.slice(0, 20).map(x => nm(x.code) + ': ' + x.n).join('; ') + (s.noIcd ? '; ' + t('icdNoCode') + ': ' + s.noIcd : '')]);
+      const withDrugs = s.icd.filter(x => x.drugs && x.drugs.length);
+      if (withDrugs.length) out.push([t('icdDrugsBy'), withDrugs.slice(0, 12).map(x => x.code + ' — ' + x.drugs.map(d => d.name + ' (' + d.n + ')').join(', ')).join(' | ')]);
+      return out;
+    };
+  }
+})();
+// МКБ — в фоне после справочника препаратов (если уже была скачана — сразу из памяти телефона)
+setTimeout(() => { try { icdLoad(); } catch (e) { } }, 4000);
 
 
 function init() {
