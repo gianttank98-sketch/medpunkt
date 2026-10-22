@@ -2405,7 +2405,7 @@ async function historyModal(id) {
     const r = await rpcA('history', { itemId: id });
     $('#histBox').classList.remove('muted');
     const done = {}; // уже отменённые записи — второй раз кнопку не показываем
-    r.rows.forEach(x => { if (x.refOpId && isStornoRow(x)) done[x.refOpId] = 1; });
+    r.rows.forEach(x => { if (x.refOpId && isStornoRow(x)) done[x.refOpId + '|' + x.itemId] = 1; });
     $('#histBox').innerHTML = r.rows.length ? r.rows.map(x => journalRowHtml(x, done)).join('') : '<div class="empty">' + esc(t('repEmpty')) + '</div>';
   } catch (e) { }
 }
@@ -2776,8 +2776,8 @@ const H = {
   deleteItem: el => deleteItem(el, el.dataset.id),
   mergeKeep: el => mergeKeep(el, el.dataset.id, el.dataset.others),
   notDup: el => notDupMark(el, el.dataset.ids),
-  stornoModal: el => stornoModal(el.dataset.op, el.dataset.day, el.dataset.desc),
-  stornoGo: el => stornoGo(el, el.dataset.op),
+  stornoModal: el => stornoModal(el.dataset.op, el.dataset.day, el.dataset.desc, el.dataset.item),
+  stornoGo: el => stornoGo(el, el.dataset.op, el.dataset.item),
   lotMemoModal: el => lotMemoModal(el.dataset.lot),
   lotMemoSave: el => lotMemoSave(el, el.dataset.lot),
   memoQuick: el => { const ta = $('#lmText'); if (ta) ta.value = (ta.value.trim() ? ta.value.trim() + '; ' : '') + el.dataset.v; },
@@ -4904,7 +4904,7 @@ function reportModel(r, th, W) {
   } else {
     m.tiles = [[r.rows.length, t('colOp')]];
     const done = {};
-    r.rows.forEach(x => { if (x.refOpId && isStornoRow(x)) done[x.refOpId] = 1; });
+    r.rows.forEach(x => { if (x.refOpId && isStornoRow(x)) done[x.refOpId + '|' + x.itemId] = 1; });
     m.body = r.rows.map(x => journalRowHtml(x, done)).join('');
   }
   m.tiles = m.tiles.map(x => tileHtml(x[0], x[1], x[2]));
@@ -7449,7 +7449,7 @@ const I18N_V11 = {
     scanBlankNo: '№ бланка', scanName: 'Имя, фамилия', scanBirth: 'Дата рождения', scanSex: 'Пол', scanPhone: 'Телефон',
     scanIdCaption: 'Удостоверение (FİN)', scanBlankCaption: 'Фото бланка',
     stornoBtn: '↩️ Отменить', stornoTitle: 'Отменить ошибочную запись',
-    stornoHint: 'Запись не удаляется: в журнал добавится такая же с обратным знаком тем же днём, поэтому отчёт за тот месяц станет верным. Остаток партии вернётся к тому, что было до ошибки.',
+    stornoHint: 'Запись не удаляется: в журнал добавится такая же с обратным знаком тем же днём, поэтому отчёт за тот месяц станет верным. Остаток партии вернётся к тому, что было до ошибки. Из прихода списком (по акту) или из ревизии отменяется только строка этого препарата — остальные строки остаются.',
     stornoReason: 'Почему отменяете', stornoReasonPh: 'например: внёс дважды / не тот препарат / ошибся количеством', stornoGo: 'Отменить запись',
     stornoNeedReason: 'Напишите причину.', stornoDone: 'Отменено записей: {n}.', closedReasonLbl: 'Месяц закрыт — причина записи в закрытый месяц',
     E_STORNO_NOT_FOUND: 'Эту запись отменить нельзя (или она не найдена).', E_STORNO_DONE: 'Эта запись уже отменена.', E_STORNO_MIXED: 'В этой операции есть ещё списание или перемещение — её нельзя отменить частично. Исправьте ревизией партии (✅).',
@@ -7482,7 +7482,7 @@ const I18N_V11 = {
     scanBlankNo: 'Blank №', scanName: 'Ad, soyad', scanBirth: 'Doğum tarixi', scanSex: 'Cins', scanPhone: 'Telefon',
     scanIdCaption: 'Şəxsiyyət vəsiqəsi (FİN)', scanBlankCaption: 'Blankın fotosu',
     stornoBtn: '↩️ Ləğv et', stornoTitle: 'Səhv yazını ləğv et',
-    stornoHint: 'Yazı silinmir: jurnala eyni gündə əks işarəli yazı əlavə olunur, ona görə həmin ayın hesabatı düzgün olacaq. Partiyanın qalığı səhvdən əvvəlki vəziyyətə qayıdacaq.',
+    stornoHint: 'Yazı silinmir: jurnala eyni gündə əks işarəli yazı əlavə olunur, ona görə həmin ayın hesabatı düzgün olacaq. Partiyanın qalığı səhvdən əvvəlki vəziyyətə qayıdacaq. Siyahı ilə mədaxildən (akt üzrə) və ya təftişdən yalnız bu dərmanın sətri ləğv olunur — digər sətirlər qalır.',
     stornoReason: 'Niyə ləğv edirsiniz', stornoReasonPh: 'məsələn: iki dəfə yazılıb / başqa dərman / say səhvdir', stornoGo: 'Yazını ləğv et',
     stornoNeedReason: 'Səbəbi yazın.', stornoDone: 'Ləğv edilən yazılar: {n}.', closedReasonLbl: 'Ay bağlıdır — bağlı aya yazının səbəbi',
     E_STORNO_NOT_FOUND: 'Bu yazını ləğv etmək olmaz (və ya tapılmadı).', E_STORNO_DONE: 'Bu yazı artıq ləğv edilib.', E_STORNO_MIXED: 'Bu əməliyyatda silinmə və ya köçürmə də var — onu qismən ləğv etmək olmaz. Partiyanın təftişi ilə düzəldin (✅).',
@@ -7587,23 +7587,23 @@ const STORNO_OK = ['RECEIVE', 'RECEIVE_HIST', 'OPENING', 'REVISION', 'REVISION_F
 function isStornoRow(r) { return /^Сторно/.test(String(r.comment || '')); }
 /** Кнопка «отменить» под строкой истории — только для админа (право «редактировать»), только один раз. */
 function stornoBtnHtml(r, done) {
-  if (!can('edit') || !r.opId || !r.delta || STORNO_OK.indexOf(r.type) === -1 || isStornoRow(r) || (done && done[r.opId])) return '';
+  if (!can('edit') || !r.opId || !r.delta || STORNO_OK.indexOf(r.type) === -1 || isStornoRow(r) || (done && done[r.opId + '|' + r.itemId])) return '';
   const desc = opName(r.type) + ' · ' + (r.itemName || '') + ' ' + (r.dosage || '') + ' ' + (r.delta > 0 ? '+' : '') + r.delta + ' · ' + fmtDate(String(r.time).slice(0, 10));
-  return ' <button class="btn small ghost" style="padding:2px 8px;min-height:0" data-act="stornoModal" data-op="' + esc(r.opId) + '" data-day="' + esc(r.factDate || String(r.time).slice(0, 10)) + '" data-desc="' + esc(desc) + '">' + esc(t('stornoBtn')) + '</button>';
+  return ' <button class="btn small ghost" style="padding:2px 8px;min-height:0" data-act="stornoModal" data-op="' + esc(r.opId) + '" data-item="' + esc(r.itemId || '') + '" data-day="' + esc(r.factDate || String(r.time).slice(0, 10)) + '" data-desc="' + esc(desc) + '">' + esc(t('stornoBtn')) + '</button>';
 }
-function stornoModal(opId, day, desc) {
+function stornoModal(opId, day, desc, itemId) {
   const closed = typeof monthClosed === 'function' && monthClosed(String(day || '').slice(0, 7));
   openModal('<h3>' + esc(t('stornoTitle')) + '</h3><div class="sum" style="margin-bottom:10px">' + esc(desc) + '</div>' +
     '<div class="muted" style="margin-bottom:10px">' + esc(t('stornoHint')) + '</div>' +
     '<div class="field"><label>' + esc(t('stornoReason')) + '</label><input id="stReason" maxlength="200" placeholder="' + esc(t('stornoReasonPh')) + '"></div>' +
     (closed ? '<div class="field"><label>' + esc(t('closedReasonLbl')) + '</label><input id="stClosed" maxlength="200"></div>' : '') +
-    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn danger" data-act="stornoGo" data-op="' + esc(opId) + '">' + esc(t('stornoGo')) + '</button></div>');
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn danger" data-act="stornoGo" data-op="' + esc(opId) + '" data-item="' + esc(itemId || '') + '">' + esc(t('stornoGo')) + '</button></div>');
   setTimeout(() => { const i = $('#stReason'); if (i) i.focus(); }, 50);
 }
-async function stornoGo(btn, opId) {
+async function stornoGo(btn, opId, itemId) {
   const reason = $('#stReason').value.trim();
   if (!reason) { toast(t('stornoNeedReason'), 'bad'); return; }
-  const p = { targetOpId: opId, reason };
+  const p = { targetOpId: opId, reason, itemId: itemId || '' };
   if ($('#stClosed')) { p.closedReason = $('#stClosed').value.trim(); if (!p.closedReason) { toast(t('stornoNeedReason'), 'bad'); return; } }
   let r = null;
   try { r = await busy(btn, () => rpcA('storno', p, { op: true, opId: newOpId() }), true); }
