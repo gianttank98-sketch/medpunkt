@@ -15,24 +15,34 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Учёт медикаментов</title>
 <style>
+  /* Спокойная палитра: мягкий серо-зелёный фон, приглушённый сине-бирюзовый акцент, цвета статусов без «кислотности».
+     Тема: авто (как в телефоне) / светлая / тёмная — ⚙️ Настройки. */
   :root {
-    --bg: #f3f5f8; --card: #ffffff; --ink: #17202b; --sub: #5d6b7a; --line: #dfe4ea; --soft: #eef2f6;
-    --brand: #1f5fbf; --brand-ink: #ffffff; --brand-soft: #e6eefb;
-    --red: #c62828; --red-soft: #fdecec; --amber: #b26a00; --amber-soft: #fff4e0; --green: #2e7d32; --green-soft: #e8f5e9;
-    --orange: #d35400; --orange-soft: #fdeee4;
-    --radius: 12px; --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .08);
+    --bg: #f1f3f2; --card: #ffffff; --ink: #1e2a32; --sub: #5f6c75; --line: #e0e5e7; --soft: #edf1f1;
+    --brand: #2c6a8a; --brand-ink: #ffffff; --brand-soft: #e2edf2;
+    --red: #b23b34; --red-soft: #f8e8e6; --amber: #9a6512; --amber-soft: #faf0dc; --green: #2d7548; --green-soft: #e4f1e8;
+    --orange: #b0561c; --orange-soft: #f8eadf;
+    --radius: 12px; --shadow: 0 1px 2px rgba(20, 30, 40, .05);
+    color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #10151b; --card: #19212a; --ink: #e8edf2; --sub: #9aa8b6; --line: #2a3541; --soft: #202a35;
-      --brand: #5b9bff; --brand-ink: #0b1220; --brand-soft: #1d2b42;
-      --red: #ff6b6b; --red-soft: #3a1d20; --amber: #ffb547; --amber-soft: #3a2c14; --green: #6fcf74; --green-soft: #1b3320;
-      --orange: #ff9a57; --orange-soft: #3a2517;
-      --shadow: none;
+    :root:not([data-theme="light"]) {
+      --bg: #121719; --card: #1a2125; --ink: #e2e7ea; --sub: #97a3ab; --line: #2a3338; --soft: #20292d;
+      --brand: #7db0cc; --brand-ink: #0c1518; --brand-soft: #1c2d36;
+      --red: #ec8a80; --red-soft: #3a2220; --amber: #e2b061; --amber-soft: #352a17; --green: #82c79a; --green-soft: #1b3125;
+      --orange: #e9a173; --orange-soft: #36261b;
+      --shadow: none; color-scheme: dark;
     }
   }
+  :root[data-theme="dark"] {
+    --bg: #121719; --card: #1a2125; --ink: #e2e7ea; --sub: #97a3ab; --line: #2a3338; --soft: #20292d;
+    --brand: #7db0cc; --brand-ink: #0c1518; --brand-soft: #1c2d36;
+    --red: #ec8a80; --red-soft: #3a2220; --amber: #e2b061; --amber-soft: #352a17; --green: #82c79a; --green-soft: #1b3125;
+    --orange: #e9a173; --orange-soft: #36261b;
+    --shadow: none; color-scheme: dark;
+  }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
   body { padding-bottom: 76px; }
   button, input, select, textarea { font: inherit; color: inherit; }
   button { cursor: pointer; }
@@ -110,7 +120,7 @@
   .searchbar input { flex: 1; }
 
   /* Подсказки при вводе */
-  .suggest { position: absolute; left: 0; right: 0; top: 100%; z-index: 30; background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.14); max-height: 320px; overflow-y: auto; margin-top: 4px; }
+  .suggest { position: absolute; left: 0; right: 0; top: 100%; z-index: 30; background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.14); max-height: min(320px, 45vh); overflow-y: auto; margin-top: 4px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
   .sg-head { font-size: 12px; color: var(--sub); padding: 8px 12px 4px; }
   .sg { display: flex; gap: 8px; align-items: baseline; padding: 9px 12px; border-top: 1px solid var(--soft); cursor: pointer; }
   .sg:hover, .sg:active { background: var(--brand-soft); }
@@ -454,6 +464,7 @@
         <button data-act="stockView" data-view="inn" class="on" data-i18n="viewInn"></button>
         <button data-act="stockView" data-view="loc" data-i18n="viewLoc"></button>
         <button data-act="stockView" data-view="dup" data-i18n="viewDup"></button>
+        <button data-act="stockView" data-view="noser" data-i18n="viewNoSer"></button>
       </div>
       <button class="btn block ghost" style="margin-bottom:10px" data-act="stockView" data-view="chk" id="chkBtn"></button>
       <div id="stockList"></div>
@@ -566,7 +577,7 @@ const I18N = {
     norms: '📏 Нормы по местам', history: '📜 История', deleteItem: '🗑️ Удалить карточку', confirmDeleteItem: 'Удалить карточку «{name}»? Остатка нет.',
     moveTitle: 'Переместить партию', moveTo: 'Куда', moveAll: 'всё ({n})', auditTitle: 'Ревизия: сколько фактически лежит?', editLotTitle: 'Исправить серию и срок',
     normsTitle: 'Сколько должно лежать в каждом месте', normsHint: '0 — нормы нет. Если меньше нормы — появится подсказка пополнить.',
-    dupEmpty: 'Похожих карточек не найдено.', dupHint: 'Одинаковое название и форма, но дозировка записана по-разному. Если это одно и то же — оставьте одну, остатки перенесутся.',
+    dupEmpty: 'Похожих карточек не найдено.', dupHint: 'Одинаковое название и форма, а дозировка, возможно, записана по-разному. Если это одно и то же — оставьте одну, остатки перенесутся. Если это разные препараты — нажмите «Это не дубли».', notDupBtn: '✋ Это не дубли', notDupDone: 'Запомнил: это разные препараты.',
     mergeKeep: 'Оставить эту', mergeConfirm: 'Перенести остатки из «{src}» в «{dst}» и удалить «{src}»?', merged: 'Карточки объединены.',
     settings: 'Настройки', places: 'Места хранения', addPlace: '＋ Добавить место', nameRu: 'Название по-русски', nameAz: 'Название по-азербайджански',
     zone: 'Зона', removePlace: 'Убрать', confirmRemovePlace: 'Убрать место «{name}»?', printQr: '🖨️ QR-коды мест',
@@ -672,7 +683,7 @@ const I18N = {
     norms: '📏 Yerlər üzrə normalar', history: '📜 Tarixçə', deleteItem: '🗑️ Kartı sil', confirmDeleteItem: '«{name}» kartı silinsin? Qalıq yoxdur.',
     moveTitle: 'Partiyanı köçür', moveTo: 'Hara', moveAll: 'hamısı ({n})', auditTitle: 'Təftiş: faktiki nə qədər var?', editLotTitle: 'Seriya və müddəti düzəlt',
     normsTitle: 'Hər yerdə nə qədər olmalıdır', normsHint: '0 — norma yoxdur. Normadan az olarsa, tamamlamaq üçün xəbərdarlıq çıxacaq.',
-    dupEmpty: 'Oxşar kart tapılmadı.', dupHint: 'Ad və forma eynidir, amma doza fərqli yazılıb. Eynidirsə, birini saxlayın — qalıqlar köçürüləcək.',
+    dupEmpty: 'Oxşar kart tapılmadı.', dupHint: 'Ad və forma eynidir, doza bəlkə fərqli yazılıb. Eynidirsə, birini saxlayın — qalıqlar köçürüləcək. Fərqli dərmanlardırsa — «Dublikat deyil» düyməsini basın.', notDupBtn: '✋ Dublikat deyil', notDupDone: 'Yadda saxladım: bunlar fərqli dərmanlardır.',
     mergeKeep: 'Bunu saxla', mergeConfirm: '«{src}» qalıqları «{dst}» kartına köçürülsün və «{src}» silinsin?', merged: 'Kartlar birləşdirildi.',
     settings: 'Parametrlər', places: 'Saxlanma yerləri', addPlace: '＋ Yer əlavə et', nameRu: 'Rusca adı', nameAz: 'Azərbaycanca adı',
     zone: 'Zona', removePlace: 'Sil', confirmRemovePlace: '«{name}» yeri silinsin?', printQr: '🖨️ Yerlərin QR-kodları',
@@ -761,6 +772,7 @@ const OPS = {
   TRANSFER_OUT: ['🔄 Перемещено отсюда', '🔄 Buradan köçürüldü'], TRANSFER_IN: ['🔄 Перемещено сюда', '🔄 Buraya köçürüldü'],
   AUDIT: ['✅ Ревизия', '✅ Təftiş'], EDIT_ITEM: ['✏️ Изменена карточка', '✏️ Kart dəyişdirildi'], EDIT_LOT: ['✏️ Исправлена партия', '✏️ Partiya düzəldildi'],
   MERGE_OUT: ['🔗 Перенесено при объединении', '🔗 Birləşdirmədə köçürüldü'], MERGE_IN: ['🔗 Получено при объединении', '🔗 Birləşdirmədə alındı'],
+  NOT_DUP: ['✋ Отмечено: не дубли', '✋ Qeyd: dublikat deyil'], LOT_MEMO: ['📝 Заметка к партии', '📝 Partiyaya qeyd'],
   DELETE_ITEM: ['❌ Карточка удалена', '❌ Kart silindi'], REQUEST: ['📝 Заявка', '📝 Sifariş'], CLOSE_REQUEST: ['☑️ Заявка закрыта', '☑️ Sifariş bağlandı'],
   ADD_LOCATION: ['📍 Добавлено место', '📍 Yer əlavə edildi'], EDIT_LOCATION: ['📍 Изменено место', '📍 Yer dəyişdirildi'],
   REMOVE_LOCATION: ['📍 Убрано место', '📍 Yer silindi'], EDIT_DOCTOR: ['👤 Изменён список врачей', '👤 Həkim siyahısı dəyişdirildi'],
@@ -827,6 +839,7 @@ function normText(s) { return String(s || '').toLowerCase().replace(/ё/g, 'е')
 function normDose(s) { return normText(s).replace(/,/g, '.').replace(/\s+/g, '').replace(/mkq|mcg|мкг/g, 'мкг').replace(/mq|mg/g, 'мг').replace(/ml/g, 'мл'); }
 function normSeries(s) { return String(s || '').trim().toUpperCase().replace(/\s+/g, ''); }
 const SKEL = {
+  'і': 'i', 'ї': 'i', 'є': 'e', 'ґ': 'g', // украинские буквы (Анальгін = Анальгин)
   'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'ғ': 'g', 'д': 'd', 'е': 'e', 'ё': 'e', 'ж': 'j', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l',
   'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'h', 'ц': 's', 'ч': 'c', 'ш': 's', 'щ': 's',
   'ъ': '', 'ы': 'i', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya', 'ə': 'e', 'ı': 'i', 'ö': 'o', 'ü': 'u', 'ş': 's', 'ç': 'c', 'ğ': 'g',
@@ -841,6 +854,53 @@ function skel(s) {
   return out.replace(/([a-z])\1+/g, '$1');
 }
 function itemKey(name, form, dosage) { return skel(name) + '|' + form + '|' + normDose(dosage); }
+/* Ключ ПОИСКА (не ключ карточки!): русские названия ↔ азербайджанские/латинские из реестра.
+ * Г/Х = H (гепарин = heparin, регидрон = rehidron), «кальция» = kalsium, «аскорбиновая кислота» = askorbin turşusu,
+ * бытовые названия (физраствор, магнезия, зелёнка, перекись, нашатырь…). На ключи карточек и сверку дублей не влияет. */
+const QANION = 'хлорид|гидрохлорид|бромид|йодид|гидрокарбонат|бикарбонат|карбонат|сульфат|тиосульфат|глюконат|лактат|ацетат|цитрат|фосфат|нитрит|нитрат|динитрат|мононитрат|перманганат|оксибутират|аспарагинат|малеат|тартрат|сукцинат|фумарат|безилат|гемифумарат|гидротартрат|битартрат|мезилат';
+const QALIAS = [
+  [/физ\.?\s*раствор\S*|физраствор\S*/g, 'natrium xlorid'],
+  [/магнезия|магнезии/g, 'maqnezium sulfat'],
+  // «хлорид калия» = «калия хлорид» (в реестре: KALİUM XLORİD)
+  [new RegExp('(' + QANION + ')\\s+([а-я]{4,}(?:ия|а|я))(?![а-я])', 'g'), '$2 $1'],
+  [/сукцинилхолин\S*/g, 'suksametonium'], [/противостолбнячн\S*\s+сыворотк\S*/g, 'tetanus antitoksin'],
+  [/кальци[йяюе](?![а-я])/g, 'kalsium'], [/кали[йяюе](?![а-я])/g, 'kalium'], [/натри[йяюе](?![а-я])/g, 'natrium'], [/магни[йяюе](?![а-я])/g, 'maqnezium'],
+  [new RegExp('([а-я]{3,})ия\\s+(' + QANION + ')', 'g'), '$1ium $2'],
+  [new RegExp('([а-я]{4,}[^аеиоуыэюяй])[ау]\\s+(' + QANION + ')', 'g'), '$1 $2'],
+  [/гидрохлорид\S*/g, 'hidroxlorid'],
+  [/фолиевая\s+кислот\S*/g, 'fol turşusu'],
+  [/([а-я]+?)(?:ов|ев)?ая\s+(?:мазь|мази|крем|гель|паста)(?![а-я])/g, '$1'], [/(?:мазь|крем|гель|паста)\s+([а-я]+?)(?:ов|ев)?ая(?![а-я])/g, '$1'],
+  [/([а-я]+?)(?:ов|ев)?(?:ая|а)\s+кислот\S*/g, '$1 turşusu'], [/кислот[аы]\s+([а-я]+?)(?:ов|ев)?(?:ая|а)(?![а-я])/g, '$1 turşusu'],
+  [/перекись\s+водорода|перекис\S*\s+водн\S*|перекись|пероксид\s+водорода/g, 'hidrogen peroksid'],
+  [/нашатыр\S*(\s+спирт\S*)?/g, 'ammonyak'],
+  [/активированн\S*\s+уг\S*|уголь\s+активированн\S*/g, 'aktivləşdirilmiş kömür'], [/^уголь(?![а-я])/g, 'kömür'],
+  [/бриллиантов\S*(\s+зел[её]н\S*)?|зел[её]нка/g, 'brilliant yaşılı'],
+  [/вода\s+для\s+инъекц\S*/g, 'inyeksiya üçün su'],
+  [/(мазь\s+)?вишневского/g, 'vişnevski'],
+  [/этилов\S*\s+спирт\S*|спирт\s+этилов\S*/g, 'etil spirt'], [/медицинск\S*\s+спирт\S*/g, 'tibbi spirt'],
+  [/глюкагон/g, 'qlükagen'],
+  [/противостолбнячн\S*|столбнячн\S*|столбняк\S*/g, 'tetanus'], [/анатоксин\S*/g, 'anatoksin'],
+  [/антирабическ\S*|от\s+бешенства|бешенств\S*/g, 'antirabik'], [/вакцин\S*/g, 'vaksin'], [/сыворотк\S*/g, 'zərdab']
+];
+/* Международные (английские) МНН из реестра — в той же записи, что русская/азербайджанская:
+ * x = кс, c = к/с, th = т, -ase = -аза, конечная e не пишется (octreotide = октреотид, enoxaparin = эноксапарин). */
+function qkeyEn(s) {
+  let v = String(s || '').toLowerCase().replace(/\bhcl\b/g, 'hidrohlorid').replace(/ph/g, 'f').replace(/th/g, 't').replace(/x/g, 'ks').replace(/ch/g, 'h')
+    .replace(/c(?=[eiy])/g, 's').replace(/c/g, 'k').replace(/ase\b/g, 'aza');
+  return qkey(v);
+}
+function qkey(s) {
+  // украинское написание → русское (Натрію хлорид = Натрия хлорид, Аскорбінова = Аскорбиновая)
+  let v = String(s || '').toLowerCase().replace(/ё/g, 'е').replace(/[іїі]/g, 'и').replace(/є/g, 'е').replace(/ґ/g, 'г').replace(/['’ʼ]/g, '');
+  if (/[а-я]/.test(v)) QALIAS.forEach(a => { v = v.replace(a[0], a[1]); });
+  // международные МНН из реестра: sodium = натрия, calcium = кальция; «-ine/-ole/-ide» без конечной e (metamizole = метамизол)
+  v = v.replace(/\bsodium\b/g, 'natrium').replace(/\bpotassium\b/g, 'kalium').replace(/\bcalcium\b/g, 'kalsium').replace(/\bmagnesium\b/g, 'maqnezium')
+    .replace(/\bhcl\b/g, 'hidroxlorid').replace(/\b([a-z]{4,})e\b/g, '$1');
+  return skel(v).replace(/ch/g, 'h').replace(/h/g, 'g').replace(/z/g, 's').replace(/ts/g, 's');
+}
+/** То же с запоминанием (названия карточек базы при каждом нажатии клавиши). */
+const QK_MEMO = new Map();
+function qk(s) { s = String(s || ''); let v = QK_MEMO.get(s); if (v === undefined) { if (QK_MEMO.size > 5000) QK_MEMO.clear(); v = qkey(s); QK_MEMO.set(s, v); } return v; }
 function lev(a, b, max) {
   if (Math.abs(a.length - b.length) > max) return max + 1;
   let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
@@ -1217,12 +1277,12 @@ function buildRefIdx(ref) {
   S.ref = ref;
   const subs = [], brands = [], bySubN = {}, bySubSk = {}, byBrandSk = {};
   ref.rows.forEach(r => {
-    const o = { s: r[0], g: r[2], sg: r[3], rf: r[4], sp: r[5], sk: skel(r[0]), brands: String(r[1] || '').split(';').map(x => x.trim()).filter(Boolean) };
+    const o = { s: r[0], g: r[2], sg: r[3], rf: r[4], sp: r[5], sk: skel(r[0]), q: qkey(r[0]), brands: String(r[1] || '').split(';').map(x => x.trim()).filter(Boolean) };
     subs.push(o);
     bySubN[normText(o.s)] = o;
     bySubSk[o.sk] = bySubSk[o.sk] || o;
     o.brands.forEach(b => {
-      const bo = { b, sub: o, sk: skel(b) };
+      const bo = { b, sub: o, sk: skel(b), q: qkey(b) };
       brands.push(bo);
       (byBrandSk[bo.sk] = byBrandSk[bo.sk] || []).push(bo);
     });
@@ -1240,31 +1300,35 @@ function refSubOf(name) {
 function refBySubstance(s) { return S.refIdx && s ? (S.refIdx.bySubN[normText(s)] || S.refIdx.bySubSk[skel(s)] || null) : null; }
 
 /** Подсказки для поля названия: карточки из базы, фирмы и МНН из справочника. */
+/** «Лидокаин 2%», «Магнезия 25% 5 мл» — для поиска названия доза не нужна. */
+function qName(q) { const b = String(q || '').replace(/\s+\d.*$/, '').trim(); return b.length >= 2 ? b : q; }
 function nameSuggestions(q, cat) {
-  const qs = skel(q);
+  const qs = qk(qName(q));
   if (!qs) return { list: [], fuzzy: false };
   if (qs.length <= 2) return shortSuggestions(qs, cat, false);
   const out = [];
   const add = (o, sc) => { if (sc > 0) { o.sc = sc; out.push(o); } };
   (S.view.items || []).filter(i => i.category === cat).forEach(i => {
     add({ kind: 'item', label: i.name, sub: formName(i.form) + ' · ' + i.dosage + (i.substance ? ' · ' + i.substance : ''), item: i, pri: 3 },
-      Math.max(score(qs, skel(i.name), false), i.substance ? score(qs, skel(i.substance), false) - 5 : 0));
+      Math.max(score(qs, qk(i.name), false), i.substance ? score(qs, qk(i.substance), false) - 5 : 0));
   });
   if (cat === 'med' && S.refIdx) {
-    S.refIdx.brands.forEach(b => add({ kind: 'brand', label: b.b, sub: t('innTag') + ': ' + b.sub.s, bo: b, pri: 2 }, score(qs, b.sk, false)));
-    S.refIdx.subs.forEach(s => add({ kind: 'sub', label: s.s, sub: t('brandsCount', { n: s.brands.length }), so: s, pri: 1 }, score(qs, s.sk, false)));
+    S.refIdx.brands.forEach(b => add({ kind: 'brand', label: b.b, sub: t('innTag') + ': ' + b.sub.s, bo: b, pri: 2 }, score(qs, b.q, false)));
+    S.refIdx.subs.forEach(s => add({ kind: 'sub', label: s.s, sub: t('brandsCount', { n: s.brands.length }), so: s, pri: 1 }, score(qs, s.q, false)));
   }
   if (cat === 'med') catSuggest(qs, false, false).forEach(o => out.push(o)); // все препараты, зарегистрированные в АР
+  if (cat === 'sup') supSuggest(qs, false, false, q).forEach(o => out.push(o)); // расходники: виды и размеры
   let fuzzy = false;
   if (!out.some(o => o.sc >= 50)) {
     fuzzy = true;
     out.length = 0;
-    (S.view.items || []).filter(i => i.category === cat).forEach(i => add({ kind: 'item', label: i.name, sub: formName(i.form) + ' · ' + i.dosage, item: i, pri: 3 }, score(qs, skel(i.name), true)));
+    (S.view.items || []).filter(i => i.category === cat).forEach(i => add({ kind: 'item', label: i.name, sub: formName(i.form) + ' · ' + i.dosage, item: i, pri: 3 }, score(qs, qk(i.name), true)));
     if (cat === 'med' && S.refIdx) {
-      S.refIdx.brands.forEach(b => add({ kind: 'brand', label: b.b, sub: t('innTag') + ': ' + b.sub.s, bo: b, pri: 2 }, score(qs, b.sk, true)));
-      S.refIdx.subs.forEach(s => add({ kind: 'sub', label: s.s, sub: t('brandsCount', { n: s.brands.length }), so: s, pri: 1 }, score(qs, s.sk, true)));
+      S.refIdx.brands.forEach(b => add({ kind: 'brand', label: b.b, sub: t('innTag') + ': ' + b.sub.s, bo: b, pri: 2 }, score(qs, b.q, true)));
+      S.refIdx.subs.forEach(s => add({ kind: 'sub', label: s.s, sub: t('brandsCount', { n: s.brands.length }), so: s, pri: 1 }, score(qs, s.q, true)));
     }
     if (cat === 'med') catSuggest(qs, true, false).forEach(o => out.push(o));
+    if (cat === 'sup') supSuggest(qs, true, false, q).forEach(o => out.push(o));
   }
   out.sort((a, b) => b.sc - a.sc || b.pri - a.pri || a.label.localeCompare(b.label));
   const seen = {};
@@ -1273,24 +1337,25 @@ function nameSuggestions(q, cat) {
 /** С первой буквы — как в поисковике: всё, что начинается с этих букв, по алфавиту. Сначала то, что уже есть в базе, потом МНН, потом фирмы. */
 function shortSuggestions(qs, cat, subsOnly) {
   const out = [];
-  if (!subsOnly) (S.view.items || []).filter(i => i.category === cat && (skel(i.name).startsWith(qs) || (i.substance && skel(i.substance).startsWith(qs))))
+  if (!subsOnly) (S.view.items || []).filter(i => i.category === cat && (qk(i.name).startsWith(qs) || (i.substance && qk(i.substance).startsWith(qs))))
     .forEach(i => out.push({ kind: 'item', label: i.name, sub: formName(i.form) + ' · ' + i.dosage + (i.substance ? ' · ' + i.substance : ''), item: i, pri: 3 }));
   if (cat === 'med' && S.refIdx) {
-    S.refIdx.subs.forEach(s => { if (s.sk.startsWith(qs)) out.push({ kind: 'sub', label: s.s, sub: t('brandsCount', { n: s.brands.length }), so: s, pri: 2 }); });
-    if (!subsOnly) S.refIdx.brands.forEach(b => { if (b.sk.startsWith(qs)) out.push({ kind: 'brand', label: b.b, sub: t('innTag') + ': ' + b.sub.s, bo: b, pri: 1 }); });
+    S.refIdx.subs.forEach(s => { if (s.q.startsWith(qs)) out.push({ kind: 'sub', label: s.s, sub: t('brandsCount', { n: s.brands.length }), so: s, pri: 2 }); });
+    if (!subsOnly) S.refIdx.brands.forEach(b => { if (b.q.startsWith(qs)) out.push({ kind: 'brand', label: b.b, sub: t('innTag') + ': ' + b.sub.s, bo: b, pri: 1 }); });
   }
   if (cat === 'med' && !subsOnly) catSuggest(qs, false, true).forEach(o => out.push(o));
+  if (cat === 'sup' && !subsOnly) supSuggest(qs, false, true).forEach(o => out.push(o));
   out.sort((a, b) => b.pri - a.pri || a.label.localeCompare(b.label, 'ru'));
   const seen = {};
   return { list: out.filter(o => { const k = o.kind + '|' + o.label + '|' + (o.item ? o.item.id : ''); if (seen[k]) return false; seen[k] = 1; return true; }).slice(0, 40), fuzzy: false };
 }
 function subSuggestions(q) {
-  const qs = skel(q);
+  const qs = qk(q);
   if (!S.refIdx || !qs) return { list: [], fuzzy: false };
   if (qs.length <= 2) return shortSuggestions(qs, 'med', true);
-  let list = S.refIdx.subs.map(s => ({ kind: 'sub', label: s.s, sub: t('brandsCount', { n: s.brands.length }), so: s, sc: score(qs, s.sk, false) })).filter(o => o.sc > 0);
+  let list = S.refIdx.subs.map(s => ({ kind: 'sub', label: s.s, sub: t('brandsCount', { n: s.brands.length }), so: s, sc: score(qs, s.q, false) })).filter(o => o.sc > 0);
   let fuzzy = false;
-  if (!list.length) { fuzzy = true; list = S.refIdx.subs.map(s => ({ kind: 'sub', label: s.s, sub: '', so: s, sc: score(qs, s.sk, true) })).filter(o => o.sc > 0); }
+  if (!list.length) { fuzzy = true; list = S.refIdx.subs.map(s => ({ kind: 'sub', label: s.s, sub: '', so: s, sc: score(qs, s.q, true) })).filter(o => o.sc > 0); }
   list.sort((a, b) => b.sc - a.sc || a.label.localeCompare(b.label));
   return { list: list.slice(0, 10), fuzzy };
 }
@@ -1303,26 +1368,43 @@ function attachSuggest(input, provider, onPick) {
   let items = [], timer = null;
   const hide = () => box.classList.add('hidden');
   const show = () => {
+    if (document.activeElement !== input) { hide(); return; } // палец уже ушёл с поля — не открываем список заново
     const res = provider(input.value);
     items = res.list;
     if (!items.length) { hide(); return; }
     box.innerHTML = (res.fuzzy ? '<div class="sg-head">' + esc(t('didYouMean')) + '</div>' : '') + items.map((o, i) => {
-      const tag = o.kind === 'item' ? '<span class="tag base">' + esc(t('inBase')) + '</span>' : o.kind === 'cat' ? '<span class="tag">' + esc(t('catTag')) + '</span>' : (o.kind === 'brand' ? '<span class="tag brand">' + esc(t('brandTag')) + '</span>' : '<span class="tag">' + esc(t('innTag')) + '</span>');
-      return '<div class="sg" data-i="' + i + '"><div class="grow"><div class="t">' + esc(o.label) + '</div>' + (o.sub ? '<div class="s">' + esc(o.sub) + '</div>' : '') + '</div>' + tag + '</div>';
+      const tag = o.kind === 'item' ? '<span class="tag base">' + esc(t('inBase')) + '</span>' : o.kind === 'cat' ? '<span class="tag">' + esc(t('catTag')) + '</span>' : o.kind === 'sup' ? '<span class="tag">' + esc(t('supTag')) + '</span>' : o.kind === 'dev' ? '<span class="tag">' + esc(t('devTag')) + '</span>' : (o.kind === 'brand' ? '<span class="tag brand">' + esc(t('brandTag')) + '</span>' : '<span class="tag">' + esc(t('innTag')) + '</span>');
+      const lab = o.kind === 'sub' || o.kind === 'inn' ? subWithAlt(o.label) : o.kind === 'sup' ? o.label + ' (' + o.se.az + ')' : o.kind === 'dev' ? o.label : (o.kind === 'item' ? nameWithAlt(o.label, o.item && o.item.substance) : nameWithAlt(o.label));
+      return '<div class="sg" data-i="' + i + '"><div class="grow"><div class="t">' + esc(lab) + '</div>' + (o.sub ? '<div class="s">' + esc(o.sub) + '</div>' : '') + '</div>' + tag + '</div>';
     }).join('');
     box.classList.remove('hidden');
   };
   input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(show, 120); });
   input.addEventListener('focus', () => { if (input.value.trim().length >= 1) show(); });
-  input.addEventListener('blur', () => setTimeout(hide, 180));
+  // Пальцем список можно листать: выбор — только короткое касание без сдвига (сдвиг > 10 px = прокрутка).
+  let touch = null, inBox = false;
+  input.addEventListener('blur', () => setTimeout(() => { if (!inBox) hide(); }, 180));
   box.addEventListener('pointerdown', e => {
+    inBox = true;
+    if (e.pointerType === 'mouse') e.preventDefault(); // мышь: поле не теряет фокус
     const el = e.target.closest('.sg');
-    if (!el) return;
+    touch = el ? { el, x: e.clientX, y: e.clientY, st: box.scrollTop } : null;
+  });
+  box.addEventListener('pointermove', e => { if (touch && (Math.abs(e.clientX - touch.x) > 10 || Math.abs(e.clientY - touch.y) > 10)) touch = null; });
+  box.addEventListener('scroll', () => { if (touch && Math.abs(box.scrollTop - touch.st) > 4) touch = null; }, { passive: true });
+  box.addEventListener('pointercancel', () => { touch = null; inBox = false; });
+  box.addEventListener('pointerup', e => {
+    const tc = touch;
+    touch = null;
+    setTimeout(() => { inBox = false; }, 250);
+    if (!tc || e.target.closest('.sg') !== tc.el) return;
     e.preventDefault();
-    const o = items[+el.dataset.i];
+    const o = items[+tc.el.dataset.i];
     hide();
     onPick(o);
   });
+  // касание мимо поля и списка — закрыть
+  document.addEventListener('pointerdown', e => { if (!box.classList.contains('hidden') && e.target !== input && !box.contains(e.target)) hide(); }, true);
   return { hide };
 }
 
@@ -1337,17 +1419,17 @@ function groupKeyOf(item) {
 }
 /** Какие позиции подходят к запросу: по названию, МНН (в т.ч. через фирмы из справочника), штрихкоду, группе, месту. */
 function matchItems(q) {
-  const qs = skel(q), qn = normText(q), digits = q.replace(/\D/g, '');
+  const qs = qk(q), qn = normText(q), digits = q.replace(/\D/g, '');
   if (!qs && !qn) return null;
   const subHit = {};
   if (S.refIdx && qs.length >= 2) {
-    S.refIdx.subs.forEach(s => { if (score(qs, s.sk, false) >= 50) subHit[s.sk] = 1; });
-    S.refIdx.brands.forEach(b => { if (score(qs, b.sk, false) >= 50) subHit[b.sub.sk] = 1; });
+    S.refIdx.subs.forEach(s => { if (score(qs, s.q, false) >= 50) subHit[s.sk] = 1; });
+    S.refIdx.brands.forEach(b => { if (score(qs, b.q, false) >= 50) subHit[b.sub.sk] = 1; });
   }
   const res = {};
   S.view.items.forEach(i => {
     const gs = skel(groupKeyOf(i).title);
-    let ok = score(qs, skel(i.name), false) >= 50 || (i.substance && score(qs, skel(i.substance), false) >= 50) || subHit[gs];
+    let ok = score(qs, qk(i.name), false) >= 50 || (i.substance && score(qs, qk(i.substance), false) >= 50) || subHit[gs];
     if (!ok && digits.length >= 6 && i.barcode && i.barcode === digits) ok = true;
     if (!ok && qn.length >= 3 && ((i.pharmGroup || '').toLowerCase().indexOf(qn) !== -1 || (i.subGroup || '').toLowerCase().indexOf(qn) !== -1)) ok = true;
     if (ok) res[i.id] = 'item';
@@ -1540,7 +1622,7 @@ function renderSpend() {
 function spendGroupHtml(g) {
   const inStock = g.brands.filter(b => b.total > 0).length;
   const unit = g.brands[0] ? unitShort(g.brands[0].item.unit) : '';
-  const head = '<div class="grp-h"><div class="t">' + (g.isSub ? '🧬 ' : '') + esc(g.title) + '</div><div class="s">' +
+  const head = '<div class="grp-h"><div class="t">' + (g.isSub ? '🧬 ' + esc(g.title) + (altSub(g.title, g.brands && g.brands[0] && g.brands[0].item ? g.brands[0].item.name : '') ? ' <span class="alt">(' + esc(altSub(g.title, g.brands && g.brands[0] && g.brands[0].item ? g.brands[0].item.name : '')) + ')</span>' : '') : esc(g.title)) + '</div><div class="s">' +
     esc(t('brandsInStock', { n: inStock })) + ' · ' + esc(t('totalShort', { n: g.total })) + '</div></div>';
   return '<div class="grp">' + head + g.brands.map(b => {
     const it = b.item;
@@ -1557,7 +1639,7 @@ function spendGroupHtml(g) {
         (l.id === firstId && usable.length > 1 ? ' <span class="tag green">' + esc(t('useFirst')) + '</span>' : '') + '</div></div>' +
         '<div class="qty"><b>' + l.qty + '</b> ' + esc(unitShort(it.unit)) + '</div><div class="btns">' + btns + '</div></div>';
     }).join('');
-    return '<div class="brand-row">' + thumbHtml(it) + '<div class="grow"><div class="nm">' + esc(it.name) + (it.strict ? ' 🔒' : '') + '</div><div class="fd">' + esc(formName(it.form)) + ' · ' + esc(it.dosage) + '</div></div></div>' +
+    return '<div class="brand-row">' + thumbHtml(it) + '<div class="grow"><div class="nm">' + nameHtml(it) + (it.strict ? ' 🔒' : '') + '</div><div class="fd">' + esc(formName(it.form)) + ' · ' + esc(it.dosage) + '</div></div></div>' +
       (b.lots.length ? '<div class="lots">' + lots + '</div>' : '<div class="zero row" style="justify-content:space-between">' + esc(t('outOfStock')) + (it.id.indexOf('tmp_') === 0 ? '' : '<button class="btn small ghost" data-act="reportUseModal" data-item="' + esc(it.id) + '">' + esc(t('reportUseBtn')) + '</button>') + '</div>');
   }).join('') + '</div>';
 }
@@ -1774,8 +1856,8 @@ function onBrandChosen() {
   $('#rcvName').value = v;
   // если такая фирма уже внесена ровно в одной дозировке — подставим её поля
   const same = S.view.items.filter(i => skel(i.name) === skel(v));
-  if (same.length === 1) fillFromItem(same[0]);
-  else $('#rcvNameNote').innerHTML = '';
+  if (same.length === 1) { fillFromItem(same[0]); hideCatVariants(); }
+  else { $('#rcvNameNote').innerHTML = ''; showCatVariants(v); }
   $('#rcvDose').focus();
 }
 
@@ -1802,6 +1884,8 @@ function fillFromItem(it) {
 function onPickName(o) {
   if (o.kind === 'item') { fillFromItem(o.item); hideCatVariants(); $('#rcvSeries').focus(); return; }
   if (o.kind === 'cat') { catFill(o.ce); return; }
+  if (o.kind === 'sup') { supFill(o.se); return; }
+  if (o.kind === 'dev') { if (S.rcv.cat !== 'sup') { S.rcv.cat = 'sup'; renderReceiveSelects(); } $('#rcvName').value = o.de.n; $('#rcvForm').value = o.de.code; $('#rcvUnit').value = formInfo(o.de.code).unit; updateDoseLabel(); hideCatVariants(); $('#rcvDose').focus(); return; }
   S.rcv.pickedItemId = '';
   $('#rcvNameNote').innerHTML = '';
   if (o.kind === 'brand') { $('#rcvName').value = o.bo.b; $('#rcvSub').value = o.bo.sub.s; showRefInfo(o.bo.sub); showBrands(o.bo.sub, o.bo.b, false); showCatVariants(o.bo.b); $('#rcvDose').focus(); }
@@ -1974,6 +2058,7 @@ function renderStock() {
   $('#chkBtn').classList.toggle('primary', S.stock.view === 'chk');
   $('#chkBtn').classList.toggle('ghost', S.stock.view !== 'chk');
   if (S.stock.view === 'dup') { box.innerHTML = dupHtml(); return; }
+  if (S.stock.view === 'noser') { box.innerHTML = noSerHtml(); return; }
   if (S.stock.view === 'chk') { box.innerHTML = checksHtml(); return; }
   const q = S.stock.q.trim();
   const m = q ? matchItems(q) : null;
@@ -2002,7 +2087,7 @@ function renderStock() {
 }
 function stockGroupHtml(g) {
   const inStock = g.brands.filter(b => b.total > 0).length;
-  return '<div class="grp"><div class="grp-h"><div class="t">' + (g.isSub ? '🧬 ' : '') + esc(g.title) + '</div><div class="s">' + esc(t('brandsInStock', { n: inStock })) + ' · ' + esc(t('totalShort', { n: g.total })) + '</div></div>' +
+  return '<div class="grp"><div class="grp-h"><div class="t">' + (g.isSub ? '🧬 ' + esc(g.title) + (altSub(g.title, g.brands && g.brands[0] && g.brands[0].item ? g.brands[0].item.name : '') ? ' <span class="alt">(' + esc(altSub(g.title, g.brands && g.brands[0] && g.brands[0].item ? g.brands[0].item.name : '')) + ')</span>' : '') : esc(g.title)) + '</div><div class="s">' + esc(t('brandsInStock', { n: inStock })) + ' · ' + esc(t('totalShort', { n: g.total })) + '</div></div>' +
     g.brands.map(b => stockItemHtml(b.item, b.lots)).join('') + '</div>';
 }
 function stockItemHtml(it, lots) {
@@ -2028,7 +2113,7 @@ function stockItemHtml(it, lots) {
         lotBtns(l) +
         (ls.cls === 'expired' ? '<button class="btn small danger" data-act="spendModal" data-lot="' + esc(l.id) + '" data-reason="DISPOSAL">' + esc(t('dispose')) + '</button>' : '')) + '</div></div>';
   }).join('');
-  return '<div class="brand-row">' + thumbHtml(it) + '<div class="grow"><div class="nm">' + esc(it.name) + (it.strict ? ' 🔒' : '') + (it.condition === 'fridge' ? ' ❄️' : '') + '</div><div class="fd">' + esc(formName(it.form)) + ' · ' + esc(it.dosage) +
+  return '<div class="brand-row">' + thumbHtml(it) + '<div class="grow"><div class="nm">' + nameHtml(it) + (it.strict ? ' 🔒' : '') + (it.condition === 'fridge' ? ' ❄️' : '') + '</div><div class="fd">' + esc(formName(it.form)) + ' · ' + esc(it.dosage) +
     (it.packCount ? ' · ' + it.packCount + '/' + esc(t('inPacks').replace(/^в /, '')) : '') + '</div>' +
     (it.subGroup || it.pharmGroup ? '<div class="fd">' + esc(it.subGroup || it.pharmGroup) + '</div>' : '') + '<div class="row wrap" style="gap:4px;margin-top:4px">' + tags.join('') + '</div></div>' +
     (it.id.indexOf('tmp_') === 0 ? '' : '<button class="more-btn" data-act="itemMenu" data-id="' + esc(it.id) + '" aria-label="menu">⋯</button>') + '</div>' +
@@ -2066,10 +2151,17 @@ function dupHtml() {
     return '<div class="grp">' + its.map(it => {
       const st = itemStats(it);
       const others = its.filter(o => o.id !== it.id).map(o => o.id).join(',');
-      return '<div class="brand-row"><div class="grow"><div class="nm">' + esc(it.name) + '</div><div class="fd">' + esc(formName(it.form)) + ' · ' + esc(it.dosage) + ' · ' + esc(t('totalShort', { n: st.usable + st.expired })) + '</div></div>' +
+      return '<div class="brand-row"><div class="grow"><div class="nm">' + nameHtml(it) + '</div><div class="fd">' + esc(formName(it.form)) + ' · ' + esc(it.dosage) + ' · ' + esc(t('totalShort', { n: st.usable + st.expired })) + '</div></div>' +
         '<button class="btn small ghost" data-act="mergeKeep" data-id="' + esc(it.id) + '" data-others="' + esc(others) + '">' + esc(t('mergeKeep')) + '</button></div>';
-    }).join('') + '<div style="height:10px"></div></div>';
+    }).join('') + '<div class="row" style="justify-content:flex-end;margin-top:6px"><button class="btn small ghost" data-act="notDup" data-ids="' + esc(its.map(i => i.id).join(',')) + '">' + esc(t('notDupBtn')) + '</button></div><div style="height:10px"></div></div>';
   }).join('');
+}
+/** «Это разные препараты» — склад запомнит и больше не покажет их как дубли. */
+async function notDupMark(btn, ids) {
+  const r = await busy(btn, () => rpcA('notDup', { ids: ids.split(',') }, { op: true, opId: newOpId() }));
+  if (!r) return;
+  toast(t('notDupDone'));
+  loadExtras();
 }
 /* ---------- «Проверить»: спорные места, которые надо пересчитать руками ---------- */
 function daysSince(dt) {
@@ -2311,15 +2403,17 @@ async function historyModal(id) {
   try {
     const r = await rpcA('history', { itemId: id });
     $('#histBox').classList.remove('muted');
-    $('#histBox').innerHTML = r.rows.length ? r.rows.map(journalRowHtml).join('') : '<div class="empty">' + esc(t('repEmpty')) + '</div>';
+    const done = {}; // уже отменённые записи — второй раз кнопку не показываем
+    r.rows.forEach(x => { if (x.refOpId && isStornoRow(x)) done[x.refOpId] = 1; });
+    $('#histBox').innerHTML = r.rows.length ? r.rows.map(x => journalRowHtml(x, done)).join('') : '<div class="empty">' + esc(t('repEmpty')) + '</div>';
   } catch (e) { }
 }
-function journalRowHtml(r) {
+function journalRowHtml(r, done) {
   const d = docById(r.doctorId);
-  const comment = USER_COMMENT_OPS.indexOf(r.type) !== -1 && r.comment ? ' · <i>' + esc(r.comment) + '</i>' : '';
+  const comment = (USER_COMMENT_OPS.indexOf(r.type) !== -1 || isStornoRow(r) || r.type === 'LOT_MEMO') && r.comment ? ' · <i>' + esc(r.comment) + '</i>' : '';
   return '<div class="rep-row"><div class="t">' + esc(opName(r.type)) + (r.itemName ? ' · ' + esc(r.itemName) + ' ' + esc(r.dosage || '') : '') + (r.delta ? ' <b>' + (r.delta > 0 ? '+' : '') + r.delta + '</b>' : '') + (r.qtyAfter !== '' ? ' → ' + r.qtyAfter : '') + '</div>' +
     '<div class="s">' + esc(fmtDate(r.time.slice(0, 10)) + ' ' + r.time.slice(11)) + ' · ' + esc(d ? docName(d) : r.doctorName) + (r.locationId ? ' · ' + esc(locName(r.locationId, r.locationName)) : '') + (r.series ? ' · ' + esc(t('seriesShort', { s: r.series })) : '') + (r.visit ? ' · 🧾 ' + esc(r.visit) : '') + (r.factDate ? ' · ' + esc(t(r.type === 'OPENING' ? 'asOfLine' : 'receivedLine', { d: fmtDate(r.factDate) })) : '') + (r.docNo ? ' · 📄 ' + esc(r.docNo) : '') + comment +
-    (r.type === 'DOC_PHOTO' && r.comment ? ' <button class="btn small ghost" style="padding:2px 8px;min-height:0" data-act="docView" data-file="' + esc(r.comment) + '">👁</button>' : '') + '</div></div>';
+    (r.type === 'DOC_PHOTO' && r.comment ? ' <button class="btn small ghost" style="padding:2px 8px;min-height:0" data-act="docView" data-file="' + esc(r.comment) + '">👁</button>' : '') + (done ? stornoBtnHtml(r, done) : '') + '</div></div>';
 }
 async function mergeKeep(btn, id, others) {
   const dst = itemById(id);
@@ -2345,7 +2439,7 @@ async function deleteItem(btn, id) {
 function settingsModal() {
   const locs = S.view.locations || [];
   const owner = isOwner();
-  openModal('<h3>⚙️ ' + esc(t('storeSettings', { s: storeName(S.base && S.base.store) })) + '</h3>' +
+  openModal('<h3>⚙️ ' + esc(t('storeSettings', { s: storeName(S.base && S.base.store) })) + '</h3>' + themeCardHtml() +
     (can('edit') ? '<div class="card"><div class="lbl">' + esc(t('places')) + '</div>' + locs.map(l => '<div class="list-row" style="flex-wrap:wrap"><div class="grow" style="min-width:140px">' + esc(locName(l.id)) + ' <span class="tag">' + esc(l.zone === 'work' ? t('zoneWork') : t('zoneStorage')) + '</span></div>' +
       '<button class="btn small ghost" data-act="placeModal" data-id="' + esc(l.id) + '">✏️</button><button class="btn small ghost" data-act="placeRemove" data-id="' + esc(l.id) + '">' + esc(t('removePlace')) + '</button></div>').join('') +
       '<div class="row wrap" style="margin-top:8px"><button class="btn small primary" data-act="placeModal" data-id="">' + esc(t('addPlace')) + '</button><button class="btn small ghost" data-act="qrModal">' + esc(t('printQr')) + '</button></div></div>' +
@@ -2680,6 +2774,12 @@ const H = {
   historyModal: el => historyModal(el.dataset.id),
   deleteItem: el => deleteItem(el, el.dataset.id),
   mergeKeep: el => mergeKeep(el, el.dataset.id, el.dataset.others),
+  notDup: el => notDupMark(el, el.dataset.ids),
+  stornoModal: el => stornoModal(el.dataset.op, el.dataset.day, el.dataset.desc),
+  stornoGo: el => stornoGo(el, el.dataset.op),
+  lotMemoModal: el => lotMemoModal(el.dataset.lot),
+  lotMemoSave: el => lotMemoSave(el, el.dataset.lot),
+  memoQuick: el => { const ta = $('#lmText'); if (ta) ta.value = (ta.value.trim() ? ta.value.trim() + '; ' : '') + el.dataset.v; },
   markChecked: el => markChecked(el, el.dataset.lots, el.dataset.failed),
   openChecks: () => { S.stock.view = 'chk'; setScreen('stock'); },
   placeModal: el => placeModal(el.dataset.id),
@@ -2715,6 +2815,7 @@ const H = {
   monthCloseGo: el => monthCloseGo(el),
   revPairsApply: () => revPairsApply(),
   catVar: el => catVarPick(+el.dataset.i),
+  supVar: el => supVarPick(+el.dataset.i),
   catRefresh: () => loadCatalog(true).then(() => { if ($('#catStat') && S.catMeta) $('#catStat').textContent = t('catInfo', { n: S.catMeta.n, v: fmtDate(S.catMeta.ver) }); }),
   repNoteSave: el => repNoteSave(el),
   visitClear: () => { setVisit(''); $('#visitInp').value = ''; $('#visitInp').focus(); },
@@ -3685,7 +3786,7 @@ function reportUseModal(opts) {
   if (!it) {
     attachSuggest($('#ruName'), q => nameSuggestions(q, S.ruCat), o => {
       if (o.kind === 'item') { closeModal(); reportUseModal({ itemId: o.item.id }); return; }
-      $('#ruName').value = o.kind === 'brand' ? o.bo.b : o.so.s;
+      $('#ruName').value = o.kind === 'brand' ? o.bo.b : o.so ? o.so.s : o.kind === 'sup' ? o.se.ru + ' ' + o.se.z : o.label;
     });
   }
 }
@@ -4172,11 +4273,13 @@ function revFoundModal() {
   $('#rfForm').addEventListener('change', () => { $('#rfUnit').value = formInfo($('#rfForm').value).unit; });
   attachSuggest($('#rfName'), q => nameSuggestions(q, S.rfCat), o => {
     if (o.kind === 'cat') { if (S.rfCat !== 'med') rfSetCat('med'); catFillFields(o.ce, { name: '#rfName', form: '#rfForm', dose: '#rfDose', unit: '#rfUnit' }); return; }
+    if (o.kind === 'sup') { if (S.rfCat !== 'sup') rfSetCat('sup'); supFillFields(o.se, { name: '#rfName', form: '#rfForm', dose: '#rfDose', unit: '#rfUnit' }); return; }
+    if (o.kind === 'dev') { if (S.rfCat !== 'sup') rfSetCat('sup'); $('#rfName').value = o.de.n; $('#rfForm').value = o.de.code; $('#rfUnit').value = formInfo(o.de.code).unit; return; }
     if (o.kind === 'item') {
       const it = o.item;
       if (it.category !== S.rfCat) rfSetCat(it.category);
       $('#rfName').value = it.name; $('#rfForm').value = it.form; $('#rfDose').value = it.dosage; $('#rfUnit').value = it.unit;
-    } else $('#rfName').value = o.kind === 'brand' ? o.bo.b : o.so.s;
+    } else $('#rfName').value = o.kind === 'brand' ? o.bo.b : o.so ? o.so.s : o.label;
   });
 }
 function rfSetCat(cat) {
@@ -4580,6 +4683,7 @@ function repTypeChanged() {
   $('#repPeriod').classList.toggle('hidden', ['usage', 'journal', 'visits', 'incidents', 'suspicious', 'forms', 'strict'].indexOf(tp) === -1);
   $('#repMonthWrap').classList.toggle('hidden', tp !== 'monthly');
   $('#repRevWrap').classList.toggle('hidden', tp !== 'revision');
+  ffRepEnsure(tp === 'forms');
 }
 async function repShow(btn) {
   const type = $('#repType').value;
@@ -4588,6 +4692,7 @@ async function repShow(btn) {
   if (['usage', 'journal', 'visits', 'incidents', 'suspicious', 'forms', 'strict'].indexOf(type) !== -1) { p.from = $('#repFrom').value; p.to = $('#repTo').value; if (!p.from || !p.to || p.from > p.to) return toast(t('E_BAD_PERIOD'), 'bad'); }
   if (type === 'monthly') { p.month = $('#repMonth').value; if (!/^\d{4}-\d{2}$/.test(p.month)) return toast(t('E_BAD_PERIOD'), 'bad'); }
   if (type === 'revision') { p.revisionId = $('#repRev').value; if (!p.revisionId) return toast(t('E_NO_REVISION'), 'bad'); }
+  if (type === 'forms') { const f = ffRead('rf'); if (f) { S.ffRep = f; p.f = f; } }
   const who = (S.me && S.me.id) + '|' + S.storeId;
   const r = await busy(btn, () => rpcA('report', p));
   if (!r) return;
@@ -4653,8 +4758,9 @@ function reportTable(r) {
   if (r.type === 'visits') return { title: t('repTitleVisits') + ' ' + fmtDate(r.from) + '–' + fmtDate(r.to), header: [t('colVisit'), t('colTime'), t('colDoctor'), t('colItems')], rows: r.rows.map(v => [v.visit, fmtDt(v.time), v.doctorName, v.items.map(i => itemLabel(i) + ' ×' + i.qty).join('; ')]) };
   if (r.type === 'incidents') return { title: t('repTitleIncidents') + ' ' + fmtDate(r.from) + '–' + fmtDate(r.to), header: [t('colTime'), t('colDoctor'), t('colKind'), t('colName'), t('colDose'), t('colQty'), t('colLoc'), t('colVisit'), t('colStatus'), t('colResolution')], rows: r.rows.map(x => [fmtDt(x.time), x.doctorName, t('incKind_' + x.kind), x.name, x.dosage, x.qty, x.locationId ? locName(x.locationId) : '', x.visit || '', t('incStatus_' + x.status), resolutionText(x.resolution)]) };
   if (r.type === 'suspicious') return { title: t('repTitleSuspicious') + ' ' + fmtDate(r.from) + '–' + fmtDate(r.to), header: [t('colTime'), t('colLevel'), t('colKind'), t('colDoctor'), t('colName'), t('colDetails')], rows: r.rows.map(x => [fmtDt(x.time), t('sev_' + x.sev), t('susp_' + x.kind), x.who, itemLabel(x), suspText(x)]) };
-  if (r.type === 'forms') return { title: t('repTitleForms') + ' ' + fmtDate(r.from) + '–' + fmtDate(r.to), header: [t('colTime'), t('colBlank'), t('colPatientName'), t('colAgeSex'), t('colFin'), t('colTriage'), t('colDx'), t('colOutcome'), t('colDoctorF')],
-    rows: r.rows.map(x => [fmtDt(x.arrivedAt || x.createdAt), x.blankNo || '—', x.patient, (x.age !== '' ? x.age : '') + (x.sex ? ' ' + t(x.sex === 'm' ? 'sexM' : 'sexF') : ''), x.fin, x.triage ? fdLabel(fdFind(FD.triage, x.triage)) : '', x.dx, x.outcome ? fdLabel(fdFind(FD.outcome, x.outcome)) + (x.outTo ? ': ' + x.outTo : '') : (x.status === 'draft' ? t('formDraft') : ''), x.doctor]) };
+  if (r.type === 'forms') return { title: t('repTitleForms') + ' ' + fmtDate(r.from) + '–' + fmtDate(r.to) + (r.filter && ffActive(r.filter) ? ' · ' + t('ffApplied', { n: ffActive(r.filter) }) : ''), header: [t('colTime'), t('colBlank'), t('colPatientName'), t('colAgeSex'), t('colFin'), t('colTriage'), t('ffArrType'), t('ffArrFrom'), t('colDx'), t('colOutcome'), t('colDoctorF')],
+    rows: r.rows.map(x => [fmtDt(x.arrivedAt || x.createdAt), x.blankNo || '—', x.patient, (x.age !== '' ? x.age : '') + (x.sex ? ' ' + t(x.sex === 'm' ? 'sexM' : 'sexF') : ''), x.fin, x.triage ? fdLabel(fdFind(FD.triage, x.triage)) : '', x.arrType && fdFind(FD.arrType, x.arrType) ? fdLabel(fdFind(FD.arrType, x.arrType)) : '', x.arrFrom && fdFind(FD.arrFrom, x.arrFrom) ? fdLabel(fdFind(FD.arrFrom, x.arrFrom)) : '', x.dx, x.outcome ? fdLabel(fdFind(FD.outcome, x.outcome)) + (x.outTo ? ': ' + x.outTo : '') : (x.status === 'draft' ? t('formDraft') : ''), x.doctor])
+      .concat([['', '', '', '', '', '', '', '', '', '', '']]).concat(ffStatsLines(r).map(l => [l[0], '', l[1], '', '', '', '', '', '', '', ''])) };
   if (r.type === 'revision') return { title: t('repTitleRevision') + ' ' + fmtDt(r.revision.finishedAt), header: [t('colName'), t('colDose'), t('colExpected'), t('colFact'), t('colDiff'), t('colRecorded'), t('colShortage'), t('colSurplus'), t('colFactual'), t('colUnit')], rows: r.rows.map(x => [x.name, x.dosage, x.expected, x.actual, (x.diff > 0 ? '+' : '') + x.diff, x.recorded, x.shortage, x.surplus, x.factual, unitShort(x.unit)]) };
   return { title: t('repTitleJournal') + ' ' + fmtDate(r.from) + '–' + fmtDate(r.to), header: [t('colTime'), t('colOp'), t('colDoctor'), t('colName'), t('colDose'), t('colLoc'), t('colSeries'), t('colDelta'), t('colAfter'), t('colVisit'), t('colComment')], rows: r.rows.map(x => [fmtDate(x.time.slice(0, 10)) + ' ' + x.time.slice(11), opName(x.type), docName(docById(x.doctorId)) || x.doctorName, x.itemName, x.dosage, x.locationId ? locName(x.locationId, x.locationName) : '', x.series, x.delta || '', x.qtyAfter, x.visit || '', (x.factDate ? t(x.type === 'OPENING' ? 'asOfLine' : 'receivedLine', { d: fmtDate(x.factDate) }) + ' ' : '') + (USER_COMMENT_OPS.indexOf(x.type) !== -1 ? x.comment : '')]) };
 }
@@ -4783,6 +4889,7 @@ function reportModel(r, th, W) {
     const triC = { green: th.good, yellow: th.warn, red: th.crit, black: th.ink2 };
     chart(t('chTriage'), stackBar(FD.triage.map(x => ({ label: fdLabel(x), value: c(y => y.triage === x[0]), color: triC[x[0]], icon: { green: '🟢', yellow: '🟡', red: '🔴', black: '⚫' }[x[0]] })), { th, W }));
     chart(t('chOutcomes'), hbarChart(FD.outcome.map(x => ({ label: fdLabel(x), value: c(y => y.outcome === x[0]) })).filter(x => x.value).sort((a2, b2) => b2.value - a2.value), { th, W }));
+    ffStatsCharts(r, chart, th, W);
     const tri = { green: '🟢', yellow: '🟡', red: '🔴', black: '⚫' };
     m.body = r.rows.map(x => '<div class="rep-row"><div class="t">№ ' + esc(x.blankNo || '—') + ' ' + (tri[x.triage] || '') + ' · ' + esc(x.patient || '—') + (x.age !== '' ? ', ' + esc(t('fAge', { n: x.age })) : '') + '</div>' +
       '<div class="s">' + esc(fmtDt(x.arrivedAt || x.createdAt)) + (x.dx ? ' · ' + esc(x.dx) : '') + (x.outcome ? ' · ' + esc(fdLabel(fdFind(FD.outcome, x.outcome))) : ' · ' + esc(t('formDraft'))) + ' · ' + esc(x.doctor || '') + (x.editsAfterClose ? ' · ✏️' + x.editsAfterClose : '') + '</div></div>').join('');
@@ -4795,7 +4902,9 @@ function reportModel(r, th, W) {
       '<div class="mrow"><span>' + esc(t('colExpected')) + ' <b>' + x.expected + '</b></span><span>' + esc(t('colFact')) + ' <b>' + x.actual + '</b></span>' + (x.recorded || x.shortage ? '<span>' + esc(t('colRecorded')) + ' ' + x.recorded + '</span><span>' + esc(t('colFactual')) + ' <b>' + x.factual + '</b></span>' : '') + '</div></div>').join('');
   } else {
     m.tiles = [[r.rows.length, t('colOp')]];
-    m.body = r.rows.map(journalRowHtml).join('');
+    const done = {};
+    r.rows.forEach(x => { if (x.refOpId && isStornoRow(x)) done[x.refOpId] = 1; });
+    m.body = r.rows.map(x => journalRowHtml(x, done)).join('');
   }
   m.tiles = m.tiles.map(x => tileHtml(x[0], x[1], x[2]));
   return m;
@@ -4841,6 +4950,9 @@ function suspText(x) {
     case 'spendNotInRx': return t('suspForm', { b: x.blank || x.visit });
     case 'dupReceipt': return t('suspDupReceiptT', { d: fmtDt(x.other), who: x.otherWho || '' });
     case 'dupDoc': return t('suspDupDocT', { n: x.doc, d: fmtDt(x.other), who: x.otherWho || '' });
+    case 'storno': return t('suspStornoT', { r: x.reason || '' });
+    case 'formDupPatient': return t('suspFormDupPatientT', { b: (x.blanks || []).join(' / '), d: fmtDt(x.other) });
+    case 'formLate': return t('suspFormLateT', { b: x.blank || '—', d: fmtDt(x.arrived) });
     case 'spendLate': return t('suspSpendLate', { d: fmtDate(x.fact) });
     case 'revCounted': return t('suspRevCounted', { n: x.qty, u }) + (x.comment ? ' · ' + x.comment : '');
     case 'afterClose': return t('suspAfterClose', { m: monthName(x.month), op: opName(x.op) }) + (x.comment ? ' · «' + x.comment + '»' : '');
@@ -5236,11 +5348,11 @@ async function photoB64(file, maxSide) {
   for (const q of [0.82, 0.7, 0.55]) { const u = c.toDataURL('image/jpeg', q); if (u.length < 4.5e6) return u.split(',')[1]; }
   throw new Error('big');
 }
-async function fAddPhoto(file, kind) {
+async function fAddPhoto(file, kind, caption0) {
   if (!S.fv) return;
   let b64;
   try { b64 = await photoB64(file, kind === 'receipt' ? 1400 : 2000); } catch (e) { return toast(t('fPhotoBig'), 'bad'); }
-  const caption = kind === 'receipt' ? '' : (prompt(t('fAttCaption'), '') || '').slice(0, 200);
+  const caption = caption0 !== undefined ? String(caption0).slice(0, 200) : kind === 'receipt' ? '' : (prompt(t('fAttCaption'), '') || '').slice(0, 200);
   const key = 'p' + newOpId();
   try { await idbPut(key, b64); } catch (e) { S.photoMem = S.photoMem || {}; S.photoMem[key] = b64; toast(t('fPhotoNoIdb'), 'bad'); }
   fFlush(); // форма должна попасть на сервер раньше фото
@@ -5288,6 +5400,37 @@ function fSummary(f) {
     dx: [d.dx1, d.dx2].filter(Boolean).join('; '), outcome: d.outcome || '', allergy: d.allergyNone ? '—' : (d.allergy || ''), compl: String(d.compl || '').slice(0, 120), local: !!f.local };
 }
 
+/* ---------- Защита от двойного пациента ----------
+ * 1) тот же номер бланка у другой формы; 2) тот же FİN (или ФИО + дата рождения) с разницей меньше 12 часов;
+ * 3) то же имя (без FİN и даты рождения) в тот же день. Предупреждаем в форме и спрашиваем при закрытии. */
+function fNameSk(s) { return skel(String(s || '').toLowerCase().replace(/ə/g, 'a')).replace(/e/g, 'a'); }
+function fDupWarn(id) {
+  const d = fData(id);
+  const me = d && Object.keys(d).length ? fSummary({ id, data: d }) : (fListRows().find(x => x.id === id) || fSummary({ id, data: {} }));
+  const out = [];
+  const rows = fListRows().filter(x => x.id !== id);
+  const bn = String(me.blankNo || '').toUpperCase().replace(/[\s№#.\-]/g, '');
+  const tm = s => { const v = Date.parse(String(s || '').replace(' ', 'T') + ':00'); return isNaN(v) ? 0 : v; };
+  const myT = tm(me.arrivedAt) || Date.now();
+  const nm2 = fNameSk(String(me.patient).split(' ').slice(0, 2).join(' '));
+  const seen = {};
+  const say = (x, why) => { if (seen[x.id]) return; seen[x.id] = 1; out.push({ id: x.id, text: t(why, { b: x.blankNo || '—', p: x.patient || '', d: fmtDt(x.arrivedAt || x.createdAt) }) }); };
+  rows.forEach(x => {
+    if (bn && String(x.blankNo || '').toUpperCase().replace(/[\s№#.\-]/g, '') === bn) say(x, 'fDupSameBlank');
+  });
+  const near = x => Math.abs((tm(x.arrivedAt || x.createdAt) || 0) - myT) < 12 * 3600000;
+  rows.concat((S.fHist && S.fHist.id === id ? S.fHist.rows : []).map(h => Object.assign({ patient: '' }, h))).forEach(x => {
+    if (!near(x)) return;
+    if (me.fin && me.fin.length >= 7 && x.fin === me.fin) say(x, 'fDupSamePerson');
+    else if (nm2.length >= 3 && x.patient && fNameSk(String(x.patient).split(' ').slice(0, 2).join(' ')) === nm2 && (!me.birthDate || !x.birthDate || me.birthDate === x.birthDate)) say(x, 'fDupSameName');
+  });
+  return out;
+}
+function fDupHtml(id) {
+  const w = fDupWarn(id);
+  return w.length ? '<div class="note" style="color:var(--red);font-weight:600;margin:8px 0">⚠️ ' + w.map(x => '<a href="#" data-act="fOpen" data-id="' + esc(x.id) + '">' + esc(x.text) + '</a>').join('<br>⚠️ ') + '</div>' : '';
+}
+
 /* ---------- экран: список форм ---------- */
 function fCtxKey() { return S.storeId + '|' + (S.me ? S.me.id : ''); }
 /** Вход на экран «Формы» (или смена склада/пользователя): старая открытая форма другого склада не показывается. */
@@ -5323,6 +5466,7 @@ function renderFormsList() {
   const tri = { green: '🟢', yellow: '🟡', red: '🔴', black: '⚫' };
   box.innerHTML = '<div class="row" style="margin-bottom:10px">' + (can('forms') ? '<button class="btn primary grow" data-act="fNew">' + esc(t('formNew')) + '</button>' : '') + '<button class="btn ghost" data-act="fPrintBlank">' + esc(t('formBlankPrint')) + '</button></div>' +
     '<div class="searchbar"><input type="search" id="fQ" autocomplete="off" placeholder="' + esc(t('formsSearchPh')) + '" value="' + esc(S.fQ || '') + '"></div>' +
+    ffBarHtml() +
     (S.fSearch ? '' : '<div class="chips">' + [['open', 'formsFilterOpen'], ['today', 'formsFilterToday'], ['all', 'formsFilterAll']].map(x => '<button class="chip' + (flt === x[0] ? ' on' : '') + '" data-act="fFilter" data-v="' + x[0] + '">' + esc(t(x[1])) + '</button>').join('') + '</div>') +
     (S.fOffline ? '<div class="info">' + esc(t('formsOfflineList')) + '</div>' : '') +
     (rows.length ? rows.map(x => {
@@ -5422,6 +5566,8 @@ function fRenderEditor(keepScroll) {
   if (!box || !S.fv) return;
   const y = window.scrollY;
   const id = S.fv.id;
+  // какие разделы открыты сейчас — берём с экрана (событие «открыт» приходит с задержкой; перерисовка не должна их закрыть)
+  $$('details.f-sec', box).forEach(el => { if (el.dataset.sec) S.fOpen[el.dataset.sec] = el.open ? 1 : 0; });
   const c = fCache();
   const f = c.full[id] || { id, data: {}, att: [] };
   const d = fData(id);
@@ -5442,13 +5588,13 @@ function fRenderEditor(keepScroll) {
   // 1. пациент
   const hist = S.fHist && S.fHist.id === id ? S.fHist.rows : [];
   const histAl = hist.map(h => h.allergy).filter(a => a && a !== '—').filter((a, i, arr) => arr.indexOf(a) === i);
-  const sPatient = '<div class="grid2 stack">' + inp('pName', L(['Имя, фамилия', 'Ad / Soyad']), { max: 120 }) + inp('pFather', L(['Отчество', 'Ata adı']), { max: 60 }) + '</div>' +
+  const sPatient = (ro ? '' : '<button type="button" class="btn small ghost block" style="margin-bottom:10px" data-act="fScanBlank" data-kind="blank">' + esc(t('scanBlankBtn')) + '</button>') + '<div class="grid2 stack">' + inp('pName', L(['Имя, фамилия', 'Ad / Soyad']), { max: 120 }) + inp('pFather', L(['Отчество', 'Ata adı']), { max: 60 }) + '</div>' +
     '<div class="grid2"><div class="field"><label>' + esc(L(['Дата рождения', 'Doğum tarixi'])) + '<b id="fAgeLbl">' + (age !== '' ? ' · ' + esc(t('fAge', { n: age })) : '') + '</b></label><input type="date" data-f="pBirth" value="' + esc(val('pBirth')) + '"></div>' +
-    '<div class="field"><label>FİN</label><input type="text" data-f="fin" maxlength="7" autocapitalize="characters" class="' + (finOk(d.fin) ? '' : 'f-bad') + '" value="' + esc(String(val('fin')).toUpperCase()) + '"><div class="note f-finnote' + (finOk(d.fin) ? ' hidden' : '') + '" style="margin:2px 0 0;color:var(--red)">' + esc(t('fFinBad')) + '</div></div></div>' +
-    '<div class="field"><label>' + esc(L(['Пол', 'Cinsi'])) + '</label>' + seg('pSex', FD.sex) + '</div>' + inp('xqn', 'XQN №', { max: 40 }) +
+    '<div class="field"><label>FİN</label><div class="row" style="gap:6px"><input type="text" data-f="fin" maxlength="7" autocapitalize="characters" class="grow ' + (finOk(d.fin) ? '' : 'f-bad') + '" value="' + esc(String(val('fin')).toUpperCase()) + '">' + (ro ? '' : '<button type="button" class="btn icon ghost" data-act="fScanId" title="' + esc(t('scanIdBtn')) + '">🪪</button>') + '</div><div class="note f-finnote' + (finOk(d.fin) ? ' hidden' : '') + '" style="margin:2px 0 0;color:var(--red)">' + esc(t('fFinBad')) + '</div></div></div>' +
+    '<div class="field"><label>' + esc(L(['Пол', 'Cinsi'])) + '</label>' + seg('pSex', FD.sex) + '</div>' + inp('xqn', 'XQN №', { max: 40 }) + fDupHtml(id) +
     (hist.length ? '<div class="info">' + esc(t('fHistoryN', { n: hist.length })) + ': ' + hist.slice(0, 5).map(h => '<a href="#" data-act="fOpen" data-id="' + esc(h.id) + '">№' + esc(h.blankNo || '—') + ' ' + esc(fmtDate(String(h.arrivedAt || h.createdAt).slice(0, 10))) + (h.dx ? ' — ' + esc(h.dx) : '') + '</a>').join('; ') +
       (histAl.length ? '<div style="color:var(--red);font-weight:700;margin-top:4px">⚠️ ' + esc(t('fHistoryAllergy', { a: histAl.join(', ') })) + '</div>' : '') + '</div>' : '') +
-    '<div class="field"><label>' + esc(t('fReceipt')) + '</label><div class="row"><input type="text" class="grow" data-f="receipt" maxlength="120" value="' + esc(val('receipt')) + '"><button type="button" class="btn icon ghost" data-act="fScanReceipt" title="' + esc(t('fReceiptScan')) + '">🔍</button><button type="button" class="btn icon ghost" data-act="fPhoto" data-kind="receipt" title="' + esc(t('fReceiptPhoto')) + '">📷</button></div></div>' +
+    '<div class="field"><label>' + esc(t('fReceipt')) + '</label><div class="row"><input type="text" class="grow" data-f="receipt" maxlength="120" value="' + esc(val('receipt')) + '"><button type="button" class="btn icon ghost" data-act="fScanReceipt" title="' + esc(t('fReceiptScan')) + '">🔍</button><button type="button" class="btn icon ghost" data-act="fScanBlank" data-kind="receipt" title="' + esc(t('scanReceiptBtn')) + '">🔤</button><button type="button" class="btn icon ghost" data-act="fPhoto" data-kind="receipt" title="' + esc(t('fReceiptPhoto')) + '">📷</button></div></div>' +
     '<div class="field"><label>' + esc(t('fArrivedAt')) + '</label><input type="datetime-local" data-f="arrivedAt" value="' + esc(String(val('arrivedAt')).replace(' ', 'T')) + '"></div>' +
     '<div class="field"><label>' + esc(L(['Вид поступления', 'Gəlişin növü'])) + '</label>' + seg('arrType', FD.arrType) + (d.arrType === 'other' ? inp('arrTypeO', t('fOther')) : '') + '</div>' +
     '<div class="field"><label>' + esc(L(['Откуда доставлен', 'Xəstənin gəldiyi yer'])) + '</label>' + seg('arrFrom', FD.arrFrom) + (d.arrFrom === 'other' ? inp('arrFromO', t('fOther')) : '') + '</div>' +
@@ -5642,6 +5788,8 @@ function fGiveModal(rid) {
     (can('spend') ? '<div class="field"><label>' + esc(t('fGiveSearch')) + '</label><input type="search" id="fgQ" value="' + esc(q) + '" autocomplete="off"></div><div id="fgLots"></div>' +
       '<div class="field"><label>' + esc(t('qty')) + '</label><input type="number" id="fgQty" min="1" value="1" inputmode="numeric"></div>' : '<div class="info">' + esc(t('fGiveNoPerm')) + '</div>') +
     '<label class="check"><input type="checkbox" id="fgOwn"><span>' + esc(t('fGiveOwn')) + '</span></label>' +
+    // форма задним числом: «когда ввели» = время поступления (можно поправить) — списание уйдёт в тот день и тот месяц
+    '<div class="field"><label>' + esc(t('fGiveWhen')) + '</label><input type="datetime-local" id="fgWhen" value="' + esc(fGiveDefaultWhen(d)) + '" max="' + esc(nowLocal()) + '"></div>' +
     '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button>' +
     (can('spend') ? '<button class="btn primary" data-act="fGiveGo">' + esc(t('fGiveSpend')) + '</button>' : '<button class="btn primary" data-act="fGiveGo">' + esc(t('fGiveMark')) + '</button>') + '</div>');
   if (can('spend')) {
@@ -5658,11 +5806,22 @@ function fGiveModal(rid) {
     draw();
   }
 }
+/** Форма заведена сегодня, а пациент поступил раньше — по умолчанию «ввели» в день поступления. */
+function fGiveDefaultWhen(d) {
+  const now = nowLocal();
+  const arr = String(d.arrivedAt || '').replace(' ', 'T');
+  return arr && arr.slice(0, 10) < now.slice(0, 10) ? arr.slice(0, 16) : now;
+}
 function fGiveGo() {
   if (!S.fv || !S.fGive) return closeModal();
   const id = S.fv.id, rid = S.fGive.rid;
   const own = $('#fgOwn').checked;
-  const now = nowLocal().replace('T', ' ');
+  const nowL = nowLocal();
+  let when = ($('#fgWhen') && $('#fgWhen').value) || nowL;
+  if (when > nowL) when = nowL;
+  if (when.slice(0, 10) < addDaysStr(nowL.slice(0, 10), -30)) return toast(t('fGiveTooOld'), 'bad');
+  const now = when.replace('T', ' ');
+  const usedAt = when.slice(0, 10) < nowL.slice(0, 10) ? when.slice(0, 10) : '';
   const row = { given: true, givenAt: now, givenBy: S.me.id, givenByName: S.me.name };
   if (own) row.own = true;
   else if (can('spend') && S.fGive.lotId) {
@@ -5673,7 +5832,7 @@ function fGiveGo() {
     const d = fData(id);
     const visit = String(d.blankNo || id).slice(0, 60);
     fFlush(); // форма — раньше списания
-    const op = enqueue('spend', { doctorId: S.docId, lotId: lot.id, qty, reason: 'PATIENT', comment: '', visit, reportShortage: true }, { label: it.name, shortageKnown: qty > lot.qty });
+    const op = enqueue('spend', { doctorId: S.docId, lotId: lot.id, qty, reason: 'PATIENT', comment: '', visit, reportShortage: true, usedAt }, { label: it.name, shortageKnown: qty > lot.qty });
     S.mine.push({ opId: op.opId, action: 'spend', type: 'SPEND', doctorId: S.docId, lotId: lot.id, itemId: it.id, series: lot.series, expiry: lot.expiry, locationId: lot.locationId, name: it.name + ' ' + it.dosage, qty, delta: -qty, ts: Date.now(), status: 'pending', visit });
     saveMine();
     Object.assign(row, { itemId: it.id, lotId: lot.id, qty, spendOp: op.opId });
@@ -5807,6 +5966,8 @@ function fClose() {
   const id = S.fv.id;
   const d = fData(id);
   if (!d.blankNo || !d.pName || !d.outcome) return;
+  const dw = fDupWarn(id);
+  if (dw.length && !confirm(t('fDupConfirm', { w: dw.map(x => '• ' + x.text).join('\n') }))) return;
   if (!confirm(t('fCloseConfirm', { n: d.blankNo }))) return;
   fFlush();
   fQueue('formSave', { id, patch: {}, close: true }, t('formsTitle') + ' №' + d.blankNo);
@@ -7012,13 +7173,13 @@ const I18N_V10 = {
     catTag: 'реестр', catSrc: 'реестр АР (Тарифный совет)', catPicked: 'Заполнено из каталога: {src}. Проверьте дозу и упаковку по коробке.',
     catVariants: 'Варианты этой фирмы в реестре: {n} — нажмите нужный', catTitle: 'Каталог препаратов (реестр АР)',
     catInfo: '{n} вариантов: фирма, МНН, доза, ампула/флакон, упаковка, производитель. Список Тарифного совета от {v}. Хранится на телефоне.',
-    catEmpty: 'Ещё не загружен — загрузится сам при связи.', catRefresh: 'Обновить каталог', catLoaded: 'Каталог загружен: {n} вариантов.', catFail: 'Каталог не загрузился — нужна связь.'
+    catEmpty: 'Ещё не загружен — загрузится сам при связи.', catRefresh: 'Обновить каталог', catLoaded: 'Каталог загружен: {n} вариантов.', catFail: 'Каталог не загрузился — нужна связь.', catInfoSup: 'Расходников: {s} видов и размеров, медизделий из реестра: {d}.', supTag: 'расходник', devTag: 'реестр медизделий', supPicked: 'Заполнено: вид и размер. Проверьте по упаковке.', supSizes: 'Другие размеры: {n} — нажмите нужный'
   },
   az: {
     catTag: 'reyestr', catSrc: 'AR reyestri (Tarif Şurası)', catPicked: 'Kataloqdan dolduruldu: {src}. Dozanı və qablaşdırmanı qutuya görə yoxlayın.',
     catVariants: 'Bu firmanın reyestrdəki variantları: {n} — lazım olanı basın', catTitle: 'Dərman kataloqu (AR reyestri)',
     catInfo: '{n} variant: firma, TBA, doza, ampula/flakon, qablaşdırma, istehsalçı. Tarif Şurasının {v} tarixli siyahısı. Telefonda saxlanılır.',
-    catEmpty: 'Hələ yüklənməyib — şəbəkə olanda özü yüklənəcək.', catRefresh: 'Kataloqu yenilə', catLoaded: 'Kataloq yükləndi: {n} variant.', catFail: 'Kataloq yüklənmədi — şəbəkə lazımdır.'
+    catEmpty: 'Hələ yüklənməyib — şəbəkə olanda özü yüklənəcək.', catRefresh: 'Kataloqu yenilə', catLoaded: 'Kataloq yükləndi: {n} variant.', catFail: 'Kataloq yüklənmədi — şəbəkə lazımdır.', catInfoSup: 'Sərf materialları: {s} növ və ölçü, reyestrdən tibbi məmulatlar: {d}.', supTag: 'sərf materialı', devTag: 'tibbi məmulat reyestri', supPicked: 'Dolduruldu: növ və ölçü. Qablaşdırmaya görə yoxlayın.', supSizes: 'Digər ölçülər: {n} — lazım olanı basın'
   }
 };
 Object.assign(I18N.ru, I18N_V10.ru);
@@ -7053,14 +7214,85 @@ function catIndex(data) {
   if (!data || !Array.isArray(data.items)) return;
   const by = {}, inns = {};
   S.cat = data.items.map(x => {
-    const e = { b: x[0], inn: x[1], d: x[2], code: FORMS.med.some(f => f[0] === x[3]) ? x[3] : 'med_other', pack: x[4], cnt: x[5], mfr: x[6], sk: skel(x[0]), si: skel(x[1]) };
+    const e = { b: x[0], inn: x[1], d: x[2], code: FORMS.med.some(f => f[0] === x[3]) ? x[3] : 'med_other', pack: x[4], cnt: x[5], mfr: x[6], sk: skel(x[0]), qb: qkey(x[0]), qi: qkeyEn(x[1]) };
     (by[e.sk] = by[e.sk] || []).push(e);
-    if (e.inn && e.inn.indexOf('+') === -1 && !inns[e.si]) inns[e.si] = e.inn;
+    if (e.inn && e.inn.indexOf('+') === -1 && !inns[e.qi]) inns[e.qi] = e.inn;
     return e;
   });
   S.catBy = by;
-  S.catInns = Object.keys(inns).map(k => ({ s: catInnName(inns[k]), sk: k }));
-  S.catMeta = { ver: data.ver, source: data.source, n: S.cat.length, at: data.at || 0 };
+  S.catInns = Object.keys(inns).map(k => ({ s: catInnName(inns[k]), q: k }));
+  S.catMeta = { ver: data.ver, source: data.source, n: S.cat.length, at: data.at || 0, nSup: 0, nDev: 0, sources: data.sources || null };
+  // расходники: стандартные виды и размеры (рус / азерб. / англ.) + названия из реестра медизделий АР
+  const supBy = {};
+  S.catSup = (data.sup || []).map(x => {
+    const e = { ru: x[0], az: x[1], en: x[2], z: x[3], code: FORMS.sup.some(f => f[0] === x[4]) ? x[4] : 'sup_other', unit: x[5] || 'pcs', syn: x[6] || '', sk: skel(x[0]), skAz: skel(x[1]) };
+    e.qs = [qkey(x[0]), qkey(x[1]), qkeyEn(x[2])].concat(String(e.syn).split(',').map(w => qkey(w.trim())).filter(Boolean));
+    e.qz = qkey(x[0] + ' ' + x[3]);
+    (supBy[e.sk] = supBy[e.sk] || []).push(e);
+    (supBy[e.skAz] = supBy[e.skAz] || []).push(e);
+    return e;
+  });
+  S.supBy = supBy;
+  S.catDev = (data.dev || []).map(x => ({ n: x[0], code: FORMS.sup.some(f => f[0] === x[1]) ? x[1] : 'sup_other', q: qkeyEn(x[0]), sk: skel(x[0]) }));
+  S.catMeta.nSup = S.catSup.length; S.catMeta.nDev = S.catDev.length;
+}
+/** Подсказки расходников: «шприц», «şpris», «syringe», «канюля 18», «венфлон» — все размеры. */
+function supSuggest(qs, fuzzy, short, qFull) {
+  if (!S.catSup || !qs) return [];
+  const out = [], seen = {};
+  const qz = qFull ? qk(qFull) : '';
+  for (const e of S.catSup) {
+    let sc = 0;
+    if (short) sc = e.qs.some(k => k.startsWith(qs)) ? 55 : 0;
+    else { sc = Math.max.apply(null, e.qs.map(k => score(qs, k, fuzzy))); if (qz && qz !== qs && e.qz.indexOf(qz) !== -1) sc += 15; }
+    if (sc <= 0) continue;
+    const k = e.ru + '|' + e.z;
+    if (seen[k]) continue;
+    seen[k] = 1;
+    out.push({ kind: 'sup', label: e.ru + ' ' + e.z, sub: e.az + ' ' + e.z + ' · ' + formName(e.code), se: e, pri: 0, sc: sc - 1 });
+    if (out.length > 300) break;
+  }
+  if (!short || qs.length >= 2) {
+    let n = 0;
+    for (const d of S.catDev || []) {
+      const sc = short ? (d.q.startsWith(qs) ? 30 : 0) : score(qs, d.q, false) - 20;
+      if (sc <= 0) continue;
+      out.push({ kind: 'dev', label: d.n, sub: formName(d.code) + ' · ' + t('devTag'), de: d, pri: 0, sc });
+      if (++n >= 40) break;
+    }
+  }
+  return out;
+}
+/** Выбрали расходник: название, вид, размер, единица; под названием — другие размеры этого же. */
+function supFill(e) {
+  if (S.rcv.cat !== 'sup') { S.rcv.cat = 'sup'; renderReceiveSelects(); }
+  $('#rcvName').value = e.ru;
+  $('#rcvForm').value = e.code;
+  $('#rcvUnit').value = e.unit || formInfo(e.code).unit;
+  updateDoseLabel();
+  $('#rcvDose').value = e.z;
+  S.rcv.pickedItemId = '';
+  updateQtyCalc();
+  $('#rcvNameNote').innerHTML = '<div class="note fix">✓ ' + esc(t('supPicked')) + '</div>';
+  showSupVariants(e.ru);
+  $('#rcvSeries').focus();
+}
+function showSupVariants(name) {
+  const box = $('#rcvCatVar');
+  if (!box) return;
+  const list = (S.supBy && S.supBy[skel(name)]) || [];
+  if (list.length < 2) { hideCatVariants(); return; }
+  S.supVar = list;
+  box.innerHTML = '<div class="lbl" style="margin-bottom:4px">' + esc(t('supSizes', { n: list.length })) + '</div>' +
+    list.slice(0, 40).map((e, i) => '<button class="chip" style="margin:0 6px 6px 0" data-act="supVar" data-i="' + i + '">' + esc(e.z) + '</button>').join('');
+  box.classList.remove('hidden');
+}
+function supVarPick(i) { const e = (S.supVar || [])[i]; if (!e) return; $('#rcvDose').value = e.z; $('#rcvForm').value = e.code; $('#rcvUnit').value = e.unit || formInfo(e.code).unit; hideCatVariants(); $('#rcvSeries').focus(); }
+function supFillFields(e, ids) {
+  if ($(ids.name)) $(ids.name).value = e.ru;
+  if ($(ids.form)) $(ids.form).value = e.code;
+  if ($(ids.dose)) $(ids.dose).value = e.z;
+  if ($(ids.unit)) $(ids.unit).value = e.unit || formInfo(e.code).unit;
 }
 /** «CALCIUM GLUCONATE» → «Calcium gluconate». */
 function catInnName(s) { s = String(s || '').toLowerCase(); return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -7092,8 +7324,8 @@ function catSuggest(qs, fuzzy, short) {
   const seen = {};
   for (const e of S.cat) {
     let sc = 0;
-    if (short) sc = e.sk.startsWith(qs) ? 60 : (e.si.startsWith(qs) ? 40 : 0);
-    else sc = Math.max(score(qs, e.sk, fuzzy), score(qs, e.si, fuzzy) - 10);
+    if (short) sc = e.qb.startsWith(qs) ? 60 : (e.qi.startsWith(qs) ? 40 : 0);
+    else sc = Math.max(score(qs, e.qb, fuzzy), score(qs, e.qi, fuzzy) - 10);
     if (sc <= 0) continue;
     const k = e.b + '|' + e.d + '|' + e.code;
     if (seen[k]) continue;
@@ -7109,7 +7341,9 @@ function catLine(e) {
 /** Заполнить приход из строки каталога. МНН — по-русски из справочника, если фирма там есть; иначе — международное из реестра. */
 function catFill(e) {
   if (S.rcv.cat !== 'med') { S.rcv.cat = 'med'; renderReceiveSelects(); }
-  $('#rcvName').value = e.b;
+  const typed = $('#rcvName').value.trim();
+  // написал фирму по-русски («Но-шпа») и выбрал её же из реестра («NO-ŞPA») — оставляем твоё написание; это одна и та же карточка
+  $('#rcvName').value = typed && /[а-яё]/i.test(typed) && skel(typed) === e.sk ? typed : e.b;
   let sub = '';
   if (S.refIdx) { const b = S.refIdx.byBrandSk[e.sk]; if (b && b.length) sub = b[0].sub.s; }
   $('#rcvSub').value = sub || (e.inn.indexOf('+') === -1 ? catInnName(e.inn) : e.inn);
@@ -7130,6 +7364,7 @@ function catFill(e) {
 function showCatVariants(name) {
   const box = $('#rcvCatVar');
   if (!box) return;
+  if (S.rcv && S.rcv.cat === 'sup') { showSupVariants(name); return; }
   const list = name && S.catBy ? (S.catBy[skel(name)] || []) : [];
   const uniq = [];
   const seen = {};
@@ -7152,20 +7387,666 @@ function catFillFields(e, ids) {
 function catSettingsHtml() {
   const m = S.catMeta;
   return '<div class="card"><div class="lbl">' + esc(t('catTitle')) + '</div><div class="muted" id="catStat">' +
-    esc(m ? t('catInfo', { n: m.n, v: fmtDate(m.ver) }) : t('catEmpty')) + '</div>' +
+    esc(m ? t('catInfo', { n: m.n, v: fmtDate(m.ver) }) + (m.nSup ? ' ' + t('catInfoSup', { s: m.nSup, d: m.nDev }) : '') : t('catEmpty')) + '</div>' +
     '<button class="btn small ghost" style="margin-top:8px" data-act="catRefresh">' + esc(t('catRefresh')) + '</button></div>';
 }
 /** Подсказки МНН: справочник (по-русски) + международные названия из реестра. */
 function subSuggestionsCat(q) {
   const base = subSuggestions(q);
-  const qs = skel(q);
+  const qs = qk(q);
   if (!qs || !S.catInns) return base;
   const have = {};
-  base.list.forEach(o => { have[skel(o.label)] = 1; });
-  const extra = S.catInns.filter(x => !have[x.sk] && (qs.length <= 2 ? x.sk.startsWith(qs) : score(qs, x.sk, false) > 0)).slice(0, 15)
+  base.list.forEach(o => { have[qk(o.label)] = 1; });
+  const extra = S.catInns.filter(x => !have[x.q] && (qs.length <= 2 ? x.q.startsWith(qs) : score(qs, x.q, false) > 0)).slice(0, 15)
     .map(x => ({ kind: 'inn', label: x.s, sub: t('catSrc') }));
   return { list: base.list.concat(extra).slice(0, 40), fuzzy: base.fuzzy && !extra.length };
 }
+
+/* ===================== v11: тексты — исправление ошибок, без серии/срока, не дубли ===================== */
+const I18N_V11 = {
+  ru: {
+    ffBtn: '🔎 Фильтр', ffTitle: 'Отбор форм', ffAny: 'любой', ffText: 'Имя, FİN или № бланка', ffTextPh: 'часть имени, FİN, номер', ffStatus: 'Статус',
+    ffAgeMin: 'Возраст от', ffAgeMax: 'Возраст до', ffTriage: 'Триаж', ffArrType: 'На чём поступил', ffArrFrom: 'Откуда', ffOutcome: 'Исход',
+    ffDx: 'Диагноз / жалобы', ffDxPh: 'часть слова', ffDoctor: 'Врач', ffDrug: 'Назначенный препарат', ffDrugPh: 'например: кеторолак', ffDrugGiven: 'только если введён',
+    ffAllergy: 'Аллергия', ffYes: 'есть', ffNo: 'нет', ffFlag: 'Отметка', ffChronic: 'Хроническое', ffNoBlank: 'без номера бланка', ffNoFin: 'без FİN',
+    ffClear: 'Сбросить', ffFound: 'Найдено: {n} · {a}–{b}', ffOffline: 'без связи — только формы на телефоне', ffNone: 'не указано', ffApplied: 'отбор: {n}',
+    chArrType: 'На чём поступили', chArrFrom: 'Откуда доставлены', chSex: 'Пол', chAge: 'Возраст', chDoctorF: 'Врачи', chDx: 'Частые диагнозы', chDrugsGiven: 'Введённые препараты (форм, в скобках — штук)',
+    ffSumTotal: 'Всего обращений', ffSumClosed: 'закрыто {n}',
+    themeLbl: 'Оформление', themeAuto: 'Как в телефоне', themeLight: '☀️ Светлое', themeDark: '🌙 Тёмное',
+    scanIdBtn: 'FİN с удостоверения (фото)', scanBlankBtn: '📄 Заполнить с фото бланка или удостоверения', scanReceiptBtn: 'Распознать чек (текст)',
+    scanIdTitle: 'Читаю удостоверение…', scanBlankTitle: 'Читаю фото…', ocrLoading: 'Загружаю распознавание…', ocrReading: 'Распознаю:',
+    ocrFirstTime: 'Первый раз нужен интернет (скачивается 5–9 МБ), потом работает из памяти телефона.', ocrNoNet: 'Распознавание не загрузилось — нужен интернет (только первый раз).',
+    scanIdFail: 'FİN не прочитался. Сфотографируйте ровно и крупно: оборот с тремя строками «<<<» или лицевую сторону с «FİN», без бликов.',
+    scanIdFound: 'Нашлось на удостоверении ({how})', scanHow_barcode: 'штрихкод', scanHow_mrz: 'строки на обороте', scanHow_text: 'надпись FİN',
+    scanBlankFound: 'Нашлось на фото', scanCheck: 'Проверьте и исправьте. Снимите галочку — поле не изменится.', scanNothing: 'Ничего не распознал — заполните вручную. Фото прикреплено к форме.',
+    scanRaw: 'Весь распознанный текст', scanApply: 'Подставить в форму', scanApplied: 'Подставлено полей: {n}. Проверьте форму.',
+    scanBlankNo: '№ бланка', scanName: 'Имя, фамилия', scanBirth: 'Дата рождения', scanSex: 'Пол', scanPhone: 'Телефон',
+    scanIdCaption: 'Удостоверение (FİN)', scanBlankCaption: 'Фото бланка',
+    stornoBtn: '↩️ Отменить', stornoTitle: 'Отменить ошибочную запись',
+    stornoHint: 'Запись не удаляется: в журнал добавится такая же с обратным знаком тем же днём, поэтому отчёт за тот месяц станет верным. Остаток партии вернётся к тому, что было до ошибки.',
+    stornoReason: 'Почему отменяете', stornoReasonPh: 'например: внёс дважды / не тот препарат / ошибся количеством', stornoGo: 'Отменить запись',
+    stornoNeedReason: 'Напишите причину.', stornoDone: 'Отменено записей: {n}.', closedReasonLbl: 'Месяц закрыт — причина записи в закрытый месяц',
+    E_STORNO_NOT_FOUND: 'Эту запись отменить нельзя (или она не найдена).', E_STORNO_DONE: 'Эта запись уже отменена.', E_STORNO_MIXED: 'В этой операции есть ещё списание или перемещение — её нельзя отменить частично. Исправьте ревизией партии (✅).',
+    E_STORNO_NEG: 'Из этой партии уже израсходовали: сейчас {have}, а отменить нужно {need}. Сделайте ревизию партии (✅) — поставьте, сколько лежит на самом деле.',
+    viewNoSer: '🏷 Без серии/срока', noSerEmpty: 'Все партии с серией и сроком.', noSerHint: 'Партий без серии или срока (или с заметкой): {n}. Исправьте по коробке или напишите, почему их нет.',
+    noSerFix: '✏️ Серия/срок', noSerMemo: '📝 Заметка', memoTitle: 'Заметка: почему нет серии или срока', memoLbl: 'Заметка',
+    memoQuick: 'без коробки|серия стёрта|срок не напечатан|уточню у аптеки|из старых запасов', memoSaved: 'Заметка сохранена.',
+    susp_storno: 'Отменённая запись (сторно)', suspStornoT: 'причина: {r}',
+    fDupSameBlank: 'Бланк №{b} уже есть: {p}, {d}', fDupSamePerson: 'Этот пациент (тот же FİN) уже внесён: бланк №{b}, {d}', fDupSameName: 'Похожий пациент в эти же часы: {p}, бланк №{b}, {d}',
+    fDupConfirm: 'Похоже, этот пациент уже внесён:\n{w}\n\nЕсли это другое обращение — нажмите «ОК». Если дубль — «Отмена» и откройте старую форму.',
+    fGiveWhen: 'Когда ввели (для формы задним числом)', fGiveTooOld: 'Ввод старше 30 дней — запишите через админа.',
+    susp_formDupPatient: 'Один пациент дважды за 12 часов', susp_formLate: 'Форма внесена задним числом', suspFormDupPatientT: 'бланки {b} · ещё {d}', suspFormLateT: 'бланк {b} · поступил {d}'
+  },
+  az: {
+    ffBtn: '🔎 Filtr', ffTitle: 'Formaların seçimi', ffAny: 'istənilən', ffText: 'Ad, FİN və ya blank №', ffTextPh: 'adın hissəsi, FİN, nömrə', ffStatus: 'Status',
+    ffAgeMin: 'Yaş, -dan', ffAgeMax: 'Yaş, -dək', ffTriage: 'Triaj', ffArrType: 'Nə ilə gəlib', ffArrFrom: 'Haradan', ffOutcome: 'Nəticə',
+    ffDx: 'Diaqnoz / şikayət', ffDxPh: 'sözün hissəsi', ffDoctor: 'Həkim', ffDrug: 'Təyin edilmiş dərman', ffDrugPh: 'məsələn: ketorolak', ffDrugGiven: 'yalnız vurulubsa',
+    ffAllergy: 'Allergiya', ffYes: 'var', ffNo: 'yox', ffFlag: 'Qeyd', ffChronic: 'Xroniki', ffNoBlank: 'blank nömrəsiz', ffNoFin: 'FİN-siz',
+    ffClear: 'Sıfırla', ffFound: 'Tapıldı: {n} · {a}–{b}', ffOffline: 'şəbəkəsiz — yalnız telefondakı formalar', ffNone: 'göstərilməyib', ffApplied: 'seçim: {n}',
+    chArrType: 'Nə ilə gəliblər', chArrFrom: 'Haradan gətirilib', chSex: 'Cins', chAge: 'Yaş', chDoctorF: 'Həkimlər', chDx: 'Tez-tez diaqnozlar', chDrugsGiven: 'Vurulan dərmanlar (forma, mötərizədə — ədəd)',
+    ffSumTotal: 'Cəmi müraciət', ffSumClosed: 'bağlanıb {n}',
+    themeLbl: 'Görünüş', themeAuto: 'Telefondakı kimi', themeLight: '☀️ İşıqlı', themeDark: '🌙 Tünd',
+    scanIdBtn: 'Şəxsiyyət vəsiqəsindən FİN (foto)', scanBlankBtn: '📄 Blankın və ya vəsiqənin fotosundan doldur', scanReceiptBtn: 'Çeki tanı (mətn)',
+    scanIdTitle: 'Vəsiqə oxunur…', scanBlankTitle: 'Foto oxunur…', ocrLoading: 'Tanıma yüklənir…', ocrReading: 'Tanınır:',
+    ocrFirstTime: 'İlk dəfə internet lazımdır (5–9 MB yüklənir), sonra telefonun yaddaşından işləyir.', ocrNoNet: 'Tanıma yüklənmədi — internet lazımdır (yalnız ilk dəfə).',
+    scanIdFail: 'FİN oxunmadı. Düz və iri çəkin: arxa tərəf («<<<» olan üç sətir) və ya «FİN» olan ön tərəf, parıltısız.',
+    scanIdFound: 'Vəsiqədə tapıldı ({how})', scanHow_barcode: 'barkod', scanHow_mrz: 'arxa tərəfdəki sətirlər', scanHow_text: 'FİN yazısı',
+    scanBlankFound: 'Fotoda tapıldı', scanCheck: 'Yoxlayın və düzəldin. İşarəni götürsəniz — sahə dəyişməyəcək.', scanNothing: 'Heç nə tanınmadı — əl ilə doldurun. Foto formaya əlavə olunub.',
+    scanRaw: 'Tanınan bütün mətn', scanApply: 'Formaya yaz', scanApplied: 'Yazılan sahələr: {n}. Formanı yoxlayın.',
+    scanBlankNo: 'Blank №', scanName: 'Ad, soyad', scanBirth: 'Doğum tarixi', scanSex: 'Cins', scanPhone: 'Telefon',
+    scanIdCaption: 'Şəxsiyyət vəsiqəsi (FİN)', scanBlankCaption: 'Blankın fotosu',
+    stornoBtn: '↩️ Ləğv et', stornoTitle: 'Səhv yazını ləğv et',
+    stornoHint: 'Yazı silinmir: jurnala eyni gündə əks işarəli yazı əlavə olunur, ona görə həmin ayın hesabatı düzgün olacaq. Partiyanın qalığı səhvdən əvvəlki vəziyyətə qayıdacaq.',
+    stornoReason: 'Niyə ləğv edirsiniz', stornoReasonPh: 'məsələn: iki dəfə yazılıb / başqa dərman / say səhvdir', stornoGo: 'Yazını ləğv et',
+    stornoNeedReason: 'Səbəbi yazın.', stornoDone: 'Ləğv edilən yazılar: {n}.', closedReasonLbl: 'Ay bağlıdır — bağlı aya yazının səbəbi',
+    E_STORNO_NOT_FOUND: 'Bu yazını ləğv etmək olmaz (və ya tapılmadı).', E_STORNO_DONE: 'Bu yazı artıq ləğv edilib.', E_STORNO_MIXED: 'Bu əməliyyatda silinmə və ya köçürmə də var — onu qismən ləğv etmək olmaz. Partiyanın təftişi ilə düzəldin (✅).',
+    E_STORNO_NEG: 'Bu partiyadan artıq istifadə olunub: indi {have}, ləğv üçün {need} lazımdır. Partiyanın təftişini edin (✅) — faktiki nə qədər var, onu yazın.',
+    viewNoSer: '🏷 Seriyasız/müddətsiz', noSerEmpty: 'Bütün partiyaların seriyası və müddəti var.', noSerHint: 'Seriyası və ya müddəti olmayan (və ya qeydli) partiyalar: {n}. Qutuya görə düzəldin və ya niyə olmadığını yazın.',
+    noSerFix: '✏️ Seriya/müddət', noSerMemo: '📝 Qeyd', memoTitle: 'Qeyd: niyə seriya və ya müddət yoxdur', memoLbl: 'Qeyd',
+    memoQuick: 'qutusuz|seriya silinib|müddət yazılmayıb|aptekdən dəqiqləşdirəcəyəm|köhnə ehtiyatdan', memoSaved: 'Qeyd saxlanıldı.',
+    susp_storno: 'Ləğv edilmiş yazı (storno)', suspStornoT: 'səbəb: {r}',
+    fDupSameBlank: '№{b} blank artıq var: {p}, {d}', fDupSamePerson: 'Bu pasiyent (eyni FİN) artıq daxil edilib: blank №{b}, {d}', fDupSameName: 'Eyni saatlarda oxşar pasiyent: {p}, blank №{b}, {d}',
+    fDupConfirm: 'Görünür, bu pasiyent artıq daxil edilib:\n{w}\n\nBaşqa müraciətdirsə — «OK». Dublikatdırsa — «Ləğv» və köhnə formanı açın.',
+    fGiveWhen: 'Nə vaxt vurulub (keçmiş tarixli forma üçün)', fGiveTooOld: '30 gündən köhnə — admin vasitəsilə yazın.',
+    susp_formDupPatient: 'Bir pasiyent 12 saat ərzində iki dəfə', susp_formLate: 'Forma keçmiş tarixlə daxil edilib', suspFormDupPatientT: 'blanklar {b} · həm də {d}', suspFormLateT: 'blank {b} · gəlib {d}'
+  }
+};
+Object.assign(I18N.ru, I18N_V11.ru);
+Object.assign(I18N.az, I18N_V11.az);
+
+/* =====================================================================
+ * v11: два написания — латиница/азербайджанский и русский, второе в скобках.
+ *  Фирма: «KETONAL (Кетонал)», «Но-шпа (NO-ŞPA)»; если фирма — это и есть МНН, в скобках русское МНН:
+ *  «SİPROFLOKSASİN (Ципрофлоксацин)». Вещество: «Дротаверин (Drotaverine)».
+ *  Только показ: в базе название и МНН хранятся как есть (ключи карточек и группировка не меняются).
+ * ===================================================================== */
+const AZ_RU = { a: 'а', b: 'б', c: 'дж', ç: 'ч', d: 'д', e: 'е', ə: 'е', f: 'ф', g: 'г', ğ: 'г', h: 'г', x: 'х', ı: 'ы', i: 'и', j: 'ж', k: 'к', q: 'г', l: 'л', m: 'м', n: 'н', o: 'о', ö: 'ё', p: 'п', r: 'р', s: 'с', ş: 'ш', t: 'т', u: 'у', ü: 'ю', v: 'в', y: 'й', z: 'з', w: 'в' };
+const RU_AZ = { а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'yo', ж: 'j', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'x', ц: 'ts', ч: 'ç', ш: 'ş', щ: 'ş', ъ: '', ы: 'ı', ь: '', э: 'e', ю: 'yu', я: 'ya', і: 'i', ї: 'yi', є: 'ye', ґ: 'q' };
+function titleCase(s) { return String(s).toLowerCase().replace(/(^|[\s\-(/])([^\s\-(/])/g, (m, a, b) => a + b.toUpperCase()); }
+function azToRu(s) {
+  // «İ» есть — значит, «I» без точки (ı); написано обычными латинскими заглавными — «I» это и
+  const raw = String(s || '');
+  let v = (/İ/.test(raw) ? raw.replace(/İ/g, 'i').replace(/I/g, 'ı') : raw.replace(/İ/g, 'i')).toLowerCase().replace(/i̇/g, 'i');
+  v = v.replace(/ts/g, 'ц').replace(/sh/g, 'ш').replace(/ch/g, 'ч').replace(/kh/g, 'х').replace(/ph/g, 'ф').replace(/ya/g, 'я').replace(/yu/g, 'ю').replace(/yo/g, 'ё').replace(/(^|[\s-])ye/g, '$1е');
+  v = v.replace(/(^|[\s\-(])e/g, '$1э'); // начальное «е» в лекарственных названиях — «э» (Etamzilat = Этамзилат)
+  let out = '';
+  for (const ch of v) out += AZ_RU[ch] !== undefined ? AZ_RU[ch] : ch;
+  return titleCase(out.replace(/ий(?=$|[\s-])/g, 'ий'));
+}
+function ruToAz(s) {
+  let out = '';
+  for (const ch of String(s || '').toLowerCase()) out += RU_AZ[ch] !== undefined ? RU_AZ[ch] : ch;
+  return out.toUpperCase().replace(/I/g, 'İ').replace(/ı/gi, 'I');
+}
+const isCyr = s => /[а-яёіїєґ]/i.test(String(s || ''));
+const ALT_MEMO = new Map();
+/** Второе написание названия (без скобок) или ''. */
+function altName(name, substance) {
+  const key = S.lang + '|' + name + '|' + (substance || '');
+  if (ALT_MEMO.has(key)) return ALT_MEMO.get(key);
+  let alt = '';
+  const sk = skel(name);
+  if (isCyr(name)) {
+    // по-русски («Но-шпа», «Кальция глюконат») — в скобках так, как в реестре АР; нет в реестре — без скобок
+    const sup = S.supBy && S.supBy[sk];
+    if (sup && sup.length) { ALT_MEMO.set(key, sup[0].az); return sup[0].az; }
+    let reg = S.catBy && S.catBy[sk];
+    if ((!reg || !reg.length) && S.cat) { const q = qk(name); const e = q.length >= 5 && S.cat.find(x => x.qb === q); if (e) reg = [e]; }
+    alt = reg && reg.length ? reg[0].b : '';
+  } else if (name && S.supBy && S.supBy[sk] && S.supBy[sk][0].skAz === sk) {
+    alt = S.supBy[sk][0].ru; // «Şpris» → (Шприц)
+  } else if (name && S.lang !== 'az') {
+    // фирма = МНН («SİPROFLOKSASİN» = ципрофлоксацин): в скобках русское МНН из справочника
+    const reg = S.catBy && S.catBy[sk];
+    const inn = reg && reg.length ? reg[0].inn : '';
+    const ruSub = (refSubOf(name) || {}).s || (isCyr(substance) ? substance : '');
+    const generic = inn && inn.indexOf('+') === -1 && qkeyEn(inn).slice(0, 6) === qk(name).slice(0, 6);
+    alt = generic && ruSub ? ruSub : azToRu(name);
+  }
+  if (alt && skel(alt) === sk && !isCyr(name) === !isCyr(alt)) alt = '';
+  if (ALT_MEMO.size > 4000) ALT_MEMO.clear();
+  ALT_MEMO.set(key, alt);
+  return alt;
+}
+/** Второе написание МНН: русское ↔ международное. */
+function altSub(sub, name) {
+  if (!sub) return '';
+  if (isCyr(sub)) {
+    const reg = S.catBy && name ? S.catBy[skel(name)] : null;
+    if (reg && reg.length && reg[0].inn && reg[0].inn.indexOf('+') === -1) return catInnName(reg[0].inn);
+    const q = qk(sub);
+    const hit = S.catInns && S.catInns.find(x => x.q === q || (q.length >= 6 && x.q.startsWith(q)));
+    return hit ? hit.s : '';
+  }
+  if (S.lang === 'az') return '';
+  const r = refSubOf(name) || refBySubstance(sub);
+  return r && isCyr(r.s) ? r.s : '';
+}
+function nameWithAlt(name, substance) { const a = altName(name, substance); return a ? name + ' (' + a + ')' : name; }
+function subWithAlt(sub, name) { const a = altSub(sub, name); return a ? sub + ' (' + a + ')' : sub; }
+/** Для карточки: «KETONAL <span>(Кетонал)</span>» — второе написание тише. */
+function nameHtml(it) { const a = altName(it.name, it.substance); return esc(it.name) + (a ? ' <span class="alt">(' + esc(a) + ')</span>' : ''); }
+(function () {
+  const st = document.createElement('style');
+  st.textContent = '.alt{font-weight:400;color:var(--sub);font-size:.92em}';
+  document.head.appendChild(st);
+})();
+
+/* =====================================================================
+ * v11: исправление ошибок на складе.
+ *  — «↩️ Отменить запись» (сторно) для ошибочного прихода, начального остатка и поправок ревизии — из истории карточки;
+ *  — «🏷 Без серии/срока»: все партии без серии или срока, исправить или оставить заметку «почему нет».
+ * ===================================================================== */
+const STORNO_OK = ['RECEIVE', 'RECEIVE_HIST', 'OPENING', 'REVISION', 'REVISION_FOUND', 'AUDIT'];
+function isStornoRow(r) { return /^Сторно/.test(String(r.comment || '')); }
+/** Кнопка «отменить» под строкой истории — только для админа (право «редактировать»), только один раз. */
+function stornoBtnHtml(r, done) {
+  if (!can('edit') || !r.opId || !r.delta || STORNO_OK.indexOf(r.type) === -1 || isStornoRow(r) || (done && done[r.opId])) return '';
+  const desc = opName(r.type) + ' · ' + (r.itemName || '') + ' ' + (r.dosage || '') + ' ' + (r.delta > 0 ? '+' : '') + r.delta + ' · ' + fmtDate(String(r.time).slice(0, 10));
+  return ' <button class="btn small ghost" style="padding:2px 8px;min-height:0" data-act="stornoModal" data-op="' + esc(r.opId) + '" data-day="' + esc(r.factDate || String(r.time).slice(0, 10)) + '" data-desc="' + esc(desc) + '">' + esc(t('stornoBtn')) + '</button>';
+}
+function stornoModal(opId, day, desc) {
+  const closed = typeof monthClosed === 'function' && monthClosed(String(day || '').slice(0, 7));
+  openModal('<h3>' + esc(t('stornoTitle')) + '</h3><div class="sum" style="margin-bottom:10px">' + esc(desc) + '</div>' +
+    '<div class="muted" style="margin-bottom:10px">' + esc(t('stornoHint')) + '</div>' +
+    '<div class="field"><label>' + esc(t('stornoReason')) + '</label><input id="stReason" maxlength="200" placeholder="' + esc(t('stornoReasonPh')) + '"></div>' +
+    (closed ? '<div class="field"><label>' + esc(t('closedReasonLbl')) + '</label><input id="stClosed" maxlength="200"></div>' : '') +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn danger" data-act="stornoGo" data-op="' + esc(opId) + '">' + esc(t('stornoGo')) + '</button></div>');
+  setTimeout(() => { const i = $('#stReason'); if (i) i.focus(); }, 50);
+}
+async function stornoGo(btn, opId) {
+  const reason = $('#stReason').value.trim();
+  if (!reason) { toast(t('stornoNeedReason'), 'bad'); return; }
+  const p = { targetOpId: opId, reason };
+  if ($('#stClosed')) { p.closedReason = $('#stClosed').value.trim(); if (!p.closedReason) { toast(t('stornoNeedReason'), 'bad'); return; } }
+  let r = null;
+  try { r = await busy(btn, () => rpcA('storno', p, { op: true, opId: newOpId() }), true); }
+  catch (e) {
+    // часть операции — в закрытом месяце: спросим причину и дадим нажать ещё раз
+    if (e && e.res && e.res.code === 'E_MONTH_CLOSED' && !$('#stClosed')) {
+      const box = document.createElement('div'); box.className = 'field';
+      box.innerHTML = '<label>' + esc(t('closedReasonLbl')) + '</label><input id="stClosed" maxlength="200">';
+      $('#stReason').closest('.field').after(box);
+    }
+    return;
+  }
+  if (!r) return;
+  closeModal();
+  toast(t('stornoDone', { n: (r.result && r.result.count) || 1 }));
+  refreshState(true);
+}
+
+/* ---------- Партии без серии или срока ---------- */
+function noSerLots() {
+  return (S.view.lots || []).filter(l => l.qty > 0 && String(l.id).indexOf('tmp_') !== 0 && (!l.series || !l.expiry || l.memo));
+}
+function noSerHtml() {
+  const lots = noSerLots();
+  if (!lots.length) return '<div class="empty">' + esc(t('noSerEmpty')) + '</div>';
+  const byItem = {};
+  lots.forEach(l => { (byItem[l.itemId] = byItem[l.itemId] || []).push(l); });
+  const canFix = can(['edit', 'revision']);
+  const items = Object.keys(byItem).map(itemById).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  return '<div class="muted" style="margin-bottom:10px">' + esc(t('noSerHint', { n: lots.length })) + '</div>' + items.map(it => '<div class="grp"><div class="brand-row"><div class="grow"><div class="nm">' + nameHtml(it) + '</div><div class="fd">' + esc(formName(it.form)) + ' · ' + esc(it.dosage) + '</div></div></div>' +
+    byItem[it.id].map(l => {
+      const miss = [!l.series ? t('noSeries') : '', !l.expiry ? t('noExpiry') : ''].filter(Boolean).join(' · ');
+      return '<div class="lot"><div><div class="loc">📍 ' + esc(locName(l.locationId)) + '</div><div class="meta">' + expMeta(l) + (miss ? ' <span class="tag amber">' + esc(miss) + '</span>' : '') + '</div>' +
+        (l.memo ? '<div class="muted" style="margin-top:4px">📝 ' + esc(l.memo) + '</div>' : '') + '</div>' +
+        '<div class="qty"><b>' + l.qty + '</b> ' + esc(unitShort(it.unit)) + '</div>' +
+        (canFix ? '<div class="btns"><button class="btn small primary" data-act="editLotModal" data-lot="' + esc(l.id) + '">' + esc(t('noSerFix')) + '</button><button class="btn small ghost" data-act="lotMemoModal" data-lot="' + esc(l.id) + '">' + esc(t('noSerMemo')) + '</button></div>' : '') + '</div>';
+    }).join('') + '</div>').join('');
+}
+function lotMemoModal(lotId) {
+  const l = (S.view.lots || []).find(x => x.id === lotId); if (!l) return;
+  const it = itemById(l.itemId) || { name: '', dosage: '' };
+  const quick = t('memoQuick').split('|');
+  openModal('<h3>' + esc(t('memoTitle')) + '</h3><div class="sum" style="margin-bottom:10px"><div><b>' + esc(it.name) + '</b> · ' + esc(it.dosage) + '</div><div>📍 ' + esc(locName(l.locationId)) + ' · ' + l.qty + '</div></div>' +
+    '<div class="chips" style="margin-bottom:8px">' + quick.map(q => '<button class="chip" data-act="memoQuick" data-v="' + esc(q) + '">' + esc(q) + '</button>').join('') + '</div>' +
+    '<div class="field"><label>' + esc(t('memoLbl')) + '</label><textarea id="lmText" maxlength="200" rows="3">' + esc(l.memo || '') + '</textarea></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="lotMemoSave" data-lot="' + esc(l.id) + '">' + esc(t('save')) + '</button></div>');
+}
+async function lotMemoSave(btn, lotId) {
+  const memo = $('#lmText').value.trim();
+  const r = await busy(btn, () => rpcA('lotMemo', { lotId, memo }, { op: true, opId: newOpId() }));
+  if (!r) return;
+  closeModal();
+  toast(t('memoSaved'));
+  refreshState(true);
+}
+
+/* ---------- Тема: авто (как в телефоне) / светлая / тёмная — на этом телефоне ---------- */
+function themeApply(v) {
+  const r = document.documentElement;
+  if (v === 'light' || v === 'dark') r.dataset.theme = v; else delete r.dataset.theme;
+}
+function themeGet() { try { return LS.get('MED_THEME') || 'auto'; } catch (e) { return 'auto'; } }
+function themeCardHtml() {
+  const cur = themeGet();
+  return '<div class="card"><div class="lbl">' + esc(t('themeLbl')) + '</div><div class="chips">' +
+    [['auto', 'themeAuto'], ['light', 'themeLight'], ['dark', 'themeDark']].map(x => '<button class="chip' + (cur === x[0] ? ' on' : '') + '" data-act="themeSet" data-v="' + x[0] + '">' + esc(t(x[1])) + '</button>').join('') + '</div></div>';
+}
+themeApply(themeGet());
+Object.assign(H, {
+  themeSet: el => { try { LS.set('MED_THEME', el.dataset.v); } catch (e) { } themeApply(el.dataset.v); $$('[data-act=themeSet]').forEach(b => b.classList.toggle('on', b === el)); }
+});
+
+/* =====================================================================
+ * v11: формы пациентов — отбор по любым полям (экран «Формы» и отчёт «По формам») и итоги:
+ * сколько поступило, на чём (вид поступления), откуда, исходы, триаж, пол, возраст, врачи, диагнозы, введённые препараты.
+ * ===================================================================== */
+const FF_FIELDS = ['status', 'sex', 'ageMin', 'ageMax', 'doctor', 'dx', 'drug', 'allergy', 'flag', 'chronic', 'preg', 'q'];
+const FF_MULTI = ['triage', 'outcome', 'arrType', 'arrFrom'];
+function ffEmpty() { return { triage: [], outcome: [], arrType: [], arrFrom: [] }; }
+function ffActive(f) {
+  if (!f) return 0;
+  let n = 0;
+  FF_FIELDS.forEach(k => { if (f[k] !== undefined && f[k] !== '') n++; });
+  FF_MULTI.forEach(k => { if (f[k] && f[k].length) n++; });
+  if (f.noBlank) n++; if (f.noFin) n++; if (f.drugGiven) n++;
+  return n;
+}
+/** Панель отбора. pfx — чтобы на одной странице могло быть две (отчёт и окно на экране форм). */
+function ffHtml(pfx, f) {
+  f = Object.assign(ffEmpty(), f || {});
+  const chips = (k, list) => '<div class="chips f-chips">' + list.map(x => '<button type="button" class="chip' + ((f[k] || []).indexOf(x[0]) !== -1 ? ' on' : '') + '" data-act="ffTog" data-pfx="' + pfx + '" data-k="' + k + '" data-v="' + esc(x[0]) + '">' + esc(fdLabel(x)) + '</button>').join('') + '</div>';
+  const sel = (k, opts) => '<select id="' + pfx + '_' + k + '"><option value="">' + esc(t('ffAny')) + '</option>' + opts.map(o => '<option value="' + esc(o[0]) + '"' + (f[k] === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('') + '</select>';
+  const txt = (k, ph) => '<input type="text" id="' + pfx + '_' + k + '" value="' + esc(f[k] || '') + '" placeholder="' + esc(ph || '') + '" maxlength="80" autocomplete="off">';
+  const fld = (lbl, body) => '<div class="field"><label>' + esc(lbl) + '</label>' + body + '</div>';
+  return '<div id="' + pfx + '_box" data-ff="' + esc(JSON.stringify({ triage: f.triage, outcome: f.outcome, arrType: f.arrType, arrFrom: f.arrFrom })) + '">' +
+    fld(t('ffText'), txt('q', t('ffTextPh'))) +
+    '<div class="grid2">' + fld(t('ffStatus'), sel('status', [['closed', t('formClosed')], ['draft', t('formDraft')]])) + fld(L(['Пол', 'Cinsi']), sel('sex', FD.sex.map(x => [x[0], fdLabel(x)]))) + '</div>' +
+    '<div class="grid2">' + fld(t('ffAgeMin'), '<input id="' + pfx + '_ageMin" type="number" inputmode="numeric" min="0" max="130" value="' + esc(f.ageMin === undefined ? '' : f.ageMin) + '">') + fld(t('ffAgeMax'), '<input id="' + pfx + '_ageMax" type="number" inputmode="numeric" min="0" max="130" value="' + esc(f.ageMax === undefined ? '' : f.ageMax) + '">') + '</div>' +
+    fld(t('ffTriage'), chips('triage', FD.triage)) +
+    fld(t('ffArrType'), chips('arrType', FD.arrType)) +
+    fld(t('ffArrFrom'), chips('arrFrom', FD.arrFrom)) +
+    fld(t('ffOutcome'), chips('outcome', FD.outcome.map(x => [x[0], fdLabel(x).slice(0, 40), fdLabel(x).slice(0, 40)]))) +
+    '<div class="grid2">' + fld(t('ffDx'), txt('dx', t('ffDxPh'))) + fld(t('ffDoctor'), txt('doctor')) + '</div>' +
+    fld(t('ffDrug'), txt('drug', t('ffDrugPh')) + '<label class="check"><input type="checkbox" id="' + pfx + '_drugGiven"' + (f.drugGiven ? ' checked' : '') + '><span>' + esc(t('ffDrugGiven')) + '</span></label>') +
+    '<div class="grid2">' + fld(t('ffAllergy'), sel('allergy', [['yes', t('ffYes')], ['no', t('ffNo')]])) + fld(t('ffFlag'), sel('flag', FD.flags.map(x => [x[0], fdLabel(x)]))) + '</div>' +
+    '<div class="grid2">' + fld(t('ffChronic'), sel('chronic', (FD.chronic || []).map(x => [x[0], fdLabel(x)]))) + fld(L(['Беременность', 'Hamiləlik']), sel('preg', (FD.preg || []).map(x => [x[0], fdLabel(x)]))) + '</div>' +
+    '<label class="check"><input type="checkbox" id="' + pfx + '_noBlank"' + (f.noBlank ? ' checked' : '') + '><span>' + esc(t('ffNoBlank')) + '</span></label>' +
+    '<label class="check"><input type="checkbox" id="' + pfx + '_noFin"' + (f.noFin ? ' checked' : '') + '><span>' + esc(t('ffNoFin')) + '</span></label>' +
+    '</div>';
+}
+function ffRead(pfx) {
+  const box = $('#' + pfx + '_box');
+  if (!box) return null;
+  const multi = JSON.parse(box.dataset.ff || '{}');
+  const f = Object.assign(ffEmpty(), multi);
+  FF_FIELDS.forEach(k => { const el = $('#' + pfx + '_' + k); if (el) f[k] = el.value.trim(); });
+  ['noBlank', 'noFin', 'drugGiven'].forEach(k => { const el = $('#' + pfx + '_' + k); f[k] = !!(el && el.checked); });
+  return f;
+}
+function ffTog(el) {
+  const box = $('#' + el.dataset.pfx + '_box');
+  if (!box) return;
+  const m = JSON.parse(box.dataset.ff || '{}');
+  const k = el.dataset.k, v = el.dataset.v;
+  m[k] = m[k] || [];
+  const i = m[k].indexOf(v);
+  if (i === -1) m[k].push(v); else m[k].splice(i, 1);
+  box.dataset.ff = JSON.stringify(m);
+  el.classList.toggle('on', i === -1);
+}
+
+/* ---------- в отчётах: отбор для «По формам» ---------- */
+function ffRepEnsure(show) {
+  let w = $('#repFormsFlt');
+  if (!w && show) {
+    const per = $('#repPeriod');
+    if (!per) return;
+    w = document.createElement('details');
+    w.id = 'repFormsFlt';
+    w.className = 'card f-sec';
+    w.innerHTML = '<summary>' + esc(t('ffTitle')) + '</summary><div class="f-body">' + ffHtml('rf', S.ffRep) + '<button class="btn small ghost" data-act="ffRepClear">' + esc(t('ffClear')) + '</button></div>';
+    per.parentNode.insertBefore(w, per.nextSibling);
+  }
+  if (w) w.classList.toggle('hidden', !show);
+}
+
+/* ---------- на экране «Формы»: окно отбора ---------- */
+function ffModal() {
+  const f = (S.fFilt && S.fFilt.f) || ffEmpty();
+  const to = (S.fFilt && S.fFilt.to) || bakuToday();
+  const from = (S.fFilt && S.fFilt.from) || addDaysStr(to, -30);
+  openModal('<h3>' + esc(t('ffTitle')) + '</h3><div class="grid2"><div class="field"><label>' + esc(t('from')) + '</label><input type="date" id="ffFrom" value="' + esc(from) + '"></div><div class="field"><label>' + esc(t('to')) + '</label><input type="date" id="ffTo" value="' + esc(to) + '"></div></div>' +
+    ffHtml('fm', f) +
+    '<div class="acts"><button class="btn ghost" data-act="ffReset">' + esc(t('ffClear')) + '</button><button class="btn primary" data-act="ffGo">' + esc(t('show')) + '</button></div>');
+}
+/** Без связи: отбираем среди форм на телефоне по тому, что о них известно. */
+function ffLocal(rows, f, from, to) {
+  const sk = s => skel(String(s || '').toLowerCase().replace(/ə/g, 'a')).replace(/e/g, 'a');
+  return rows.filter(x => {
+    const day = String(x.arrivedAt || x.createdAt).slice(0, 10);
+    if (day < from || day > to) return false;
+    if (f.status && (f.status === 'closed' ? x.status !== 'closed' : x.status === 'closed')) return false;
+    if (f.triage.length && f.triage.indexOf(x.triage) === -1) return false;
+    if (f.outcome.length && f.outcome.indexOf(x.outcome) === -1) return false;
+    if (f.sex && x.sex !== f.sex) return false;
+    const age = ageOf(x.birthDate, x.arrivedAt || x.createdAt);
+    if (f.ageMin !== '' && !(age !== '' && age >= Number(f.ageMin))) return false;
+    if (f.ageMax !== '' && !(age !== '' && age <= Number(f.ageMax))) return false;
+    if (f.dx && sk(x.dx + ' ' + (x.compl || '')).indexOf(sk(f.dx)) === -1) return false;
+    if (f.allergy === 'yes' && !(x.allergy && x.allergy !== '—')) return false;
+    if (f.allergy === 'no' && x.allergy && x.allergy !== '—') return false;
+    if (f.noBlank && x.blankNo) return false;
+    if (f.noFin && x.fin) return false;
+    if (f.q && (sk(x.patient) + '|' + String(x.fin).toLowerCase() + '|' + String(x.blankNo).toLowerCase()).indexOf(sk(f.q)) === -1) return false;
+    return true;
+  });
+}
+async function ffGo(btn) {
+  const f = ffRead('fm');
+  const from = $('#ffFrom').value, to = $('#ffTo').value;
+  if (!from || !to || from > to) return toast(t('E_BAD_PERIOD'), 'bad');
+  S.fFilt = { f, from, to };
+  let rows = ffLocal(fListRows(), f, from, to), total = rows.length, offline = true;
+  try {
+    const r = await busy(btn, () => rpc('formsFind', { from, to, f }));
+    if (r && r.ok) { const have = {}; r.rows.forEach(x => { have[x.id] = 1; }); rows = r.rows.concat(rows.filter(x => !have[x.id] && x.local)); total = r.total; offline = false; }
+  } catch (e) { }
+  closeModal();
+  S.fQ = '';
+  S.fSearch = { q: '', rows, filter: true, total, offline };
+  renderFormsList();
+}
+function ffBarHtml() {
+  const n = S.fFilt ? ffActive(S.fFilt.f) : 0;
+  const on = S.fSearch && S.fSearch.filter;
+  return '<div class="row" style="margin:-4px 0 10px;gap:6px"><button class="btn small ' + (on ? 'primary' : 'ghost') + '" data-act="ffModal">' + esc(t('ffBtn')) + (n ? ' (' + n + ')' : '') + '</button>' +
+    (on ? '<span class="muted grow">' + esc(t('ffFound', { n: S.fSearch.total, a: fmtDate(S.fFilt.from), b: fmtDate(S.fFilt.to) })) + (S.fSearch.offline ? ' · ' + esc(t('ffOffline')) : '') + '</span><button class="btn small ghost" data-act="ffOff">✕</button>' : '') + '</div>';
+}
+
+/* ---------- итоги отчёта «По формам» ---------- */
+function ffStatsCharts(r, chart, th, W) {
+  const s = r.stats;
+  if (!s) return;
+  const lbl = (list, k) => { if (k === '—') return t('ffNone'); const x = fdFind(list, k); return x ? fdLabel(x) : k; };
+  const bars = (title, obj, list) => {
+    const pts = Object.keys(obj || {}).map(k => ({ label: list ? lbl(list, k) : (k === '—' ? t('ffNone') : k), value: obj[k] })).filter(x => x.value).sort((a, b) => b.value - a.value).slice(0, 12);
+    if (pts.length) chart(title, hbarChart(pts, { th, W }));
+  };
+  bars(t('chArrType'), s.arrType, FD.arrType);
+  bars(t('chArrFrom'), s.arrFrom, FD.arrFrom);
+  bars(t('chSex'), s.sex, FD.sex);
+  bars(t('chAge'), s.age);
+  bars(t('chDoctorF'), s.doctor);
+  if (s.dx && s.dx.length) chart(t('chDx'), hbarChart(s.dx.slice(0, 12).map(x => ({ label: x.name, value: x.n })), { th, W }));
+  if (s.drugs && s.drugs.length) chart(t('chDrugsGiven'), hbarChart(s.drugs.slice(0, 15).map(x => ({ label: x.name + (x.qty ? ' (' + x.qty + ')' : ''), value: x.forms })), { th, W }));
+}
+/** Итоги текстом — в начало таблицы / WhatsApp: сколько поступило, на чём, откуда, исходы. */
+function ffStatsLines(r) {
+  const s = r.stats;
+  if (!s) return [];
+  const part = (obj, list) => Object.keys(obj || {}).sort((a, b) => obj[b] - obj[a]).map(k => (k === '—' ? t('ffNone') : (list ? (fdFind(list, k) ? fdLabel(fdFind(list, k)) : k) : k)) + ': ' + obj[k]).join('; ');
+  return [
+    [t('ffSumTotal'), s.total + ' (' + t('ffSumClosed', { n: s.closed }) + ')'],
+    [t('chArrType'), part(s.arrType, FD.arrType)],
+    [t('chArrFrom'), part(s.arrFrom, FD.arrFrom)],
+    [t('chOutcomes'), part(s.outcome, FD.outcome)],
+    [t('chTriage'), part(s.triage, FD.triage)],
+    [t('chSex'), part(s.sex, FD.sex)],
+    [t('chAge'), part(s.age)],
+    [t('chDrugsGiven'), (s.drugs || []).slice(0, 15).map(x => x.name + ': ' + x.forms + (x.qty ? ' (' + x.qty + ')' : '')).join('; ')]
+  ].filter(x => x[1]);
+}
+
+Object.assign(H, {
+  ffTog: el => ffTog(el),
+  ffModal: () => ffModal(),
+  ffGo: el => ffGo(el),
+  ffReset: () => { S.fFilt = null; ffModal(); },
+  ffOff: () => { S.fSearch = null; renderFormsList(); },
+  ffRepClear: () => { S.ffRep = null; const w = $('#repFormsFlt'); if (w) w.remove(); ffRepEnsure(true); const n = $('#repFormsFlt'); if (n) n.open = true; }
+});
+(function () {
+  const st = document.createElement('style');
+  st.textContent = '[id$="_box"] .grid2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}[id$="_box"] .grid2>.field{min-width:0}[id$="_box"] input:not([type=checkbox]),[id$="_box"] select{width:100%;box-sizing:border-box;min-width:0}';
+  document.head.appendChild(st);
+})();
+
+/* =====================================================================
+ * v11: распознавание с фото.
+ *  — FİN с удостоверения: сначала штрихкод/QR (если есть), потом машиночитаемые строки на обороте (MRZ «IDAZE…<<<»),
+ *    потом надпись «FİN» на лицевой стороне. Подходит и для старых образцов — FİN ищется по тексту. Всё — на подтверждение.
+ *  — Бланк / чек: распознаём текст и предлагаем, что подставить в форму (№ бланка, FİN, ФИО, дата рождения, пол, телефон,
+ *    номер чека, время) — каждое поле можно исправить или не подставлять. Фото прикрепляется к форме.
+ * Распознавание работает на телефоне (Tesseract). Первый раз нужен интернет — скачиваются ~5–9 МБ, дальше из памяти.
+ * ===================================================================== */
+const TESS = {
+  js: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
+  worker: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js',
+  core: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1'
+};
+const OCR_WORKERS = {};
+async function ocrWorker(langs) {
+  if (OCR_WORKERS[langs]) return OCR_WORKERS[langs];
+  if (!window.Tesseract) {
+    await loadScript(TESS.js);
+    for (let i = 0; i < 100 && !window.Tesseract; i++) await new Promise(r => setTimeout(r, 100));
+    if (!window.Tesseract) throw new Error('ocr-load');
+  }
+  OCR_WORKERS[langs] = Tesseract.createWorker(langs, 1, {
+    workerPath: TESS.worker, corePath: TESS.core,
+    logger: m => { if (m && m.status && /recogniz|load/.test(m.status) && S.ocrNote) S.ocrNote(m); }
+  });
+  OCR_WORKERS[langs].catch(() => { delete OCR_WORKERS[langs]; });
+  return OCR_WORKERS[langs];
+}
+/** Фото → серое, контрастное, не больше 2200 px по длинной стороне (быстрее и точнее). */
+async function ocrCanvas(file, rot) {
+  const img = await fileToImage(file);
+  const sc = Math.min(1, 2200 / Math.max(img.width, img.height));
+  const w = Math.round(img.width * sc), h = Math.round(img.height * sc);
+  const c = document.createElement('canvas');
+  const ctx = c.getContext('2d');
+  if (rot) { c.width = h; c.height = w; ctx.translate(h / 2, w / 2); ctx.rotate(rot * Math.PI / 180); ctx.drawImage(img, -w / 2, -h / 2, w, h); }
+  else { c.width = w; c.height = h; ctx.drawImage(img, 0, 0, w, h); }
+  const d = ctx.getImageData(0, 0, c.width, c.height);
+  const px = d.data;
+  let mn = 255, mx = 0;
+  for (let i = 0; i < px.length; i += 4) { const g = (px[i] * 299 + px[i + 1] * 587 + px[i + 2] * 114) / 1000; px[i] = g; if (g < mn) mn = g; if (g > mx) mx = g; }
+  const k = mx > mn ? 255 / (mx - mn) : 1;
+  for (let i = 0; i < px.length; i += 4) { const g = Math.max(0, Math.min(255, (px[i] - mn) * k)); px[i] = px[i + 1] = px[i + 2] = g; }
+  ctx.putImageData(d, 0, 0);
+  return c;
+}
+async function ocrText(file, langs, rot) {
+  const w = await ocrWorker(langs);
+  const c = await ocrCanvas(file, rot || 0);
+  const r = await w.recognize(c);
+  return String((r && r.data && r.data.text) || '');
+}
+
+/* ---------- FİN: штрихкод → MRZ → надпись ---------- */
+const FIN_RE = /^[0-9A-Z]{7}$/;
+function finClean(s) { return String(s || '').toUpperCase().replace(/İ/g, 'I').replace(/[^0-9A-Z<\n ]/g, ''); }
+/** Машиночитаемая зона удостоверения (3 строки по 30 знаков): ФИО, дата рождения, пол, FİN в доп. поле. */
+function parseMrz(text) {
+  const lines = String(text || '').toUpperCase().replace(/İ/g, 'I').split(/\n/).map(l => l.replace(/\s+/g, '').replace(/[«‹(\[{]/g, '<')).filter(l => (l.match(/</g) || []).length >= 2 && l.length >= 20);
+  if (!lines.length) return null;
+  const out = {};
+  const l1 = lines.find(l => /^[I1][DO0<A-Z]?[A-Z<]{3}/.test(l) && /AZE/.test(l.slice(0, 8))) || lines.find(l => /^I[A-Z<]/.test(l));
+  if (l1) {
+    const opt = l1.slice(15, 30).replace(/</g, ' ').trim();
+    const cand = opt.split(/\s+/).filter(x => FIN_RE.test(x));
+    if (cand.length) out.fin = cand[0];
+    else { const m = opt.replace(/\s+/g, '').match(/[0-9A-Z]{7}/); if (m) out.fin = m[0]; }
+    out.doc = l1.slice(5, 14).replace(/</g, '');
+  }
+  const l2 = lines.find(l => /^\d{6}[0-9<][MF<]\d{6}/.test(l.replace(/O/g, '0')));
+  if (l2) {
+    const s = l2.replace(/O/g, '0');
+    const yy = +s.slice(0, 2), mm = s.slice(2, 4), dd = s.slice(4, 6);
+    const nowY = new Date().getFullYear() % 100;
+    if (+mm >= 1 && +mm <= 12 && +dd >= 1 && +dd <= 31) out.birth = (yy > nowY ? 1900 + yy : 2000 + yy) + '-' + mm + '-' + dd;
+    if (s[7] === 'M') out.sex = 'm'; else if (s[7] === 'F') out.sex = 'f';
+  }
+  const l3 = lines.find(l => /^[A-Z]+<<[A-Z]/.test(l));
+  if (l3) {
+    const parts = l3.split('<<');
+    const sur = parts[0].replace(/</g, ' ').trim(), given = (parts[1] || '').replace(/</g, ' ').trim();
+    const cap = s => s.toLowerCase().replace(/(^|\s)\S/g, x => x.toUpperCase());
+    if (sur || given) out.name = cap([given, sur].filter(Boolean).join(' '));
+  }
+  return Object.keys(out).length ? out : null;
+}
+/** FİN по тексту: после надписи «FİN/FIN/ФИН», иначе — 7 знаков из букв и цифр (обязательно и то и то). */
+function finFromText(text) {
+  const up = String(text || '').toUpperCase().replace(/İ/g, 'I').replace(/Ф[ИI]Н/g, 'FIN');
+  const m = up.match(/F[I1L|][NH][^0-9A-Z]{0,6}([0-9A-Z]{7})(?![0-9A-Z])/);
+  if (m) return m[1];
+  const toks = (up.match(/(?:^|[^0-9A-Z])([0-9A-Z]{7})(?![0-9A-Z])/g) || []).map(x => x.replace(/^[^0-9A-Z]/, ''));
+  const good = toks.filter(x => /\d/.test(x) && /[A-Z]/.test(x) && !/^(AZE|IDAZE)/.test(x));
+  return good[0] || '';
+}
+async function readIdCard(file, onStep) {
+  // 1) штрихкод / QR (на некоторых образцах)
+  try {
+    const code = await decodeBarcode(file);
+    if (code) {
+      const mz = parseMrz(code.replace(/\r/g, '\n'));
+      if (mz && mz.fin) return Object.assign(mz, { how: 'barcode' });
+      const f = finFromText(code);
+      if (f) return { fin: f, how: 'barcode' };
+    }
+  } catch (e) { }
+  // 2) текст: машиночитаемые строки на обороте, надпись «FİN» на лицевой; если не вышло — повёрнутое фото
+  for (const rot of [0, 90, 270]) {
+    if (onStep) onStep(rot);
+    const txt = await ocrText(file, 'eng', rot);
+    const mz = parseMrz(txt);
+    if (mz && mz.fin) return Object.assign(mz, { how: 'mrz', raw: txt });
+    const f = finFromText(txt);
+    if (f) return Object.assign(mz || {}, { fin: f, how: 'text', raw: txt });
+  }
+  return null;
+}
+
+/* ---------- бланк / чек: что можно подставить в форму ---------- */
+function blankFields(text) {
+  const t0 = String(text || '');
+  const up = t0.toUpperCase().replace(/İ/g, 'I');
+  const out = {};
+  const mz = parseMrz(t0);
+  if (mz) Object.assign(out, { fin: mz.fin, pBirth: mz.birth, pSex: mz.sex, pName: mz.name });
+  if (!out.fin) { const f = finFromText(t0); if (f) out.fin = f; }
+  const bn = t0.match(/(?:№|N[o°º]\.?|NO\.?|blank|бланк)\s*[:#]?\s*([0-9]{3,10})/i);
+  if (bn) out.blankNo = bn[1];
+  const dates = [];
+  t0.replace(/\b(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4}|\d{2})\b/g, (m, d, mo, y) => { const Y = y.length === 2 ? (+y > 30 ? '19' + y : '20' + y) : y; if (+mo >= 1 && +mo <= 12 && +d >= 1 && +d <= 31) dates.push({ s: Y + '-' + String(mo).padStart(2, '0') + '-' + String(d).padStart(2, '0'), at: t0.indexOf(m) }); return m; });
+  const birthLbl = /(do[ğg]um|рожд|д\.?\s?р\.?|birth)/i;
+  const bd = dates.find(d => birthLbl.test(t0.slice(Math.max(0, d.at - 40), d.at))) || dates.find(d => d.s < String(new Date().getFullYear() - 1));
+  if (bd && !out.pBirth) out.pBirth = bd.s;
+  const tm = t0.match(/\b(\d{1,2}):(\d{2})\b/);
+  const today = dates.find(d => d !== bd);
+  if (today) out.arrivedAt = today.s + (tm ? 'T' + tm[1].padStart(2, '0') + ':' + tm[2] : '');
+  const ph = t0.replace(/[\s()-]/g, '').match(/(?:\+?994|0)(?:10|12|50|51|55|60|70|77|99)\d{7}/);
+  if (ph) out.phone = ph[0];
+  const nm = t0.match(/(?:soyad[ıi],?\s*ad[ıi]|ad[ıi],?\s*soyad[ıi]|ф\.?\s?и\.?\s?о\.?|фамилия,?\s*имя|xəstə|пациент)\s*[:\-]?\s*([A-Za-zƏəÖöÜüĞğİıŞşÇçА-Яа-яЁё]+(?:\s+[A-Za-zƏəÖöÜüĞğİıŞşÇçА-Яа-яЁё]+){1,2})/i);
+  if (nm && !out.pName) out.pName = nm[1].trim();
+  if (/\b(ki[şs]i|муж)/i.test(t0) && !out.pSex) out.pSex = 'm';
+  else if (/\b(qad[ıi]n|жен)/i.test(t0) && !out.pSex) out.pSex = 'f';
+  const rc = up.match(/(?:FISKAL|ФИСКАЛ|ÇEK|CHEK|ЧЕК)[^0-9A-Z]{0,20}([0-9A-Z]{6,20})/);
+  if (rc) out.receipt = rc[1];
+  Object.keys(out).forEach(k => { if (!out[k]) delete out[k]; });
+  return out;
+}
+const SCAN_FIELDS = [['blankNo', 'scanBlankNo'], ['pName', 'scanName'], ['fin', 'FİN'], ['pBirth', 'scanBirth'], ['pSex', 'scanSex'], ['arrivedAt', 'fArrivedAt'], ['receipt', 'fReceipt']];
+/** Окно «Что нашлось на фото»: каждое поле можно исправить или снять галочку. */
+function scanReviewModal(found, title, raw) {
+  S.scanFound = found;
+  const rows = SCAN_FIELDS.filter(f => found[f[0]] !== undefined).map(f => {
+    const k = f[0], v = found[k];
+    const lbl = f[1] === 'FİN' ? 'FİN' : t(f[1]);
+    const input = k === 'pSex' ? '<select id="sc_' + k + '">' + FD.sex.map(x => '<option value="' + x[0] + '"' + (x[0] === v ? ' selected' : '') + '>' + esc(fdLabel(x)) + '</option>').join('') + '</select>'
+      : '<input type="' + (k === 'pBirth' ? 'date' : k === 'arrivedAt' ? 'datetime-local' : 'text') + '" id="sc_' + k + '" value="' + esc(v) + '"' + (k === 'fin' ? ' maxlength="7" autocapitalize="characters"' : '') + '>';
+    return '<div class="field"><label class="check" style="margin:0 0 4px"><input type="checkbox" id="scOn_' + k + '" checked><span>' + esc(lbl) + '</span></label>' + input + '</div>';
+  }).join('');
+  openModal('<h3>' + esc(title) + '</h3>' + (rows ? '<div class="muted" style="margin-bottom:10px">' + esc(t('scanCheck')) + '</div>' + rows : '<div class="info">' + esc(t('scanNothing')) + '</div>') +
+    (raw ? '<details class="card f-sec" style="margin-top:8px"><summary>' + esc(t('scanRaw')) + '</summary><pre style="white-space:pre-wrap;font-size:12px;max-height:200px;overflow:auto">' + esc(String(raw).slice(0, 3000)) + '</pre></details>' : '') +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button>' + (rows ? '<button class="btn primary" data-act="scanApply">' + esc(t('scanApply')) + '</button>' : '') + '</div>');
+}
+function scanApply() {
+  if (!S.fv || !S.scanFound) return closeModal();
+  const p = {};
+  SCAN_FIELDS.forEach(f => {
+    const k = f[0];
+    const on = $('#scOn_' + k), el = $('#sc_' + k);
+    if (!on || !on.checked || !el) return;
+    let v = el.value.trim();
+    if (k === 'fin') v = v.toUpperCase();
+    if (v) p[k] = v;
+  });
+  closeModal();
+  if (!Object.keys(p).length) return;
+  fSet(p, true);
+  fFlush();
+  fHistoryCheck(fData(S.fv.id));
+  toast(t('scanApplied', { n: Object.keys(p).length }));
+}
+function ocrProgress(prefix) {
+  S.ocrNote = m => { if (m.status === 'recognizing text') toastProgress(prefix + ' ' + Math.round((m.progress || 0) * 100) + '%'); else toastProgress(t('ocrLoading')); };
+}
+function toastProgress(msg) { const box = $('#ocrProg'); if (box) box.textContent = msg; }
+function busyScanModal(title) {
+  openModal('<h3>' + esc(title) + '</h3><div class="muted" id="ocrProg">' + esc(t('ocrLoading')) + '</div><div class="muted" style="margin-top:8px">' + esc(t('ocrFirstTime')) + '</div>');
+}
+async function fScanIdFile(file) {
+  busyScanModal(t('scanIdTitle'));
+  ocrProgress(t('ocrReading'));
+  let r = null;
+  try { r = await readIdCard(file); } catch (e) { closeModal(); return toast(t(/ocr-load|load/.test(e.message) ? 'ocrNoNet' : 'scanIdFail'), 'bad', null, 8000); }
+  S.ocrNote = null;
+  if (!r || !r.fin) { closeModal(); return toast(t('scanIdFail'), 'bad', null, 9000); }
+  fAddPhotoSafe(file, 'doc', t('scanIdCaption'));
+  scanReviewModal({ fin: r.fin, pName: r.name, pBirth: r.birth, pSex: r.sex }, t('scanIdFound', { how: t('scanHow_' + r.how) }), r.raw);
+  Object.keys(S.scanFound).forEach(k => { if (!S.scanFound[k]) { const el = $('#scOn_' + k); if (el) el.closest('.field').remove(); } });
+}
+async function fScanBlankFile(file) {
+  busyScanModal(t('scanBlankTitle'));
+  ocrProgress(t('ocrReading'));
+  let txt = '';
+  try { txt = await ocrText(file, 'aze+rus+eng'); } catch (e) { closeModal(); return toast(t('ocrNoNet'), 'bad', null, 8000); }
+  S.ocrNote = null;
+  let found = blankFields(txt);
+  // штрихкод/QR чека — точнее, чем текст
+  try { const code = await decodeBarcode(file); if (code) found.receipt = String(code).trim().slice(0, 120); } catch (e) { }
+  fAddPhotoSafe(file, S.scanKind === 'receipt' ? 'receipt' : 'doc', S.scanKind === 'receipt' ? '' : t('scanBlankCaption'));
+  scanReviewModal(found, t('scanBlankFound'), txt);
+}
+function fAddPhotoSafe(file, kind, cap) { try { if (typeof fAddPhoto === 'function') fAddPhoto(file, kind, cap); } catch (e) { } }
+
+(function () {
+  const mk = id => { const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; i.capture = 'environment'; i.id = id; i.className = 'hidden'; document.body.appendChild(i); return i; };
+  mk('fileScanId').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) fScanIdFile(f); });
+  mk('fileScanBlank').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) fScanBlankFile(f); });
+})();
+Object.assign(H, {
+  fScanId: () => { const f = $('#fileScanId'); f.value = ''; f.click(); },
+  fScanBlank: el => { S.scanKind = el && el.dataset.kind || 'blank'; const f = $('#fileScanBlank'); f.value = ''; f.click(); },
+  scanApply: () => scanApply()
+});
 
 
 function init() {
