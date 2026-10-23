@@ -15105,7 +15105,8 @@ async function aiSend() {
   const inp = $('#aiIn'); if (!inp || ai.busy) return;
   const txt = inp.value.trim(); if (!txt) return;
   inp.value = '';
-  const pre = ai.done.length ? '[Что произошло с предложениями: ' + ai.done.join('; ') + ']\n' : '';
+  const ctx = typeof window.aiCtxFn === 'function' ? window.aiCtxFn() : '';
+  const pre = (ctx ? ctx + '\n' : '') + (ai.done.length ? '[Что произошло с предложениями: ' + ai.done.join('; ') + ']\n' : '');
   ai.done = [];
   ai.msgs.push({ role: 'user', content: [{ type: 'text', text: pre + txt }] });
   ai.view.push({ k: 'u', text: txt });
@@ -15895,6 +15896,163 @@ const DOC_TPL = {
         ['note', 'ta', 'Пояснение для пациента', 'Pasiyent üçün qeyd', { max: 600 }]
       ]]
     ]
+  },
+  refusal: {
+    ic: '✋', ru: 'Отказ от медицинского вмешательства', az: 'Tibbi müdaxilədən imtina', no: 'regNo',
+    head: 'TİBBİ MÜDAXİLƏDƏN (MÜAYİNƏDƏN, MÜALİCƏDƏN, HOSPİTALİZASİYADAN) İMTİNA',
+    signs: [['Pasiyent (və ya qanuni nümayəndə) / Пациент (или законный представитель)'], ['Həkim / Врач'], ['Şahid / Свидетель']],
+    secs: [
+      ['main', 'Кто и когда', 'Kim və nə vaxt', [
+        ['regNo', 't', '№ записи', 'Qeydin №-si', { max: 30 }], ['inst', 't', 'Медицинское учреждение / медпункт', 'Tibb müəssisəsi', { req: 1, max: 150 }],
+        ['at', 'dt', 'Дата и время', 'Tarix və saat', { req: 1 }]
+      ].concat(DOC_PATIENT.filter(f => f[0] !== 'sex')).concat([
+        ['agent', 't', 'Законный представитель (если пациент несовершеннолетний / недееспособен): ФИО, кем приходится', 'Qanuni nümayəndə', { pii: 1, max: 150 }]
+      ])],
+      ['what', 'От чего отказ', 'Nədən imtina', [
+        ['dxIcd', 'icd', 'Диагноз (предварительный): МКБ-10', 'Diaqnoz: XBT-10', {}], ['dx', 't', 'Диагноз', 'Diaqnoz', { max: 200 }],
+        ['offered', 'ta', 'Что предложено (осмотр, обследование, лечение, госпитализация, эвакуация — конкретно)', 'Nə təklif olunub', { req: 1, max: 1500 }],
+        ['scope', 'sel', 'Отказ', 'İmtina', { req: 1, o: [['full', 'Полный', 'Tam'], ['partial', 'Частичный', 'Qismən']] }],
+        ['risks', 'ta', 'Разъяснены возможные последствия отказа (конкретно: осложнения, угроза жизни)', 'İmtinanın mümkün nəticələri izah edilib', { req: 1, max: 1500 }],
+        ['alternatives', 'ta', 'Предложенные альтернативы / что делать при ухудшении', 'Alternativlər', { max: 1000 }],
+        ['capacity', 'chk', 'Пациент в сознании, ориентирован, понимает последствия своего решения', 'Pasiyent huşundadır, qərarının nəticələrini anlayır', { req: 1 }],
+        ['words', 'ta', 'Слова пациента (причина отказа — по возможности дословно)', 'Pasiyentin sözləri', { max: 800 }]
+      ]],
+      ['sign', 'Подписи', 'İmzalar', [
+        ['doctor', 't', 'Врач (ФИО)', 'Həkim', { req: 1, max: 80 }], ['witness', 't', 'Свидетель (ФИО, должность)', 'Şahid', { pii: 1, max: 120 }],
+        ['patientRefusedSign', 'chk', 'Пациент отказался подписать (подтверждает свидетель)', 'Pasiyent imzalamaqdan imtina edib', {}]
+      ]]
+    ]
+  },
+  consent: {
+    ic: '🤝', ru: 'Информированное согласие', az: 'Məlumatlandırılmış razılıq', no: 'regNo',
+    head: 'TİBBİ MÜDAXİLƏYƏ MƏLUMATLANDIRILMIŞ KÖNÜLLÜ RAZILIQ',
+    signs: [['Pasiyent (və ya qanuni nümayəndə) / Пациент (или законный представитель)'], ['Həkim / Врач']],
+    secs: [
+      ['main', 'Кто и когда', 'Kim və nə vaxt', [
+        ['regNo', 't', '№ записи', 'Qeydin №-si', { max: 30 }], ['inst', 't', 'Медицинское учреждение / медпункт', 'Tibb müəssisəsi', { req: 1, max: 150 }],
+        ['at', 'dt', 'Дата и время', 'Tarix və saat', { req: 1 }]
+      ].concat(DOC_PATIENT.filter(f => f[0] !== 'sex')).concat([
+        ['agent', 't', 'Законный представитель: ФИО, кем приходится', 'Qanuni nümayəndə', { pii: 1, max: 150 }]
+      ])],
+      ['what', 'Вмешательство', 'Müdaxilə', [
+        ['procedure', 'ta', 'Вмешательство (что именно будет сделано)', 'Müdaxilə', { req: 1, max: 1000 }],
+        ['purpose', 'ta', 'Цель', 'Məqsəd', { req: 1, max: 600 }],
+        ['risks', 'ta', 'Возможные риски и осложнения (разъяснены)', 'Mümkün risklər', { req: 1, max: 1200 }],
+        ['alternatives', 'ta', 'Альтернативы (в том числе отказ и его последствия)', 'Alternativlər', { max: 800 }],
+        ['questions', 'chk', 'Пациент задал вопросы и получил понятные ответы', 'Pasiyent suallarına cavab alıb', { req: 1 }]
+      ]],
+      ['sign', 'Подписи', 'İmzalar', [['doctor', 't', 'Врач (ФИО)', 'Həkim', { req: 1, max: 80 }]]]
+    ]
+  },
+  referral: {
+    ic: '📨', ru: 'Направление', az: 'Göndəriş', no: 'regNo',
+    head: 'GÖNDƏRİŞ',
+    signs: [['Həkim / Врач']],
+    secs: [
+      ['main', 'Куда и зачем', 'Haraya və nə üçün', [
+        ['regNo', 't', '№ направления', 'Göndərişin №-si', { max: 30 }], ['inst', 't', 'Кто направляет (учреждение / медпункт)', 'Göndərən müəssisə', { req: 1, max: 150 }],
+        ['at', 'dt', 'Дата и время', 'Tarix və saat', { req: 1 }],
+        ['to', 't', 'Куда (учреждение, отделение, специалист)', 'Haraya', { req: 1, max: 150 }],
+        ['purpose', 'sel', 'Цель', 'Məqsəd', { req: 1, o: [['hosp', 'Госпитализация', 'Hospitalizasiya'], ['consult', 'Консультация специалиста', 'Mütəxəssis məsləhəti'], ['exam', 'Обследование', 'Müayinə'], ['other', 'Другое', 'Digər']] }],
+        ['urgency', 'sel', 'Срочность', 'Təcililik', { req: 1, o: [['now', 'Экстренно', 'Təcili'], ['urgent', 'Срочно (в течение суток)', 'Sutka ərzində'], ['plan', 'Планово', 'Planlı']] }]
+      ].concat(DOC_PATIENT)],
+      ['clin', 'Клиника', 'Klinika', [
+        ['dxIcd', 'icd', 'Диагноз: МКБ-10', 'Diaqnoz: XBT-10', { req: 1 }], ['dx', 't', 'Диагноз', 'Diaqnoz', { req: 1, max: 200 }],
+        ['complaints', 'ta', 'Жалобы и анамнез (кратко)', 'Şikayətlər və anamnez', { max: 1200 }],
+        ['statusNow', 'ta', 'Состояние сейчас (АД, ЧСС, SpO2, t°, сознание)', 'Hazırkı vəziyyət', { req: 1, max: 800 }],
+        ['done', 'ta', 'Что сделано / введено (время, препарат, доза)', 'Nə edilib', { max: 1200 }],
+        ['tests', 'ta', 'Результаты обследований (ЭКГ, глюкоза и др.)', 'Müayinələrin nəticələri', { max: 800 }],
+        ['allergy', 't', 'Аллергия', 'Allergiya', { max: 200 }]
+      ]],
+      ['sign', 'Подпись', 'İmza', [['doctor', 't', 'Врач (ФИО)', 'Həkim', { req: 1, max: 80 }], ['phone', 't', 'Телефон для связи с направившим врачом', 'Əlaqə telefonu', { max: 30 }]]]
+    ]
+  },
+  injury: {
+    ic: '⛑️', ru: 'Несчастный случай на производстве', az: 'İstehsalatda bədbəxt hadisə', no: 'regNo',
+    head: 'İSTEHSALATDA BƏDBƏXT HADİSƏ ZAMANI GÖSTƏRİLMİŞ TİBBİ YARDIM HAQQINDA MƏLUMAT',
+    signs: [['Həkim / Врач'], ['Məsul şəxs (iş icraçısı) / Ответственный (производитель работ)']],
+    secs: [
+      ['event', 'Что и где случилось', 'Nə və harada baş verib', [
+        ['regNo', 't', '№ записи', 'Qeydin №-si', { max: 30 }], ['inst', 't', 'Медпункт / объект', 'Tibb məntəqəsi / obyekt', { req: 1, max: 150 }],
+        ['eventAt', 'dt', 'Когда произошло', 'Hadisənin vaxtı', { req: 1 }], ['arrivedAt', 'dt', 'Когда обратился / доставлен', 'Müraciət vaxtı', { req: 1 }],
+        ['place', 't', 'Место (участок, тоннель, пикет, цех)', 'Yer', { req: 1, max: 150 }],
+        ['employer', 't', 'Работодатель / подрядчик', 'İşəgötürən / podratçı', { req: 1, max: 150 }], ['position', 't', 'Должность пострадавшего', 'Vəzifəsi', { max: 80 }],
+        ['mechanism', 'ta', 'Обстоятельства и механизм травмы (со слов пострадавшего / свидетелей)', 'Hadisənin şəraiti və mexanizmi', { req: 1, max: 1500 }]
+      ]],
+      ['patient', 'Пострадавший', 'Zərərçəkən', DOC_PATIENT],
+      ['med', 'Повреждения и помощь', 'Zədələr və yardım', [
+        ['injuries', 'ta', 'Объективно: повреждения (локализация, характер, размеры)', 'Zədələr', { req: 1, max: 1500 }],
+        ['dxIcd', 'icd', 'Диагноз: МКБ-10', 'Diaqnoz: XBT-10', { req: 1 }], ['dx', 't', 'Диагноз', 'Diaqnoz', { req: 1, max: 200 }],
+        ['severity', 'sel', 'Предварительно по тяжести', 'Ağırlıq dərəcəsi (ilkin)', { req: 1, o: [['light', 'Лёгкая', 'Yüngül'], ['severe', 'Тяжёлая', 'Ağır'], ['fatal', 'Со смертельным исходом', 'Ölümlə nəticələnən']] }],
+        ['alcohol', 'sel', 'Проба на алкоголь', 'Alkoqol testi', { req: 1, o: [['neg', 'Отрицательная', 'Mənfi'], ['pos', 'Положительная', 'Müsbət'], ['no', 'Не проводилась', 'Aparılmayıb']] }],
+        ['firstAid', 'ta', 'Оказанная помощь (время, препараты, дозы, иммобилизация, жгут — время)', 'Göstərilən yardım', { req: 1, max: 1500 }],
+        ['outcome', 'sel', 'Исход', 'Nəticə', { req: 1, o: [['work', 'Вернулся к работе', 'İşə qayıdıb'], ['free', 'Освобождён от работы', 'İşdən azad edilib'], ['ref', 'Направлен в учреждение', 'Müəssisəyə göndərilib'], ['evac', 'Эвакуирован', 'Təxliyə edilib'], ['death', 'Смерть', 'Ölüm']] }],
+        ['outTo', 't', 'Куда направлен / эвакуирован', 'Haraya göndərilib', { max: 150 }],
+        ['notified', 'ta', 'Кого и когда уведомили (руководство, ОТ и ТБ, родственники)', 'Kimə və nə vaxt məlumat verilib', { max: 600 }],
+        ['witnesses', 't', 'Свидетели (ФИО)', 'Şahidlər', { pii: 1, max: 200 }]
+      ]],
+      ['sign', 'Подписи', 'İmzalar', [['doctor', 't', 'Врач (ФИО)', 'Həkim', { req: 1, max: 80 }]]]
+    ]
+  },
+  shift: {
+    ic: '🚦', ru: 'Предсменный / предрейсовый медосмотр', az: 'Növbəqabağı / reysqabağı tibbi müayinə', no: 'regNo', noPatient: 1,
+    head: 'NÖVBƏQABAĞI / REYSQABAĞI TİBBİ MÜAYİNƏ JURNALI',
+    signs: [['Həkim / Врач']],
+    secs: [
+      ['main', 'Смена', 'Növbə', [
+        ['regNo', 't', '№ листа журнала', 'Jurnal vərəqəsinin №-si', { max: 30 }], ['inst', 't', 'Медпункт / объект', 'Tibb məntəqəsi / obyekt', { req: 1, max: 150 }],
+        ['date', 'd', 'Дата', 'Tarix', { req: 1 }],
+        ['kind', 'sel', 'Вид осмотра', 'Müayinənin növü', { req: 1, o: [['preshift', 'Предсменный', 'Növbəqabağı'], ['pretrip', 'Предрейсовый', 'Reysqabağı'], ['posttrip', 'Послерейсовый / послесменный', 'Reysdən / növbədən sonra']] }],
+        ['shift', 'sel', 'Смена', 'Növbə', { o: [['day', 'Дневная', 'Gündüz'], ['night', 'Ночная', 'Gecə']] }]
+      ]],
+      ['ppl', 'Работники', 'İşçilər', [
+        ['ppl', 'rows', 'Осмотрены', 'Müayinə olunub', { req: 1, max: 300, sub: [
+          ['fio', 't', 'ФИО', 'S.A.A.', { req: 1, pii: 1, max: 80 }], ['job', 't', 'Должность / таб. №', 'Vəzifə / tabel №', { max: 60 }],
+          ['tm', 'tm', 'Время', 'Saat', { req: 1 }], ['bp', 't', 'АД', 'AT', { req: 1, max: 10 }], ['hr', 'n', 'Пульс', 'Nəbz', { req: 1 }], ['t', 'n', 't °C', 't °C', {}],
+          ['alc', 'sel', 'Алкотест', 'Alkotest', { req: 1, o: [['neg', 'Отриц.', 'Mənfi'], ['pos', 'Полож.', 'Müsbət'], ['no', 'Не пров.', 'Aparılmayıb']] }],
+          ['compl', 't', 'Жалобы', 'Şikayət', { max: 120 }],
+          ['ok', 'sel', 'Допуск', 'Buraxılış', { req: 1, o: [['yes', 'Допущен', 'Buraxılıb'], ['no', 'Не допущен', 'Buraxılmayıb']] }]
+        ] }]
+      ]],
+      ['sign', 'Подпись', 'İmza', [['doctor', 't', 'Врач / фельдшер (ФИО)', 'Həkim / feldşer', { req: 1, max: 80 }]]]
+    ]
+  },
+  death: {
+    ic: '🕯️', ru: 'Констатация смерти', az: 'Ölümün təsdiqi', no: 'regNo',
+    head: 'BİOLOJİ ÖLÜMÜN TƏSDİQİ HAQQINDA PROTOKOL',
+    signs: [['Həkim / Врач'], ['Şahid / Свидетель']],
+    secs: [
+      ['main', 'Кто, где, когда', 'Kim, harada, nə vaxt', [
+        ['regNo', 't', '№ записи', 'Qeydin №-si', { max: 30 }], ['inst', 't', 'Медпункт / учреждение', 'Tibb müəssisəsi', { req: 1, max: 150 }],
+        ['deathAt', 'dt', 'Дата и время констатации смерти', 'Ölümün təsdiqi tarixi və saatı', { req: 1 }], ['place', 't', 'Место', 'Yer', { req: 1, max: 150 }]
+      ].concat(DOC_PATIENT)],
+      ['signs', 'Признаки и реанимация', 'Əlamətlər və reanimasiya', [
+        ['signs', 'ta', 'Признаки биологической смерти (отсутствие сознания, дыхания, пульса на сонных артериях; широкие зрачки без реакции на свет; «кошачий глаз»; трупные пятна, окоченение — что выявлено)', 'Bioloji ölüm əlamətləri', { req: 1, max: 1500 }],
+        ['resus', 'ta', 'Сердечно-лёгочная реанимация: проводилась или нет (почему), начало, прекращение, что вводилось', 'Ürək-ağciyər reanimasiyası', { req: 1, max: 1500 }],
+        ['cause', 'ta', 'Предварительная причина / обстоятельства', 'İlkin səbəb / şərait', { max: 1000 }],
+        ['dxIcd', 'icd', 'МКБ-10 (если ясно)', 'XBT-10', {}],
+        ['notified', 'ta', 'Кого уведомили и когда (полиция, руководство, родственники)', 'Kimə məlumat verilib', { max: 600 }]
+      ]],
+      ['sign', 'Подписи', 'İmzalar', [['doctor', 't', 'Врач (ФИО)', 'Həkim', { req: 1, max: 80 }], ['witness', 't', 'Свидетель (ФИО, должность)', 'Şahid', { pii: 1, max: 120 }]]]
+    ]
+  },
+  workfree: {
+    ic: '🏠', ru: 'Справка об освобождении от работы', az: 'İşdən azad olma haqqında arayış', no: 'regNo',
+    head: 'İŞDƏN AZAD OLMA HAQQINDA ARAYIŞ',
+    signs: [['Həkim / Врач']],
+    secs: [
+      ['main', 'Справка', 'Arayış', [
+        ['regNo', 't', '№ справки', 'Arayışın №-si', { max: 30 }], ['inst', 't', 'Медпункт / учреждение', 'Tibb müəssisəsi', { req: 1, max: 150 }],
+        ['date', 'd', 'Дата выдачи', 'Verilmə tarixi', { req: 1 }]
+      ].concat(DOC_PATIENT.filter(f => f[0] !== 'sex')).concat([
+        ['employer', 't', 'Работодатель / подрядчик', 'İşəgötürən', { req: 1, max: 150 }], ['position', 't', 'Должность', 'Vəzifəsi', { max: 80 }],
+        ['from', 'd', 'Освобождён с', 'Tarixindən', { req: 1 }], ['to', 'd', 'по (включительно)', 'Tarixinədək (daxil)', { req: 1 }],
+        ['dxShow', 'chk', 'Указать диагноз (только с согласия пациента)', 'Diaqnozu göstər (pasiyentin razılığı ilə)', {}],
+        ['dxIcd', 'icd', 'Диагноз: МКБ-10', 'Diaqnoz: XBT-10', {}], ['dx', 't', 'Диагноз', 'Diaqnoz', { max: 200 }],
+        ['recs', 'ta', 'Рекомендации (облегчённый труд, контроль)', 'Tövsiyələr', { max: 600 }]
+      ])],
+      ['sign', 'Подпись', 'İmza', [['doctor', 't', 'Врач (ФИО)', 'Həkim', { req: 1, max: 80 }]]]
+    ]
   }
 };
 /** Поля формы обращения медпункта, которые ИИ может заполнить (ключ формы → описание). */
@@ -16034,8 +16192,15 @@ function dsDepersonalize(type, d) {
   const out = {};
   const pii = {};
   dsFields(type).forEach(f => { if (f.o.pii) pii[f.k] = 1; });
-  Object.keys(d || {}).forEach(k => { if (!pii[k]) out[k] = d[k]; });
-  const words = dsPiiWords(Object.keys(pii).map(k => d && d[k]), d && d.birth);
+  const rowPii = {};
+  dsFields(type).forEach(f => { if (f.type === 'rows') (f.o.sub || []).forEach(sf => { if ((sf[4] || {}).pii) (rowPii[f.k] = rowPii[f.k] || []).push(sf[0]); }); });
+  const rowVals = [];
+  Object.keys(d || {}).forEach(k => {
+    if (pii[k]) return;
+    if (rowPii[k] && d[k] && typeof d[k] === 'object') { const o = {}; Object.keys(d[k]).forEach(rid => { const r = Object.assign({}, d[k][rid]); rowPii[k].forEach(sk => { rowVals.push(r[sk]); delete r[sk]; }); o[rid] = r; }); out[k] = o; return; }
+    out[k] = d[k];
+  });
+  const words = dsPiiWords(Object.keys(pii).map(k => d && d[k]).concat(rowVals), d && d.birth);
   const res = dsScrub(out, words);
   if (d && d.birth) res.age = dsAge(d.birth, d.admAt || d.departAt);
   return res;
@@ -16177,7 +16342,7 @@ async function dsCreate(type, pii, caseId, data0, fixed) {
   const opId = (fixed && fixed.opId) || newOpId();
   for (let i = 0; i < 2; i++) {
     let r = null;
-    try { r = await rpc('docSave', { id, type, caseId: caseId || '', storeId: S.storeId, patch, opId }, 60000); } catch (e) { r = null; }
+    try { r = await rpc('docSave', Object.assign({ id, type, caseId: caseId || '', storeId: S.storeId, patch, opId }, fixed && fixed.formId ? { formId: fixed.formId } : {}), 60000); } catch (e) { r = null; }
     if (r && r.ok) return { id, type, doc: r.doc, status: r.doc.status, data: r.data, pend: {}, caseId: caseId || '', storeId: S.storeId };
     if (r && !r.ok) { toast(errText(r), 'bad'); break; }
   }
@@ -16295,7 +16460,7 @@ function dsPiiModal(type, onDone, pre) {
   const tpl = DOC_TPL[type] || { ru: 'Форма обращения', az: 'Müraciət forması' };
   const p = pre || {};
   const fld = (k, lbl, ty, extra) => '<div class="field"><label>' + esc(lbl) + '</label><input id="dpi_' + k + '" type="' + (ty || 'text') + '" value="' + esc(p[k] || '') + '"' + (extra || '') + '></div>';
-  const noLbl = type === 'form' ? t('formBlankNo') : type === 'evac' ? '№ листа / бланка' : type === 'rx' ? '№ / код бланка рецепта' : '№ истории болезни';
+  const noLbl = type === 'form' ? t('formBlankNo') : type === 'evac' ? '№ листа / бланка' : type === 'rx' ? '№ / код бланка рецепта' : (type === 'h003' || type === 'epi') ? '№ истории болезни' : '№ документа';
   S.dsPiiDone = onDone;
   openModal('<h3>🔒 ' + esc(t('dsPiiTitle')) + ' — ' + esc(S.lang === 'az' ? tpl.az : tpl.ru) + '</h3><div class="muted" style="margin-bottom:8px">' + esc(t('dsPiiHint')) + '</div>' +
     '<div class="grid2">' + fld('surname', 'Фамилия / Soyadı') + fld('name', 'Имя / Adı') + '</div>' + fld('patronymic', 'Отчество / Atasının adı') +
@@ -16428,7 +16593,8 @@ function dsPrint() {
     });
     if (rows) h += '<table class="pf"><tr><th colspan="2" style="text-align:center">' + esc(sc[2]) + '</th></tr>' + rows + '</table>';
   });
-  h += '<table class="pf" style="margin-top:10px"><tr><td style="height:40px">Həkim / Врач: ' + esc(d.doctor || d.finDoctor || d.epiDoctor || '') + '<br><br>İmza: ____________</td><td>Şöbə müdiri: ' + esc(d.head || d.finHead || d.epiHead || '') + '<br><br>İmza: ____________</td></tr></table>' +
+  h += (tpl.signs ? '<table class="pf" style="margin-top:10px"><tr>' + tpl.signs.map(sg => '<td style="height:52px;vertical-align:top">' + esc(sg[0]) + '<br><br>________________ / ________________</td>').join('') + '</tr></table>' :
+    '<table class="pf" style="margin-top:10px"><tr><td style="height:40px">Həkim / Врач: ' + esc(d.doctor || d.finDoctor || d.epiDoctor || '') + '<br><br>İmza: ____________</td><td>Şöbə müdiri: ' + esc(d.head || d.finHead || d.epiHead || '') + '<br><br>İmza: ____________</td></tr></table>') +
     '<div style="font-size:8px;margin-top:6px">ID ' + esc(c.id) + ' · ' + esc(c.status === 'closed' ? 'bağlanıb ' + ((c.doc && c.doc.closedAt) || '') + ' — ' + ((c.doc && c.doc.closedByName) || '') : 'QARALAMA') + (c.doc && c.doc.editsAfterClose ? ' · bağlandıqdan sonra düzəlişlər: ' + c.doc.editsAfterClose : '') + '</div></div>';
   $('#printRoot').innerHTML = h;
   document.body.classList.add('print-form');
@@ -16582,8 +16748,15 @@ Object.assign(H, {
   dsSeg: async el => { const st = dsSt(); if (st.cur && !(await dsLeaveOk())) return; if (st.seg !== el.dataset.seg) { st.list = null; st.q = ''; } st.seg = el.dataset.seg; st.cur = null; if (st.seg === 'forms') { S.fv = null; renderFormsList(); } else dsRender(); window.scrollTo(0, 0); },
   dsOpen: el => dsOpen(el.dataset.id),
   dsBack: async () => { const st = dsSt(); if (!(await dsLeaveOk())) return; st.cur = null; st.list = null; dsRender(); window.scrollTo(0, 0); },
-  dsNewPii: el => {
+  dsNewPii: async el => {
     const type = el.dataset.type;
+    if (DOC_TPL[type] && DOC_TPL[type].noPatient) {
+      // журнал (например, предсменный осмотр) — без одного пациента: сразу редактор
+      const c = await dsCreate(type, { date: bakuToday(), doctor: S.me ? S.me.name : '' });
+      if (!c) return;
+      const st = dsSt(); st.cur = c; st.seg = 'docs'; dsRender(); window.scrollTo(0, 0);
+      return;
+    }
     dsPiiModal(type, async pii => {
       const tplNo = DOC_TPL[type].no;
       const c = await dsCreate(type, Object.assign({ surname: pii.surname, name: pii.name, patronymic: pii.patronymic, birth: pii.birth, fin: pii.fin, sex: pii.sex }, { [tplNo]: pii.no }));
@@ -16594,7 +16767,8 @@ Object.assign(H, {
   },
   dsPiiGo: async el => {
     const p = dsPiiRead();
-    if (!p.surname || !p.name || !p.no) { toast('Фамилия, имя и номер обязательны.', 'bad'); return; }
+    const noReq = !(DOC_TPL[el.dataset.type] && DOC_TPL[el.dataset.type].no === 'regNo');
+    if (!p.surname || !p.name || (noReq && !p.no)) { toast(noReq ? 'Фамилия, имя и номер обязательны.' : 'Фамилия и имя обязательны.', 'bad'); return; }
     const fn = S.dsPiiDone; S.dsPiiDone = null; closeModal();
     // не удалось (нет связи / отказ сервера) — окно снова, с уже введённым
     if (fn && (await fn(p)) === false) dsPiiModal(el.dataset.type, fn, p);
@@ -16804,7 +16978,7 @@ async function fillApplyDoc(c, v, pii) {
   };
   if (!id) {
     const base = Object.assign({ surname: pii.surname, name: pii.name, patronymic: pii.patronymic, birth: pii.birth, fin: pii.fin, sex: pii.sex }, { [DOC_TPL[v.doc].no]: pii.no });
-    const d = await dsCreate(v.doc, Object.assign(base, fields, rowsFor(null)), c.id, null, { id: fx.id, opId: fx.opId });
+    const d = await dsCreate(v.doc, Object.assign(base, fields, rowsFor(null)), c.id, null, { id: fx.id, opId: fx.opId, formId: c.formId || '' });
     if (!d) throw new Error(t('E_NETWORK'));
     c.data.docs = Object.assign({}, c.data.docs || {}, { [v.doc]: d.id });
     return 'ok';
@@ -17019,7 +17193,7 @@ window.csCaseExtra = function (c) {
   const modes = '<div class="dx-row" style="margin-top:8px"><button class="chip" data-act="csModeHelp">' + esc(t('csModeHelp')) + '</button><button class="chip" data-act="csModePaper">' + esc(t('csModePaper')) + '</button><button class="chip" data-act="trOpen" data-from="case">' + esc(t('trBtn')) + '</button></div>';
   return modes + '<details class="dx-grp" style="margin-top:8px"><summary><span class="grow">' + esc(t('dsFill')) + '</span>' + (links.length ? '<span class="dx-cnt">' + links.length + '</span>' : '') + '</summary><div style="padding:10px">' +
     (links.length ? '<div class="dx-row">' + links.join('') + '</div>' : '') +
-    '<div class="dx-row">' + ['form', 'h003', 'epi', 'evac', 'rx'].map(k => '<button class="chip" data-act="fillAsk" data-doc="' + k + '">' + esc(t('dsFillBtn', { n: fillDocName(k) })) + '</button>').join('') + '</div></div></details>';
+    '<div class="dx-row">' + ['form'].concat(Object.keys(DOC_TPL).filter(k => !DOC_TPL[k].noPatient)).map(k => '<button class="chip" data-act="fillAsk" data-doc="' + k + '">' + esc(t('dsFillBtn', { n: fillDocName(k) })) + '</button>').join('') + '</div></div></details>';
 };
 Object.assign(H, {
   csModeHelp: () => { const c = csSt().cur; if (!c || c.busy) return; csSay(c, '[РЕЖИМ: ПОМОЩЬ] Сейчас важнее помочь пациенту: спрашивай только то, что меняет диагноз и лечение прямо сейчас. Оформление — потом.', t('csModeHelpSaid')); },
@@ -17451,6 +17625,281 @@ Object.assign(H, {
   const origTab = H.tab;
   H.tab = el => { menuOpen(false); return origTab(el); };
 })();
+
+/* =====================================================================
+ * v25:
+ *  1) Главный админ: удалить / восстановить любой документ и любую форму обращения (и закрытую) — с причиной, всё в журнал.
+ *  2) Обращение ↔ документы: из формы обращения — «📄 Документ по этому обращению» (данные пациента подставляются,
+ *     документ связан с обращением кодом); в документе — кнопка «🩺 Обращение».
+ *  3) Профиль пациента: разборы с ИИ (через документы), удалённое (видит только главный админ), надёжная склейка без FİN.
+ *  4) 🤖 Помощник (ИИ: склад) в ревизии и при правке карточки — понимает, что на экране.
+ * ===================================================================== */
+const I18N_V25 = {
+  ru: {
+    admDel: '🗑 Удалить', admRestore: '♻️ Восстановить', admDelAsk: 'Удалить? Укажите причину (данные сохранятся, в журнале будет запись):', admRestoreAsk: 'Восстановить? Укажите причину:',
+    admDeleted: '🗑 Удалён', admDeletedDoc: 'Документ удалён главным админом. Данные сохранены — можно восстановить.', admShowDel: '🗑 Показать удалённые', admHideDel: 'Скрыть удалённые',
+    admDelClosed: '🗑️ Удалить закрытую форму', admDone: 'Готово', fDocsTitle: '📄 Документы по этому обращению', fDocNew: '➕ {n}', fDocOpenForm: '🩺 Обращение', fDocsNone: 'Документов пока нет.',
+    psCases: '🧑‍⚕️ Разборы с ИИ', psCaseOpen: 'Открыть разбор',
+    dockTitle: '🤖 Помощник', dockRevHint: 'Спросите: где ещё лежит препарат, почему расхождение, что пересчитать, какие сроки.', dockCardHint: 'Спросите: проверь карточку, какое МНН и форма, есть ли дубликаты на складе. Изменения предложит — вы подтвердите.',
+    dockBtn: '🤖 Помощник', dockClose: 'Свернуть', dockCard: '🤖 Подсказать по карточке'
+  },
+  az: {
+    admDel: '🗑 Sil', admRestore: '♻️ Bərpa et', admDelAsk: 'Silinsin? Səbəbi yazın (məlumat saxlanılacaq, jurnalda qeyd olacaq):', admRestoreAsk: 'Bərpa edilsin? Səbəbi yazın:',
+    admDeleted: '🗑 Silinib', admDeletedDoc: 'Sənəd baş admin tərəfindən silinib. Məlumat saxlanılıb — bərpa etmək olar.', admShowDel: '🗑 Silinənləri göstər', admHideDel: 'Silinənləri gizlət',
+    admDelClosed: '🗑️ Bağlı formanı sil', admDone: 'Hazırdır', fDocsTitle: '📄 Bu müraciət üzrə sənədlər', fDocNew: '➕ {n}', fDocOpenForm: '🩺 Müraciət', fDocsNone: 'Hələ sənəd yoxdur.',
+    psCases: '🧑‍⚕️ Sİ təhlilləri', psCaseOpen: 'Təhlili aç',
+    dockTitle: '🤖 Köməkçi', dockRevHint: 'Soruşun: dərman başqa harada var, niyə uyğunsuzluq var, nəyi yenidən saymalı, müddətlər.', dockCardHint: 'Soruşun: kartı yoxla, MBA və forma hansıdır, anbarda dublikat varmı. Dəyişikliyi təklif edəcək — siz təsdiqləyəcəksiniz.',
+    dockBtn: '🤖 Köməkçi', dockClose: 'Kiçilt', dockCard: '🤖 Kart üzrə məsləhət'
+  }
+};
+Object.assign(I18N.ru, I18N_V25.ru);
+Object.assign(I18N.az, I18N_V25.az);
+
+function admAskReason(key) {
+  const r = prompt(t(key), '');
+  if (r === null) return null;
+  if (r.trim().length < 3) { toast(t('dsReasonNeed'), 'bad'); return null; }
+  return r.trim().slice(0, 300);
+}
+
+/* ---------- 1. документы: удалить / восстановить (главный админ) ---------- */
+(function () {
+  const origEditor = dsEditorHtml;
+  window.dsEditorHtml = function () {
+    const c = dsSt().cur; let h = origEditor.apply(this, arguments);
+    if (!c) return h;
+    const extra = [];
+    if (c.doc && c.doc.formId) extra.push('<button class="btn small ghost" data-act="dsOpenForm" data-id="' + esc(c.doc.formId) + '">' + esc(t('fDocOpenForm')) + '</button>');
+    if (isOwner()) extra.push(c.status === 'deleted' ? '<button class="btn small primary" data-act="dsRestoreDoc">' + esc(t('admRestore')) + '</button>' : '<button class="btn small ghost" style="color:var(--red)" data-act="dsDeleteDoc">' + esc(t('admDel')) + '</button>');
+    if (c.status === 'deleted') extra.unshift('<div class="hint" style="margin:0 0 8px;display:block;width:100%">' + esc(t('admDeletedDoc')) + '</div>');
+    if (extra.length) h = h.replace('<div id="dsMissBox">', '<div class="row" style="gap:6px;flex-wrap:wrap;margin:6px 0">' + extra.join('') + '</div><div id="dsMissBox">');
+    return h;
+  };
+  // удалённый документ — только просмотр
+  const origBind = dsBindEditor;
+  window.dsBindEditor = function () { const r = origBind.apply(this, arguments); const c = dsSt().cur; if (c && c.status === 'deleted') $$('#formsBox .ds-in, #formsBox [data-act=dsRowAdd], #formsBox [data-act=dsRowDel], #formsBox [data-act=dsClose], #formsBox [data-act=dsGive]').forEach(el => { el.disabled = true; }); return r; };
+  // список документов: «показать удалённые» (главный админ)
+  const origList = dsListHtml;
+  window.dsListHtml = function () {
+    const st = dsSt(); let h = origList.apply(this, arguments);
+    if (isOwner()) h = h.replace('<div class="searchbar">', '<div class="row" style="justify-content:flex-end;margin:-4px 0 6px"><button class="btn small ghost" data-act="dsToggleDel">' + esc(t(st.withDel ? 'admHideDel' : 'admShowDel')) + '</button></div><div class="searchbar">');
+    if (st.list) st.list.forEach(r => { if (r.status === 'deleted') h = h.replace('data-id="' + esc(r.id) + '"><span>', 'data-id="' + esc(r.id) + '" style="opacity:.6"><span>🗑 '); });
+    return h;
+  };
+  const origLoad = dsLoadList;
+  window.dsLoadList = async function () {
+    const st = dsSt();
+    if (!(st.withDel && isOwner())) return origLoad.apply(this, arguments);
+    try { const r = await rpc('docList', { q: st.q || '', type: st.seg === 'rx' ? 'rx' : '', withDeleted: true }, 30000); if (r && r.ok) st.list = (r.rows || []).filter(x => st.seg === 'rx' ? x.type === 'rx' : x.type !== 'rx'); }
+    catch (e) { st.list = st.list || []; }
+    if (S.screen === 'forms' && (st.seg === 'docs' || st.seg === 'rx') && !st.cur) dsRender(true);
+  };
+})();
+
+/* ---------- 2. обращение ↔ документы ---------- */
+/** Данные пациента и клинические поля из формы обращения → новый документ. */
+function formToDocPre(d) {
+  const parts = String(d.pName || '').trim().split(/\s+/);
+  return { surname: parts[0] || '', name: parts.slice(1).join(' '), patronymic: d.pFather || '', birth: d.pBirth || '', fin: d.fin || '', sex: d.pSex || '' };
+}
+function formToDocData(type, d) {
+  const icd = d.dx1c || '', dx = d.dx1 || '';
+  const arr = String(d.arrivedAt || '').replace('T', ' ').slice(0, 16);
+  if (type === 'h003') return { edIcd: icd, edDx: dx, admAt: arr, allergy: d.allergyNone ? 'не отягощён' : (d.allergy || '') };
+  if (type === 'epi') return { dxIcd: icd, dxMain: dx, complaints: d.compl || '', admAt: arr, allergy: d.allergyNone ? 'не отягощён' : (d.allergy || '') };
+  if (type === 'evac') return { dxIcd: icd, dx: dx, situation: d.compl || '', allergy: d.allergyNone ? 'не известна' : (d.allergy || '') };
+  if (type === 'rx') return { dxIcd: icd, dx: dx, date: bakuToday() };
+  if (type === 'referral') return { dxIcd: icd, dx: dx, complaints: d.compl || '', at: nowLocal().replace('T', ' '), allergy: d.allergyNone ? 'не отягощена' : (d.allergy || '') };
+  if (type === 'refusal' || type === 'consent') return { dxIcd: icd, dx: dx, at: nowLocal().replace('T', ' ') };
+  if (type === 'injury') return { dxIcd: icd, dx: dx, arrivedAt: arr };
+  if (type === 'workfree') return { dxIcd: icd, dx: dx, date: bakuToday(), from: bakuToday() };
+  if (type === 'death') return { dxIcd: icd };
+  return {};
+}
+async function fDocsLoad(formId) {
+  const box = $('#fDocsBox'); if (!box) return;
+  const r = await rpc('docList', { formId }, 30000).catch(() => null);
+  const rows = r && r.ok ? r.rows : [];
+  box.innerHTML = rows.length ? rows.map(x => '<button class="btn ghost block" style="text-align:left;margin-bottom:6px" data-act="dsOpen" data-id="' + esc(x.id) + '">' + (DOC_TPL[x.type] || {}).ic + ' ' + esc((DOC_TPL[x.type] || {})[S.lang === 'az' ? 'az' : 'ru'] || x.type) + (x.docNo ? ' № ' + esc(x.docNo) : '') + ' · ' + esc(x.status === 'closed' ? t('dsClosed') : t('dsDraft')) + '</button>').join('') : '<div class="muted">' + esc(t('fDocsNone')) + '</div>';
+}
+(function () {
+  const origMenu = fMenu;
+  window.fMenu = function () {
+    origMenu.apply(this, arguments);
+    const id = S.fv && S.fv.id; if (!id) return;
+    const st = fStatus(id);
+    const col = $('.modal .col-btns'); if (!col) return;
+    let add = '';
+    if (isOwner() && st === 'closed') add += '<button class="btn ghost block" style="color:var(--red)" data-act="fDeleteClosed">' + esc(t('admDelClosed')) + '</button>';
+    if (isOwner() && st === 'deleted') add += '<button class="btn primary block" data-act="fRestore">' + esc(t('admRestore')) + '</button>';
+    if (st !== 'deleted' && can('forms')) add += '<div class="lbl" style="margin-top:8px">' + esc(t('fDocsTitle')) + '</div><div id="fDocsBox" class="muted">…</div><div class="dx-row">' +
+      Object.keys(DOC_TPL).filter(k => !DOC_TPL[k].noPatient).map(k => '<button class="chip" data-act="fDocNew" data-type="' + k + '">' + esc(t('fDocNew', { n: DOC_TPL[k].ic + ' ' + (S.lang === 'az' ? DOC_TPL[k].az : DOC_TPL[k].ru) })) + '</button>').join('') + '</div>';
+    col.insertAdjacentHTML('beforeend', add);
+    if (st !== 'deleted' && can('forms') && !String(id).startsWith('tmp')) fDocsLoad(id);
+  };
+})();
+
+/* ---------- 3. профиль пациента: разборы, удалённое, склейка ---------- */
+(function () {
+  // склейка: FİN — главный ключ; без FİN — по ФИО, а дата рождения разделяет, только если в обеих записях она есть и разная
+  const origSearch = psSearch;
+  window.psSearch = async function () {
+    const st = dsSt();
+    const q = ($('#psQ') || {}).value || st.pq || '';
+    st.pq = q.trim(); if (st.pq.length < 3) return;
+    const r = await rpcA('patientFind', { q: st.pq, withDeleted: isOwner() }).catch(() => null);
+    if (!r) return;
+    const all = (r.forms || []).map(f => ({ kind: 'form', x: f })).concat((r.docs || []).map(d => ({ kind: 'doc', x: d })));
+    const groups = [];
+    const nm = x => nameSkel(String(x.patient || '').split(' ').slice(0, 2).join(' '));
+    all.forEach(e => {
+      const fin = e.x.fin && e.x.fin.length >= 5 ? e.x.fin : '';
+      let g = fin ? groups.find(g => g.fin === fin) : null;
+      if (!g) g = groups.find(g => (!fin || !g.fin) && g.nm && g.nm === nm(e.x) && (!g.birth || !e.x.birthDate || g.birth === e.x.birthDate));
+      if (!g) { g = { fin: '', nm: nm(e.x), birth: '', forms: [], docs: [], head: e.x }; groups.push(g); }
+      if (fin && !g.fin) g.fin = fin;
+      if (e.x.birthDate && !g.birth) g.birth = e.x.birthDate;
+      if (!g.head.fin && e.x.fin) g.head = e.x;
+      (e.kind === 'form' ? g.forms : g.docs).push(e.x);
+    });
+    st.pres = groups;
+    st.prof = groups.length === 1 ? groups[0] : null;
+    st.audit = null;
+    dsRender(true);
+  };
+  const origProf = psProfileHtml;
+  window.psProfileHtml = function (g) {
+    let h = origProf.apply(this, arguments);
+    // удалённое — пометка (видит только главный админ)
+    g.forms.concat(g.docs).filter(x => x.status === 'deleted').forEach(x => { h = h.replace('data-id="' + esc(x.id) + '"><div class="grow"><div class="nm">', 'data-id="' + esc(x.id) + '" style="opacity:.6"><div class="grow"><div class="nm">' + esc(t('admDeleted')) + ' · '); });
+    const cases = Array.from(new Set(g.docs.map(d => d.caseId).filter(Boolean)));
+    if (cases.length && typeof canAi === 'function' && canAi()) h += '<div class="lbl">' + esc(t('psCases')) + ' (' + cases.length + ')</div><div class="dx-row">' + cases.map((c, i) => '<button class="chip" data-act="psCaseOpen" data-id="' + esc(c) + '">🧑‍⚕️ ' + esc(t('psCaseOpen')) + ' ' + (i + 1) + '</button>').join('') + '</div>';
+    return h;
+  };
+})();
+
+/* ---------- 4. 🤖 Помощник в ревизии и при правке карточки ---------- */
+function dockCanUse() { return isOwner(); } // ИИ по складу — у главного админа
+function dockCss() {
+  if ($('#dockCss')) return;
+  const s = document.createElement('style'); s.id = 'dockCss';
+  s.textContent = '#aiDock{position:fixed;left:0;right:0;bottom:0;z-index:70;background:var(--card);border-top:3px solid var(--acc,var(--brand));box-shadow:0 -8px 24px rgba(0,0,0,.25);max-height:62vh;display:flex;flex-direction:column;padding:8px 12px calc(8px + env(safe-area-inset-bottom))}' +
+    '#aiDock .dk-log{overflow:auto;flex:1;min-height:80px}#aiDock .dk-in{display:flex;gap:6px;margin-top:6px}#aiDock textarea{flex:1;min-height:44px;max-height:120px}' +
+    '#dockFab{position:fixed;right:14px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:30;border:0;border-radius:999px;padding:12px 16px;font-weight:700;background:var(--acc,var(--brand));color:var(--acc-ink,#fff);box-shadow:0 6px 18px rgba(0,0,0,.25)}' +
+    '#aiDock.top{top:0;bottom:auto;border-top:0;border-bottom:3px solid var(--acc,var(--brand));max-height:48vh;padding-top:calc(8px + env(safe-area-inset-top))}' +
+    '@media (min-width:1100px){#aiDock{left:300px}}';
+  document.head.appendChild(s);
+}
+/** Что сейчас на экране — коротко, без данных пациентов. */
+function dockContext() {
+  const k = S.dockKind;
+  if (k === 'card' && S.dockItem) {
+    const it = itemById(S.dockItem); if (!it) return '';
+    const val = id => { const el = $('#' + id); return el ? (el.type === 'checkbox' ? el.checked : el.value) : ''; };
+    const now = { category: val('eiCat'), name: val('eiName'), substance: val('eiSub'), form: val('eiForm'), dosage: val('eiDose'), unit: val('eiUnit'), packCount: val('eiPack'), strict: val('eiStrict') };
+    return '[Экран: правка карточки позиции id=' + it.id + '. Сейчас в полях: ' + JSON.stringify(now) + '. Сохранено в карточке: ' + JSON.stringify({ name: it.name, substance: it.substance, form: it.form, dosage: it.dosage, unit: it.unit, category: it.category }) +
+      '. Помоги с этой карточкой; изменения — только через propose_edit_item (админ подтвердит).]';
+  }
+  if (k === 'rev' && S.rev) {
+    const r = S.rev;
+    const lines = Object.values(r.lines || {}).filter(l => revCounted(l) && Number(l.actual) !== Number(l.expected)).slice(0, 40).map(l => { const it = itemById(l.itemId); return (it ? it.name + ' ' + it.dosage : l.itemId) + ' сер.' + (l.series || '—') + ' [' + locName(l.locationId) + '] по учёту ' + l.expected + ', факт ' + l.actual; });
+    return '[Экран: ревизия. Сейчас считаю место «' + locName(r.cur) + '». Места ревизии: ' + r.locations.map(locName).join(', ') + '. Расхождения на сейчас: ' + (lines.length ? lines.join('; ') : 'нет') + '. Ничего не меняй сам — только подскажи.]';
+  }
+  if (k === 'rev') return '[Экран: ревизия, ещё не начата. Помоги спланировать: какие места считать, что проверить в первую очередь (сроки, строгий учёт). Ничего не меняй сам.]';
+  return '';
+}
+function dockHtml() {
+  return '<div class="row" style="justify-content:space-between;align-items:center"><b>' + esc(t('dockTitle')) + '</b><span><button class="btn small ghost" data-act="aiNew">' + esc(t('aiNew')) + '</button> <button class="btn small ghost" data-act="dockClose">✕</button></span></div>' +
+    '<div class="muted" style="font-size:12.5px;margin:2px 0 4px">' + esc(t(S.dockKind === 'card' ? 'dockCardHint' : 'dockRevHint')) + '</div>' +
+    '<div class="dk-log" id="aiLog">' + aiLogHtml() + '</div><div class="dk-in"><textarea id="aiIn" placeholder="' + esc(t('aiPh')) + '"></textarea><button class="btn primary" data-act="aiSend" id="aiSendBtn">' + esc(t('aiSend')) + '</button></div>';
+}
+function dockOpen(kind, itemId) {
+  if (!dockCanUse()) return;
+  dockCss(); aiCss();
+  S.dockKind = kind; S.dockItem = itemId || '';
+  // у раздела «ИИ: склад» те же поля ввода — пока открыт помощник, убираем их со скрытого экрана
+  const cb = $('#clBody'); if (cb && cb.querySelector('#aiLog')) cb.innerHTML = '';
+  let d = $('#aiDock'); if (!d) { d = document.createElement('div'); d.id = 'aiDock'; document.body.appendChild(d); }
+  d.innerHTML = dockHtml();
+  d.classList.toggle('top', kind === 'card');
+  const f = $('#dockFab'); if (f) f.classList.add('hidden');
+  if (!aiSt().status) aiLoadStatus();
+}
+function dockClose() { const d = $('#aiDock'); if (d) d.remove(); S.dockKind = ''; dockFab(); }
+function dockFab() {
+  dockCss();
+  let f = $('#dockFab');
+  const show = S.screen === 'revision' && dockCanUse() && !$('#aiDock');
+  if (!f && show) { f = document.createElement('button'); f.id = 'dockFab'; f.dataset.act = 'dockRev'; f.textContent = t('dockBtn'); document.body.appendChild(f); }
+  if (f) { f.classList.toggle('hidden', !show); f.textContent = t('dockBtn'); }
+}
+(function () {
+  // контекст экрана — к каждому сообщению помощника
+  window.aiCtxFn = () => S.dockKind && $('#aiDock') ? dockContext() : '';
+  const origSet = setScreen;
+  window.setScreen = function (scr) { const r = origSet.apply(this, arguments); try { if (scr !== 'revision' && S.dockKind === 'rev') dockClose(); dockFab(); } catch (e) { } return r; };
+  // карточка: кнопка «🤖 Подсказать по карточке»
+  const origEdit = editItemModal;
+  window.editItemModal = function (id) {
+    const r = origEdit.apply(this, arguments);
+    if (dockCanUse()) { const acts = $('.modal .acts'); if (acts) acts.insertAdjacentHTML('beforebegin', '<button class="btn ghost block" style="margin-bottom:8px" data-act="dockCard" data-id="' + esc(id) + '">' + esc(t('dockCard')) + '</button>'); }
+    return r;
+  };
+  const origClose = closeModal;
+  window.closeModal = function () { const r = origClose.apply(this, arguments); if (S.dockKind === 'card') dockClose(); return r; };
+})();
+
+Object.assign(H, {
+  dsDeleteDoc: async () => {
+    const c = dsSt().cur; if (!c) return;
+    const reason = admAskReason('admDelAsk'); if (!reason) return;
+    await dsFlush();
+    const r = await rpcA('docDelete', { id: c.id, reason, opId: newOpId() }).catch(() => null); if (!r) return;
+    c.doc = r.doc; c.status = 'deleted'; toast(t('admDone'), 'ok'); dsRender(true);
+  },
+  dsRestoreDoc: async () => {
+    const c = dsSt().cur; if (!c) return;
+    const reason = admAskReason('admRestoreAsk'); if (!reason) return;
+    const r = await rpcA('docRestore', { id: c.id, reason, opId: newOpId() }).catch(() => null); if (!r) return;
+    c.doc = r.doc; c.status = r.doc.status; if (r.data) c.data = r.data; toast(t('admDone'), 'ok'); dsRender(true);
+  },
+  dsToggleDel: () => { const st = dsSt(); st.withDel = !st.withDel; st.list = null; dsRender(true); },
+  dsOpenForm: el => { const st = dsSt(); const go = () => { st.cur = null; st.seg = 'forms'; if (S.screen !== 'forms') setScreen('forms'); fOpen(el.dataset.id); }; dsLeaveOk().then(ok => { if (ok) go(); }); },
+  fDeleteClosed: () => {
+    const id = S.fv && S.fv.id; if (!id) return;
+    const reason = admAskReason('admDelAsk'); if (!reason) return;
+    fFlush();
+    fQueue('formDelete', { id, reason }, t('formsTitle'));
+    const c = fCache(); if (c.full[id]) c.full[id].status = 'deleted'; c.list = c.list.filter(x => x.id !== id); fSaveCache();
+    closeModal(); toast(t('fDeletedToast')); fBack();
+  },
+  fRestore: async () => {
+    const id = S.fv && S.fv.id; if (!id) return;
+    const reason = admAskReason('admRestoreAsk'); if (!reason) return;
+    const r = await rpcA('formRestore', { id, reason }, { op: true }).catch(() => null); if (!r) return;
+    const form = (r.result && r.result.form) || r.form || {};
+    const c = fCache(); if (c.full[id] && form.status) { c.full[id].status = form.status; fSaveCache(); }
+    closeModal(); toast(t('admDone'), 'ok'); fOpen(id);
+  },
+  fDocNew: el => {
+    const id = S.fv && S.fv.id; if (!id) return;
+    const type = el.dataset.type;
+    const d = fData(id) || {};
+    closeModal();
+    dsPiiModal(type, async pii => {
+      const base = Object.assign({ surname: pii.surname, name: pii.name, patronymic: pii.patronymic, birth: pii.birth, fin: pii.fin, sex: pii.sex }, { [DOC_TPL[type].no]: pii.no }, formToDocData(type, d));
+      Object.keys(base).forEach(k => { if (base[k] === '' || base[k] === undefined) delete base[k]; });
+      const c = await dsCreate(type, base, '', null, { formId: id });
+      if (!c) return false;
+      const st = dsSt(); st.cur = c; st.seg = type === 'rx' ? 'rx' : 'docs'; S.fv = null; dsRender(); window.scrollTo(0, 0);
+      return true;
+    }, Object.assign(formToDocPre(d), { no: '' }));
+  },
+  psCaseOpen: el => { S.clSeg = 'cases'; setScreen('clinic'); csOpen(el.dataset.id); },
+  dockRev: () => dockOpen('rev'),
+  dockCard: el => dockOpen('card', el.dataset.id),
+  dockClose: () => dockClose()
+});
 
 
 function init() {
