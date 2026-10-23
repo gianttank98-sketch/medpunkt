@@ -2444,7 +2444,7 @@ async function deleteItem(btn, id) {
 /* ---------- Настройки (места, врачи, справочник, письма) ---------- */
 function settingsModal() {
   const locs = S.view.locations || [];
-  const owner = isOwner();
+  const owner = typeof isSuper === 'function' ? isSuper() : isOwner(); // адрес приложения и справочник — общие для всех: только главный админ
   openModal('<h3>⚙️ ' + esc(t('storeSettings', { s: storeName(S.base && S.base.store) })) + '</h3>' + themeCardHtml() + (typeof minCardHtml === 'function' ? minCardHtml() : '') +
     (can('edit') ? '<div class="card"><div class="lbl">' + esc(t('places')) + '</div>' + locs.map(l => '<div class="list-row" style="flex-wrap:wrap"><div class="grow" style="min-width:140px">' + esc(locName(l.id)) + ' <span class="tag">' + esc(l.zone === 'work' ? t('zoneWork') : t('zoneStorage')) + '</span></div>' +
       '<button class="btn small ghost" data-act="placeModal" data-id="' + esc(l.id) + '">✏️</button><button class="btn small ghost" data-act="placeRemove" data-id="' + esc(l.id) + '">' + esc(t('removePlace')) + '</button></div>').join('') +
@@ -3979,7 +3979,7 @@ function bulkParse() {
 }
 /** Готовые списки показываются только главному админу и только на своём складе (по названию склада). */
 function presetsHere() {
-  if (!isOwner() || !S.base || !S.base.store) return [];
+  if (!(typeof isSuper === 'function' ? isSuper() : isOwner()) || !S.base || !S.base.store) return [];
   const nm = (S.base.store.nameRu || '') + ' ' + (S.base.store.nameAz || '');
   const all = [
     { key: 'old_0510', label: 'presetOld', rows: PRESET_OLD, source: 'Старый учёт 05.10.2026 / 05.10 köhnə uçot', re: /зод|zod|кялб|kəlb|kelb/i },
@@ -9850,7 +9850,7 @@ Object.assign(I18N.az, {
   const orig = storeEditModal;
   window.storeEditModal = function (id) {
     const r = orig.apply(this, arguments);
-    if (id && isOwner()) {
+    if (id && (typeof isSuper === 'function' ? isSuper() : isOwner())) { // удалить склад — только главный админ
       const acts = $('.modal .acts');
       if (acts) acts.insertAdjacentHTML('beforebegin', '<button class="btn danger block" style="margin:6px 0 10px" data-act="sdModal" data-id="' + esc(id) + '">' + esc(t('sdBtn')) + '</button>');
     }
@@ -15136,15 +15136,16 @@ function aiLogHtml() {
 function aiStatusLine() {
   const s = aiSt().status;
   if (!s) return '';
+  if (s.orgCap !== undefined) return '<span class="muted">' + esc(t('aiOrgMonth', { n: s.orgUsed || 0, m: s.orgCap || '∞' })) + '</span>';
   return '<span class="muted">' + esc((t('aiModels')[s.model] || s.model).split(' — ')[0]) + ' · ' + esc(t('aiToday', { n: s.today, m: s.dayMax })) + '</span>';
 }
 function aiScreenHtml() {
   const ai = aiSt();
   const s = ai.status;
-  let h = '<div class="ai-bar">' + aiStatusLine() + '<span><button class="btn small ghost" data-act="aiNew">' + esc(t('aiNew')) + '</button> <button class="btn small ghost" data-act="aiSettingsModal">⚙️</button></span></div>';
+  let h = '<div class="ai-bar">' + aiStatusLine() + '<span><button class="btn small ghost" data-act="aiNew">' + esc(t('aiNew')) + '</button>' + (typeof isSuper !== 'function' || isSuper() ? ' <button class="btn small ghost" data-act="aiSettingsModal">⚙️</button>' : '') + '</span></div>';
   h += '<div class="muted" style="margin-bottom:8px">🔒 ' + esc(t('aiPrivacy')) + '</div>' +
     (typeof canAi === 'function' && canAi() ? '<button class="btn small ghost" style="margin-bottom:8px" data-act="clSeg" data-seg="cases">' + esc(t('aiToCases')) + '</button>' : '');
-  if (s && !s.hasKey) return h + '<div class="hint" style="margin:0 0 10px">' + esc(t('aiNoKey')) + '</div><button class="btn primary block" data-act="aiSettingsModal">' + esc(t('aiSettings')) + '</button>';
+  if (s && !s.hasKey) return h + '<div class="hint" style="margin:0 0 10px">' + esc(t('aiNoKey')) + '</div>' + (typeof isSuper !== 'function' || isSuper() ? '<button class="btn primary block" data-act="aiSettingsModal">' + esc(t('aiSettings')) + '</button>' : '');
   return h + '<div id="aiLog">' + aiLogHtml() + '</div><div class="field"><textarea id="aiIn" placeholder="' + esc(t('aiPh')) + '"></textarea></div><button class="btn primary block" data-act="aiSend" id="aiSendBtn">' + esc(t('aiSend')) + '</button>';
 }
 function aiRender() {
@@ -17899,6 +17900,233 @@ Object.assign(H, {
   dockRev: () => dockOpen('rev'),
   dockCard: el => dockOpen('card', el.dataset.id),
   dockClose: () => dockClose()
+});
+
+/* =====================================================================
+ * v26: организации и регистрация.
+ *  Вход: «📝 Регистрация» — частный врач (сразу свой кабинет), вступить в организацию (заявка), новая организация (заявка главному админу).
+ *  Админ организации: свои пользователи (одобрить заявку), склады, права — как главный админ, но только в своей организации.
+ *  Главный админ: «🏢 Организации и оплата» — статус, тариф, «оплачено до», лимиты, одобрение.
+ * ===================================================================== */
+const I18N_V26 = {
+  ru: {
+    regBtn: '📝 Регистрация', regTitle: 'Регистрация', regKind: 'Кто вы', regPrivate: '👨‍⚕️ Частный врач — свой кабинет, сразу', regJoin: '🏥 Сотрудник организации — заявка админу', regNewOrg: '🏢 Новая организация — заявка',
+    regName: 'Ваше имя и фамилия', regLogin: 'Логин (латиница, 3–30)', regPw: 'Пароль (не меньше 8)', regPw2: 'Повторите пароль', regPhone: 'Телефон', regEmail: 'E-mail', regContactHint: 'Нужен хотя бы телефон или e-mail — для связи по заявке и оплате.',
+    regOrg: 'Организация', regOrgNone: 'Пока нет организаций, открытых для заявок. Попросите админа организации добавить вас или выберите «Новая организация».', regOrgName: 'Название организации', regStore: 'Название кабинета / склада', regNote: 'Пара слов об организации (необязательно)',
+    regAgree: 'Я принимаю условия использования и обработку данных (медицинские данные пациентов хранятся на сервере приложения; я отвечаю за законность их внесения)', regTerms: 'Условия', regGo: 'Зарегистрироваться',
+    regDoneJoin: 'Заявка отправлена админу организации. Войти можно будет после одобрения.', regDoneOrg: 'Заявка на новую организацию отправлена. Войти можно будет после одобрения (мы свяжемся по указанному контакту).',
+    termsText: 'Приложение «Учёт медикаментов» — инструмент учёта и помощи врачу. Решения о диагностике и лечении принимает врач. Подсказки ИИ — справочные. Вы отвечаете за законность внесения персональных данных пациентов и за доступ сотрудников, которым выдали права. Данные вашей организации доступны только её пользователям и главному администратору сервиса (для поддержки). На время пилота сервис бесплатный; тарифы и лимиты могут меняться с предупреждением. Удалить свои данные — по запросу главному администратору.',
+    E_PENDING: 'Заявка ещё не одобрена. Войти можно будет после одобрения.', E_ORG_BLOCKED: 'Доступ организации приостановлен. Свяжитесь с администратором сервиса.', E_REG_AGREE: 'Нужно принять условия.', E_REG_CONTACT: 'Укажите телефон или e-mail.', E_REG_LIMIT: 'Сегодня слишком много регистраций. Попробуйте завтра.', E_REG_BAD: 'Неверная регистрация.', E_NO_ORG: 'Организация не найдена.',
+    E_PLAN_LIMIT: 'Лимит тарифа: {what} — не больше {max}. Чтобы расширить — свяжитесь с администратором сервиса.', E_AI_ORG_LIMIT: 'Лимит ИИ вашей организации на этот месяц исчерпан ({max} запросов). Пакет можно докупить у администратора сервиса.', E_AI_EXT_BUSY: 'ИИ сейчас перегружен запросами. Попробуйте позже.',
+    aiOrgMonth: 'ИИ в этом месяце: {n} из {m}',
+    orgsBtn: '🏢 Организации и оплата', orgsTitle: '🏢 Организации и оплата', orgNew: '＋ Новая организация', orgStatus_active: 'активна', orgStatus_pending: 'ждёт одобрения', orgStatus_blocked: 'заблокирована',
+    orgType_main: 'основная', orgType_org: 'организация', orgType_private: 'частный врач', orgType_demo: 'демо',
+    plan_free: 'Бесплатный (старт)', plan_private: 'Частный врач', plan_team: 'Медпункт', plan_clinic: 'Клиника', plan_main: 'Основная',
+    orgPaid: 'оплачено до {d}', orgUnpaid: 'без срока', orgUsers: 'людей {n}/{m}', orgStores: 'складов {n}/{m}', orgAi: 'ИИ {n}/{m} в месяц', orgPendingN: 'заявок: {n}',
+    orgName: 'Название', orgPlanL: 'Тариф', orgStatusL: 'Статус', orgPaidL: 'Оплачено до', orgListed: 'Показывать в списке для заявок «вступить»', orgAiL: 'ИИ: запросов в месяц (пусто — по тарифу)', orgMaxU: 'Макс. пользователей (пусто — по тарифу)', orgMaxS: 'Макс. складов (пусто — по тарифу)',
+    orgContact: 'Контакт', orgNoteL: 'Заметка (оплата, договор)', orgApprove: '✅ Одобрить организацию', orgSave: 'Сохранить',
+    uaPending: '⏳ ждёт одобрения', uaApprove: '✅ Одобрить', uaOrgAdmin: 'Админ организации (все права в своей организации, люди и склады)', uaOrg: 'Организация', orgBadge: '🏢 {o} · {p}', orgAdminBadge: 'админ организации'
+  },
+  az: {
+    regBtn: '📝 Qeydiyyat', regTitle: 'Qeydiyyat', regKind: 'Siz kimsiniz', regPrivate: '👨‍⚕️ Fərdi həkim — öz kabinetiniz, dərhal', regJoin: '🏥 Təşkilatın əməkdaşı — adminə müraciət', regNewOrg: '🏢 Yeni təşkilat — müraciət',
+    regName: 'Adınız və soyadınız', regLogin: 'Login (latın, 3–30)', regPw: 'Parol (ən azı 8)', regPw2: 'Parolu təkrarlayın', regPhone: 'Telefon', regEmail: 'E-mail', regContactHint: 'Ən azı telefon və ya e-mail lazımdır — müraciət və ödəniş üzrə əlaqə üçün.',
+    regOrg: 'Təşkilat', regOrgNone: 'Müraciət üçün açıq təşkilat hələ yoxdur. Təşkilatın adminindən sizi əlavə etməsini xahiş edin və ya «Yeni təşkilat» seçin.', regOrgName: 'Təşkilatın adı', regStore: 'Kabinetin / anbarın adı', regNote: 'Təşkilat haqqında bir-iki söz (vacib deyil)',
+    regAgree: 'İstifadə şərtlərini və məlumatların emalını qəbul edirəm (pasiyentlərin tibbi məlumatları tətbiqin serverində saxlanılır; onların daxil edilməsinin qanuniliyinə mən cavabdehəm)', regTerms: 'Şərtlər', regGo: 'Qeydiyyatdan keç',
+    regDoneJoin: 'Müraciət təşkilatın adminə göndərildi. Təsdiqdən sonra daxil ola bilərsiniz.', regDoneOrg: 'Yeni təşkilat üçün müraciət göndərildi. Təsdiqdən sonra daxil ola bilərsiniz (göstərilən əlaqə ilə əlaqə saxlayacağıq).',
+    termsText: '«Dərman uçotu» tətbiqi uçot və həkimə köməkçi vasitədir. Diaqnostika və müalicə qərarlarını həkim verir. Sİ məsləhətləri məlumat xarakterlidir. Pasiyentlərin şəxsi məlumatlarının daxil edilməsinin qanuniliyinə və hüquq verdiyiniz əməkdaşların girişinə siz cavabdehsiniz. Təşkilatınızın məlumatları yalnız onun istifadəçilərinə və servisin baş administratoruna (dəstək üçün) əlçatandır. Pilot dövründə servis pulsuzdur; tariflər və limitlər xəbərdarlıqla dəyişə bilər. Məlumatlarınızı silmək — baş administratora müraciətlə.',
+    E_PENDING: 'Müraciət hələ təsdiqlənməyib. Təsdiqdən sonra daxil ola bilərsiniz.', E_ORG_BLOCKED: 'Təşkilatın girişi dayandırılıb. Servisin administratoru ilə əlaqə saxlayın.', E_REG_AGREE: 'Şərtləri qəbul etmək lazımdır.', E_REG_CONTACT: 'Telefon və ya e-mail göstərin.', E_REG_LIMIT: 'Bu gün çox qeydiyyat olub. Sabah cəhd edin.', E_REG_BAD: 'Yanlış qeydiyyat.', E_NO_ORG: 'Təşkilat tapılmadı.',
+    E_PLAN_LIMIT: 'Tarif limiti: {what} — {max}-dan çox olmaz. Genişləndirmək üçün servisin administratoru ilə əlaqə saxlayın.', E_AI_ORG_LIMIT: 'Təşkilatınızın bu ay üçün Sİ limiti bitib ({max} sorğu). Paket servisin administratorundan alına bilər.', E_AI_EXT_BUSY: 'Sİ hazırda sorğularla yüklənib. Sonra cəhd edin.',
+    aiOrgMonth: 'Sİ bu ay: {n} / {m}',
+    orgsBtn: '🏢 Təşkilatlar və ödəniş', orgsTitle: '🏢 Təşkilatlar və ödəniş', orgNew: '＋ Yeni təşkilat', orgStatus_active: 'aktiv', orgStatus_pending: 'təsdiq gözləyir', orgStatus_blocked: 'bloklanıb',
+    orgType_main: 'əsas', orgType_org: 'təşkilat', orgType_private: 'fərdi həkim', orgType_demo: 'demo',
+    plan_free: 'Pulsuz (start)', plan_private: 'Fərdi həkim', plan_team: 'Tibb məntəqəsi', plan_clinic: 'Klinika', plan_main: 'Əsas',
+    orgPaid: '{d}-dək ödənilib', orgUnpaid: 'müddətsiz', orgUsers: 'adam {n}/{m}', orgStores: 'anbar {n}/{m}', orgAi: 'Sİ {n}/{m} ayda', orgPendingN: 'müraciət: {n}',
+    orgName: 'Ad', orgPlanL: 'Tarif', orgStatusL: 'Status', orgPaidL: 'Ödənilib (tarixədək)', orgListed: '«Qoşul» müraciəti üçün siyahıda göstər', orgAiL: 'Sİ: ayda sorğu (boş — tarifə görə)', orgMaxU: 'Maks. istifadəçi (boş — tarifə görə)', orgMaxS: 'Maks. anbar (boş — tarifə görə)',
+    orgContact: 'Əlaqə', orgNoteL: 'Qeyd (ödəniş, müqavilə)', orgApprove: '✅ Təşkilatı təsdiqlə', orgSave: 'Yadda saxla',
+    uaPending: '⏳ təsdiq gözləyir', uaApprove: '✅ Təsdiqlə', uaOrgAdmin: 'Təşkilatın admini (öz təşkilatında bütün hüquqlar, adamlar və anbarlar)', uaOrg: 'Təşkilat', orgBadge: '🏢 {o} · {p}', orgAdminBadge: 'təşkilatın admini'
+  }
+};
+Object.assign(I18N.ru, I18N_V26.ru);
+Object.assign(I18N.az, I18N_V26.az);
+
+/** Главный админ сервиса (все организации). isOwner() теперь — «админ здесь»: главный или админ организации этого склада. */
+function isSuper() { return !!(S.me && S.me.owner); }
+window.isOwner = function () {
+  if (!S.me) return false;
+  if (S.me.owner) return true;
+  const st = myStores().find(s => s.id === S.storeId);
+  return !!(st && st.admin);
+};
+function isOrgAdmin() { return !!(S.me && (S.me.owner || S.me.orgAdmin)); }
+
+/* ---------- регистрация ---------- */
+async function regOpen() {
+  S.reg = { kind: 'private', orgs: null };
+  regRender();
+  try { const r = await rpc('orgList', {}, 30000); S.reg.orgs = r && r.ok ? r.rows : []; } catch (e) { S.reg.orgs = []; }
+  if (S.reg.kind === 'join') regRender();
+}
+function regRender() {
+  const g = S.reg; if (!g) return;
+  const keep = Object.assign({}, g.keep || {}); $$('.modal [data-rg]').forEach(el => { keep[el.dataset.rg] = el.type === 'checkbox' ? el.checked : el.value; });
+  g.keep = keep;
+  const fld = (k, lbl, ty, extra) => '<div class="field"><label>' + esc(t(lbl)) + '</label><input data-rg="' + k + '" type="' + (ty || 'text') + '"' + (extra || '') + ' value="' + esc(keep[k] || '') + '"></div>';
+  const kinds = [['private', 'regPrivate'], ['join', 'regJoin'], ['neworg', 'regNewOrg']];
+  let h = '<h3>' + esc(t('regTitle')) + '</h3><div class="lbl">' + esc(t('regKind')) + '</div>' +
+    kinds.map(k => '<label class="check" style="margin:6px 0"><input type="radio" name="rgKind" value="' + k[0] + '"' + (g.kind === k[0] ? ' checked' : '') + '><span>' + esc(t(k[1])) + '</span></label>').join('');
+  if (g.kind === 'join') h += g.orgs === null ? '<div class="muted">' + esc(t('loading')) + '</div>' : g.orgs.length ? '<div class="field"><label>' + esc(t('regOrg')) + '</label><select data-rg="orgId">' + g.orgs.map(o => '<option value="' + esc(o.id) + '"' + (keep.orgId === o.id ? ' selected' : '') + '>' + esc(o.name) + '</option>').join('') + '</select></div>' : '<div class="hint" style="display:block">' + esc(t('regOrgNone')) + '</div>';
+  if (g.kind === 'neworg') h += fld('orgName', 'regOrgName') + fld('note', 'regNote');
+  h += fld('name', 'regName', 'text', ' autocomplete="name"') + (g.kind === 'private' ? fld('storeName', 'regStore') : '') +
+    fld('login', 'regLogin', 'text', ' autocapitalize="none" autocomplete="username"') + fld('password', 'regPw', 'password', ' autocomplete="new-password"') + fld('password2', 'regPw2', 'password', ' autocomplete="new-password"') +
+    fld('phone', 'regPhone', 'tel') + fld('email', 'regEmail', 'email') + '<div class="muted" style="margin:-4px 0 8px">' + esc(t('regContactHint')) + '</div>' +
+    '<label class="check"><input type="checkbox" data-rg="agree"' + (keep.agree ? ' checked' : '') + '><span>' + esc(t('regAgree')) + ' · <a href="#" data-act="regTerms">' + esc(t('regTerms')) + '</a></span></label>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="regGo">' + esc(t('regGo')) + '</button></div>';
+  openModal(h);
+  $$('input[name=rgKind]').forEach(x => x.addEventListener('change', () => { S.reg.kind = x.value; regRender(); }));
+}
+async function regGo(btn) {
+  const v = {}; $$('.modal [data-rg]').forEach(el => { v[el.dataset.rg] = el.type === 'checkbox' ? el.checked : el.value.trim(); });
+  if (v.password !== v.password2) return toast(t('pwMismatch'), 'bad');
+  if (!v.agree) return toast(t('E_REG_AGREE'), 'bad');
+  const p = { kind: S.reg.kind, name: v.name, login: v.login, password: v.password, phone: v.phone, email: v.email, agree: true, device: deviceName() };
+  if (p.kind === 'private') p.storeName = v.storeName;
+  if (p.kind === 'join') p.orgId = v.orgId;
+  if (p.kind === 'neworg') { p.orgName = v.orgName; p.note = v.note; }
+  let r;
+  try { r = await busy(btn, () => rpc('register', p, 120000), true); } catch (e) { return toast(t('E_NETWORK'), 'bad'); }
+  if (!r) return;
+  if (!r.ok) return toast(errText(r), 'bad');
+  if (r.sess) { closeModal(); afterLogin(r); return; }
+  S.loginPrefill = p.login;
+  closeModal();
+  showLogin(t(r.pending === 'neworg' ? 'regDoneOrg' : 'regDoneJoin'));
+}
+
+/* ---------- главный админ: организации и оплата ---------- */
+async function orgsAdmin() {
+  openModal('<h3>' + esc(t('orgsTitle')) + '</h3><div id="oaBox" class="muted">' + esc(t('loading')) + '</div>');
+  let r; try { r = await rpcO('orgsAdmin'); } catch (e) { return; }
+  S.oa = r; orgsRender();
+}
+function orgsRender() {
+  const box = $('#oaBox'); if (!box || !S.oa) return;
+  box.classList.remove('muted');
+  const order = { pending: 0, active: 1, blocked: 2 };
+  box.innerHTML = '<button class="btn primary block" style="margin-bottom:10px" data-act="orgEdit" data-id="">' + esc(t('orgNew')) + '</button>' +
+    S.oa.orgs.slice().sort((a, b) => (order[a.status] - order[b.status]) || String(a.name).localeCompare(String(b.name))).map(o => {
+      const late = o.paidUntil && o.paidUntil < bakuToday();
+      return '<div class="grp' + (o.status === 'blocked' ? ' off' : '') + '"><div class="grp-h"><div class="t">' + esc(o.name || o.id) + ' <span class="muted">' + esc(t('orgType_' + o.type) || o.type) + '</span></div>' +
+        (o.id !== 'O_MAIN' ? '<button class="btn small ghost" data-act="orgEdit" data-id="' + esc(o.id) + '">✏️</button>' : '') + '</div><div style="padding:6px 12px 10px">' +
+        '<span class="tag ' + (o.status === 'active' ? 'green' : o.status === 'pending' ? 'amber' : 'red') + '">' + esc(t('orgStatus_' + o.status)) + '</span> ' +
+        '<span class="tag">' + esc(t('plan_' + o.plan) || o.plan) + '</span> ' + (o.paidUntil ? '<span class="tag ' + (late ? 'red' : 'green') + '">' + esc(t('orgPaid', { d: fmtDate(o.paidUntil) })) + '</span>' : '') +
+        (o.pending ? ' <span class="tag amber">' + esc(t('orgPendingN', { n: o.pending })) + '</span>' : '') +
+        '<div class="muted" style="margin-top:4px">' + esc([t('orgUsers', { n: o.users, m: o.caps.users }), t('orgStores', { n: o.stores, m: o.caps.stores }), t('orgAi', { n: o.aiUsed, m: o.caps.aiMonth || '∞' }), o.contact].filter(Boolean).join(' · ')) + '</div>' +
+        (o.note ? '<div class="muted">' + esc(o.note) + '</div>' : '') + '</div></div>';
+    }).join('') + '<div class="acts"><button class="btn ghost" data-act="profile">' + esc(t('close')) + '</button></div>';
+}
+function orgEditModal(id) {
+  const o = id ? S.oa.orgs.find(x => x.id === id) : { status: 'active', plan: 'free', listed: false };
+  if (!o) return;
+  const sel = (k, list, cur) => '<select id="oe_' + k + '">' + list.map(x => '<option value="' + x + '"' + (x === cur ? ' selected' : '') + '>' + esc(t((k === 'plan' ? 'plan_' : 'orgStatus_') + x)) + '</option>').join('') + '</select>';
+  const inp = (k, lbl, v, ty) => '<div class="field"><label>' + esc(t(lbl)) + '</label><input id="oe_' + k + '" type="' + (ty || 'text') + '" value="' + esc(v === undefined || v === null ? '' : v) + '"></div>';
+  openModal('<h3>' + esc(id ? o.name : t('orgNew')) + '</h3>' +
+    inp('name', 'orgName', o.name) +
+    '<div class="grid2"><div class="field"><label>' + esc(t('orgPlanL')) + '</label>' + sel('plan', ['free', 'private', 'team', 'clinic'], o.plan) + '</div><div class="field"><label>' + esc(t('orgStatusL')) + '</label>' + sel('status', ['active', 'pending', 'blocked'], o.status) + '</div></div>' +
+    inp('paidUntil', 'orgPaidL', o.paidUntil, 'date') +
+    '<div class="grid2">' + inp('maxUsers', 'orgMaxU', o.maxUsers, 'number') + inp('maxStores', 'orgMaxS', o.maxStores, 'number') + '</div>' + inp('aiMonth', 'orgAiL', o.aiMonth, 'number') +
+    '<label class="check"><input type="checkbox" id="oe_listed"' + (o.listed ? ' checked' : '') + '><span>' + esc(t('orgListed')) + '</span></label>' +
+    inp('contact', 'orgContact', o.contact) + inp('note', 'orgNoteL', o.note) +
+    (id && o.status === 'pending' ? '<button class="btn primary block" style="margin:8px 0" data-act="orgSave" data-id="' + esc(id) + '" data-approve="1">' + esc(t('orgApprove')) + '</button>' : '') +
+    '<div class="acts"><button class="btn ghost" data-act="orgsAdmin">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="orgSave" data-id="' + esc(id || '') + '">' + esc(t('orgSave')) + '</button></div>');
+}
+async function orgSave(btn) {
+  const g = k => { const el = $('#oe_' + k); return el ? (el.type === 'checkbox' ? el.checked : el.value.trim()) : undefined; };
+  const org = { id: btn.dataset.id || '', name: g('name'), plan: g('plan'), status: g('status'), paidUntil: g('paidUntil'), maxUsers: g('maxUsers'), maxStores: g('maxStores'), aiMonth: g('aiMonth'), listed: g('listed'), contact: g('contact'), note: g('note') };
+  if (btn.dataset.approve) org.approve = true;
+  const r = await busy(btn, () => rpcO('saveOrg', { org }, { timeout: 180000 }));
+  if (!r) return;
+  S.oa.orgs = r.orgs;
+  openModal('<h3>' + esc(t('orgsTitle')) + '</h3><div id="oaBox"></div>'); orgsRender();
+}
+
+/* ---------- профиль, пользователи: организация, заявки, админ организации ---------- */
+(function () {
+  const origProfile = profileModal;
+  window.profileModal = async function () {
+    const r = origProfile.apply(this, arguments);
+    const m = $('.modal');
+    if (m && S.me) {
+      const o = S.me.org || {};
+      if (o.name && o.type !== 'main') { const h3 = m.querySelector('h3'); if (h3) h3.insertAdjacentHTML('afterend', '<div class="muted" style="margin:-4px 0 8px">' + esc(t('orgBadge', { o: o.name, p: t('plan_' + o.plan) || o.plan })) + (S.me.orgAdmin ? ' · ' + esc(t('orgAdminBadge')) : '') + (o.paidUntil ? ' · ' + esc(t('orgPaid', { d: fmtDate(o.paidUntil) })) : '') + '</div>'); }
+      // админ организации — свои люди и склады; главный админ — ещё и организации
+      if (!isSuper() && S.me.orgAdmin && !m.querySelector('[data-act=usersAdmin]')) {
+        const card = m.querySelector('.card');
+        if (card) card.insertAdjacentHTML('afterend', '<div class="card"><div class="lbl">🏢 ' + esc(t('orgAdminBadge')) + '</div><div class="col-btns"><button class="btn ghost block" data-act="usersAdmin">👥 ' + esc(t('usersAndPerms')) + '</button><button class="btn ghost block" data-act="storesAdmin">🏥 ' + esc(t('storesTitle')) + '</button><button class="btn ghost block" data-act="authLogModal">📒 ' + esc(t('authLog')) + '</button></div></div>');
+      }
+      if (isSuper()) { const col = m.querySelector('[data-act=usersAdmin]'); if (col) col.insertAdjacentHTML('beforebegin', '<button class="btn ghost block" data-act="orgsAdmin">' + esc(t('orgsBtn')) + '</button>'); }
+    }
+    return r;
+  };
+  const origUsers = usersAdmin;
+  window.usersAdmin = async function (focusId) {
+    const r = await origUsers.apply(this, arguments);
+    const box = $('#uaBox'); if (!box || !S.ua) return r;
+    // заявки — сверху, кнопка «Одобрить»; у главного админа — организация каждого
+    const orgName = id => ((S.ua.orgs || []).find(o => o.id === id) || {}).name || '';
+    (S.ua.users || []).forEach(u => {
+      const btnEl = box.querySelector('[data-act=userEdit][data-id="' + u.id + '"]'); if (!btnEl) return;
+      const grp = btnEl.closest('.grp'); if (!grp) return;
+      const body = grp.querySelector('.grp-h + div');
+      if (u.pending && body) { body.insertAdjacentHTML('afterbegin', '<span class="tag amber">' + esc(t('uaPending')) + '</span> <button class="btn small primary" data-act="uaApprove" data-id="' + esc(u.id) + '">' + esc(t('uaApprove')) + '</button> '); grp.parentNode.insertBefore(grp, grp.parentNode.children[1] || null); }
+      if (u.orgAdmin && body) body.insertAdjacentHTML('afterbegin', '<span class="tag green">' + esc(t('orgAdminBadge')) + '</span> ');
+      if (isSuper() && body && u.orgId && u.orgId !== 'O_MAIN') body.insertAdjacentHTML('afterbegin', '<span class="tag">🏢 ' + esc(orgName(u.orgId) || u.orgId) + '</span> ');
+    });
+    return r;
+  };
+  const origEdit = userEditModal;
+  window.userEditModal = function (id) {
+    const r = origEdit.apply(this, arguments);
+    const u = id && S.ua ? S.ua.users.find(x => x.id === id) : null;
+    if (u && u.owner) return r;
+    const acts = $('.modal .acts'); if (!acts) return r;
+    let h = '<label class="check"><input type="checkbox" id="ueOrgAdmin"' + (u && u.orgAdmin ? ' checked' : '') + '><span>' + esc(t('uaOrgAdmin')) + '</span></label>';
+    if (isSuper() && (S.ua.orgs || []).length) h += '<div class="field"><label>' + esc(t('uaOrg')) + '</label><select id="ueOrg">' + S.ua.orgs.map(o => '<option value="' + esc(o.id) + '"' + ((u ? u.orgId : 'O_MAIN') === o.id ? ' selected' : '') + '>' + esc(o.name || o.id) + '</option>').join('') + '</select></div>';
+    acts.insertAdjacentHTML('beforebegin', h);
+    return r;
+  };
+  const origSave = userSave;
+  window.userSave = async function (btn) {
+    // добавить к сохранению флаг «админ организации» и организацию (у главного админа)
+    const origRpc = window.rpcO;
+    window.rpcO = function (action, payload, opts) {
+      if (action === 'saveUser' && payload && payload.user) { const a = $('#ueOrgAdmin'); if (a) payload.user.orgAdmin = a.checked; const o = $('#ueOrg'); if (o) payload.user.orgId = o.value; }
+      return origRpc.apply(this, arguments);
+    };
+    try { return await origSave.apply(this, arguments); } finally { window.rpcO = origRpc; }
+  };
+  // экран входа: кнопка «Регистрация»
+  const origLogin = renderLogin;
+  window.renderLogin = async function () {
+    const r = await origLogin.apply(this, arguments);
+    const box = $('#loginBox');
+    const go = box && box.querySelector('[data-act=loginGo]');
+    if (go && !box.querySelector('[data-act=regOpen]')) go.insertAdjacentHTML('afterend', '<button class="btn ghost block" style="margin-top:8px" data-act="regOpen">' + esc(t('regBtn')) + '</button>');
+    return r;
+  };
+})();
+Object.assign(H, {
+  regOpen: () => regOpen(),
+  regGo: el => regGo(el),
+  regTerms: () => { const keep = S.reg; if (keep) { keep.keep = keep.keep || {}; $$('.modal [data-rg]').forEach(el => { keep.keep[el.dataset.rg] = el.type === 'checkbox' ? el.checked : el.value; }); } openModal('<h3>' + esc(t('regTerms')) + '</h3><div style="white-space:pre-wrap">' + esc(t('termsText')) + '</div><div class="acts"><button class="btn primary" data-act="regBack">OK</button></div>'); S.reg = keep; },
+  regBack: () => regRender(),
+  orgsAdmin: () => orgsAdmin(),
+  orgEdit: el => orgEditModal(el.dataset.id),
+  orgSave: el => orgSave(el),
+  uaApprove: async el => {
+    const u = S.ua && S.ua.users.find(x => x.id === el.dataset.id); if (!u) return;
+    const r = await busy(el, () => rpcO('saveUser', { user: { id: u.id, login: u.login, name: u.name, nameAz: u.nameAz, email: u.email, approve: true } }));
+    if (r) { toast(t('saved'), 'ok'); window.usersAdmin(u.id); }
+  }
 });
 
 
