@@ -9746,6 +9746,156 @@ function icdAttachForm() {
 // МКБ — в фоне после справочника препаратов (если уже была скачана — сразу из памяти телефона)
 setTimeout(() => { try { icdLoad(); } catch (e) { } }, 4000);
 
+/* =====================================================================
+ * v16: «🧹 Начать склад заново» — в настройках склада, только у главного админа.
+ *  Можно выбрать, что удалить полностью, а что оставить. Перед очисткой сервер делает резервную копию таблицы.
+ * ===================================================================== */
+const I18N_V16 = {
+  ru: {
+    rsCard: '🧹 Начать склад заново', rsCardHint: 'Удалить все карточки, остатки и журнал операций этого склада и внести всё заново. Перед очисткой делается резервная копия таблицы.',
+    rsOpen: 'Начать заново…', rsTitle: '🧹 Начать склад заново', rsAlways: 'Удаляется всегда: карточки, партии и остатки, журнал операций (приходы, списания, перемещения), ревизии, расхождения, заявки, свидетели утилизации, нормы по местам (они привязаны к карточкам).',
+    rsChoose: 'Отметьте, что тоже удалить полностью (без отметки — останется):', rsForms: 'Формы пациентов и их журнал (фото на Диске останутся)', rsPlaces: 'Места хранения и укладки сумок (вместо них — стандартные места)', rsSubMins: 'Минимумы по МНН',
+    rsMonths: 'Закрытые месяцы и пояснения к отчётам (если оставить — отчёты за прошлые месяцы будут пустыми: журнал удаляется)', rsKeepAlways: 'Не трогается никогда: пользователи и права, другие склады, справочники, настройки.',
+    rsBackup: 'Перед очисткой — копия таблицы в папку «Медпункт — резервные копии» на Диске.', rsPw: 'Ваш пароль', rsWord: 'Для подтверждения напишите: ОЧИСТИТЬ',
+    rsGo: '🧹 Очистить склад', rsBadWord: 'Напишите слово ОЧИСТИТЬ — без него склад не очищается.', rsQueue: 'На этом телефоне есть неотправленные операции ({n}). Сначала дождитесь отправки (нужна связь) — иначе они попадут в новый склад.',
+    rsDevices: 'Неотправленное есть ещё на телефонах: {list}. Лучше дождаться, пока они отправят.', rsDone: 'Склад очищен', rsDoneText: 'Удалено: {list}. Резервная копия:',
+    rsOpenBackup: 'открыть копию', rsBackupFolder: 'в папке «Медпункт — резервные копии» на Диске', rsNext: 'Теперь вносите остатки: «Приход» → «📥 Начальный остаток» или «Приход списком».', rsToReceive: '📥 Внести начальный остаток',
+    rsG_stock: 'склад', rsG_forms: 'формы пациентов', rsG_places: 'места и укладки', rsG_subMins: 'минимумы по МНН', rsG_months: 'закрытые месяцы',
+    E_RESET_CONFIRM: 'Не подтверждено словом ОЧИСТИТЬ.', E_BACKUP_FAILED: 'Не удалось сделать резервную копию — склад не очищен. {msg}', E_RESET_XFER: 'Есть передача между складами, которую ещё не приняли. Сначала примите или верните её.', E_STORE_RESET: 'Операция сделана до очистки склада — в новый склад не записана.', E_RESET_PARTIAL: 'Склад очищен не полностью (сбой: {msg}). Резервная копия сохранена — сообщите разработчику, не повторяйте.'
+  },
+  az: {
+    rsCard: '🧹 Anbarı yenidən başla', rsCardHint: 'Bu anbarın bütün kartlarını, qalıqlarını və əməliyyat jurnalını silmək və hər şeyi yenidən daxil etmək. Təmizləmədən əvvəl cədvəlin ehtiyat surəti çıxarılır.',
+    rsOpen: 'Yenidən başla…', rsTitle: '🧹 Anbarı yenidən başla', rsAlways: 'Həmişə silinir: kartlar, partiyalar və qalıqlar, əməliyyat jurnalı (mədaxil, silinmə, köçürmə), təftişlər, uyğunsuzluqlar, sifarişlər, utilizasiya şahidləri, yerlər üzrə normalar (kartlara bağlıdır).',
+    rsChoose: 'Tam silinməli olanları da qeyd edin (qeydsiz — qalacaq):', rsForms: 'Pasiyent formaları və onların jurnalı (Diskdəki fotolar qalacaq)', rsPlaces: 'Saxlama yerləri və çanta yığımları (əvəzinə — standart yerlər)', rsSubMins: 'MNN üzrə minimumlar',
+    rsMonths: 'Bağlanmış aylar və hesabat izahları (saxlasanız — keçmiş ayların hesabatları boş olacaq: jurnal silinir)', rsKeepAlways: 'Heç vaxt toxunulmur: istifadəçilər və hüquqlar, digər anbarlar, məlumat kitabçaları, ayarlar.',
+    rsBackup: 'Təmizləmədən əvvəl — cədvəlin surəti Diskdə «Медпункт — резервные копии» qovluğuna.', rsPw: 'Şifrəniz', rsWord: 'Təsdiq üçün yazın: TƏMİZLƏ',
+    rsGo: '🧹 Anbarı təmizlə', rsBadWord: 'TƏMİZLƏ sözünü yazın — onsuz anbar təmizlənmir.', rsQueue: 'Bu telefonda göndərilməmiş əməliyyatlar var ({n}). Əvvəlcə göndərilməsini gözləyin (şəbəkə lazımdır) — yoxsa yeni anbara düşəcəklər.',
+    rsDevices: 'Göndərilməmiş əməliyyatlar başqa telefonlarda da var: {list}. Göndərənə qədər gözləmək yaxşıdır.', rsDone: 'Anbar təmizləndi', rsDoneText: 'Silindi: {list}. Ehtiyat surəti:',
+    rsOpenBackup: 'surəti aç', rsBackupFolder: 'Diskdə «Медпункт — резервные копии» qovluğunda', rsNext: 'İndi qalıqları daxil edin: «Mədaxil» → «📥 Başlanğıc qalıq» və ya «Siyahı ilə mədaxil».', rsToReceive: '📥 Başlanğıc qalığı daxil et',
+    rsG_stock: 'anbar', rsG_forms: 'pasiyent formaları', rsG_places: 'yerlər və yığımlar', rsG_subMins: 'MNN minimumları', rsG_months: 'bağlanmış aylar',
+    E_RESET_CONFIRM: 'TƏMİZLƏ sözü ilə təsdiqlənməyib.', E_BACKUP_FAILED: 'Ehtiyat surəti çıxarmaq alınmadı — anbar təmizlənmədi. {msg}', E_RESET_XFER: 'Anbarlar arasında hələ qəbul edilməmiş ötürmə var. Əvvəlcə qəbul edin və ya qaytarın.', E_STORE_RESET: 'Əməliyyat anbar təmizlənməzdən əvvəl edilib — yeni anbara yazılmadı.', E_RESET_PARTIAL: 'Anbar tam təmizlənmədi (xəta: {msg}). Ehtiyat surəti saxlanılıb — tərtibatçıya bildirin, təkrarlamayın.'
+  }
+};
+Object.assign(I18N.ru, I18N_V16.ru);
+Object.assign(I18N.az, I18N_V16.az);
+
+function rsCardHtml() {
+  if (!isOwner()) return '';
+  return '<div class="card" id="rsCard"><div class="lbl">' + esc(t('rsCard')) + '</div><div class="muted" style="margin-bottom:8px">' + esc(t('rsCardHint')) + '</div>' +
+    '<button class="btn small danger" data-act="rsModal">' + esc(t('rsOpen')) + '</button></div>';
+}
+(function () {
+  const orig = settingsModal;
+  window.settingsModal = function () {
+    const r = orig.apply(this, arguments);
+    try {
+      const m = $('.modal'); const card = rsCardHtml();
+      if (m && card && !$('#rsCard', m)) { const acts = m.querySelector('.acts:last-of-type'); if (acts) acts.insertAdjacentHTML('beforebegin', card); else m.insertAdjacentHTML('beforeend', card); }
+    } catch (e) { }
+    return r;
+  };
+})();
+function rsPendingHtml() {
+  const own = (S.queue || []).length + (S.failed || []).length;
+  const dev = ((S.extras && S.extras.devices) || []).filter(d => d.pending || d.failed).map(d => d.name + (d.device ? ' (' + d.device + ')' : '') + ': ' + (d.pending + d.failed));
+  return (own ? '<div class="f-alert" style="margin-bottom:8px">⚠️ ' + esc(t('rsQueue', { n: own })) + '</div>' : '') +
+    (dev.length ? '<div class="hint" style="margin-bottom:8px">⚠️ ' + esc(t('rsDevices', { list: dev.join('; ') })) + '</div>' : '');
+}
+function rsModal() {
+  if (!isOwner()) return;
+  const chk = (g, lbl) => '<label class="check"><input type="checkbox" data-rs="' + g + '"><span>' + esc(lbl) + '</span></label>';
+  openModal('<h3>' + esc(t('rsTitle')) + '</h3>' + rsPendingHtml() +
+    '<div class="hint" style="margin-bottom:10px">🗑️ ' + esc(t('rsAlways')) + '</div>' +
+    '<div class="lbl">' + esc(t('rsChoose')) + '</div>' + chk('forms', t('rsForms')) + chk('places', t('rsPlaces')) + chk('subMins', t('rsSubMins')) + chk('months', t('rsMonths')) +
+    '<div class="muted" style="margin:8px 0">✅ ' + esc(t('rsKeepAlways')) + '</div><div class="muted" style="margin-bottom:10px">💾 ' + esc(t('rsBackup')) + '</div>' +
+    '<div class="field"><label>' + esc(t('rsPw')) + '</label><input type="password" id="rsPw" autocomplete="current-password"></div>' +
+    '<div class="field"><label>' + esc(t('rsWord')) + '</label><input type="text" id="rsWord" autocomplete="off" autocapitalize="characters"></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn danger" data-act="rsGo">' + esc(t('rsGo')) + '</button></div>');
+}
+async function rsGo(btn) {
+  const w = String($('#rsWord').value || '').trim().toUpperCase().replace(/İ/g, 'I');
+  if (w !== 'ОЧИСТИТЬ' && w !== 'TƏMIZLƏ' && w !== 'TEMIZLE') { toast(t('rsBadWord'), 'bad'); return; }
+  if ((S.queue || []).length + (S.failed || []).length) { toast(t('rsQueue', { n: (S.queue || []).length + (S.failed || []).length }), 'bad'); return; }
+  const groups = $$('[data-rs]').filter(x => x.checked).map(x => x.dataset.rs);
+  const r = await busy(btn, () => rpcA('resetStore', { groups, password: $('#rsPw').value, confirm: 'RESET' }, { timeout: 170000 }));
+  if (!r) return;
+  // на этом телефоне — забыть старое состояние склада (и формы, если их удалили)
+  try { LS.del(stateKey()); } catch (e) { }
+  if (groups.indexOf('forms') !== -1) { try { LS.del(fKey()); } catch (e) { } }
+  const names = (r.deleted || []).map(g => t('rsG_' + g)).join(', ');
+  openModal('<h3>✅ ' + esc(t('rsDone')) + '</h3><div style="margin-bottom:10px">' + esc(t('rsDoneText', { list: names })) + ' ' +
+    (r.backupUrl ? '<a href="' + esc(r.backupUrl) + '" target="_blank" rel="noopener">' + esc(t('rsOpenBackup')) + '</a>' : esc(t('rsBackupFolder'))) + '</div>' +
+    '<div class="info" style="margin-bottom:10px">' + esc(t('rsNext')) + '</div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button><button class="btn primary" data-act="rsToReceive">' + esc(t('rsToReceive')) + '</button></div>');
+  refreshState(true);
+}
+Object.assign(H, {
+  rsModal: () => rsModal(),
+  rsGo: el => rsGo(el),
+  rsToReceive: () => { closeModal(); setScreen('receive'); const b = $('[data-act=rcvMode][data-mode=opening]'); if (b) b.click(); }
+});
+
+/* ---------- удалить склад целиком (в «Склады» у главного админа) ---------- */
+Object.assign(I18N.ru, {
+  sdBtn: '🗑️ Удалить склад', sdTitle: '🗑️ Удалить склад «{s}»', sdText: 'Склад пропадёт у всех, права на него снимутся. Перед удалением — копия его таблицы в папку «Медпункт — резервные копии» на Диске. Своя таблица склада уйдёт в корзину Диска (30 дней можно вернуть).',
+  sdWord: 'Для подтверждения напишите: УДАЛИТЬ', sdBadWord: 'Напишите слово УДАЛИТЬ.', sdDone: 'Склад «{s}» удалён. Копия: ', sdQueue: 'На этом телефоне есть неотправленные операции этого склада ({n}) — они не дойдут.',
+  E_LAST_STORE: 'Это единственный склад — сначала создайте новый, потом удаляйте этот.'
+});
+Object.assign(I18N.az, {
+  sdBtn: '🗑️ Anbarı sil', sdTitle: '🗑️ «{s}» anbarını sil', sdText: 'Anbar hamıdan gizlənəcək, ona hüquqlar götürüləcək. Silinmədən əvvəl — cədvəlin surəti Diskdə «Медпункт — резервные копии» qovluğuna. Anbarın öz cədvəli Disk səbətinə gedəcək (30 gün ərzində qaytarmaq olar).',
+  sdWord: 'Təsdiq üçün yazın: SİL', sdBadWord: 'SİL sözünü yazın.', sdDone: '«{s}» anbarı silindi. Surət: ', sdQueue: 'Bu telefonda bu anbarın göndərilməmiş əməliyyatları var ({n}) — onlar çatmayacaq.',
+  E_LAST_STORE: 'Bu yeganə anbardır — əvvəlcə yenisini yaradın, sonra bunu silin.'
+});
+(function () {
+  const orig = storeEditModal;
+  window.storeEditModal = function (id) {
+    const r = orig.apply(this, arguments);
+    if (id && isOwner()) {
+      const acts = $('.modal .acts');
+      if (acts) acts.insertAdjacentHTML('beforebegin', '<button class="btn danger block" style="margin:6px 0 10px" data-act="sdModal" data-id="' + esc(id) + '">' + esc(t('sdBtn')) + '</button>');
+    }
+    return r;
+  };
+  // в списке складов — только действующие
+  const origSA = storesAdmin;
+  window.storesAdmin = async function () {
+    const r = await origSA.apply(this, arguments);
+    try {
+      if (S.ua && S.ua.stores) {
+        const gone = S.ua.stores.filter(s => !s.active).map(s => s.id);
+        $$('#saBox [data-act=storeEdit]').forEach(b => { if (b.dataset.id && gone.indexOf(b.dataset.id) !== -1) { const row = b.closest('.list-row'); if (row) row.remove(); } });
+      }
+    } catch (e) { }
+    return r;
+  };
+})();
+function sdModal(id) {
+  const s = (S.ua && S.ua.stores || []).find(x => x.id === id); if (!s) return;
+  const own = (S.queue || []).concat(S.failed || []).filter(o => o.payload && o.payload.storeId === id).length;
+  openModal('<h3>' + esc(t('sdTitle', { s: s.nameRu })) + '</h3>' + (own ? '<div class="f-alert" style="margin-bottom:8px">⚠️ ' + esc(t('sdQueue', { n: own })) + '</div>' : '') +
+    '<div class="hint" style="margin-bottom:10px">' + esc(t('sdText')) + '</div>' +
+    '<div class="field"><label>' + esc(t('rsPw')) + '</label><input type="password" id="sdPw" autocomplete="current-password"></div>' +
+    '<div class="field"><label>' + esc(t('sdWord')) + '</label><input type="text" id="sdWord" autocomplete="off" autocapitalize="characters"></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="storesAdmin">' + esc(t('cancel')) + '</button><button class="btn danger" data-act="sdGo" data-id="' + esc(id) + '">' + esc(t('sdBtn')) + '</button></div>');
+}
+async function sdGo(btn) {
+  const id = btn.dataset.id;
+  const s = (S.ua && S.ua.stores || []).find(x => x.id === id) || { nameRu: id };
+  const w = String($('#sdWord').value || '').trim().toUpperCase().replace(/İ/g, 'I');
+  if (w !== 'УДАЛИТЬ' && w !== 'SIL') { toast(t('sdBadWord'), 'bad'); return; }
+  let r;
+  try { r = await busy(btn, () => rpcO('deleteStore', { storeId: id, password: $('#sdPw').value, confirm: 'DELETE' }, { timeout: 170000 }), true); } catch (e) { return; }
+  if (!r) return;
+  toast(t('sdDone', { s: s.nameRu }) + (r.backupUrl ? '✔' : t('rsBackupFolder')));
+  await reloadMeQuiet();
+  if (S.storeId === id) { const left = myStores(); if (left.length) switchStore(left[0].id); }
+  storesAdmin();
+}
+Object.assign(H, {
+  sdModal: el => sdModal(el.dataset.id),
+  sdGo: el => sdGo(el)
+});
+
 
 function init() {
   vizTipInit();
