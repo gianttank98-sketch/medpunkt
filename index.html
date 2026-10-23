@@ -14746,7 +14746,7 @@ Object.assign(H, {
  * ===================================================================== */
 const I18N_V19 = {
   ru: {
-    clSegAi: '🤖 ИИ', aiPh: 'Спросите или поручите: «что заканчивается?», «внеси приход: кеторолак 10 амп, серия K1, до 05.2028, в шкаф»…',
+    clSegAi: '🤖 ИИ: склад', aiToCases: '🧑‍⚕️ Пациент, рецепт, документы — в «Разбор»', aiPh: 'Спросите или поручите: «что заканчивается?», «внеси приход: кеторолак 10 амп, серия K1, до 05.2028, в шкаф»…',
     aiSend: 'Отправить', aiNew: '🧹 Новый разговор', aiSettings: '⚙️ Настройки ИИ', aiNoKey: 'ИИ ещё не подключён: нужен ключ API Claude (console.anthropic.com → API Keys). Ключ хранится только на сервере.',
     aiKey: 'Ключ API (sk-ant-…)', aiKeyHas: 'Ключ задан: …{t}', aiKeyNone: 'Ключ не задан', aiKeyDel: 'Удалить ключ', aiPw: 'Ваш пароль (для смены ключа)',
     aiModel: 'Модель', aiDayMax: 'Не больше запросов в день', aiUsage: 'В этом месяце: {n} запросов, ввод {i} тыс. токенов, ответ {o} тыс.', aiToday: 'сегодня {n} из {m}',
@@ -14765,7 +14765,7 @@ const I18N_V19 = {
     aiHistNote: 'Дата раньше начального остатка — запишется только в отчёт, остаток не изменится.', aiResAdd: 'добавлено к остатку', aiResRev: 'записано как уже посчитанное — остаток не изменился', aiResHist: 'записано только в отчёт (раньше начального остатка)', aiResAsk: 'внимание: проверьте, не внесено ли это в начальный остаток', aiStale: 'Карточка уже изменилась после предложения — попросите ИИ предложить заново.', aiMinManual: 'минимум станет «вручную»', E_AI_KEY_FORMAT: 'Это не похоже на ключ API Claude (должен начинаться с sk-ant-).'
   },
   az: {
-    clSegAi: '🤖 Sİ', aiPh: 'Soruşun və ya tapşırın: «nə qurtarır?», «mədaxil et: ketorolak 10 amp, seriya K1, 05.2028-ə qədər, şkafa»…',
+    clSegAi: '🤖 Sİ: anbar', aiToCases: '🧑‍⚕️ Pasiyent, resept, sənədlər — «Təhlil»də', aiPh: 'Soruşun və ya tapşırın: «nə qurtarır?», «mədaxil et: ketorolak 10 amp, seriya K1, 05.2028-ə qədər, şkafa»…',
     aiSend: 'Göndər', aiNew: '🧹 Yeni söhbət', aiSettings: '⚙️ Sİ ayarları', aiNoKey: 'Sİ hələ qoşulmayıb: Claude API açarı lazımdır (console.anthropic.com → API Keys). Açar yalnız serverdə saxlanılır.',
     aiKey: 'API açarı (sk-ant-…)', aiKeyHas: 'Açar var: …{t}', aiKeyNone: 'Açar yoxdur', aiKeyDel: 'Açarı sil', aiPw: 'Parolunuz (açarı dəyişmək üçün)',
     aiModel: 'Model', aiDayMax: 'Gündə ən çox sorğu', aiUsage: 'Bu ay: {n} sorğu, giriş {i} min token, cavab {o} min', aiToday: 'bu gün {n} / {m}',
@@ -15141,7 +15141,8 @@ function aiScreenHtml() {
   const ai = aiSt();
   const s = ai.status;
   let h = '<div class="ai-bar">' + aiStatusLine() + '<span><button class="btn small ghost" data-act="aiNew">' + esc(t('aiNew')) + '</button> <button class="btn small ghost" data-act="aiSettingsModal">⚙️</button></span></div>';
-  h += '<div class="muted" style="margin-bottom:8px">🔒 ' + esc(t('aiPrivacy')) + '</div>';
+  h += '<div class="muted" style="margin-bottom:8px">🔒 ' + esc(t('aiPrivacy')) + '</div>' +
+    (typeof canAi === 'function' && canAi() ? '<button class="btn small ghost" style="margin-bottom:8px" data-act="clSeg" data-seg="cases">' + esc(t('aiToCases')) + '</button>' : '');
   if (s && !s.hasKey) return h + '<div class="hint" style="margin:0 0 10px">' + esc(t('aiNoKey')) + '</div><button class="btn primary block" data-act="aiSettingsModal">' + esc(t('aiSettings')) + '</button>';
   return h + '<div id="aiLog">' + aiLogHtml() + '</div><div class="field"><textarea id="aiIn" placeholder="' + esc(t('aiPh')) + '"></textarea></div><button class="btn primary block" data-act="aiSend" id="aiSendBtn">' + esc(t('aiSend')) + '</button>';
 }
