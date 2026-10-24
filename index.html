@@ -17188,10 +17188,14 @@ function csSay(c, txt, shown) {
 async function paperMsg(c, only) {
   const parts = [];
   const docs = Object.assign({}, c.data.docs || {});
+  const ident = { fin: '', surname: '', birth: '', raw: [] }; // кто пациент — для поиска его других документов (на телефоне, к ИИ не уходит)
+  const takeIdent = (fin, surname, birth, raw) => { if (!ident.fin && fin) ident.fin = String(fin).toUpperCase().replace(/[^A-Z0-9]/g, ''); if (!ident.surname && surname) ident.surname = String(surname).trim(); if (!ident.birth && birth) ident.birth = String(birth).slice(0, 10); ident.raw = ident.raw.concat(raw || []); };
   for (const type of Object.keys(docs)) {
-    if (only && type !== only) continue;
     const r = await rpc('docGet', { id: docs[type] }, 60000).catch(() => null);
     if (!r || !r.ok) continue;
+    const dd = r.data || {};
+    takeIdent(dd.fin, dd.surname, dd.birth, [dd.surname, dd.name, dd.patronymic, dd.fin]);
+    if (only && type !== only) continue;
     const miss = dsCheck(type, r.data || {});
     const piiK = {}; dsFields(type).forEach(f => { if (f.o.pii) piiK[f.k] = 1; });
     const missAi = miss.filter(m => !piiK[m.k]).map(m => m.label + ' (' + m.k + ')');
@@ -17201,10 +17205,36 @@ async function paperMsg(c, only) {
   }
   if (c.formId && (!only || only === 'form')) {
     const r = await rpc('formGet', { id: c.formId }, 60000).catch(() => null);
+    if (r && r.ok && r.form) { const fd = r.form.data || {}; const w = String(fd.pName || '').trim().split(/\s+/); takeIdent(fd.fin, w.find(x => x.length >= 5 && PII_SURNAME_RE.test(x)) || w[w.length - 1] || '', fd.pBirth, FORM_PII_KEYS.map(k => fd[k])); }
     if (r && r.ok && r.form) parts.push('Форма обращения медпункта (doc=form). Уже заполнено (обезличено): ' + aiCut(dsFormDepersonalize(r.form.data || {}), 12000) + '\nПроверь по doc_fields, чего не хватает.');
   }
+  const other = await paperOtherDocs(c, ident).catch(() => '');
+  if (other) parts.push(other);
   return '[РЕЖИМ: ОФОРМЛЕНИЕ] Начинаем оформление. ' + (parts.length ? 'Выясняй по одному вопросу всё, чего не хватает, потом заполни (fill_document).\n\n' + parts.join('\n\n') :
     'Документы по этому пациенту ещё не созданы. Сначала спроси (ask_question, можно несколько вариантов), какие документы оформлять: форма обращения медпункта (form), история болезни 003 (h003), выписной эпикриз (epi), лист передачи при эвакуации (evac). Потом выясни всё нужное для них и заполни.');
+}
+/** Другие документы ЭТОГО пациента вне разбора (за год, до 6 последних): обезличенно и кратко — для сверки дат, диагнозов,
+ *  аллергий, исходов. Пациент — по FİN (как профиль), без FİN — по фамилии и дате рождения. */
+const PAPER_OTHER_MAX = 6, PAPER_OTHER_DAYS = 365, PAPER_OTHER_CUT = 2500;
+async function paperOtherDocs(c, ident) {
+  if (!ident.fin && !(ident.surname && ident.birth)) return '';
+  const r = await rpc('docList', { q: ident.fin || ident.surname }, 60000).catch(() => null);
+  if (!r || !r.ok) return '';
+  const mine = Object.values(c.data.docs || {});
+  const since = new Date(Date.now() + 4 * 3600e3 - PAPER_OTHER_DAYS * 86400e3).toISOString().slice(0, 10);
+  const nameKey = s => String(s || '').toLowerCase().replace(/[^a-zа-яёəöüğışç]/gi, '');
+  const rows = (r.rows || []).filter(x => mine.indexOf(x.id) === -1 && x.status !== 'deleted' && String(x.createdAt || '').slice(0, 10) >= since &&
+    (ident.fin ? String(x.fin || '') === ident.fin : (String(x.birthDate || '') === ident.birth && nameKey(x.patient).indexOf(nameKey(ident.surname)) !== -1)))
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, PAPER_OTHER_MAX);
+  if (!rows.length) return '';
+  const words = dsPiiWords(ident.raw.filter(Boolean), ident.birth);
+  const out = [];
+  for (const x of rows) {
+    const g = await rpc('docGet', { id: x.id }, 60000).catch(() => null);
+    if (!g || !g.ok || !DOC_TPL[x.type]) continue;
+    out.push('— «' + DOC_TPL[x.type].ru + '» от ' + String(x.createdAt).slice(0, 10) + ' (' + (x.status === 'closed' ? 'закрыт' : 'черновик') + '): ' + aiCut(dsDepersonalize(x.type, g.data || {}, words), PAPER_OTHER_CUT));
+  }
+  return out.length ? 'Другие документы этого же пациента вне этого разбора (за последний год, обезличено, сокращено; ТОЛЬКО для сверки: даты, диагнозы, аллергии, исходы, лечение — их не меняй и не переписывай; если они противоречат тому, что говорит врач, — спроси врача):\n' + out.join('\n') : '';
 }
 async function paperStart(c, only) {
   if (!c || c.busy) return;
