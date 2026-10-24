@@ -24935,6 +24935,8 @@ Object.assign(H, {
   rmNotify: async () => { try { await Notification.requestPermission(); } catch (e) { } rmRender(); }
 });
 
+/** Галочки Telegram: [ключ, подпись] — общий список (v41 добавляет новые). */
+var TG_FEAT_LBL = [['app', 'tgaApp'], ['low', 'tgaLow'], ['stock', 'tgaStock'], ['docs', 'tgaDocs'], ['remind', 'tgaRemind'], ['chat', 'tgaChat']];
 /* =====================================================================
  * v31: приложение внутри Telegram (Mini App): вход «Telegram + ПИН», кнопка «Назад», ссылки; ПИН в профиле;
  *  включение команд бота (главный админ). Сторонний скрипт Telegram не подключается — связь с Telegram своя, минимальная.
@@ -24991,7 +24993,8 @@ Object.assign(I18N.az, I18N_V31.az);
 /* ---------- связь с Telegram (без стороннего скрипта) ---------- */
 const TGB = { back: [], modal: false };
 const TG_WEB_ORIGIN = 'https://web.telegram.org'; // веб-версия Telegram — только ей (ссылки и события не уходят чужой странице-обёртке)
-const TG_IDLE_MS = 5 * 60 * 1000;
+const TG_IDLE_MS = 5 * 60 * 1000; // v39: по умолчанию — из настроек главного админа (tgIdleMs)
+function tgIdleMs() { const m = Number(S.me && S.me.tgIdleMin); return (m >= 5 && m <= 720 ? m : 60) * 60000; }
 function tgPost(ev, data) {
   if (!TGW) return;
   const js = JSON.stringify(data || {});
@@ -25038,7 +25041,7 @@ if (TGW) {
   const idleLock = () => {
     const at = Number(SS.get('MED_TG_HIDDEN', 0)) || 0;
     SS.del('MED_TG_HIDDEN');
-    if (at && Date.now() - at > TG_IDLE_MS && S.sess) {
+    if (at && Date.now() - at > tgIdleMs() && S.sess) {
       const sess = S.sess;
       rpc('logout', { sess: sess }).catch(() => { });
       onAuthLost();
@@ -25118,7 +25121,7 @@ async function tgwGo(btn) {
     let h = '<div class="card" style="margin-top:10px" id="tgPinCard"><div class="lbl">' + esc(t('tgPinCard')) + '</div>';
     if (st.inTg) h += '<div class="muted">✈️ ' + esc(t('tgInTg')) + '</div>';
     const acc = st.acc || {};
-    const accL = [['app', 'tgaApp'], ['low', 'tgaLow'], ['stock', 'tgaStock'], ['docs', 'tgaDocs'], ['remind', 'tgaRemind'], ['chat', 'tgaChat']].filter(x => acc[x[0]]).map(x => t(x[1]));
+    const accL = TG_FEAT_LBL.filter(x => acc[x[0]]).map(x => t(x[1]));
     h += '<div class="muted" style="margin:4px 0">' + esc(accL.length ? t('tgAccMine', { l: accL.join('; ') }) : t('tgAccNone')) + '</div>';
     if (!st.linked) h += '<div class="muted">' + esc(t('tgPinNeedLink')) + '</div>';
     else if (acc.app) {
@@ -25219,7 +25222,7 @@ function tgElevClose() { const d = document.getElementById('tgElev'); if (d) d.r
       b.classList.remove('muted');
       const st = '<div class="muted" style="margin-bottom:6px">' + esc(t('tgaState', { l: x.linked ? t('tgaYes') : t('tgaNo'), p: x.pin ? t('tgaPinYes') : t('tgaPinNo') })) + '</div>';
       if (x.owner) { b.innerHTML = st + '<div class="muted">' + esc(t('tgaOwner')) + '</div>'; return; }
-      b.innerHTML = st + [['app', 'tgaApp'], ['low', 'tgaLow'], ['stock', 'tgaStock'], ['docs', 'tgaDocs'], ['remind', 'tgaRemind'], ['chat', 'tgaChat']].map(f =>
+      b.innerHTML = st + TG_FEAT_LBL.map(f =>
         '<label class="check"><input type="checkbox" data-tga="' + f[0] + '"' + (x.acc && x.acc[f[0]] ? ' checked' : '') + '><span>' + esc(t(f[1])) + '</span></label>').join('') +
         '<div class="muted" style="margin:6px 0">' + esc(t('tgaHint')) + '</div><button class="btn small primary" data-act="tgaSave" data-id="' + esc(u.id) + '">' + esc(t('save')) + '</button>';
     }).catch(() => { const b = $('#tgaBox'); if (b) b.textContent = t('E_NETWORK'); });
@@ -26443,7 +26446,7 @@ function admPersonRender() {
     (!x.helper && !x.owner ? '<div class="field" style="margin-top:6px"><label>' + esc(t('admLimChat')) + '</label><input type="number" id="admLimAi" min="0" value="' + esc(x.limAi) + '" inputmode="numeric"></div>' : '') +
     (x.sandbox !== undefined ? '<label class="row" style="gap:8px;align-items:center;margin:4px 0"><input type="checkbox" id="admSbx"' + (x.sandbox ? ' checked' : '') + (x.owner ? ' disabled' : '') + '> ' + esc(t('ft_sandbox')) + '</label>' : '');
   const tgAcc = d.tg.acc || {};
-  const tgCard = d.tg.linked ? ['app', 'low', 'stock', 'docs', 'remind', 'chat'].map(f => '<label class="row" style="gap:8px;align-items:center;margin:4px 0"><input type="checkbox" data-tg="' + f + '"' + (tgAcc[f] ? ' checked' : '') + (x.owner ? ' disabled' : '') + '> ' + esc(t('tg_' + f)) + '</label>').join('') +
+  const tgCard = d.tg.linked ? TG_FEAT_LBL.map(x => x[0]).map(f => '<label class="row" style="gap:8px;align-items:center;margin:4px 0"><input type="checkbox" data-tg="' + f + '"' + (tgAcc[f] ? ' checked' : '') + (x.owner ? ' disabled' : '') + '> ' + esc(t('tg_' + f)) + '</label>').join('') +
     (x.owner ? '' : '<button class="btn small" data-act="admTgSave" data-id="' + esc(x.id) + '">' + esc(t('admSave')) + '</button>') : '<div class="muted">' + esc(t('admTgNo')) + '</div>';
   const h = d.helper;
   const helperCard = h ? '<div class="card"><b>' + esc(t('admHelper')) + '</b><div class="muted">' + esc([x.spec ? t('sp_' + x.spec) : '', admPlanTag(x), h.used ? '📊 ' + (h.used.cases || 0) + '/' + (h.limits.cases || '∞') + ' · 🤖 ' + (h.used.ai || 0) + '/' + (h.limits.ai || '∞') : ''].filter(Boolean).join(' · ')) + '</div>' +
@@ -26696,7 +26699,7 @@ Object.assign(H, {
     if (r) { toast(t('admSaved')); await admPeopleReload(); const p = admSt().person; if (p) { p.x = admSt().people.rows.find(x => x.id === p.x.id) || p.x; } }
   },
   admTgSave: async el => {
-    const acc = {}; ['app', 'low', 'stock', 'docs', 'remind', 'chat'].forEach(f => { const c = $('#modalRoot [data-tg="' + f + '"]'); acc[f] = !!(c && c.checked); });
+    const acc = {}; TG_FEAT_LBL.map(x => x[0]).forEach(f => { const c = $('#modalRoot [data-tg="' + f + '"]'); acc[f] = !!(c && c.checked); });
     const r = await busy(el, () => rpcA('tgAccessSet', { userId: el.dataset.id, acc }));
     if (r) toast(t('admSaved'));
   },
@@ -27204,6 +27207,106 @@ Object.assign(H, {
     if (r) { closeModal(); admSt().econ = r; admRefresh(); toast(t('stSaved')); }
   }
 });
+
+/* =====================================================================
+ * v39: ⚡ Скорость. Приложение в Telegram: повторное открытие «📱 Приложения» — без ПИНа, пока сеанс жив
+ *  (по умолчанию 12 ч и не дольше 60 мин бездействия — настраивает главный админ). Сервер продолжает сеанс только
+ *  для того же человека в Telegram (подписанные данные запуска Mini App).
+ * ===================================================================== */
+const I18N_V39 = {
+  ru: { tgResuming: '⏳ Вход…', stTgPol: '✈️ Приложение в Telegram: как часто спрашивать ПИН', stTgPolH: 'ПИН — не чаще раза в, часов (1–72)', stTgPolIdle: 'Без действий дольше, минут (5–720) — снова ПИН' },
+  az: { tgResuming: '⏳ Giriş…', stTgPol: '✈️ Telegram-da tətbiq: PİN nə qədər tez-tez soruşulsun', stTgPolH: 'PİN — ən çox, saatda bir (1–72)', stTgPolIdle: 'Hərəkətsizlik, dəqiqə (5–720) — yenidən PİN' }
+};
+Object.assign(I18N.ru, I18N_V39.ru);
+Object.assign(I18N.az, I18N_V39.az);
+const TG_RS_KEY = 'MED_TG_RS';
+function TG_RS_OK() { return !!TGW && ['android', 'android_x', 'ios'].indexOf(String(TGW.plat || '').toLowerCase()) !== -1; }
+(function () {
+  if (typeof afterLogin === 'function') {
+    const oal = afterLogin;
+    afterLogin = function (r) {
+      // на компьютере (Telegram Desktop, веб-версия) — не запоминаем: там чаще чужие руки; только телефоны
+      try { if (TGW && r && r.tg && r.sess && TG_RS_OK()) LS.set(TG_RS_KEY, { sess: r.sess, exp: Number(r.exp) || Date.now() + 12 * 3600000 }); } catch (e) { }
+      return oal.apply(this, arguments);
+    };
+  }
+  if (typeof saveSession === 'function') {
+    const oss = saveSession;
+    saveSession = function (sess) { if (!sess) { try { LS.del(TG_RS_KEY); } catch (e) { } } return oss.apply(this, arguments); };
+  }
+  // экран входа в Telegram: сначала — продолжить сеанс (без ПИНа); не вышло — обычный ПИН
+  const orl = window.renderLogin;
+  if (typeof orl === 'function') {
+    window.renderLogin = renderLogin = async function (msg) {
+      if (TGW && !S.tgUsePw && !S.tgResumeTried && window.PWA_MODE && typeof pwaApi === 'function' && pwaApi()) {
+        S.tgResumeTried = true;
+        let rs = null;
+        try { rs = LS.get(TG_RS_KEY); } catch (e) { rs = null; }
+        if (rs && rs.sess && Number(rs.exp) > Date.now() && TGW.init) {
+          const box = $('#loginBox');
+          if (box) box.innerHTML = '<div class="card login-card"><div class="login-logo">✈️</div><div class="muted" style="text-align:center;font-size:18px">' + esc(t('tgResuming')) + '</div></div>';
+          let r = null;
+          try { r = await rpc('tgResume', { initData: TGW.init, sess: rs.sess }, 20000); } catch (e) { r = null; }
+          if (r && r.ok) { afterLogin(r); return; }
+          if (!r || (r.code && r.code !== 'E_NETWORK')) { try { LS.del(TG_RS_KEY); } catch (e) { } }
+        }
+      }
+      return orl.apply(this, arguments);
+    };
+  }
+})();
+// Админ-центр → ⚙ Настройки: как часто спрашивать ПИН в Telegram
+if (typeof admSetHtml === 'function') {
+  const osh = admSetHtml;
+  admSetHtml = function () {
+    const h = osh.apply(this, arguments);
+    const me = S.me || {};
+    return h + '<div class="card"><b>' + esc(t('stTgPol')) + '</b><div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px">' +
+      '<div class="field" style="flex:1;min-width:140px"><label>' + esc(t('stTgPolH')) + '</label><input type="number" id="tpH" min="1" max="72" value="' + esc(me.tgPinH || 12) + '"></div>' +
+      '<div class="field" style="flex:1;min-width:140px"><label>' + esc(t('stTgPolIdle')) + '</label><input type="number" id="tpIdle" min="5" max="720" value="' + esc(me.tgIdleMin || 60) + '"></div></div>' +
+      '<button class="btn primary" data-act="tpSave">' + esc(t('admSave')) + '</button></div>';
+  };
+}
+Object.assign(H, {
+  tpSave: async el => {
+    const pw = await admPw(t('stPwAsk')); if (!pw) return;
+    const r = await busy(el, () => rpcA('tgPolicySet', { password: pw, hours: Number(($('#tpH') || {}).value), idleMin: Number(($('#tpIdle') || {}).value) }));
+    if (r) { if (S.me) { S.me.tgPinH = r.h; S.me.tgIdleMin = r.idle; } toast(t('stSaved')); }
+  }
+});
+
+/* =====================================================================
+ * v40: разбор, начатый в чате бота, — «📱 Открыть в приложении» открывает именно его (адрес …&case=ID).
+ * ===================================================================== */
+(function () {
+  let want = '';
+  try { want = new URLSearchParams(location.search).get('case') || ''; } catch (e) { want = ''; }
+  if (!/^C[a-z0-9]{8,30}$/.test(want)) return;
+  const go = () => {
+    if (!want || !S.me || !S.sess) return;
+    const id = want; want = '';
+    let store = '';
+    try { const u = new URL(location.href); store = u.searchParams.get('store') || ''; u.searchParams.delete('case'); u.searchParams.delete('store'); history.replaceState(null, '', u.toString()); } catch (e) { }
+    // разбор лежит в своём складе — сначала перейти туда
+    try { if (store && store !== S.storeId && typeof switchStore === 'function' && myStores().some(s => s.id === store)) switchStore(store); } catch (e) { }
+    setTimeout(() => { try { S.clSeg = 'cases'; setScreen('clinic'); csOpen(id); } catch (e) { } }, 600);
+  };
+  if (typeof afterLogin === 'function') { const oal = afterLogin; afterLogin = function () { const r = oal.apply(this, arguments); go(); return r; }; }
+  window.addEventListener('load', () => setTimeout(go, 1500));
+})();
+
+/* =====================================================================
+ * v41: ✈️ Права в Telegram по максимуму — галочки для новых возможностей бота (Админ-центр и «Telegram» сотрудника).
+ * ===================================================================== */
+const I18N_V41 = {
+  ru: { tgaCase: '🩺 Разбор пациента в чате (/case)', tgaSpend: '📝 Списание через чат (кнопка «Подтвердить»; нужны ещё «Остатки» и «Чат»)', tgaReport: '📊 Сводка дня (/report; нужны «Отчёты» на складе)', tgaMorning: '☀️ Утренняя сводка по складам',
+    tg_case: 'Разбор пациента в чате (/case)', tg_spend: 'Списание через чат', tg_report: 'Сводка дня (/report)', tg_morning: 'Утренняя сводка' },
+  az: { tgaCase: '🩺 Çatda pasiyent təhlili (/case)', tgaSpend: '📝 Çat ilə silinmə («Təsdiqlə» düyməsi; «Qalıqlar» və «Çat» da lazımdır)', tgaReport: '📊 Günün xülasəsi (/report)', tgaMorning: '☀️ Səhər anbar xülasəsi',
+    tg_case: 'Çatda pasiyent təhlili (/case)', tg_spend: 'Çat ilə silinmə', tg_report: 'Günün xülasəsi (/report)', tg_morning: 'Səhər xülasəsi' }
+};
+Object.assign(I18N.ru, I18N_V41.ru);
+Object.assign(I18N.az, I18N_V41.az);
+['case', 'spend', 'report', 'morning'].forEach(k => { if (TG_FEAT_LBL.every(x => x[0] !== k)) TG_FEAT_LBL.push([k, 'tga' + k[0].toUpperCase() + k.slice(1)]); });
 
 
 function init() {
