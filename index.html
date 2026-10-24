@@ -26653,7 +26653,7 @@ function admSetHtml() {
     '<div class="row" style="gap:6px"><div class="field grow"><label>' + esc(t('stClinicAzn')) + ' (5)</label><input type="number" id="stC5" value="' + esc((kinds.c5 || {}).amount || '') + '"></div><div class="field grow"><label>' + esc(t('stClinicAzn')) + ' (10)</label><input type="number" id="stC10" value="' + esc((kinds.c10 || {}).amount || '') + '"></div></div>' +
     '<button class="btn primary" data-act="stPaySave">' + esc(t('admSave')) + '</button></div>' +
     '<div class="card"><b>' + esc(t('stHelper')) + '</b><div class="row" style="gap:6px;flex-wrap:wrap">' + f('starsM', '⭐ / мес', cfg.starsM) + f('starsY', '⭐ / год', cfg.starsY) + f('aznM', '₼ / мес', cfg.aznM) + f('aznY', '₼ / год', cfg.aznY) +
-      f('trialDays', 'Пробных дней', cfg.trialDays) + f('freeCases', 'Free: разборов', cfg.freeCases) + f('freeDocs', 'Free: документов', cfg.freeDocs) + f('proCases', 'Pro: разборов', cfg.proCases) +
+      f('trialDays', 'Пробных дней', cfg.trialDays) + f('trialCases', 'Пробный: разборов', cfg.trialCases) + f('freeCases', 'Free: разборов', cfg.freeCases) + f('freeDocs', 'Free: документов', cfg.freeDocs) + f('proCases', 'Pro: разборов', cfg.proCases) +
       f('exStarsM', 'Эксперт ⭐ / мес', cfg.exStarsM) + f('exStarsY', 'Эксперт ⭐ / год', cfg.exStarsY) + f('exAznM', 'Эксперт ₼ / мес', cfg.exAznM) + f('exAznY', 'Эксперт ₼ / год', cfg.exAznY) + f('exCases', 'Эксперт: разборов', cfg.exCases) + '</div>' +
       '<label class="row" style="gap:8px;align-items:center;margin:6px 0"><input type="checkbox" id="stRegOpen"' + (s.sub && s.sub.regOpen ? ' checked' : '') + '> ' + esc(S.lang === 'az' ? 'Qeydiyyat açıqdır' : 'Регистрация открыта') + '</label>' +
       '<button class="btn primary" data-act="stCfgSave">' + esc(t('admSave')) + '</button></div>' +
@@ -28829,6 +28829,152 @@ Object.assign(H, {
   };
   if (typeof afterLogin === 'function') { const oal = afterLogin; afterLogin = function () { const r = oal.apply(this, arguments); go(); return r; }; }
   window.addEventListener('load', () => setTimeout(go, 1600));
+})();
+
+/* =====================================================================
+ * v49 (9.25): перевод врача «Помощника» в организацию (главный админ) и перенос ФИО/FİN его пациентов с телефона
+ *  (только с согласия врача); память Джарвиса в приложении.
+ * ===================================================================== */
+const I18N_V49 = {
+  ru: { hmvBtn: '➡️ Перевести в организацию', hmvTitle: 'Перевести врача в организацию', hmvWhat: 'Переедут: форм — {f}, документов — {d}, разборов — {c}. Личный кабинет уйдёт в архив; права — «врач отделения» на выбранное отделение.',
+    hmvPaid: 'Оплачен Pro до {d} — подписка Telegram не продлится.', hmvClinic: 'Врач — владелец мини-клиники: сначала передайте её другому врачу.', hmvOrg: 'Организация', hmvStore: 'Отделение', hmvGo: 'Перевести', hmvDone2: '✅ Переведён: перенесено записей — {n}. Врачу ушло сообщение.', hmvPw: 'Ваш пароль (перевод не отменить)', hmvRunning: 'Перевод уже начат — нажмите «Перевести», чтобы закончить.',
+    hpiiTitle: 'Перенести ФИО пациентов?', hpiiText: 'Вас перевели в «{o}» (отделение «{s}»). Ваши разборы, документы и формы уже там. ФИО, FİN и даты рождения ваших пациентов хранились только на этом телефоне ({n}). Перенести их в организацию?',
+    hpiiYes: 'Перенести', hpiiLater: 'Не сейчас', hpiiNo: 'Не переносить', hpiiDone: '✅ Перенесено: {n}', hpiiNone: 'Вас перевели в «{o}». ФИО ваших пациентов — на том телефоне, где вы их вводили: откройте приложение там, чтобы перенести.',
+    E_HMV_NOT_HELPER: 'Это не врач «Помощника».', E_HMV_CLINIC_OWNER: 'Врач — владелец мини-клиники: сначала передайте её другому врачу.' },
+  az: { hmvBtn: '➡️ Təşkilata keçir', hmvTitle: 'Həkimi təşkilata keçir', hmvWhat: 'Köçürüləcək: forma — {f}, sənəd — {d}, təhlil — {c}. Şəxsi kabinet arxivə gedəcək; seçilmiş şöbədə «şöbə həkimi» hüquqları.',
+    hmvPaid: 'Pro {d} tarixinədək ödənilib — Telegram abunəsi uzadılmayacaq.', hmvClinic: 'Həkim mini-klinikanın sahibidir: əvvəlcə onu başqa həkimə verin.', hmvOrg: 'Təşkilat', hmvStore: 'Şöbə', hmvGo: 'Keçir', hmvDone2: '✅ Keçirildi: köçürülən qeyd — {n}. Həkimə mesaj getdi.', hmvPw: 'Şifrəniz (keçidi ləğv etmək olmaz)', hmvRunning: 'Keçid artıq başlayıb — bitirmək üçün «Keçir» basın.',
+    hpiiTitle: 'Pasiyentlərin adlarını köçürək?', hpiiText: 'Siz «{o}» («{s}» şöbəsi) təşkilatına keçirildiniz. Təhlilləriniz, sənədləriniz və formalarınız artıq oradadır. Pasiyentlərin ad, FİN və doğum tarixləri yalnız bu telefonda idi ({n}). Təşkilata köçürək?',
+    hpiiYes: 'Köçür', hpiiLater: 'İndi yox', hpiiNo: 'Köçürmə', hpiiDone: '✅ Köçürüldü: {n}', hpiiNone: 'Siz «{o}» təşkilatına keçirildiniz. Pasiyentlərin adları onları daxil etdiyiniz telefondadır: köçürmək üçün tətbiqi orada açın.',
+    E_HMV_NOT_HELPER: 'Bu «Köməkçi» həkimi deyil.', E_HMV_CLINIC_OWNER: 'Həkim mini-klinikanın sahibidir: əvvəlcə onu başqa həkimə verin.' }
+};
+Object.assign(I18N.ru, I18N_V49.ru);
+Object.assign(I18N.az, I18N_V49.az);
+/* ---------- главный админ: карточка сотрудника → «Перевести в организацию» (для врачей «Помощника») ---------- */
+(function () {
+  const orig = window.userEditModal;
+  if (typeof orig !== 'function') return;
+  window.userEditModal = function (id) {
+    const r = orig.apply(this, arguments);
+    try {
+      const u = id && S.ua ? (S.ua.users || []).find(x => x.id === id) : null;
+      const o = u ? (S.ua.orgs || []).find(x => x.id === u.orgId) : null;
+      const m = $('.modal');
+      if (m && u && o && o.plan === 'helper' && typeof isSuper === 'function' && isSuper() && !m.querySelector('[data-act=hmvOpen]'))
+        m.insertAdjacentHTML('beforeend', '<div class="acts"><button class="btn ghost" data-act="hmvOpen" data-id="' + esc(u.id) + '">' + esc(t('hmvBtn')) + '</button></div>');
+    } catch (e) { }
+    return r;
+  };
+})();
+async function hmvOpen(uid) {
+  const r = await rpc('helperMoveInfo', { userId: uid }).catch(() => null);
+  if (!r || !r.ok) return toast(r ? errText(r) : t('E_NETWORK'), 'bad');
+  S.hmvRunning = !!r.running;
+  if (typeof refreshUa === 'function' && !S.ua) await refreshUa();
+  const orgs = (S.ua.orgs || []).filter(o => o.plan !== 'helper' && !/^(deleted|deleting|blocked|closed)$/.test(String(o.status || '')));
+  const opt = (S.ua.orgs || []).length ? orgs.map(o => '<option value="' + esc(o.id) + '">' + esc(o.name || o.id) + '</option>').join('') : '';
+  openModal('<h3>' + esc(t('hmvTitle')) + ' — ' + esc(r.name) + '</h3>' +
+    '<div class="info">' + esc(t('hmvWhat', { f: r.forms, d: r.docs, c: r.cases })) + '</div>' +
+    (r.paidUntil && !r.trial ? '<div class="pr-warn">' + esc(t('hmvPaid', { d: fmtDate(r.paidUntil) })) + '</div>' : '') +
+    (r.clinicOwner ? '<div class="pr-warn">' + esc(t('hmvClinic')) + '</div>' : '') +
+    (r.running ? '<div class="pr-warn">' + esc(t('hmvRunning')) + '</div>' : '<div class="field"><label>' + esc(t('hmvPw')) + '</label><input type="password" id="hmvPw" autocomplete="current-password"></div>') +
+    '<div class="field"><label>' + esc(t('hmvOrg')) + '</label><select id="hmvOrg">' + opt + '</select></div>' +
+    '<div class="field"><label>' + esc(t('hmvStore')) + '</label><select id="hmvStore"></select></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="hmvGo" data-id="' + esc(uid) + '"' + (r.clinicOwner ? ' disabled' : '') + '>' + esc(t('hmvGo')) + '</button></div>');
+  const fill = () => {
+    const oid = ($('#hmvOrg') || {}).value;
+    const st = (S.ua.stores || []).filter(s => s.active && s.orgId === oid && !s.sandbox);
+    $('#hmvStore').innerHTML = st.map(s => '<option value="' + esc(s.id) + '">' + esc((s.upId ? '↳ ' : '') + s.nameRu) + '</option>').join('');
+  };
+  $('#hmvOrg').addEventListener('change', fill);
+  if (r.running) { $('#hmvOrg').value = r.running.orgId; $('#hmvOrg').disabled = true; }
+  fill();
+  if (r.running) { $('#hmvStore').value = r.running.storeId; $('#hmvStore').disabled = true; }
+}
+Object.assign(H, {
+  hmvOpen: el => hmvOpen(el.dataset.id),
+  hmvGo: async el => {
+    const orgId = ($('#hmvOrg') || {}).value, storeId = ($('#hmvStore') || {}).value, password = ($('#hmvPw') || {}).value || '';
+    if (!orgId || !storeId) return;
+    if (!password && !S.hmvRunning) return toast(t('password'), 'bad');
+    // по шагам: каждая таблица кабинета — отдельный шаг (после сбоя — продолжить тем же нажатием)
+    const r = await busy(el, async () => {
+      let x = null;
+      for (let i = 0; i < 60; i++) {
+        x = await rpcA('helperMove', { userId: el.dataset.id, orgId, storeId, password }, { timeout: 300000 });
+        if (!x || x.done) break;
+        el.textContent = '⏳ ' + x.step + ' / ' + x.of;
+      }
+      return x;
+    });
+    if (!r || !r.done) return;
+    closeModal();
+    toast(t('hmvDone2', { n: r.moved }), 'ok', null, 8000);
+    try { if (typeof refreshUa === 'function') await refreshUa(); } catch (e) { }
+  }
+});
+/* ---------- врач после перевода: перенести ФИО / FİN своих пациентов с телефона (только по его согласию) ---------- */
+async function hpiiCheck(tries) {
+  if (!S.me || !S.sess || S.me.owner) return;
+  // временный пароль ещё не сменён / открыто другое окно — спросить позже (не мешать)
+  if (S.me.mustChange || $('.modal')) { if ((tries || 0) < 12) setTimeout(() => { hpiiCheck((tries || 0) + 1).catch(() => { }); }, 5000); return; }
+  const r = await rpc('helperPiiPending', {}).catch(() => null);
+  const p = r && r.ok && r.pending;
+  if (!p) return;
+  let L = { docs: {}, forms: {} };
+  try { const o = LS.get('MED_PIIL:' + S.me.id, null); if (o && typeof o === 'object') L = { docs: o.docs || {}, forms: o.forms || {} }; } catch (e) { }
+  // все записи с ФИО на этом телефоне; сервер примет только свои, перенесённые в отделение, и только пустые поля
+  const items = Object.keys(L.forms).map(id => ({ kind: 'forms', id, vals: L.forms[id] })).concat(Object.keys(L.docs).map(id => ({ kind: 'docs', id, vals: L.docs[id] })));
+  if (!items.length) { toast(t('hpiiNone', { o: p.orgName }), '', null, 9000); return; }
+  S.hpii = items;
+  openModal('<h3>🔒 ' + esc(t('hpiiTitle')) + '</h3><div class="info">' + esc(t('hpiiText', { o: p.orgName, s: p.storeName, n: items.length })) + '</div>' +
+    '<div class="acts"><button class="btn ghost" data-act="hpiiNo">' + esc(t('hpiiNo')) + '</button><button class="btn ghost" data-act="closeModal">' + esc(t('hpiiLater')) + '</button><button class="btn primary" data-act="hpiiYes">' + esc(t('hpiiYes')) + '</button></div>');
+}
+Object.assign(H, {
+  hpiiYes: async el => {
+    const items = S.hpii || [];
+    let n = 0;
+    const got = { forms: {}, docs: {} };
+    const r = await busy(el, async () => {
+      for (let i = 0; i < items.length; i += 30) {
+        const part = items.slice(i, i + 30);
+        const x = await rpcA('helperPiiImport', { items: part }, { timeout: 120000 });
+        if (!x) return null;
+        n += x.imported || 0;
+        (x.ids || []).forEach(id => { part.filter(it => it.id === id).forEach(it => { got[it.kind][id] = 1; }); });
+      }
+      // всё принято — перенос закончен; что-то не принято — копия остаётся на телефоне, спросим ещё раз
+      return n === items.length ? rpcA('helperPiiDone', {}) : { partial: true };
+    });
+    if (!r) return;
+    // с телефона убрать ТОЛЬКО то, что сервер принял (это единственная копия)
+    try { const key = 'MED_PIIL:' + S.me.id; const o = LS.get(key, null) || {}; ['forms', 'docs'].forEach(k => { Object.keys(got[k]).forEach(id => { if (o[k]) delete o[k][id]; }); }); LS.set(key, o); } catch (e) { }
+    closeModal(); S.hpii = null;
+    toast(t('hpiiDone', { n }), 'ok', null, 6000);
+  },
+  hpiiNo: async el => { const r = await busy(el, () => rpcA('helperPiiDone', { declined: true })); if (r) { closeModal(); S.hpii = null; } }
+});
+(function () {
+  if (typeof afterLogin === 'function') { const oal = afterLogin; afterLogin = function () { const r = oal.apply(this, arguments); setTimeout(() => { hpiiCheck().catch(() => { }); }, 2500); return r; }; }
+})();
+/* ---------- память Джарвиса в «ИИ склада» главного админа ---------- */
+(function () {
+  const ort = window.aiRunTool;
+  if (typeof ort !== 'function') return;
+  window.aiRunTool = async function (name, a) {
+    if (name === 'remember' || name === 'forget') {
+      if (!(S.me && (S.me.owner || S.me.ownerWork))) return { error: 'только главному админу' };
+      const text = String((a || {}).text || '').slice(0, 300);
+      if (name === 'forget') { const r = await rpc('jvMemDel', { id: String((a || {}).id || '') }).catch(() => null); if (!r || !r.ok) return { error: r ? errText(r) : 'нет связи' }; return { deleted: r.deleted }; }
+      // запомнить — только после нажатия «Подтвердить» (ИИ лишь предлагает)
+      const ai = aiSt(), pid = 'p' + Date.now().toString(36) + Math.floor(Math.random() * 1e4);
+      ai.props[pid] = { text: '🧠 Запомнить: ' + aiClean(text), state: 'wait', opId: newOpId(), full: '', warn: '', choice: null,
+        run: async () => rpcA('jvMemAdd', { text }) };
+      ai.view.push({ k: 'p', id: pid });
+      return { status: 'показано админу — запомнится, когда он нажмёт «Подтвердить»' };
+    }
+    return ort.apply(this, arguments);
+  };
+  try { Object.assign(AI_TOOL_LABEL, { remember: 'запомнить', forget: 'забыть' }); } catch (e) { }
 })();
 
 
