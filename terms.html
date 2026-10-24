@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="az">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Həkim köməkçisi — şərtlər / Помощник врача — условия</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#17202a;--sub:#5b6673;--line:#e1e5ea;--acc:#0f7c75}
+@media (prefers-color-scheme: dark){:root{--bg:#11161b;--card:#192028;--ink:#e8edf2;--sub:#9aa6b2;--line:#2a333d;--acc:#4fd1c5}}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:22px;margin:8px 0 4px}h2{font-size:18px;margin:26px 0 8px;color:var(--acc)}h3{font-size:16px;margin:18px 0 6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0}
+.muted{color:var(--sub);font-size:14px}nav a{color:var(--acc);margin-right:14px;font-weight:600}
+li{margin:4px 0}
+</style>
+</head>
+<body><main>
+<nav><a href="#az">Azərbaycanca</a><a href="#ru">Русский</a></nav>
+<div class="card muted">Layihə / Проект. Hüquqşünas tərəfindən yoxlanılana qədər ilkin mətndir. — Черновик до проверки юристом. Versiya / Версия: 24.10.2026.</div>
+
+<section id="az">
+<h1>Həkim köməkçisi — istifadə şərtləri və məxfilik siyasəti</h1>
+<h2>1. Xidmət nədir</h2>
+<p>«Həkim köməkçisi» (bundan sonra — Xidmət) həkimlər üçün süni intellekt (Sİ) əsaslı köməkçidir: differensial diaqnoz, müayinə və müalicə planı üzrə təkliflər, analiz nəticələrinin şərhi, tibbi sənədlərin və reseptlərin hazırlanması, sənəd keyfiyyətinin yoxlanması. Xidmət Telegram daxilində və brauzerdə işləyir.</p>
+<h2>2. Həkimin məsuliyyəti</h2>
+<ul>
+<li>Sİ təklifləri <b>yalnız köməkdir</b>. Diaqnoz, müalicə, dozalar, sənədlər üzrə qərar və məsuliyyət <b>həkimin özünə</b> aiddir.</li>
+<li>Həkim təklifləri klinik vəziyyət, rəsmi protokollar və dərmanların təlimatı ilə yoxlamalıdır.</li>
+<li>«🤖 Sİ protokolu» ilə işarələnmiş protokollar rəsmi deyil: açıq mənbələr əsasında Sİ tərəfindən tərtib edilib.</li>
+<li>Xidmətdən yalnız tibbi təhsilli mütəxəssislər istifadə edə bilər.</li>
+</ul>
+<h2>3. Pasiyentlərin şəxsi məlumatları</h2>
+<ul>
+<li>Pasiyentin adı, soyadı, ata adı, FİN, doğum tarixi, ünvanı, telefonu, sənəd nömrələri <b>yalnız həkimin telefonunda</b> saxlanılır və serverə göndərilmir.</li>
+<li>Serverdə (Google, ABŞ/Aİ) anonimləşdirilmiş klinik məlumatlar saxlanılır: şikayətlər, müayinə, analizlər, diaqnozlar, sənədlərin mətni (ad və nömrələr olmadan).</li>
+<li>Sİ təhlili üçün anonimləşdirilmiş mətn Anthropic şirkətinin (ABŞ) serverlərinə ötürülür. Sİ sorğuları emaldan sonra təlim üçün istifadə olunmur (Anthropic API şərtləri).</li>
+<li>Blankların fotosunda pasiyentin adını rəngləyin. Sİ blankdan yalnız dəyərləri oxuyur; adlar və nömrələr saxlanılmır.</li>
+<li>Həkim pasiyentdən məlumatların emalına razılıq almağa və Azərbaycan Respublikasının «Fərdi məlumatlar haqqında» Qanununa riayət etməyə cavabdehdir.</li>
+<li>Telegram çatına pasiyent məlumatlarını yazmayın: çat yazışmaları Telegram serverlərində saxlanılır.</li>
+</ul>
+<h2>4. Həkimin öz məlumatları</h2>
+<p>Ad, ixtisas, iş yeri, telefon (istəyə görə), Telegram identifikatoru — hesabın işləməsi, giriş və ödəniş üçün. Üçüncü şəxslərə satılmır.</p>
+<h2>5. Tariflər və ödəniş</h2>
+<ul>
+<li>Pulsuz tarif: ayda məhdud sayda təhlil və sənəd. Qeydiyyatdan sonra 7 gün Pro.</li>
+<li>Pro: Telegram Stars (⭐) ilə aylıq (avtomatik uzadılır) və ya illik ödəniş. Abunəni Telegram-da ləğv etmək olar: Ayarlar → Ulduzlarım → Abunələr.</li>
+<li>Geri qaytarma: texniki səbəbdən xidmət göstərilmədikdə — bota /paysupport yazın, 2 iş günü ərzində baxılır.</li>
+<li>Qiymətlər və limitlər dəyişə bilər; ödənilmiş dövr dəyişməz qalır.</li>
+</ul>
+<h2>6. Məhdudiyyətlər</h2>
+<p>Xidmət «olduğu kimi» təqdim olunur. Sİ səhv edə bilər; texniki fasilələr mümkündür. Xidmət təcili tibbi yardımı əvəz etmir.</p>
+<h2>7. Əlaqə</h2>
+<p>Telegram botu: /paysupport. Məlumatların silinməsi tələbi — bota yazın: hesab və serverdəki anonimləşdirilmiş məlumatlar 30 gün ərzində silinir.</p>
+</section>
+
+<section id="ru">
+<h1>Помощник врача — условия использования и политика конфиденциальности</h1>
+<h2>1. Что это</h2>
+<p>«Помощник врача» (далее — Сервис) — помощник для врачей на основе искусственного интеллекта (ИИ): дифференциальный диагноз, предложения по плану обследования и лечения, трактовка анализов, подготовка медицинских документов и рецептов, проверка качества документов. Работает внутри Telegram и в браузере.</p>
+<h2>2. Ответственность врача</h2>
+<ul>
+<li>Предложения ИИ — <b>только подсказка</b>. Решение и ответственность за диагноз, лечение, дозы и документы — <b>на враче</b>.</li>
+<li>Врач сверяет предложения с клинической ситуацией, официальными протоколами и инструкциями препаратов.</li>
+<li>Протоколы с пометкой «🤖 ИИ-протокол» — не официальные: составлены ИИ по общедоступным источникам.</li>
+<li>Сервисом пользуются только специалисты с медицинским образованием.</li>
+</ul>
+<h2>3. Личные данные пациентов</h2>
+<ul>
+<li>ФИО, FİN, дата рождения, адрес, телефон, номера документов пациента хранятся <b>только на телефоне врача</b> и на сервер не передаются.</li>
+<li>На сервере (Google, США/ЕС) хранятся обезличенные клинические данные: жалобы, осмотр, анализы, диагнозы, текст документов (без имён и номеров).</li>
+<li>Для разбора ИИ обезличенный текст передаётся на серверы компании Anthropic (США). Запросы не используются для обучения моделей (условия Anthropic API).</li>
+<li>На фото бланков закрашивайте имя пациента. ИИ читает только значения; имена и номера не сохраняются.</li>
+<li>Врач отвечает за получение согласия пациента на обработку данных и соблюдение Закона АР «О персональных данных».</li>
+<li>Не пишите данные пациентов в чат с ботом: переписка хранится на серверах Telegram.</li>
+</ul>
+<h2>4. Данные самого врача</h2>
+<p>Имя, специальность, место работы, телефон (по желанию), идентификатор Telegram — для работы учётной записи, входа и оплаты. Третьим лицам не продаются.</p>
+<h2>5. Тарифы и оплата</h2>
+<ul>
+<li>Бесплатный тариф: ограниченное число разборов и документов в месяц. После регистрации — 7 дней Pro.</li>
+<li>Pro: оплата звёздами Telegram (⭐) — помесячно (продлевается автоматически) или за год. Отменить подписку можно в Telegram: Настройки → Мои звёзды → Подписки.</li>
+<li>Возврат: если услуга не оказана по технической причине — напишите боту /paysupport, рассмотрим в течение 2 рабочих дней.</li>
+<li>Цены и лимиты могут меняться; оплаченный период сохраняется.</li>
+</ul>
+<h2>6. Ограничения</h2>
+<p>Сервис предоставляется «как есть». ИИ может ошибаться; возможны технические перерывы. Сервис не заменяет экстренную медицинскую помощь.</p>
+<h2>7. Связь</h2>
+<p>Бот Telegram: /paysupport. Запрос на удаление данных — напишите боту: учётная запись и обезличенные данные на сервере удаляются в течение 30 дней.</p>
+</section>
+</main></body>
+</html>

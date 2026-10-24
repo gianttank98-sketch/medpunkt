@@ -15731,6 +15731,42 @@ const DOC_PATIENT = [
 /** Консультанты (TQS № 003): кого вызвали. */
 const DOC_SPECS = [['reanim', 'Реаниматолог', 'Reanimatoloq'], ['pulmo', 'Пульмонолог', 'Pulmonoloq'], ['therap', 'Терапевт', 'Terapevt'], ['cardio', 'Кардиолог', 'Kardioloq'], ['surg', 'Хирург', 'Cərrah'], ['trauma', 'Травматолог', 'Travmatoloq'], ['neuro', 'Невролог', 'Nevroloq'], ['nsurg', 'Нейрохирург', 'Neyrocərrah'], ['gyn', 'Акушер-гинеколог', 'Mama-ginekoloq'], ['peds', 'Педиатр', 'Pediatr'], ['uro', 'Уролог', 'Uroloq'], ['ent', 'ЛОР', 'LOR'], ['oph', 'Офтальмолог', 'Oftalmoloq'], ['infect', 'Инфекционист', 'İnfeksionist'], ['tb', 'Фтизиатр', 'Ftiziatr'], ['psy', 'Психиатр', 'Psixiatr'], ['other', 'Другой', 'Digər']];
 const DOC_TPL = {
+  consult: {
+    ic: '🩺', ru: 'Консультативное заключение', az: 'Məsləhət rəyi', no: 'regNo',
+    head: 'MƏSLƏHƏT RƏYİ',
+    signs: [['Həkim / Врач']],
+    secs: [
+      ['main', 'Приём', 'Qəbul', [
+        ['regNo', 't', '№', '№', { max: 30 }], ['inst', 't', 'Учреждение / кабинет', 'Müəssisə / kabinet', { req: 1, max: 150 }],
+        ['at', 'dt', 'Дата и время приёма', 'Qəbulun tarixi və saatı', { req: 1 }],
+        ['spec', 't', 'Специальность врача', 'Həkimin ixtisası', { req: 1, max: 80 }],
+        ['visit', 'sel', 'Приём', 'Qəbul', { o: [['first', 'Первичный', 'İlkin'], ['repeat', 'Повторный', 'Təkrar'], ['consult', 'Консультация по направлению', 'Göndərişlə məsləhət']] }],
+        ['referredBy', 't', 'Кем направлен', 'Kim tərəfindən göndərilib', { max: 150 }]
+      ].concat(DOC_PATIENT)],
+      ['clin', 'Клиника', 'Klinika', [
+        ['complaints', 'ta', 'Жалобы', 'Şikayətlər', { req: 1, max: 2000 }],
+        ['anamnesis', 'ta', 'Анамнез заболевания', 'Xəstəliyin anamnezi', { max: 3000 }],
+        ['history', 'ta', 'Анамнез жизни (хронические болезни, операции, лекарства, наследственность)', 'Həyat anamnezi', { max: 2000 }],
+        ['allergy', 't', 'Аллергия', 'Allergiya', { max: 200 }],
+        ['status', 'ta', 'Объективно (общее состояние, витальные, по системам, локальный статус)', 'Obyektiv', { req: 1, max: 4000 }],
+        ['tests', 'ta', 'Результаты анализов и обследований (с датами)', 'Analiz və müayinələrin nəticələri', { max: 4000 }]
+      ]],
+      ['dx', 'Диагноз', 'Diaqnoz', [
+        ['dxIcd', 'icd', 'Основной диагноз: МКБ-10', 'Əsas diaqnoz: XBT-10', { req: 1 }], ['dx', 't', 'Основной диагноз', 'Əsas diaqnoz', { req: 1, max: 300 }],
+        ['dxCompl', 'ta', 'Осложнения', 'Ağırlaşmalar', { max: 600 }], ['dxSide', 'ta', 'Сопутствующие', 'Müşayiətedici', { max: 600 }],
+        ['dxReason', 'ta', 'Обоснование диагноза', 'Diaqnozun əsaslandırılması', { max: 2000 }]
+      ]],
+      ['plan', 'План и рекомендации', 'Plan və tövsiyələr', [
+        ['exams', 'ta', 'Рекомендованные обследования', 'Tövsiyə olunan müayinələr', { max: 2000 }],
+        ['treat', 'ta', 'Лечение (препарат, доза, путь, кратность, длительность)', 'Müalicə', { max: 3000 }],
+        ['regimen', 'ta', 'Режим, диета, образ жизни', 'Rejim, pəhriz', { max: 1000 }],
+        ['refer', 'ta', 'Направить к специалисту / госпитализация (куда, срочность)', 'Mütəxəssisə göndəriş / hospitalizasiya', { max: 1000 }],
+        ['followUp', 't', 'Повторный приём / контроль', 'Təkrar qəbul / nəzarət', { max: 200 }],
+        ['warn', 'ta', 'Когда обратиться срочно (тревожные признаки)', 'Təcili müraciət əlamətləri', { max: 800 }]
+      ]],
+      ['sign', 'Подпись', 'İmza', [['doctor', 't', 'Врач (ФИО)', 'Həkim', { req: 1, max: 80 }]]]
+    ]
+  },
   h003: {
     ic: '📕', ru: 'История болезни (TQS № 003)', az: 'Xəstəlik tarixi (TQS № 003)', no: 'histNo',
     head: 'Azərbaycan Respublikası Səhiyyə Nazirliyi · XƏSTƏLİK TARİXİ · TQS № 003 (SN-in 30.12.2016 tarixli 100 nömrəli əmri)',
@@ -25210,6 +25246,600 @@ Object.assign(H, {
     if (r) toast(t('saved'));
   }
 });
+
+/* =====================================================================
+ * v32: «Помощник врача» — регистрация в Telegram, тариф Free/Pro и оплата звёздами, упрощённый интерфейс
+ *  (разбор с ИИ, документы и рецепты), ФИО/FİN пациента только на телефоне, анализы и обследования в разборе,
+ *  проверка качества документа.
+ * ===================================================================== */
+const I18N_V32 = {
+  ru: {
+    hpRegTitle: 'Регистрация — Помощник врача', hpRegHint: '1 минута. 7 дней Pro бесплатно, дальше — бесплатный тариф или подписка.',
+    hpName: 'Ваше имя и фамилия', hpSpec: 'Специальность', hpWork: 'Место работы (необязательно)', hpPhone: 'Телефон (необязательно)',
+    hpPin: 'Придумайте ПИН (6–8 цифр) — для входа', hpPin2: 'Повторите ПИН', hpAgree: 'Принимаю условия и политику конфиденциальности', hpTerms: 'Условия и конфиденциальность',
+    hpRegGo: 'Зарегистрироваться', hpHaveAcc: 'У меня уже есть вход (логин и пароль)', hpCredsTitle: '✅ Готово! Сохраните вход для компьютера',
+    hpCredsHint: 'В Telegram вы входите по ПИНу. Для входа с компьютера или обычного браузера — логин и пароль ниже (покажем один раз):', hpLogin: 'Логин', hpPass: 'Пароль', hpCont: 'Начать работу',
+    hpSpecChoose: '— выберите —',
+    hpPlanFree: 'Бесплатно: разборов {c}/{cm}, документов {d}/{dm} в этом месяце', hpPlanPro: '⭐ Pro до {d} · разборов {c}/{cm} в этом месяце', hpPlanTrial: '🎁 Пробный Pro до {d} · разборов {c}/{cm}',
+    hpSubBtn: '⭐ Подписка', hpSubTitle: '⭐ Подписка — Помощник врача', hpSubFree: 'Бесплатно', hpSubPro: 'Pro',
+    hpSubFreeList: '{c} разбора пациента и {d} документа в месяц', hpSubProList: '{c} разборов пациента в месяц · документы и рецепты без ограничений · анализы и обследования · проверка качества документов',
+    hpBuyM: 'Pro на месяц — {s} ⭐', hpBuyY: 'Pro на год — {s} ⭐', hpSubAuto: 'Месячная подписка продлевается автоматически, отменить можно в Telegram: Настройки → Мои звёзды.',
+    hpSubOutside: 'Оплата звёздами откроется в Telegram (нужен Telegram на этом устройстве). После оплаты вернитесь сюда и обновите страницу. Оплата картой появится позже.', hpPaidWait: 'Оплата прошла — включаем Pro…', hpPaidOk: '⭐ Pro включён до {d}. Спасибо!', hpPaidLate: 'Оплата получена Telegram — Pro включится в течение минуты. Если нет — напишите боту /paysupport.',
+    hpYourPlan: 'Ваш тариф', hpUsage: 'В этом месяце',
+    E_PLAN_CASES: 'Лимит разборов на этот месяц ({max}) исчерпан. Pro — {pro} разборов в месяц.', E_PLAN_DOCS: 'Лимит документов бесплатного тарифа ({max} в месяц) исчерпан — в Pro без ограничений.',
+    E_TG_ALREADY: 'Этот Telegram уже зарегистрирован — войдите по ПИНу.', E_TG_RELINK_PW: 'Этот Telegram уже регистрировался — введите пароль от прежнего кабинета (выдан при регистрации).', hpRelinkHint: 'Вы уже регистрировались с этого Telegram. Чтобы вернуться в свой кабинет, введите пароль от него.', E_REG_SPEC: 'Выберите специальность.', E_REG_CLOSED: 'Регистрация временно закрыта.', E_PAY_OFF: 'Оплата сейчас недоступна — попробуйте позже.', E_PAY_REFUND: 'Telegram не вернул оплату.',
+    hpSpecTitle: 'Специальность (для ИИ-помощника)', hpSpecSave: 'Сохранить специальность',
+    labTitle: '🧪 Анализы и обследования', labAdd: '＋ Вручную', labPhoto: '📷 По фото бланка', labNone: 'Пока нет. Добавьте вручную или сфотографируйте бланк — ИИ прочитает значения.',
+    labKind: 'Вид', labDate: 'Дата', labName: 'Название', labText: 'Результат (значения, единицы, заключение)', labSave: 'Добавить', labDel: 'Удалить',
+    labPhotoMsg: '📷 Прочитай бланк(и) на фото и внеси результаты в разбор (add_results). ФИО и номера не переписывай.', labPhotoHint: 'Выберите фото бланка — затем нажмите «Отправить». Имя на бланке можно закрасить.',
+    labNote: '[Врач добавил результаты обследований: {t}]',
+    lk_cbc: 'Общий анализ крови', lk_urine: 'Общий анализ мочи', lk_bio: 'Биохимия крови', lk_coag: 'Коагулограмма', lk_glu: 'Глюкоза / HbA1c', lk_hormone: 'Гормоны', lk_marker: 'Маркеры (тропонин, D-димер, CRP…)', lk_infect: 'Инфекции, посевы, ПЦР',
+    lk_ecg: 'ЭКГ', lk_xray: 'Рентген', lk_us: 'УЗИ', lk_ct: 'КТ', lk_mri: 'МРТ', lk_endo: 'Эндоскопия', lk_consult: 'Заключение специалиста', lk_other: 'Другое',
+    dqBtn: '✅ Качество документа', dqTitle: 'Качество документа',
+    sp_therap: 'Терапевт', sp_family: 'Семейный врач', sp_peds: 'Педиатр', sp_surg: 'Хирург', sp_trauma: 'Травматолог-ортопед', sp_neuro: 'Невролог', sp_cardio: 'Кардиолог', sp_gyn: 'Акушер-гинеколог', sp_endo: 'Эндокринолог', sp_gastro: 'Гастроэнтеролог',
+    sp_pulmo: 'Пульмонолог', sp_infect: 'Инфекционист', sp_derm: 'Дерматовенеролог', sp_ent: 'ЛОР', sp_oph: 'Офтальмолог', sp_uro: 'Уролог', sp_nephro: 'Нефролог', sp_rheum: 'Ревматолог', sp_hem: 'Гематолог', sp_onco: 'Онколог',
+    sp_psy: 'Психиатр', sp_reanim: 'Анестезиолог-реаниматолог', sp_emerg: 'Врач скорой / неотложной помощи', sp_tb: 'Фтизиатр', sp_dent: 'Стоматолог', sp_other: 'Другая специальность',
+    hpAdmTitle: '⭐ Помощник врача: тариф и оплаты', hpAdmReg: 'Регистрация новых врачей открыта', hpAdmSync: 'Сверить оплаты с Telegram', hpAdmRefund: 'Вернуть', hpAdmNone: 'Оплат пока нет.', hpAdmSaved: 'Сохранено', hpAdmSynced: 'Сверено, применено новых: {n}'
+  },
+  az: {
+    hpRegTitle: 'Qeydiyyat — Həkim köməkçisi', hpRegHint: '1 dəqiqə. 7 gün Pro pulsuz, sonra pulsuz tarif və ya abunə.',
+    hpName: 'Adınız və soyadınız', hpSpec: 'İxtisas', hpWork: 'İş yeri (məcburi deyil)', hpPhone: 'Telefon (məcburi deyil)',
+    hpPin: 'PİN düşünün (6–8 rəqəm) — giriş üçün', hpPin2: 'PİN-i təkrarlayın', hpAgree: 'Şərtləri və məxfilik siyasətini qəbul edirəm', hpTerms: 'Şərtlər və məxfilik',
+    hpRegGo: 'Qeydiyyatdan keç', hpHaveAcc: 'Artıq girişim var (login və şifrə)', hpCredsTitle: '✅ Hazırdır! Kompüter üçün girişi saxlayın',
+    hpCredsHint: 'Telegram-da PİN ilə daxil olursunuz. Kompüterdən və ya adi brauzerdən giriş üçün — aşağıdakı login və şifrə (bir dəfə göstəririk):', hpLogin: 'Login', hpPass: 'Şifrə', hpCont: 'İşə başla',
+    hpSpecChoose: '— seçin —',
+    hpPlanFree: 'Pulsuz: bu ay təhlil {c}/{cm}, sənəd {d}/{dm}', hpPlanPro: '⭐ Pro {d} tarixinədək · bu ay təhlil {c}/{cm}', hpPlanTrial: '🎁 Sınaq Pro {d} tarixinədək · təhlil {c}/{cm}',
+    hpSubBtn: '⭐ Abunə', hpSubTitle: '⭐ Abunə — Həkim köməkçisi', hpSubFree: 'Pulsuz', hpSubPro: 'Pro',
+    hpSubFreeList: 'ayda {c} pasiyent təhlili və {d} sənəd', hpSubProList: 'ayda {c} pasiyent təhlili · sənədlər və reseptlər limitsiz · analizlər və müayinələr · sənəd keyfiyyətinin yoxlanması',
+    hpBuyM: 'Pro 1 ay — {s} ⭐', hpBuyY: 'Pro 1 il — {s} ⭐', hpSubAuto: 'Aylıq abunə avtomatik uzadılır, Telegram-da ləğv etmək olar: Ayarlar → Ulduzlarım.',
+    hpSubOutside: 'Ulduzla ödəniş Telegram-da açılacaq (bu cihazda Telegram lazımdır). Ödənişdən sonra bura qayıdın və səhifəni yeniləyin. Kartla ödəniş sonra olacaq.', hpPaidWait: 'Ödəniş keçdi — Pro aktivləşir…', hpPaidOk: '⭐ Pro {d} tarixinədək aktivdir. Təşəkkürlər!', hpPaidLate: 'Ödəniş Telegram tərəfindən alındı — Pro bir dəqiqə ərzində aktivləşəcək. Olmasa — bota /paysupport yazın.',
+    hpYourPlan: 'Tarifiniz', hpUsage: 'Bu ay',
+    E_PLAN_CASES: 'Bu ay üçün təhlil limiti ({max}) bitdi. Pro — ayda {pro} təhlil.', E_PLAN_DOCS: 'Pulsuz tarifin sənəd limiti (ayda {max}) bitdi — Pro-da limitsizdir.',
+    E_TG_ALREADY: 'Bu Telegram artıq qeydiyyatdadır — PİN ilə daxil olun.', E_TG_RELINK_PW: 'Bu Telegram artıq qeydiyyatdan keçib — əvvəlki kabinetin şifrəsini daxil edin (qeydiyyatda verilib).', hpRelinkHint: 'Bu Telegram ilə artıq qeydiyyatdan keçmisiniz. Kabinetinizə qayıtmaq üçün onun şifrəsini daxil edin.', E_REG_SPEC: 'İxtisası seçin.', E_REG_CLOSED: 'Qeydiyyat müvəqqəti bağlıdır.', E_PAY_OFF: 'Ödəniş indi mümkün deyil — sonra cəhd edin.', E_PAY_REFUND: 'Telegram ödənişi qaytarmadı.',
+    hpSpecTitle: 'İxtisas (Sİ köməkçisi üçün)', hpSpecSave: 'İxtisası saxla',
+    labTitle: '🧪 Analizlər və müayinələr', labAdd: '＋ Əl ilə', labPhoto: '📷 Blankın fotosu ilə', labNone: 'Hələ yoxdur. Əl ilə əlavə edin və ya blankın şəklini çəkin — Sİ dəyərləri oxuyacaq.',
+    labKind: 'Növ', labDate: 'Tarix', labName: 'Adı', labText: 'Nəticə (dəyərlər, vahidlər, rəy)', labSave: 'Əlavə et', labDel: 'Sil',
+    labPhotoMsg: '📷 Fotodakı blank(lar)ı oxu və nəticələri təhlilə əlavə et (add_results). Ad və nömrələri köçürmə.', labPhotoHint: 'Blankın fotosunu seçin — sonra «Göndər» basın. Blankdakı adı rəngləmək olar.',
+    labNote: '[Həkim müayinə nəticələri əlavə etdi: {t}]',
+    lk_cbc: 'Ümumi qan analizi', lk_urine: 'Ümumi sidik analizi', lk_bio: 'Qanın biokimyası', lk_coag: 'Koaquloqramma', lk_glu: 'Qlükoza / HbA1c', lk_hormone: 'Hormonlar', lk_marker: 'Markerlər (troponin, D-dimer, CRP…)', lk_infect: 'İnfeksiyalar, əkmələr, PZR',
+    lk_ecg: 'EKQ', lk_xray: 'Rentgen', lk_us: 'USM', lk_ct: 'KT', lk_mri: 'MRT', lk_endo: 'Endoskopiya', lk_consult: 'Mütəxəssis rəyi', lk_other: 'Digər',
+    dqBtn: '✅ Sənədin keyfiyyəti', dqTitle: 'Sənədin keyfiyyəti',
+    sp_therap: 'Terapevt', sp_family: 'Ailə həkimi', sp_peds: 'Pediatr', sp_surg: 'Cərrah', sp_trauma: 'Travmatoloq-ortoped', sp_neuro: 'Nevroloq', sp_cardio: 'Kardioloq', sp_gyn: 'Mama-ginekoloq', sp_endo: 'Endokrinoloq', sp_gastro: 'Qastroenteroloq',
+    sp_pulmo: 'Pulmonoloq', sp_infect: 'İnfeksionist', sp_derm: 'Dermatovenerolog', sp_ent: 'LOR', sp_oph: 'Oftalmoloq', sp_uro: 'Uroloq', sp_nephro: 'Nefroloq', sp_rheum: 'Revmatoloq', sp_hem: 'Hematoloq', sp_onco: 'Onkoloq',
+    sp_psy: 'Psixiatr', sp_reanim: 'Anestezioloq-reanimatoloq', sp_emerg: 'Təcili yardım həkimi', sp_tb: 'Ftiziatr', sp_dent: 'Stomatoloq', sp_other: 'Digər ixtisas',
+    hpAdmTitle: '⭐ Həkim köməkçisi: tarif və ödənişlər', hpAdmReg: 'Yeni həkimlərin qeydiyyatı açıqdır', hpAdmSync: 'Ödənişləri Telegram ilə tutuşdur', hpAdmRefund: 'Qaytar', hpAdmNone: 'Hələ ödəniş yoxdur.', hpAdmSaved: 'Saxlanıldı', hpAdmSynced: 'Tutuşduruldu, yeni tətbiq olunan: {n}'
+  }
+};
+Object.assign(I18N.ru, I18N_V32.ru);
+Object.assign(I18N.az, I18N_V32.az);
+const HP_SPECS = ['therap', 'family', 'peds', 'surg', 'trauma', 'neuro', 'cardio', 'gyn', 'endo', 'gastro', 'pulmo', 'infect', 'derm', 'ent', 'oph', 'uro', 'nephro', 'rheum', 'hem', 'onco', 'psy', 'reanim', 'emerg', 'tb', 'dent', 'other'];
+const LAB_KINDS = ['cbc', 'urine', 'bio', 'coag', 'glu', 'hormone', 'marker', 'infect', 'ecg', 'xray', 'us', 'ct', 'mri', 'endo', 'consult', 'other'];
+function isHelper() { return !!(S.me && S.me.plan && S.me.plan.kind === 'helper'); }
+function hpFmtD(d) { return d ? String(d).slice(0, 10).split('-').reverse().join('.') : ''; }
+
+/* =========================== 1. регистрация в Telegram =========================== */
+(function () {
+  const orig = window.renderLogin;
+  window.renderLogin = async function (msg) {
+    if (TGW && window.PWA_MODE && pwaApi() && !S.pwaApiEdit && !S.setupNeeded && !S.tgUsePw) {
+      if (!S.tgWho) {
+        try { const r = await rpc('tgWho', { initData: TGW.init }, 30000); S.tgWho = r && r.ok ? r : { linked: true }; } catch (e) { S.tgWho = { linked: true }; }
+        // язык Telegram для нового человека (если язык в приложении ещё не выбирали)
+        if (S.tgWho.lang && LS.get('MED2_LANG', null) === null && S.tgWho.lang !== S.lang) { S.lang = S.tgWho.lang; try { applyStatic(); } catch (e) { } }
+      }
+      if (!S.tgWho.linked && S.tgWho.open !== false && !S.tgHaveAcc) return hpRegRender(msg);
+      if (S.tgWho.linked && !S.tgWho.pin) S.tgUsePw = true;
+    }
+    return orig.apply(this, arguments);
+  };
+})();
+function hpRegRender(msg) {
+  const box = $('#loginBox');
+  const lng = S.lang === 'az' ? 'az' : 'ru';
+  box.innerHTML = '<div class="card login-card"><div class="login-logo">🩺</div><h2 class="scr" style="text-align:center">' + esc(t('hpRegTitle')) + '</h2>' +
+    (msg ? '<div class="info">' + esc(msg) + '</div>' : '') +
+    '<div class="muted" style="margin-bottom:10px;text-align:center">' + esc(t('hpRegHint')) + '</div>' +
+    '<div class="row" style="justify-content:center;gap:6px;margin-bottom:8px"><button class="btn small ' + (lng === 'az' ? 'primary' : 'ghost') + '" data-act="lang" data-lang="az">AZ</button><button class="btn small ' + (lng === 'ru' ? 'primary' : 'ghost') + '" data-act="lang" data-lang="ru">RU</button></div>' +
+    '<div class="field"><label>' + esc(t('hpName')) + '</label><input type="text" id="hpName" autocomplete="name" maxlength="60"></div>' +
+    '<div class="field"><label>' + esc(t('hpSpec')) + '</label><select id="hpSpec"><option value="">' + esc(t('hpSpecChoose')) + '</option>' + HP_SPECS.map(s => '<option value="' + s + '">' + esc(t('sp_' + s)) + '</option>').join('') + '</select></div>' +
+    '<div class="field"><label>' + esc(t('hpWork')) + '</label><input type="text" id="hpWork" maxlength="120"></div>' +
+    '<div class="field"><label>' + esc(t('hpPhone')) + '</label><input type="tel" id="hpPhone" maxlength="30" autocomplete="tel"></div>' +
+    '<div class="field"><label>' + esc(t('hpPin')) + '</label><input type="password" id="hpPin" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off"></div>' +
+    '<div class="field"><label>' + esc(t('hpPin2')) + '</label><input type="password" id="hpPin2" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off"></div>' +
+    (S.hpRelink ? '<div class="info">' + esc(t('hpRelinkHint')) + '</div><div class="field"><label>' + esc(t('password')) + '</label><input type="password" id="hpOldPw" autocomplete="current-password"></div>' : '') +
+    '<label class="check"><input type="checkbox" id="hpAgree"><span>' + esc(t('hpAgree')) + ' — <a href="terms.html" target="_blank" rel="noopener">' + esc(t('hpTerms')) + '</a></span></label>' +
+    '<button class="btn primary block" style="margin-top:8px" data-act="hpRegGo">' + esc(t('hpRegGo')) + '</button>' +
+    '<button class="btn small ghost block" style="margin-top:12px" data-act="hpHaveAcc">' + esc(t('hpHaveAcc')) + '</button></div>';
+}
+async function hpRegGo(btn) {
+  const v = id => ($('#' + id).value || '').trim();
+  const pin = v('hpPin');
+  if (v('hpName').length < 3) return toast(t('E_NAME_REQUIRED'), 'bad');
+  if (!v('hpSpec')) return toast(t('E_REG_SPEC'), 'bad');
+  if (!/^\d{6,8}$/.test(pin)) return toast(t('E_PIN_FORMAT', { min: 6 }), 'bad');
+  if (pin !== v('hpPin2')) return toast(t('tgPinMismatch'), 'bad');
+  if (!$('#hpAgree').checked) return toast(t('E_REG_AGREE'), 'bad');
+  let r;
+  const oldPw = $('#hpOldPw') ? $('#hpOldPw').value : '';
+  try { r = await busy(btn, () => rpc('tgRegister', { initData: TGW.init, name: v('hpName'), spec: v('hpSpec'), work: v('hpWork'), phone: v('hpPhone'), pin, agree: true, password: oldPw || undefined, device: deviceName() }, 120000), true); }
+  catch (e) { return toast(t('E_NETWORK'), 'bad'); }
+  if (!r) return;
+  if (!r.ok) {
+    if (r.code === 'E_TG_ALREADY') { S.tgWho = { linked: true, pin: true }; renderLogin(errText(r)); }
+    if (r.code === 'E_TG_RELINK_PW') { S.hpRelink = true; const keep = {}; ['hpName', 'hpSpec', 'hpWork', 'hpPhone'].forEach(id => { keep[id] = v(id); }); hpRegRender(); Object.keys(keep).forEach(id => { const el = $('#' + id); if (el) el.value = keep[id]; }); }
+    return toast(errText(r), 'bad', null, 7000);
+  }
+  ['hpPin', 'hpPin2'].forEach(id => { const i = $('#' + id); if (i) i.value = ''; });
+  S.tgWho = { linked: true, pin: true };
+  const creds = r.creds || {};
+  delete r.creds;
+  afterLogin(r);
+  openModal('<h3>' + esc(t('hpCredsTitle')) + '</h3><div class="muted" style="margin-bottom:8px">' + esc(t('hpCredsHint')) + '</div>' +
+    '<div class="field"><label>' + esc(t('hpLogin')) + '</label><input type="text" readonly value="' + esc(creds.login || '') + '" onclick="this.select()"></div>' +
+    '<div class="field"><label>' + esc(t('hpPass')) + '</label><input type="text" readonly value="' + esc(creds.password || '') + '" onclick="this.select()"></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="copyCreds" data-text="' + esc((creds.login || '') + ' / ' + (creds.password || '')) + '">' + esc(t('copy')) + '</button><button class="btn primary" data-act="closeModal">' + esc(t('hpCont')) + '</button></div>');
+}
+
+/* =========================== 2. упрощённый интерфейс =========================== */
+(function () {
+  const oa = window.screenAllowed;
+  window.screenAllowed = function (scr) { if (isHelper()) return scr === 'clinic' || scr === 'forms'; return oa(scr); };
+  const of = window.firstScreen;
+  window.firstScreen = function () { if (isHelper()) { if (!S.clSeg || ['ind', 'ai'].indexOf(S.clSeg) !== -1) S.clSeg = 'cases'; return 'clinic'; } return of(); };
+  // разделы клиники: разбор с ИИ, диагнозы, протоколы (без склада и ИИ склада)
+  const segs = window.CLINIC_SEGS || [];
+  window.CLINIC_SEGS = segs.map(s => { const f = s[2]; return [s[0], s[1], () => (!isHelper() || ['cases', 'dx', 'proto'].indexOf(s[0]) !== -1) && (!f || f())]; });
+  // «Пациенты и документы» → документы и рецепты (формы обращения медпункта и поиск пациента по FİN — не для них)
+  if (typeof dsSegHtml === 'function') {
+    const od = dsSegHtml;
+    dsSegHtml = function () {
+      if (!isHelper()) return od.apply(this, arguments);
+      const st = dsSt(); if (['docs', 'rx'].indexOf(st.seg) === -1) st.seg = 'docs';
+      return '<div class="seg-wide" style="margin-bottom:10px">' + [['docs', 'dsDocs'], ['rx', 'dsRx']].map(s => '<button data-act="dsSeg" data-seg="' + s[0] + '" class="' + (st.seg === s[0] ? 'on' : '') + '">' + esc(t(s[1])) + '</button>').join('') + '</div>';
+    };
+  }
+  if (H.dsSeg) { const ods = H.dsSeg; H.dsSeg = async el => { if (isHelper() && ['docs', 'rx'].indexOf(el.dataset.seg) === -1) el = { dataset: { seg: 'docs' } }; return ods(el); }; }
+  const omr = window.menuRender;
+  if (typeof omr === 'function') window.menuRender = function () {
+    const r = omr.apply(this, arguments);
+    const nav = $('nav.bottom.drawer');
+    if (nav && isHelper()) {
+      nav.querySelectorAll('.m-subs [data-tab="forms"]').forEach(b => { if (['docs', 'rx'].indexOf(b.dataset.seg) === -1) b.remove(); });
+      if (!nav.querySelector('[data-act=hpSub]')) {
+        const html = '<button class="btn primary block" style="margin:6px 0" data-act="hpSub">' + esc(t('hpSubBtn')) + '</button>';
+        const fb = nav.querySelector('[data-act=fbOpen]'); if (fb) fb.insertAdjacentHTML('beforebegin', html); else nav.insertAdjacentHTML('beforeend', html);
+      }
+    }
+    return r;
+  };
+  // при входе «Помощника» — сразу разбор с ИИ
+  const oe = window.enterApp;
+  if (typeof oe === 'function') window.enterApp = function () {
+    if (isHelper()) { if (!S.clSeg || ['ind', 'ai'].indexOf(S.clSeg) !== -1) S.clSeg = 'cases'; const st = typeof dsSt === 'function' ? dsSt() : null; if (st && ['docs', 'rx'].indexOf(st.seg) === -1) st.seg = 'docs'; if (!screenAllowed(S.screen)) S.screen = 'clinic'; }
+    return oe.apply(this, arguments);
+  };
+  // строка тарифа над списком разборов
+  if (typeof csScreenHtml === 'function') {
+    const oc = csScreenHtml;
+    csScreenHtml = function () { const h = oc.apply(this, arguments); const st = csSt(); return isHelper() && st.view === 'list' ? hpPlanBar() + h : h; };
+    if (window.CLINIC_RENDER) window.CLINIC_RENDER.cases = csScreenHtml;
+  }
+})();
+function hpPlanBar() {
+  const p = S.me && S.me.plan; if (!p) return '';
+  const u = p.used || {}, l = p.limits || {};
+  const txt = p.pro ? t(p.trial ? 'hpPlanTrial' : 'hpPlanPro', { d: hpFmtD(p.until), c: u.cases || 0, cm: l.cases }) : t('hpPlanFree', { c: u.cases || 0, cm: l.cases, d: u.docs || 0, dm: l.docs });
+  return '<div class="card" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px"><span class="grow" style="min-width:180px">' + esc(txt) + '</span><button class="btn small ' + (p.pro ? 'ghost' : 'primary') + '" data-act="hpSub">' + esc(t('hpSubBtn')) + '</button></div>';
+}
+async function hpRefreshPlan() {
+  try { const r = await rpc('helperMe', {}, 30000); if (r && r.ok && r.plan && S.me) { S.me.plan = r.plan; LS.set('MED4_ME', S.me); } } catch (e) { }
+  return S.me && S.me.plan;
+}
+async function hpSubOpen() {
+  const p = (await hpRefreshPlan()) || {};
+  const pr = p.price || {}, l = p.limits || {};
+  const cur = p.pro ? t(p.trial ? 'hpPlanTrial' : 'hpPlanPro', { d: hpFmtD(p.until), c: (p.used || {}).cases || 0, cm: l.cases }) : t('hpPlanFree', { c: (p.used || {}).cases || 0, cm: l.cases, d: (p.used || {}).docs || 0, dm: l.docs });
+  openModal('<h3>' + esc(t('hpSubTitle')) + '</h3><div class="info">' + esc(t('hpYourPlan')) + ': ' + esc(cur) + '</div>' +
+    '<div class="card"><b>' + esc(t('hpSubFree')) + '</b><div class="muted">' + esc(t('hpSubFreeList', { c: (p.tariff || {}).freeCases, d: (p.tariff || {}).freeDocs })) + '</div></div>' +
+    '<div class="card"><b>' + esc(t('hpSubPro')) + '</b><div class="muted">' + esc(t('hpSubProList', { c: (p.tariff || {}).proCases })) + '</div></div>' +
+    '<button class="btn primary block" style="margin-bottom:8px" data-act="hpBuy" data-p="m">' + esc(t('hpBuyM', { s: pr.starsM, a: pr.aznM })) + '</button>' +
+      '<button class="btn ghost block" data-act="hpBuy" data-p="y">' + esc(t('hpBuyY', { s: pr.starsY, a: pr.aznY })) + '</button><div class="muted" style="margin-top:8px">' + esc(t('hpSubAuto')) + '</div>' +
+      (TGW ? '' : '<div class="hint" style="display:block;margin-top:8px">' + esc(t('hpSubOutside')) + '</div>') +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+}
+async function hpBuy(btn) {
+  const r = await busy(btn, () => rpcA('subInvoice', { period: btn.dataset.p }));
+  if (!r || !r.url) return;
+  const m = String(r.url).match(/^https:\/\/t\.me\/\$([A-Za-z0-9_-]+)$/) || String(r.url).match(/^https:\/\/t\.me\/invoice\/([A-Za-z0-9_-]+)$/);
+  if (TGW && m) { S.hpInvoice = m[1]; tgPost('web_app_open_invoice', { slug: m[1] }); }
+  else window.open(r.url, '_blank');
+}
+/** Telegram: окно оплаты закрыто — если оплачено, ждём, пока сервер включит Pro. */
+async function hpInvoiceClosed(status) {
+  if (status !== 'paid') return;
+  toast(t('hpPaidWait'), '', null, 4000);
+  const was = S.me && S.me.plan ? S.me.plan.until : '';
+  for (let i = 0; i < 8; i++) {
+    await new Promise(r => setTimeout(r, 2500));
+    const p = await hpRefreshPlan();
+    if (p && p.pro && p.until !== was && !p.trial) { closeModal(); toast(t('hpPaidOk', { d: hpFmtD(p.until) }), '', null, 7000); renderAll(); return; }
+  }
+  toast(t('hpPaidLate'), '', null, 9000);
+}
+if (TGW) {
+  const prevRecv = window.Telegram && window.Telegram.WebView && window.Telegram.WebView.receiveEvent;
+  window.Telegram.WebView.receiveEvent = function (type, data) {
+    if (String(type) === 'invoice_closed') { let d = data; try { if (typeof d === 'string') d = JSON.parse(d); } catch (e) { } hpInvoiceClosed(d && d.status); return; }
+    if (prevRecv) return prevRecv.apply(this, arguments);
+  };
+  window.addEventListener('message', e => {
+    if (e.source !== window.parent || e.origin !== TG_WEB_ORIGIN) return;
+    let d = null; try { d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch (er) { return; }
+    if (d && d.eventType === 'invoice_closed') hpInvoiceClosed(d.eventData && d.eventData.status);
+  });
+}
+
+/* =========================== 3. ФИО/FİN — только на телефоне =========================== */
+const HP_DOC_PII = (() => { const s = {}; Object.keys(DOC_TPL).forEach(k => dsFields(k).forEach(f => { if (f.o.pii && f.type !== 'rows') s[f.k] = 1; })); return s; })();
+function hpPiiOn() { return !!(S.me && S.me.piiLocal); }
+function hpPiiKey() { return 'MED_PIIL:' + (S.me ? S.me.id : '-'); }
+function hpPiiGet() { const o = LS.get(hpPiiKey(), null); return o && typeof o === 'object' ? { docs: o.docs || {}, forms: o.forms || {} } : { docs: {}, forms: {} }; }
+function hpPiiPut(kind, id, vals) {
+  if (!id || !vals || !Object.keys(vals).length) return;
+  const o = hpPiiGet();
+  o[kind][id] = Object.assign({}, o[kind][id] || {}, vals);
+  if (!LS.set(hpPiiKey(), o)) toast('⚠️ ' + t('E_SERVER', { msg: 'storage' }), 'bad');
+}
+function hpSplit(patch, isPii) {
+  const keep = {}, pii = {};
+  Object.keys(patch || {}).forEach(k => { if (isPii(k)) pii[k] = patch[k]; else keep[k] = patch[k]; });
+  return { keep, pii };
+}
+function hpDocPatchSummary(row, d) {
+  if (!row || !d) return;
+  const name = [d.surname, d.name, d.patronymic].filter(Boolean).join(' ');
+  if (name) row.patient = name;
+  if (d.fin) row.fin = String(d.fin).toUpperCase();
+  if (d.birth) row.birthDate = d.birth;
+  const nk = { h003: 'histNo', epi: 'histNo', evac: 'sheetNo', rx: 'rxNo' }[row.type] || 'regNo';
+  if (d[nk]) row.docNo = d[nk];
+}
+function hpFormPatchSummary(row, d) {
+  if (!row || !d) return;
+  if (d.pName) row.patient = [d.pName, d.pFather].filter(Boolean).join(' ');
+  if (d.fin) row.fin = String(d.fin).toUpperCase();
+  if (d.pBirth) row.birthDate = d.pBirth;
+  if (d.blankNo) row.blankNo = d.blankNo;
+}
+(function () {
+  const orpc = window.rpc;
+  window.rpc = async function (action, payload, timeoutMs) {
+    if (!hpPiiOn()) return orpc.apply(this, arguments);
+    let p = payload, q = '';
+    if (action === 'docSave' && p && p.patch) { const s = hpSplit(p.patch, k => !!HP_DOC_PII[k]); hpPiiPut('docs', p.id, s.pii); p = Object.assign({}, p, { patch: s.keep }); }
+    if (action === 'formSave' && p && p.patch) { const s = hpSplit(p.patch, k => FORM_PII_KEYS.indexOf(k) !== -1); hpPiiPut('forms', p.id, s.pii); p = Object.assign({}, p, { patch: s.keep }); }
+    if ((action === 'docList' || action === 'formsList') && p && p.q) { q = String(p.q).trim().toLowerCase(); p = Object.assign({}, p, { q: '', days: 3650 }); }
+    const r = await orpc.call(this, action, p, timeoutMs);
+    if (!r || !r.ok) return r;
+    const L = hpPiiGet();
+    try {
+      if ((action === 'docGet' || action === 'docSave') && r.doc) { const loc = L.docs[r.doc.id]; if (loc) { r.data = Object.assign({}, r.data || {}, loc); hpDocPatchSummary(r.doc, loc); } }
+      if (action === 'docList' && Array.isArray(r.rows)) {
+        r.rows.forEach(row => hpDocPatchSummary(row, L.docs[row.id]));
+        if (q) r.rows = r.rows.filter(row => [row.patient, row.fin, row.docNo, row.icd, row.dx].some(v => String(v || '').toLowerCase().indexOf(q) !== -1));
+      }
+      if (action === 'formGet' && r.form) { const loc = L.forms[r.form.id]; if (loc) r.form.data = Object.assign({}, r.form.data || {}, loc); }
+      if (action === 'formSave' && r.result && r.result.form) { const loc = L.forms[r.result.form.id]; if (loc) r.result.form.data = Object.assign({}, r.result.form.data || {}, loc); }
+      if (action === 'formsList' && Array.isArray(r.rows)) {
+        r.rows.forEach(row => hpFormPatchSummary(row, L.forms[row.id]));
+        if (q) r.rows = r.rows.filter(row => [row.patient, row.fin, row.blankNo, row.icd, row.dx].some(v => String(v || '').toLowerCase().indexOf(q) !== -1));
+      }
+    } catch (e) { }
+    // лимит тарифа — сразу предложить подписку
+    return r;
+  };
+})();
+(function () {
+  const orpc = window.rpc;
+  window.rpc = async function () {
+    const r = await orpc.apply(this, arguments);
+    if (r && !r.ok && (r.code === 'E_PLAN_CASES' || r.code === 'E_PLAN_DOCS') && isHelper()) setTimeout(() => { hpRefreshPlan().then(() => hpSubOpen()); }, 400);
+    return r;
+  };
+})();
+
+/* =========================== 4. анализы и обследования в разборе =========================== */
+function labClean(x) {
+  const str = (v, n) => typeof v === 'string' ? v.slice(0, n) : '';
+  if (!x || typeof x !== 'object') return null;
+  const kind = LAB_KINDS.indexOf(x.kind) !== -1 ? x.kind : 'other';
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(String(x.date || '')) ? String(x.date) : '';
+  const text = str(x.text, 4000).trim();
+  if (!text) return null;
+  return { id: /^L[a-z0-9]{4,20}$/.test(String(x.id || '')) ? String(x.id) : 'L' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36), kind, date, title: str(x.title, 120), text, src: ['manual', 'ai'].indexOf(x.src) !== -1 ? x.src : 'manual' };
+}
+/** Личное с бланка не храним: телефоны, номера, FİN, слова из ФИО связанной формы и местных данных. */
+function labScrub(c, text) {
+  const words = [];
+  try {
+    const loc = hpPiiGet();
+    if (c && c.data && c.data.formId && loc.forms[c.data.formId]) FORM_PII_KEYS.forEach(k => words.push(loc.forms[c.data.formId][k]));
+  } catch (e) { }
+  return typeof dsScrub === 'function' ? dsScrub(String(text), typeof dsPiiWords === 'function' ? dsPiiWords(words, '') : []) : String(text);
+}
+if (typeof csSanitize === 'function') {
+  const os = csSanitize;
+  csSanitize = function (d) { const out = os.apply(this, arguments); out.labs = (Array.isArray(d.labs) ? d.labs : []).slice(0, 100).map(labClean).filter(Boolean); out.labsNote = typeof d.labsNote === 'string' ? d.labsNote.slice(0, 3000) : ''; return out; };
+}
+function labsHtml(c) {
+  const labs = (c.data.labs || []).slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  return '<details class="card" id="labsCard" open><summary><b>' + esc(t('labTitle')) + '</b> <span class="muted">(' + labs.length + ')</span></summary>' +
+    (labs.length ? labs.map(x => '<div class="f-rx"><div><b>' + esc(t('lk_' + x.kind)) + (x.title && x.title !== t('lk_' + x.kind) ? ' — ' + esc(x.title) : '') + '</b>' + (x.date ? ' <span class="muted">' + esc(hpFmtD(x.date)) + '</span>' : '') + (x.src === 'ai' ? ' <span class="pill">🤖</span>' : '') +
+      ' <button class="btn small ghost" style="min-height:0;padding:0 8px" data-act="labDel" data-id="' + esc(x.id) + '">' + esc(t('labDel')) + '</button></div><div style="white-space:pre-wrap">' + esc(x.text) + '</div></div>').join('') : '<div class="muted">' + esc(t('labNone')) + '</div>') +
+    '<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn small ghost" data-act="labAdd">' + esc(t('labAdd')) + '</button><button class="btn small ghost" data-act="labPhoto">' + esc(t('labPhoto')) + '</button></div></details>';
+}
+(function () {
+  const oe = window.csCaseExtra;
+  window.csCaseExtra = function (c) { return labsHtml(c) + (oe ? oe(c) : ''); };
+  const hook = window.csToolHook;
+  const names = (hook && hook.names) || [];
+  window.csToolHook = async function (c, b) {
+    if (b.name === 'add_results') {
+      const items = Array.isArray(b.input && b.input.items) ? b.input.items.slice(0, 30) : [];
+      const add = items.map(x => labClean({ kind: x.kind, date: x.date, title: aiClean(x.title), text: labScrub(c, aiClean(x.text)), src: 'ai' })).filter(Boolean);
+      c.data.labs = (c.data.labs || []).concat(add).slice(-100);
+      c.data.view.push({ k: 't', text: t('labTitle') + ': +' + add.length });
+      return { status: 'внесено записей: ' + add.length + '; врач видит их в разделе «Анализы и обследования»' };
+    }
+    return hook(c, b);
+  };
+  window.csToolHook.names = names.concat(['add_results']);
+  // вручную добавленные результаты — ИИ узнаёт со следующим сообщением врача
+  const oa = window.csAnswer;
+  window.csAnswer = function (c, text) { if (c && c.data && c.data.labsNote && c.data.pending && !c.busy) { text = text + '\n' + c.data.labsNote; c.data.labsNote = ''; } return oa.call(this, c, text); };
+  const ost = window.csSendText;
+  window.csSendText = function (c) { const inp = $('#csIn'); if (c && c.data && c.data.labsNote && inp && inp.value.trim() && !c.busy) { inp.value = inp.value + '\n' + c.data.labsNote; c.data.labsNote = ''; } return ost.apply(this, arguments); };
+})();
+function labAddModal() {
+  const today = typeof bakuToday === 'function' ? bakuToday() : new Date().toISOString().slice(0, 10);
+  openModal('<h3>' + esc(t('labTitle')) + '</h3>' +
+    '<div class="field"><label>' + esc(t('labKind')) + '</label><select id="labKind">' + LAB_KINDS.map(k => '<option value="' + k + '">' + esc(t('lk_' + k)) + '</option>').join('') + '</select></div>' +
+    '<div class="field"><label>' + esc(t('labDate')) + '</label><input type="date" id="labDate" value="' + today + '"></div>' +
+    '<div class="field"><label>' + esc(t('labName')) + '</label><input type="text" id="labTitleIn" maxlength="120"></div>' +
+    '<div class="field"><label>' + esc(t('labText')) + '</label><textarea id="labText" rows="6" maxlength="4000" placeholder="Hb 102 г/л ↓ (120–160), WBC 13,2 ↑, CRP 48 мг/л ↑ …"></textarea></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="labSave">' + esc(t('labSave')) + '</button></div>');
+}
+function labSave() {
+  const c = csSt().cur; if (!c) return closeModal();
+  const x = labClean({ kind: $('#labKind').value, date: $('#labDate').value, title: ($('#labTitleIn').value || '').trim() || t('lk_' + $('#labKind').value), text: labScrub(c, ($('#labText').value || '').trim()), src: 'manual' });
+  if (!x) return toast(t('labText'), 'bad');
+  c.data.labs = (c.data.labs || []).concat([x]).slice(-100);
+  c.data.labsNote = ((c.data.labsNote ? c.data.labsNote.replace(/\]$/, '; ') : '') + t('labNote', { t: (x.date ? hpFmtD(x.date) + ' ' : '') + x.title + ': ' + x.text }).replace(/^\[/, c.data.labsNote ? '' : '[')).slice(0, 3000);
+  closeModal();
+  csSave(c);
+  csRender();
+  const card = $('#labsCard'); if (card) { card.outerHTML = labsHtml(c); }
+}
+function labPhoto() {
+  const inp = $('#csIn');
+  if (inp && !inp.value.trim()) inp.value = t('labPhotoMsg');
+  toast(t('labPhotoHint'), '', null, 6000);
+  if (typeof attPick === 'function') attPick('cs');
+}
+Object.assign(H, {
+  hpRegGo: el => hpRegGo(el),
+  hpHaveAcc: () => { S.tgHaveAcc = true; S.tgUsePw = true; renderLogin(); },
+  hpSub: () => { if (typeof menuClose === 'function') try { menuClose(); } catch (e) { } hpSubOpen(); },
+  hpBuy: el => hpBuy(el),
+  labAdd: () => labAddModal(),
+  labSave: () => labSave(),
+  labPhoto: () => labPhoto(),
+  labDel: el => { const c = csSt().cur; if (!c) return; c.data.labs = (c.data.labs || []).filter(x => x.id !== el.dataset.id); csSave(c); const card = $('#labsCard'); if (card) card.outerHTML = labsHtml(c); }
+});
+
+/* =========================== 5. качество документа (ИИ, обезличенно) =========================== */
+async function dqRun() {
+  const st = dsSt(), c = st.cur; if (!c) return;
+  const data = Object.assign({}, c.data || {}, c.pend || {});
+  const words = [];
+  dsFields(c.type).forEach(f => { if (f.o.pii) words.push(data[f.k]); });
+  const dep = dsDepersonalize(c.type, data, dsPiiWords(words, data.birth));
+  const req = dsFields(c.type).filter(f => (f.o.req || f.o.reqClose) && !f.o.pii).map(f => f.k + ' — ' + f.ru);
+  const msg = 'Проверь ОДИН документ (обезличен). Обязательные поля: ' + JSON.stringify(req) + '\nДокумент:\n' + aiCut([{ doc: 'doc1', type: c.type, typeName: (DOC_TPL[c.type] || {}).ru, status: c.status, data: dep }], 60000);
+  openModal('<h3>' + esc(t('dqTitle')) + '</h3><div id="psAuditBox"><div class="ai-t">' + esc(t('aiThinking')) + '</div></div><div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+  let r;
+  try { r = await rpcA('aiChat', { mode: 'audit', messages: [{ role: 'user', content: [{ type: 'text', text: msg }] }] }, { timeout: 180000 }); }
+  catch (e) { st.audit = { error: e && e.res ? errText(e.res) : t('E_NETWORK'), items: [] }; const b = $('#psAuditBox'); if (b) b.innerHTML = psAuditHtml(); return; }
+  const call = (r.content || []).find(b => b.type === 'tool_use' && b.name === 'report_findings');
+  const txt = (r.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+  const inp = call ? call.input || {} : { items: [], summary: txt };
+  const pct = v => { const n = Math.round(Number(v)); return isFinite(n) ? Math.max(0, Math.min(100, n)) : null; };
+  const title = (DOC_TPL[c.type] || {})[S.lang === 'az' ? 'az' : 'ru'] || c.type;
+  const label = k => { const f = dsFields(c.type).find(x => x.k === k); return f ? (S.lang === 'az' ? f.az || f.ru : f.ru) : k; };
+  st.audit = {
+    overall: pct(inp.overall),
+    scores: (Array.isArray(inp.scores) ? inp.scores : []).slice(0, 1).map(x => ({ docId: '', kind: 'doc', title, score: pct(x.score), toPerfect: aiClean(x.toPerfect).slice(0, 1500) })).filter(x => x.score !== null),
+    summary: aiClean(inp.summary || txt).slice(0, 2000),
+    items: (Array.isArray(inp.items) ? inp.items : []).slice(0, 40).map(x => ({ docId: '', doc: title, docTitle: title, field: aiClean(x.field).slice(0, 40), fieldLabel: label(aiClean(x.field)), severity: ['critical', 'major', 'minor'].indexOf(x.severity) !== -1 ? x.severity : 'minor', problem: aiClean(x.problem).slice(0, 600), fix: aiClean(x.fix).slice(0, 1200) }))
+  };
+  const b = $('#psAuditBox'); if (b) b.innerHTML = psAuditHtml();
+}
+(function () {
+  const oe = window.dsEditorHtml;
+  if (typeof oe !== 'function') return;
+  window.dsEditorHtml = function () {
+    const h = oe.apply(this, arguments);
+    const c = dsSt().cur;
+    if (!c || !canAi() || c.status === 'deleted') return h;
+    return h + '<div class="row" style="margin:8px 0"><button class="btn small ghost" data-act="dqRun">' + esc(t('dqBtn')) + '</button></div>';
+  };
+})();
+H.dqRun = () => dqRun();
+
+/* =========================== 6. профиль: специальность; главный админ: тариф и оплаты =========================== */
+(function () {
+  const op = window.profileModal;
+  if (typeof op !== 'function') return;
+  window.profileModal = async function () {
+    const r = await op.apply(this, arguments);
+    const m = $('.modal');
+    if (!m || !S.me) return r;
+    if (isHelper() && !m.querySelector('#hpSpecCard')) {
+      const html = '<div class="card" id="hpSpecCard"><div class="lbl">' + esc(t('hpSpecTitle')) + '</div><select id="hpSpecSel">' + HP_SPECS.map(s => '<option value="' + s + '"' + (S.me.spec === s ? ' selected' : '') + '>' + esc(t('sp_' + s)) + '</option>').join('') + '</select>' +
+        '<button class="btn small primary" style="margin-top:6px" data-act="hpSpecSave">' + esc(t('hpSpecSave')) + '</button> <button class="btn small ghost" style="margin-top:6px" data-act="hpSub">' + esc(t('hpSubBtn')) + '</button></div>';
+      const acts = m.querySelector('.acts:last-of-type'); if (acts) acts.insertAdjacentHTML('beforebegin', html); else m.insertAdjacentHTML('beforeend', html);
+    }
+    return r;
+  };
+  H.hpSpecSave = async el => { const r = await busy(el, () => rpcA('helperProfileSet', { spec: $('#hpSpecSel').value })); if (r) { S.me.spec = r.profile.spec; LS.set('MED4_ME', S.me); toast(t('saved')); } };
+})();
+(function () {
+  const ot = window.tgOpen;
+  if (typeof ot !== 'function') return;
+  window.tgOpen = async function () {
+    await ot.apply(this, arguments);
+    if (!isSuper()) return;
+    if (S.tg && S.tg.inTg && !S.tg.elevated) return; // в Telegram — только после пароля (не открывать окно пароля само)
+    const m = $('.modal'); if (!m || m.querySelector('#hpAdm')) return;
+    let r = null;
+    try { r = await rpc('subPays', {}, 60000); } catch (e) { }
+    if (!r || !r.ok) return;
+    const html = '<div class="card" id="hpAdm"><div class="lbl">' + esc(t('hpAdmTitle')) + '</div>' +
+      '<label class="check"><input type="checkbox" id="hpRegOpen"' + (r.regOpen ? ' checked' : '') + '><span>' + esc(t('hpAdmReg')) + '</span></label>' +
+      '<div class="muted" style="margin:4px 0">Pro: ' + r.cfg.starsM + ' ⭐ / ' + r.cfg.aznM + ' ₼ · ' + r.cfg.starsY + ' ⭐ / ' + r.cfg.aznY + ' ₼ · Free: ' + r.cfg.freeCases + ' / ' + r.cfg.freeDocs + ' · Pro: ' + r.cfg.proCases + '</div>' +
+      '<div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn small primary" data-act="hpAdmSave">' + esc(t('save')) + '</button><button class="btn small ghost" data-act="hpAdmSync">' + esc(t('hpAdmSync')) + '</button></div>' +
+      (r.rows.length ? r.rows.slice(0, 50).map(x => '<div class="list-row"><div class="grow"><b>' + x.amount + ' ⭐</b> · ' + esc(x.at) + ' · ' + esc(x.orgId) + ' · ' + (x.period === 'y' ? '1 год' : '1 мес') + ' → ' + esc(x.until) + ' · ' + esc(x.status) + '</div>' + (x.status === 'paid' ? '<button class="btn small ghost" data-act="hpAdmRefund" data-id="' + esc(x.id) + '">' + esc(t('hpAdmRefund')) + '</button>' : '') + '</div>').join('') : '<div class="muted">' + esc(t('hpAdmNone')) + '</div>') + '</div>';
+    const acts = m.querySelector('.acts:last-of-type'); if (acts) acts.insertAdjacentHTML('beforebegin', html); else m.insertAdjacentHTML('beforeend', html);
+  };
+  const pw = () => ($('#tgPwIn') ? $('#tgPwIn').value : '');
+  H.hpAdmSave = async el => { if (!pw()) { toast(t('tgPw'), 'bad'); return; } const r = await busy(el, () => rpcA('helperCfgSet', { regOpen: $('#hpRegOpen').checked, password: pw() })); if (r) toast(t('hpAdmSaved')); };
+  H.hpAdmSync = async el => { const r = await busy(el, () => rpcA('subSync', {}, { timeout: 120000 })); if (r) toast(t('hpAdmSynced', { n: r.n })); };
+  H.hpAdmRefund = async el => { if (!pw()) { toast(t('tgPw'), 'bad'); return; } if (!confirm(t('hpAdmRefund') + '?')) return; const r = await busy(el, () => rpcA('subRefund', { id: el.dataset.id, password: pw() })); if (r) { toast(t('saved')); tgOpen(); } };
+})();
+
+/* =========================== 7. регистрация «Помощника» в обычном приложении (не только Telegram) =========================== */
+Object.assign(I18N.ru, { regHelper: '🩺 Помощник врача — ИИ для любой специальности (7 дней Pro — после привязки Telegram)' });
+Object.assign(I18N.az, { regHelper: '🩺 Həkim köməkçisi — istənilən ixtisas üçün Sİ (7 gün Pro — Telegram bağlandıqdan sonra)' });
+(function () {
+  if (typeof regRender !== 'function') return;
+  const orr = regRender;
+  regRender = function () {
+    const r = orr.apply(this, arguments);
+    const m = $('.modal'); if (!m || !S.reg) return r;
+    const first = m.querySelector('input[name=rgKind]');
+    if (first && !m.querySelector('input[name=rgKind][value=helper]')) {
+      first.closest('label').insertAdjacentHTML('beforebegin', '<label class="check" style="margin:6px 0"><input type="radio" name="rgKind" value="helper"' + (S.reg.kind === 'helper' ? ' checked' : '') + '><span>' + esc(t('regHelper')) + '</span></label>');
+      const nr = m.querySelector('input[name=rgKind][value=helper]');
+      nr.addEventListener('change', () => { S.reg.kind = 'helper'; regRender(); });
+    }
+    if (S.reg.kind === 'helper') {
+      const keep = S.reg.keep || {};
+      const nameF = m.querySelector('[data-rg=name]');
+      if (nameF && !m.querySelector('[data-rg=spec]')) nameF.closest('.field').insertAdjacentHTML('afterend',
+        '<div class="field"><label>' + esc(t('hpSpec')) + '</label><select data-rg="spec"><option value="">' + esc(t('hpSpecChoose')) + '</option>' + HP_SPECS.map(s => '<option value="' + s + '"' + (keep.spec === s ? ' selected' : '') + '>' + esc(t('sp_' + s)) + '</option>').join('') + '</select></div>' +
+        '<div class="field"><label>' + esc(t('hpWork')) + '</label><input data-rg="work" type="text" maxlength="120" value="' + esc(keep.work || '') + '"></div>');
+      const sf = m.querySelector('[data-rg=storeName]'); if (sf) sf.closest('.field').remove();
+    }
+    return r;
+  };
+  // регистрация открывается «Помощником» по умолчанию
+  if (typeof regOpen === 'function') { const oo = regOpen; regOpen = async function () { const r = oo.apply(this, arguments); if (S.reg && S.reg.kind === 'private' && !S.reg.touched) { S.reg.kind = 'helper'; regRender(); } return r; }; }
+  const og = H.regGo;
+  if (og) H.regGo = async el => {
+    if (!S.reg || S.reg.kind !== 'helper') return og(el);
+    const v = {}; $$('.modal [data-rg]').forEach(x => { v[x.dataset.rg] = x.type === 'checkbox' ? x.checked : x.value.trim(); });
+    if (!v.spec) return toast(t('E_REG_SPEC'), 'bad');
+    if (v.password !== v.password2) return toast(t('pwMismatch'), 'bad');
+    if (!v.agree) return toast(t('E_REG_AGREE'), 'bad');
+    let r;
+    try { r = await busy(el, () => rpc('register', { kind: 'helper', spec: v.spec, work: v.work, name: v.name, login: v.login, password: v.password, phone: v.phone, email: v.email, agree: true, lang: S.lang, device: deviceName() }, 120000), true); } catch (e) { return toast(t('E_NETWORK'), 'bad'); }
+    if (!r) return;
+    if (!r.ok) return toast(errText(r), 'bad');
+    closeModal(); afterLogin(r);
+  };
+})();
+
+/* =========================== 8. «Помощник»: только подходящие документы; ФИО — в очереди без сети тоже только на телефоне =========================== */
+const HP_DOC_TYPES = ['consult', 'referral', 'rx', 'workfree', 'epi', 'h003', 'refusal', 'consent', 'evac', 'death', 'injury'];
+(function () {
+  if (typeof dsListHtml === 'function') {
+    const ol = dsListHtml;
+    dsListHtml = function () {
+      const h = ol.apply(this, arguments);
+      if (!isHelper()) return h;
+      return h.replace(/<button class="chip" data-act="dsNewPii" data-type="([a-z0-9]+)">[\s\S]*?<\/button>/g, (m, k) => HP_DOC_TYPES.indexOf(k) !== -1 ? m : '');
+    };
+  }
+  const oc = window.csCaseExtra;
+  window.csCaseExtra = function (c) {
+    const h = oc ? oc(c) : '';
+    if (!isHelper()) return h;
+    return h.replace(/<button class="chip" data-act="fillAsk" data-doc="([a-z0-9]+)">[\s\S]*?<\/button>/g, (m, k) => HP_DOC_TYPES.indexOf(k) !== -1 ? m : '');
+  };
+  const oq = window.enqueue;
+  if (typeof oq === 'function') window.enqueue = function (action, payload, meta) {
+    if (hpPiiOn() && payload && payload.patch && (action === 'formSave' || action === 'docSave')) {
+      const isPii = action === 'docSave' ? (k => !!HP_DOC_PII[k]) : (k => FORM_PII_KEYS.indexOf(k) !== -1);
+      const sp = hpSplit(payload.patch, isPii);
+      hpPiiPut(action === 'docSave' ? 'docs' : 'forms', payload.id, sp.pii);
+      payload = Object.assign({}, payload, { patch: sp.keep });
+    }
+    return oq.call(this, action, payload, meta);
+  };
+})();
+
+(function () {
+  const ofq = window.fQueue;
+  if (typeof ofq === 'function') window.fQueue = function (action, payload, label) {
+    if (hpPiiOn() && action === 'formSave' && payload && payload.patch) {
+      const sp = hpSplit(payload.patch, k => FORM_PII_KEYS.indexOf(k) !== -1);
+      hpPiiPut('forms', payload.id, sp.pii);
+      payload = Object.assign({}, payload, { patch: sp.keep });
+    }
+    return ofq.call(this, action, payload, label);
+  };
+})();
+
+/* =========================== 9. главный админ: врачи «Помощника» и подарок Pro =========================== */
+Object.assign(I18N.ru, { hgTitle: '👩‍⚕️ Врачи «Помощника»', hgNone: 'Пока никто не зарегистрировался.', hgGift: '🎁 Pro', hgDays: 'На сколько дней подарить Pro? (0 — снять подарок)', hgDone: 'Pro до {d}', hgFree: 'бесплатный', hgTrial: 'пробный до {d}', hgPaid: 'Pro до {d}', hgGiftSt: 'подарок до {d}', hgCases: 'разборов в месяце: {n}' });
+Object.assign(I18N.az, { hgTitle: '👩‍⚕️ «Köməkçi» həkimləri', hgNone: 'Hələ heç kim qeydiyyatdan keçməyib.', hgGift: '🎁 Pro', hgDays: 'Neçə günlük Pro hədiyyə edilsin? (0 — hədiyyəni ləğv et)', hgDone: 'Pro {d} tarixinədək', hgFree: 'pulsuz', hgTrial: 'sınaq {d} tarixinədək', hgPaid: 'Pro {d} tarixinədək', hgGiftSt: 'hədiyyə {d} tarixinədək', hgCases: 'bu ay təhlil: {n}' });
+async function hgOpen() {
+  let r = null;
+  try { r = await rpcA('helperList', {}); } catch (e) { return; }
+  const st = x => !x.pro ? t('hgFree') : x.note === 'trial' ? t('hgTrial', { d: hpFmtD(x.until) }) : x.note === 'gift' ? t('hgGiftSt', { d: hpFmtD(x.until) }) : t('hgPaid', { d: hpFmtD(x.until) });
+  openModal('<h3>' + esc(t('hgTitle')) + ' (' + r.rows.length + ')</h3>' +
+    (r.rows.length ? r.rows.map(x => '<div class="list-row"><div class="grow"><b>' + esc(x.name) + '</b> · ' + esc(t('sp_' + x.spec) || x.spec) + (x.work ? ' · ' + esc(x.work) : '') +
+      '<div class="muted">' + esc(st(x)) + ' · ' + esc(t('hgCases', { n: x.cases })) + (x.tg ? ' · ✈️' : '') + (x.phone ? ' · ' + esc(x.phone) : '') + ' · ' + esc(String(x.createdAt).slice(0, 10)) + '</div></div>' +
+      '<button class="btn small ghost" data-act="hgGift" data-org="' + esc(x.orgId) + '">' + esc(t('hgGift')) + '</button></div>').join('') : '<div class="muted">' + esc(t('hgNone')) + '</div>') +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+}
+Object.assign(H, {
+  hgOpen: () => hgOpen(),
+  hgGift: el => {
+    openModal('<h3>' + esc(t('hgGift')) + '</h3><div class="field"><label>' + esc(t('hgDays')) + '</label><input type="number" id="hgDaysIn" min="0" max="366" value="14" inputmode="numeric"></div>' +
+      '<div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">' + [7, 14, 30, 90].map(n => '<button class="btn small ghost" data-act="hgPreset" data-n="' + n + '">' + n + '</button>').join('') + '</div>' +
+      '<div class="acts"><button class="btn ghost" data-act="hgOpen">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="hgGiftGo" data-org="' + esc(el.dataset.org) + '">' + esc(t('save')) + '</button></div>');
+  },
+  hgPreset: el => { const i = $('#hgDaysIn'); if (i) i.value = el.dataset.n; },
+  hgGiftGo: async el => {
+    const days = Math.round(Number(($('#hgDaysIn') || {}).value));
+    if (!(days >= 0 && days <= 366)) return toast(t('E_BAD_INPUT'), 'bad');
+    const r = await busy(el, () => rpcA('helperGift', { orgId: el.dataset.org, days }));
+    if (r) { toast(t('hgDone', { d: hpFmtD(r.until) })); hgOpen(); }
+  }
+});
+(function () {
+  const omr = window.menuRender;
+  if (typeof omr === 'function') window.menuRender = function () {
+    const r = omr.apply(this, arguments);
+    const nav = $('nav.bottom.drawer');
+    if (nav && isSuper() && !nav.querySelector('[data-act=hgOpen]')) {
+      const html = '<button class="btn ghost block" style="margin:6px 0" data-act="hgOpen">' + esc(t('hgTitle')) + '</button>';
+      const fb = nav.querySelector('[data-act=fbOpen]'); if (fb) fb.insertAdjacentHTML('beforebegin', html); else nav.insertAdjacentHTML('beforeend', html);
+    }
+    return r;
+  };
+})();
 
 
 function init() {
