@@ -26191,6 +26191,7 @@ const I18N_V34 = {
     admBlock: '⛔ Заблокировать', admUnblock: '✅ Разблокировать', admBlockAsk: 'Заблокировать {n}? Все его входы закроются.', admApprove: '✅ Одобрить',
     admPw: '🔑 Временный пароль', admPwAsk: 'Новый временный пароль для {n} (не меньше 8 знаков). При входе его попросят сменить:', admPwDone: 'Пароль задан. Передайте его человеку лично.',
     admSess: 'Входов (устройств): {n}', admSessOff: '🚪 Закрыть все входы', admSessDone: 'Входы закрыты',
+    admLimChat: 'Личный лимит чата-помощника, запросов в месяц (пусто — без личного лимита)',
     admFeats: 'Разделы приложения', admFeatsHint: 'Снимите галочку — раздел у человека пропадёт и в приложении, и в Telegram.', admLim: 'Личные лимиты (пусто — по тарифу)', admLimCases: 'Разборов в месяц', admLimAi: 'Запросов ИИ в месяц', admSave: 'Сохранить', admSaved: 'Сохранено',
     ft_ai: '🧑‍⚕️ Разбор с ИИ и подсказки ИИ', ft_docs: '📄 Документы', ft_rx: '💊 Рецепты', ft_clinic: '👥 Мини-клиника и консультации', ft_kb: '📚 Справочник: жалобы, диагнозы, протоколы',
     admStores: '🏥 Права на складах', admTg: '✈️ Telegram', tg_app: 'Приложение в Telegram', tg_low: 'Команда «Кончается»', tg_stock: 'Команда «Остатки»', tg_docs: 'Команда «Документы»', tg_remind: 'Напоминания', admTgNo: 'Telegram не привязан',
@@ -26228,6 +26229,7 @@ const I18N_V34 = {
     admBlock: '⛔ Blokla', admUnblock: '✅ Blokdan çıxar', admBlockAsk: '{n} bloklansın? Bütün girişləri bağlanacaq.', admApprove: '✅ Təsdiqlə',
     admPw: '🔑 Müvəqqəti şifrə', admPwAsk: '{n} üçün yeni müvəqqəti şifrə (ən azı 8 simvol). Girişdə dəyişmək istəniləcək:', admPwDone: 'Şifrə təyin olundu. Şəxsən verin.',
     admSess: 'Girişlər (cihazlar): {n}', admSessOff: '🚪 Bütün girişləri bağla', admSessDone: 'Girişlər bağlandı',
+    admLimChat: 'Çat-köməkçinin şəxsi limiti, ayda sorğu (boş — şəxsi limit yoxdur)',
     admFeats: 'Tətbiq bölmələri', admFeatsHint: 'İşarəni götürün — bölmə həm tətbiqdə, həm Telegram-da yox olacaq.', admLim: 'Şəxsi limitlər (boş — tarifə görə)', admLimCases: 'Ayda təhlil', admLimAi: 'Ayda Sİ sorğusu', admSave: 'Saxla', admSaved: 'Saxlanıldı',
     ft_ai: '🧑‍⚕️ Sİ ilə təhlil və Sİ məsləhətləri', ft_docs: '📄 Sənədlər', ft_rx: '💊 Reseptlər', ft_clinic: '👥 Mini-klinika və məsləhətlər', ft_kb: '📚 Məlumat: şikayətlər, diaqnozlar, protokollar',
     admStores: '🏥 Anbar hüquqları', admTg: '✈️ Telegram', tg_app: 'Telegram-da tətbiq', tg_low: '«Qurtarır» əmri', tg_stock: '«Qalıqlar» əmri', tg_docs: '«Sənədlər» əmri', tg_remind: 'Xatırlatmalar', admTgNo: 'Telegram bağlanmayıb',
@@ -26436,7 +26438,9 @@ async function admPersonOpen(id) {
 }
 function admPersonRender() {
   const { x, d } = admSt().person;
-  const feats = ADM_FEATS.map(f => '<label class="row" style="gap:8px;align-items:center;margin:4px 0"><input type="checkbox" data-ft="' + f + '"' + (x.off.indexOf(f) === -1 ? ' checked' : '') + (x.owner ? ' disabled' : '') + '> ' + esc(t('ft_' + f)) + '</label>').join('');
+  const feats = ADM_FEATS.map(f => '<label class="row" style="gap:8px;align-items:center;margin:4px 0"><input type="checkbox" data-ft="' + f + '"' + (x.off.indexOf(f) === -1 ? ' checked' : '') + (x.owner ? ' disabled' : '') + '> ' + esc(t('ft_' + f)) + '</label>').join('') +
+    (!x.helper && !x.owner ? '<div class="field" style="margin-top:6px"><label>' + esc(t('admLimChat')) + '</label><input type="number" id="admLimAi" min="0" value="' + esc(x.limAi) + '" inputmode="numeric"></div>' : '') +
+    (x.sandbox !== undefined ? '<label class="row" style="gap:8px;align-items:center;margin:4px 0"><input type="checkbox" id="admSbx"' + (x.sandbox ? ' checked' : '') + (x.owner ? ' disabled' : '') + '> ' + esc(t('ft_sandbox')) + '</label>' : '');
   const tgAcc = d.tg.acc || {};
   const tgCard = d.tg.linked ? ['app', 'low', 'stock', 'docs', 'remind', 'chat'].map(f => '<label class="row" style="gap:8px;align-items:center;margin:4px 0"><input type="checkbox" data-tg="' + f + '"' + (tgAcc[f] ? ' checked' : '') + (x.owner ? ' disabled' : '') + '> ' + esc(t('tg_' + f)) + '</label>').join('') +
     (x.owner ? '' : '<button class="btn small" data-act="admTgSave" data-id="' + esc(x.id) + '">' + esc(t('admSave')) + '</button>') : '<div class="muted">' + esc(t('admTgNo')) + '</div>';
@@ -26684,7 +26688,8 @@ Object.assign(H, {
   admOldUsers: () => usersAdmin(),
   admFeatSave: async el => {
     const off = ADM_FEATS.filter(f => { const c = $('#modalRoot [data-ft="' + f + '"]'); return c && !c.checked; });
-    const r = await busy(el, () => rpcA('admFeatSet', { userId: el.dataset.id, off, limCases: ($('#admLimCases') || {}).value, limAi: ($('#admLimAi') || {}).value }));
+    const sb = $('#admSbx');
+    const r = await busy(el, () => rpcA('admFeatSet', { userId: el.dataset.id, off, limCases: ($('#admLimCases') || {}).value, limAi: ($('#admLimAi') || {}).value, sandbox: sb ? !!sb.checked : undefined }));
     if (r) { toast(t('admSaved')); await admPeopleReload(); const p = admSt().person; if (p) { p.x = admSt().people.rows.find(x => x.id === p.x.id) || p.x; } }
   },
   admTgSave: async el => {
@@ -26914,6 +26919,89 @@ function chatProposeSpend(a) {
 (function () {
   const L = ['ru', 'az'];
   L.forEach(l => { if (!I18N[l].tg_chat) I18N[l].tg_chat = I18N_V35[l].tg_chat; });
+})();
+
+/* =====================================================================
+ * v36: 🧪 Песочница — учебная копия склада; полоса «ПЕСОЧНИЦА», выход, очистка; галочка в Админ-центре.
+ * ===================================================================== */
+const I18N_V36 = {
+  ru: { sbBtn: '🧪 Песочница (учебный режим)', sbExit: '↩ Выйти из песочницы', sbReset: '🧹 Очистить песочницу', sbResetAsk: 'Удалить все учебные данные и начать с копии настоящего склада?', sbBanner: '🧪 ПЕСОЧНИЦА (общая для этого склада) — учебные данные, в отчёты не попадают', sbOpening: 'Готовлю учебную копию склада…', sbCleared: 'Песочница очищена', ft_sandbox: '🧪 Песочница (учебный режим — тренироваться, ничего не сломав)', E_SANDBOX_XFER: 'Между песочницей и настоящим складом передавать нельзя.' },
+  az: { sbBtn: '🧪 Qum qutusu (təlim rejimi)', sbExit: '↩ Qum qutusundan çıx', sbReset: '🧹 Qum qutusunu təmizlə', sbResetAsk: 'Bütün təlim məlumatları silinsin və həqiqi anbarın surətindən başlansın?', sbBanner: '🧪 QUM QUTUSU (bu anbar üçün ümumi) — təlim məlumatları, hesabatlara düşmür', sbOpening: 'Anbarın təlim surəti hazırlanır…', sbCleared: 'Qum qutusu təmizləndi', ft_sandbox: '🧪 Qum qutusu (təlim rejimi — heç nəyi pozmadan məşq)', E_SANDBOX_XFER: 'Qum qutusu ilə həqiqi anbar arasında ötürmək olmaz.' }
+};
+Object.assign(I18N.ru, I18N_V36.ru);
+Object.assign(I18N.az, I18N_V36.az);
+function sbCur() { return (typeof myStores === 'function' ? myStores() : []).find(s => s.id === S.storeId) || null; }
+function sbIn() { const s = sbCur(); return !!(s && s.sandbox); }
+function sbBannerSync() {
+  const old = $('#sbBanner');
+  const on = !!(S.me && S.screen && S.screen !== 'login' && sbIn());
+  if (!on) { if (old) old.remove(); document.body.classList.remove('sandbox'); return; }
+  document.body.classList.add('sandbox');
+  const h = '<div id="sbBanner" style="display:flex;align-items:center;gap:8px;padding:6px 12px;background:#f5c518;color:#1d1d1d;font-weight:800;font-size:13px"><span class="grow">' + esc(t('sbBanner')) + '</span>' +
+    '<button class="btn small" style="min-height:0;padding:3px 10px;background:#1d1d1d;color:#fff" data-act="sbExit">' + esc(t('sbExit')) + '</button></div>';
+  if (old) old.outerHTML = h; else document.body.insertAdjacentHTML('afterbegin', h);
+}
+async function sbOpen(btn) {
+  const cur = sbCur(); if (!cur) return;
+  toast(t('sbOpening'), '', null, 4000);
+  const r = await busy(btn, () => rpcA('sandboxOpen', { storeId: cur.id }, { timeout: 120000 }));
+  if (!r) return;
+  const m = await rpc('me').catch(() => null);
+  if (m && m.ok) setMe(m.me);
+  switchStore(r.id);
+}
+async function sbExit() {
+  const cur = sbCur(); if (!cur || !cur.sandbox) return;
+  switchStore(cur.parentId && myStores().some(s => s.id === cur.parentId) ? cur.parentId : (myStores().find(s => !s.sandbox) || {}).id);
+}
+async function sbReset(btn) {
+  const cur = sbCur(); if (!cur || !cur.sandbox) return;
+  if (!confirm(t('sbResetAsk'))) return;
+  const r = await busy(btn, () => rpcA('sandboxReset', { storeId: cur.id }, { timeout: 60000 }));
+  if (!r) return;
+  LS.del(stateKey(cur.id));
+  const m = await rpc('me').catch(() => null);
+  if (m && m.ok) setMe(m.me);
+  if (myStores().some(s => s.id === r.parentId)) switchStore(r.parentId);
+  toast(t('sbCleared'));
+}
+(function () {
+  const os = window.setScreen;
+  window.setScreen = function () { const r = os.apply(this, arguments); sbBannerSync(); return r; };
+  const ora = window.renderAll;
+  window.renderAll = function () { const r = ora.apply(this, arguments); sbBannerSync(); return r; };
+  const omr = window.menuRender;
+  if (typeof omr === 'function') window.menuRender = function () {
+    const r = omr.apply(this, arguments);
+    const nav = $('nav.bottom.drawer'); if (!nav) return r;
+    nav.querySelectorAll('[data-act=sbOpen],[data-act=sbExit],[data-act=sbReset]').forEach(b => b.remove());
+    if (S.me && S.me.sandbox) {
+      const html = sbIn() ? '<button class="btn ghost block" style="margin:6px 0" data-act="sbExit">' + esc(t('sbExit')) + '</button><button class="btn ghost block" style="margin:6px 0" data-act="sbReset">' + esc(t('sbReset')) + '</button>'
+        : '<button class="btn ghost block" style="margin:6px 0" data-act="sbOpen">' + esc(t('sbBtn')) + '</button>';
+      const fb = nav.querySelector('[data-act=fbOpen]'); if (fb) fb.insertAdjacentHTML('beforebegin', html); else nav.insertAdjacentHTML('beforeend', html);
+    }
+    return r;
+  };
+})();
+Object.assign(H, {
+  sbOpen: el => { if (typeof menuOpen === 'function') try { menuOpen(false); } catch (e) { } sbOpen(el); },
+  sbExit: () => { if (typeof menuOpen === 'function') try { menuOpen(false); } catch (e) { } sbExit(); },
+  sbReset: el => { if (typeof menuOpen === 'function') try { menuOpen(false); } catch (e) { } sbReset(el); }
+});
+// вход: последним был склад-песочница — открыть основной; один настоящий склад — выбрать сам
+(function () {
+  const oe = window.enterApp;
+  if (typeof oe === 'function') window.enterApp = function () {
+    try {
+      const stores = myStores();
+      const real = stores.filter(s => !s.sandbox);
+      const last = LS.get('MED4_STORE', '');
+      const lastSb = stores.find(s => s.id === (S.storeId || last) && s.sandbox);
+      if (lastSb) { S.storeId = lastSb.parentId && real.some(s => s.id === lastSb.parentId) ? lastSb.parentId : (real.length === 1 ? real[0].id : ''); LS.set('MED4_STORE', S.storeId); }
+      else if (!stores.some(s => s.id === S.storeId) && !stores.some(s => s.id === last) && real.length === 1) S.storeId = real[0].id;
+    } catch (e) { }
+    return oe.apply(this, arguments);
+  };
 })();
 
 
