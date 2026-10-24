@@ -5223,6 +5223,38 @@ const FD = {
     ['mrt_cran', 'МРТ головы', 'MRT — Kranial'], ['mrt_dif', 'МРТ диффузия', 'MRT — Difuzyon'], ['xr_lung', 'Рентген лёгких', 'Rentgen — Ağ ciyər (bir tərəfli)'],
     ['xr_cerv', 'Рентген шейного отдела', 'Rentgen — Servikal (iki tərəfli)'], ['xr_pelv', 'Рентген таза', 'Rentgen — Pelvis'], ['us_abd', 'УЗИ живота', 'USM — Tam abdomen'],
     ['us_soft', 'УЗИ мягких тканей', 'USM — Dərialtı səthi toxumalar']],
+  // v9.24: исследования по группам (Саид, 25.10: «сплошным списком не сгруппировано, даже обычного ЭКГ нету»). Ключи прежних —
+  // те же (данные и официальный бланк не меняются); новые — в те же поля labs / img. На бланке TƏBİB новые — только отмеченные.
+  labGroups: [
+    ['Кровь', 'Qan', ['cbc', 'esr', 'bgroup']],
+    ['Свёртывание', 'Laxtalanma', ['inr', 'aptt', 'fibr', 'ddimer']],
+    ['Биохимия', 'Biokimya', ['bioS', 'bioL', 'glu', 'lytes', 'renal', 'liver', 'amyl', 'lact', 'ck', 'ketone']],
+    ['Кардиомаркеры', 'Kardiomarkerlər', ['trop', 'ckmb', 'bnp']],
+    ['Воспаление и инфекции', 'İltihab və infeksiyalar', ['crp', 'pct', 'bcult', 'hivhep', 'rw', 'rapid']],
+    ['Газы крови', 'Qan qazları', ['abg']],
+    ['Гормоны, беременность', 'Hormonlar, hamiləlik', ['bhcg', 'tsh']],
+    ['Токсикология', 'Toksikologiya', ['etoh', 'utox']],
+    ['Моча', 'Sidik', ['ua']],
+    ['Кал', 'Nəcis', ['occult', 'stoolCult']],
+    ['🫀 Функциональная диагностика', '🫀 Funksional diaqnostika', ['ecg', 'ecgMon', 'echo', 'spiro', 'glucoM', 'fgds']],
+    ['Другое (из бланка)', 'Digər (blankdan)', ['gross']]
+  ],
+  labsX: [['esr', 'СОЭ', 'EÇS'], ['aptt', 'АЧТВ', 'APTT'], ['fibr', 'Фибриноген', 'Fibrinogen'], ['glu', 'Глюкоза', 'Qlükoza'], ['lytes', 'Электролиты (Na, K, Cl)', 'Elektrolitlər (Na, K, Cl)'],
+    ['renal', 'Креатинин, мочевина', 'Kreatinin, sidik cövhəri'], ['liver', 'Печёночные пробы (АЛТ, АСТ, билирубин)', 'Qaraciyər sınaqları (ALT, AST, bilirubin)'], ['amyl', 'Амилаза / липаза', 'Amilaza / lipaza'],
+    ['lact', 'Лактат', 'Laktat'], ['ck', 'КФК', 'KFK'], ['ketone', 'Кетоны', 'Ketonlar'], ['ckmb', 'КФК-МВ', 'KFK-MB'], ['bnp', 'NT-proBNP', 'NT-proBNP'], ['pct', 'Прокальцитонин', 'Prokalsitonin'],
+    ['bcult', 'Посев крови', 'Qanın əkilməsi'], ['hivhep', 'ВИЧ, гепатиты B и C', 'HİV, hepatit B və C'], ['rw', 'RW (сифилис)', 'RW (sifilis)'], ['rapid', 'Экспресс-тест COVID / грипп', 'COVID / qrip ekspress-testi'],
+    ['tsh', 'ТТГ', 'TTH'], ['etoh', 'Алкоголь в крови', 'Qanda alkoqol'], ['utox', 'Токсикология мочи', 'Sidikdə toksikoloji test'],
+    ['ecgMon', 'ЭКГ-мониторинг', 'EKQ monitorinqi'], ['echo', 'ЭхоКГ', 'ExoKQ'], ['spiro', 'Спирометрия / пикфлоуметрия', 'Spirometriya / pikfloumetriya'], ['glucoM', 'Глюкометрия (экспресс)', 'Qlükometriya (ekspress)'], ['fgds', 'ФГДС', 'FQDS']],
+  imgGroups: [
+    ['Рентген', 'Rentgen', ['xr_lung', 'xr_cerv', 'xr_pelv', 'xr_limb', 'xr_spine', 'xr_abd']],
+    ['КТ', 'KT', ['kt_brain', 'kt_cerv', 'kt_thor', 'kt_abd', 'kt_angio', 'kt_spine']],
+    ['МРТ', 'MRT', ['mrt_cran', 'mrt_dif', 'mrt_spine']],
+    ['УЗИ', 'USM', ['us_abd', 'us_soft', 'us_fast', 'us_kid', 'us_pelv', 'us_veins', 'us_lung']]
+  ],
+  imagingX: [['xr_limb', 'Рентген конечностей', 'Rentgen — ətraflar'], ['xr_spine', 'Рентген позвоночника', 'Rentgen — onurğa'], ['xr_abd', 'Обзорный рентген живота', 'Rentgen — qarın boşluğu (icmal)'],
+    ['kt_angio', 'КТ-ангиография', 'KT-angioqrafiya'], ['kt_spine', 'КТ позвоночника', 'KT — onurğa'], ['mrt_spine', 'МРТ позвоночника', 'MRT — onurğa'],
+    ['us_fast', 'УЗИ FAST (травма)', 'USM — FAST (travma)'], ['us_kid', 'УЗИ почек', 'USM — böyrəklər'], ['us_pelv', 'УЗИ малого таза', 'USM — kiçik çanaq'],
+    ['us_veins', 'УЗИ вен ног (тромбоз)', 'USM — ayaq venaları (tromboz)'], ['us_lung', 'УЗИ лёгких / плевры', 'USM — ağciyər / plevra']],
   contrast: [['with', 'С контрастом', 'Dərmanlı'], ['without', 'Без контраста', 'Dərmansız']],
   outcome: [['home', 'Состояние улучшилось, выписан', 'Xəstə vəziyyətdən çıxdı, özünü yaxşı hiss edir. Xəstə çıxışa verildi.'],
     ['asm', 'Рекомендовано обратиться в ASM (поликлинику)', 'Xəstəyə ASM-ə getməsi məsləhət görüldü.'],
@@ -5232,6 +5264,9 @@ const FD = {
     ['death', 'Смерть', 'Xəstə saatı ……… EX oldu.'],
     ['left', 'Ушёл без разрешения', 'Xəstə müəssisəni icazəsiz tərk etdi.']]
 };
+// официальные строки бланка TƏBİB — как были; полный список (с новыми) — для экрана, результатов и ИИ
+FD.labsBase = FD.labs; FD.imgBase = FD.imaging;
+FD.labs = FD.labs.concat(FD.labsX); FD.imaging = FD.imaging.concat(FD.imagingX);
 const VIT_FIELDS = ['t', 'bpRs', 'bpRd', 'bpLs', 'bpLd', 'pulse', 'spo2', 'rr', 'temp', 'glu'];
 function fdLabel(row) { return S.lang === 'az' ? row[2] : row[1]; }
 function fdFind(list, code) { return list.find(x => x[0] === code); }
@@ -5702,10 +5737,13 @@ function fRenderEditor(keepScroll) {
     '<div class="field"><label>' + esc(t('fWhen')) + '</label><input type="datetime-local" data-f="exAt" value="' + esc(String(val('exAt')).replace(' ', 'T')) + '"></div></div>';
 
   // 6. анализы и исследования
-  const sLabs = '<div class="lbl">' + esc(L(['Лабораторные исследования', 'Laborator müayinələr'])) + '</div>' + multi('labs', FD.labs) +
+  // исследования по группам: подпись группы — и её кнопки
+  const byKey = (list, k) => list.find(x => x[0] === k);
+  const grouped = (field, groups, list) => groups.map(g => '<div class="muted" style="font-size:12.5px;font-weight:700;margin:8px 0 2px">' + esc(S.lang === 'az' ? g[1] : g[0]) + '</div>' + multi(field, g[2].map(k => byKey(list, k)).filter(Boolean))).join('');
+  const sLabs = '<div class="lbl">' + esc(L(['Лабораторные исследования', 'Laborator müayinələr'])) + '</div>' + grouped('labs', FD.labGroups, FD.labs) +
     FD.labs.filter(x => isOn(d, 'labs', x[0])).map(x => inp('lab_' + x[0], fdLabel(x) + ' — ' + t('fResult'), { max: 500 })).join('') +
     '<div class="grid2">' + inp('labO1', t('fOther')) + inp('labO2', t('fOther')) + '</div>' +
-    '<div class="lbl" style="margin-top:6px">' + esc(L(['Визуализация', 'Görüntüləmə'])) + '</div>' + multi('img', FD.imaging) +
+    '<div class="lbl" style="margin-top:10px">' + esc(L(['Визуализация', 'Görüntüləmə'])) + '</div>' + grouped('img', FD.imgGroups, FD.imaging) +
     FD.imaging.filter(x => isOn(d, 'img', x[0])).map(x => '<div class="f-img"><b>' + L2(x) + '</b>' + seg('imgc_' + x[0], FD.contrast) + inp('img_' + x[0], t('fResult'), { max: 600 }) + '</div>').join('') +
     inp('imgO', t('fOther'), { max: 300 });
 
@@ -5951,9 +5989,9 @@ function fPrint(d, meta) {
   const rxRows = rx.map(r => '<tr><td>' + esc(r.drug || '') + '</td><td class="c">' + esc(r.at || '') + '</td><td>' + (r.given ? esc(r.drug || '') + (r.qty ? ' ×' + esc(r.qty) : '') + ' — ' + esc(fmtDt(r.givenAt).slice(11)) : '') + '</td><td>' + (r.given ? esc(r.givenByName || '') : '') + '</td></tr>').join('') +
     Array.from({ length: Math.max(0, 14 - rx.length) }, () => '<tr class="h"><td></td><td></td><td></td><td></td></tr>').join('');
   const p2 = '<div class="pf-page"><div class="pf-sub">APARILAN MÜAYİNƏLƏR' + (blank ? ' — № ' + blank : '') + '</div>' +
-    '<table class="pf"><tr><th colspan="2">LABORATOR MÜAYİNƏLƏR</th></tr>' + FD.labs.map(x => '<tr><td style="width:34%">' + box(labsOn(x[0])) + ' ' + AZ(x) + '</td><td>' + v('lab_' + x[0]) + '</td></tr>').join('') +
+    '<table class="pf"><tr><th colspan="2">LABORATOR MÜAYİNƏLƏR</th></tr>' + FD.labsBase.concat(FD.labsX.filter(x => labsOn(x[0]))).map(x => '<tr><td style="width:34%">' + box(labsOn(x[0])) + ' ' + AZ(x) + '</td><td>' + v('lab_' + x[0]) + '</td></tr>').join('') +
     '<tr><td>☐ Digər</td><td>' + v('labO1') + ' ' + v('labO2') + '</td></tr></table>' +
-    '<table class="pf"><tr><th colspan="3">GÖRÜNTÜLƏMƏ</th></tr><tr><th>Sahə</th><th style="width:22%">Dərmanlı / Dərmansız</th><th>Nəticə</th></tr>' + FD.imaging.map(x => '<tr><td style="width:34%">' + box(imgOn(x[0])) + ' ' + AZ(x) + '</td><td class="c">' + (d && d['imgc_' + x[0]] ? (d['imgc_' + x[0]] === 'with' ? 'Dərmanlı' : 'Dərmansız') : '') + '</td><td>' + v('img_' + x[0]) + '</td></tr>').join('') +
+    '<table class="pf"><tr><th colspan="3">GÖRÜNTÜLƏMƏ</th></tr><tr><th>Sahə</th><th style="width:22%">Dərmanlı / Dərmansız</th><th>Nəticə</th></tr>' + FD.imgBase.concat(FD.imagingX.filter(x => imgOn(x[0]))).map(x => '<tr><td style="width:34%">' + box(imgOn(x[0])) + ' ' + AZ(x) + '</td><td class="c">' + (d && d['imgc_' + x[0]] ? (d['imgc_' + x[0]] === 'with' ? 'Dərmanlı' : 'Dərmansız') : '') + '</td><td>' + v('img_' + x[0]) + '</td></tr>').join('') +
     '<tr><td>☐ Digər</td><td></td><td>' + v('imgO') + '</td></tr></table>' +
     '<table class="pf"><tr><th colspan="4">TƏYİNAT</th></tr><tr><th style="width:36%">Tətbiq ediləcək müalicə</th><th style="width:9%">Saat</th><th>Tətbiq edilən müalicə</th><th style="width:20%">T/bacısı (A.S.İmza)</th></tr>' + rxRows + '</table></div>';
   const obs = vits.slice(1);
@@ -6323,7 +6361,8 @@ function pwaReadApiParam() {
     // ссылка задаёт сервер только в первый раз. Сервер уже выбран — чужая ссылка не может молча увести вход и данные
     if (u && apiUrlOk(u) && !pwaApi()) { pwaSetApi(u); S.setupNeeded = undefined; }
     else if (u && u !== pwaApi()) S.pwaApiIgnored = true;
-    if (qs.has('api')) history.replaceState(null, '', location.pathname + (qs.get('loc') ? '?loc=' + encodeURIComponent(qs.get('loc')) : ''));
+    // убрать из адреса только api (остальное — ссылки из Telegram: &doc=, &form=, &case=, &jv=… — читают модули ниже)
+    if (qs.has('api')) { qs.delete('api'); const rest = qs.toString(); history.replaceState(null, '', location.pathname + (rest ? '?' + rest : '')); }
   } catch (e) { }
 }
 function pwaShareLink() {
@@ -16663,18 +16702,20 @@ function dsPrintRx(c) {
   const fio = [d.surname, d.name, d.patronymic].filter(Boolean).join(' ');
   const age = d.age !== undefined && d.age !== '' ? d.age : dsAge(d.birth, d.date);
   const one = '<div style="border:1.5px solid #000;padding:10px 12px;font-size:12.5px;line-height:1.45">' +
-    '<div style="display:flex;justify-content:space-between;gap:8px"><div>' + v('inst') + '</div><div style="text-align:right"><b style="font-size:16px;letter-spacing:.5px">RESEPT</b><br>№ <b>' + v('rxNo') + '</b></div></div>' +
-    '<div style="margin-top:6px">Tarix: <b>' + esc(d.date ? fmtDate(String(d.date).slice(0, 10)) : '') + '</b></div>' +
-    '<div>Xəstənin soyadı, adı, atasının adı: <b>' + esc(fio) + '</b>' + (age !== '' ? ' &nbsp; Yaşı: <b>' + esc(String(age)) + '</b>' : '') + '</div>' +
-    (d.dx || d.dxIcd ? '<div>Diaqnoz: ' + (d.dxIcd ? '<b>' + v('dxIcd') + '</b> ' : '') + v('dx') + '</div>' : '') +
+    '<div style="display:flex;justify-content:space-between;gap:8px"><div>' + v('inst') + '</div><div style="text-align:right"><b style="font-size:16px;letter-spacing:.5px">RESEPT / РЕЦЕПТ</b><br>№ <b>' + v('rxNo') + '</b></div></div>' +
+    '<div style="margin-top:6px">Tarix / Дата: <b>' + esc(d.date ? fmtDate(String(d.date).slice(0, 10)) : '') + '</b></div>' +
+    '<div>Xəstənin soyadı, adı, atasının adı / ФИО пациента: <b>' + esc(fio) + '</b>' + (age !== '' ? ' &nbsp; Yaşı / Возраст: <b>' + esc(String(age)) + '</b>' : '') + '</div>' +
+    (d.dx || d.dxIcd ? '<div>Diaqnoz / Диагноз: ' + (d.dxIcd ? '<b>' + v('dxIcd') + '</b> ' : '') + v('dx') + '</div>' : '') +
     '<div style="margin-top:8px">' + items.map(r => '<div style="margin-bottom:8px;padding-left:4px"><div><b>Rp.:</b> ' + esc(r.rp || '') + '</div><div style="padding-left:28px">D.t.d. N ' + esc(r.dtd || '') + '</div><div style="padding-left:28px"><b>S.:</b> ' + esc(r.signa || '') + '</div>' +
       (r.brand ? '<div style="padding-left:28px;font-size:11px">(aptekdə / в аптеке: ' + esc(r.brand) + ')</div>' : '') + '</div>').join('') + '</div>' +
     (d.note ? '<div style="font-size:11.5px;margin-top:4px;white-space:pre-wrap">' + v('note') + '</div>' : '') +
-    '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:14px;gap:10px"><div>Həkim: <b>' + v('doctor') + '</b><br><br>İmza: ________________</div><div style="width:90px;height:60px;border:1px dashed #000;display:flex;align-items:center;justify-content:center;font-size:11px">M.Y.</div></div>' +
-    (d.valid ? '<div style="font-size:11px;margin-top:4px">Resept etibarlıdır: ' + v('valid') + '</div>' : '') +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:14px;gap:10px"><div>Həkim / Врач: <b>' + v('doctor') + '</b><br><br>İmza / Подпись: ________________</div><div style="width:90px;height:60px;border:1px dashed #000;display:flex;align-items:center;justify-content:center;font-size:11px">M.Y.</div></div>' +
+    (d.valid ? '<div style="font-size:11px;margin-top:4px">Resept etibarlıdır / Рецепт действителен: ' + v('valid') + '</div>' : '') +
     '<div style="font-size:8px;margin-top:6px">ID ' + esc(c.id) + (c.doc && c.doc.createdAt ? ' · ' + esc(c.doc.createdAt) : '') + '</div></div>';
   return '<div class="pf-page last">' + one + '</div>';
 }
+/** Печать на двух языках (Саид, 25.10): «азербайджанский / русский» — у заголовка, разделов и каждого поля. */
+function dsBi(az, ru) { az = String(az || ''); ru = String(ru || ''); return !ru || ru === az ? esc(az) : esc(az) + ' <span style="font-weight:400;font-style:italic">/ ' + esc(ru) + '</span>'; }
 function dsPrint() {
   const c = dsSt().cur; if (!c) return;
   const tpl = DOC_TPL[c.type], d = c.data || {};
@@ -16684,7 +16725,7 @@ function dsPrint() {
     setTimeout(() => { window.print(); setTimeout(() => { document.body.classList.remove('print-form'); $('#printRoot').innerHTML = ''; }, 800); }, 60);
     return;
   }
-  let h = '<div class="pf-page last"><div class="pf-t">' + esc(tpl.head) + '</div><div class="pf-sub">' + esc(tpl.az) + '</div>';
+  let h = '<div class="pf-page last"><div class="pf-t">' + esc(tpl.head) + '</div><div class="pf-sub">' + dsBi(tpl.az, tpl.ru) + '</div>';
   tpl.secs.forEach(sc => {
     const fields = sc[3].map(f => ({ k: f[0], type: f[1], ru: f[2], az: f[3], o: f[4] || {} }));
     let rows = '';
@@ -16693,18 +16734,18 @@ function dsPrint() {
         const rs = dsRows(d, f.k); if (!rs.length) return;
         const subs = (f.o.sub || []).map(s => ({ k: s[0], type: s[1], ru: s[2], az: s[3], o: s[4] || {} }));
         const lateOf = r => { if (!r.enteredAt) return ''; const a = Date.parse(String(r.at || '').replace(' ', 'T')), e = Date.parse(String(r.enteredAt).replace(' ', 'T')); return isFinite(a) && isFinite(e) && e - a > 3600000 ? ' [sonra daxil edilib / внесено позже: ' + fmtDate(String(r.enteredAt).slice(0, 10)) + ' ' + String(r.enteredAt).slice(11, 16) + (r.enteredBy ? ', ' + r.enteredBy : '') + ']' : ''; };
-        rows += '<tr><td colspan="2"><b>' + esc(f.az) + '</b><table class="pf"><tr>' + subs.map(s => '<th>' + esc(s.az) + '</th>').join('') + '</tr>' + rs.map(r => '<tr>' + subs.map((s, si) => '<td style="white-space:pre-wrap">' + esc(dsPrintVal(s, r[s.k]) + (si === subs.length - 1 ? lateOf(r) : '')) + '</td>').join('') + '</tr>').join('') + '</table></td></tr>';
+        rows += '<tr><td colspan="2"><b>' + dsBi(f.az, f.ru) + '</b><table class="pf"><tr>' + subs.map(s => '<th>' + dsBi(s.az, s.ru) + '</th>').join('') + '</tr>' + rs.map(r => '<tr>' + subs.map((s, si) => '<td style="white-space:pre-wrap">' + esc(dsPrintVal(s, r[s.k]) + (si === subs.length - 1 ? lateOf(r) : '')) + '</td>').join('') + '</tr>').join('') + '</table></td></tr>';
         return;
       }
       const v = dsPrintVal(f, d[f.k]);
       if (v === '' && !(f.o.req || f.o.reqClose)) return;
-      rows += '<tr><th style="width:38%">' + esc(f.az) + '</th><td style="white-space:pre-wrap">' + esc(v) + '</td></tr>';
+      rows += '<tr><th style="width:38%">' + dsBi(f.az, f.ru) + '</th><td style="white-space:pre-wrap">' + esc(v) + '</td></tr>';
     });
-    if (rows) h += '<table class="pf"><tr><th colspan="2" style="text-align:center">' + esc(sc[2]) + '</th></tr>' + rows + '</table>';
+    if (rows) h += '<table class="pf"><tr><th colspan="2" style="text-align:center">' + dsBi(sc[2], sc[1]) + '</th></tr>' + rows + '</table>';
   });
   h += (tpl.signs ? '<table class="pf" style="margin-top:10px"><tr>' + tpl.signs.map(sg => '<td style="height:52px;vertical-align:top">' + esc(sg[0]) + '<br><br>________________ / ________________</td>').join('') + '</tr></table>' :
-    '<table class="pf" style="margin-top:10px"><tr><td style="height:40px">Həkim / Врач: ' + esc(d.doctor || d.finDoctor || d.epiDoctor || '') + '<br><br>İmza: ____________</td><td>Şöbə müdiri: ' + esc(d.head || d.finHead || d.epiHead || '') + '<br><br>İmza: ____________</td></tr></table>') +
-    '<div style="font-size:8px;margin-top:6px">ID ' + esc(c.id) + ' · ' + esc(c.status === 'closed' ? 'bağlanıb ' + ((c.doc && c.doc.closedAt) || '') + ' — ' + ((c.doc && c.doc.closedByName) || '') : 'QARALAMA') + (c.doc && c.doc.editsAfterClose ? ' · bağlandıqdan sonra düzəlişlər: ' + c.doc.editsAfterClose : '') + '</div></div>';
+    '<table class="pf" style="margin-top:10px"><tr><td style="height:40px">Həkim / Врач: ' + esc(d.doctor || d.finDoctor || d.epiDoctor || '') + '<br><br>İmza / Подпись: ____________</td><td>Şöbə müdiri / Зав. отделением: ' + esc(d.head || d.finHead || d.epiHead || '') + '<br><br>İmza / Подпись: ____________</td></tr></table>') +
+    '<div style="font-size:8px;margin-top:6px">ID ' + esc(c.id) + ' · ' + esc(c.status === 'closed' ? 'bağlanıb / закрыт ' + ((c.doc && c.doc.closedAt) || '') + ' — ' + ((c.doc && c.doc.closedByName) || '') : 'QARALAMA / ЧЕРНОВИК') + (c.doc && c.doc.editsAfterClose ? ' · bağlandıqdan sonra düzəlişlər: ' + c.doc.editsAfterClose : '') + '</div></div>';
   $('#printRoot').innerHTML = h;
   document.body.classList.add('print-form');
   setTimeout(() => { window.print(); setTimeout(() => { document.body.classList.remove('print-form'); $('#printRoot').innerHTML = ''; }, 800); }, 60);
@@ -28720,6 +28761,74 @@ Object.assign(H, {
   const ot = window.t;
   if (typeof ot !== 'function') return;
   window.t = function (k) { if (k === 'aiPrivacy' && typeof isSuper === 'function' && isSuper()) return ot('aiPrivacyBoss'); return ot.apply(this, arguments); };
+})();
+
+/* =====================================================================
+ * v48: 🤖 «Джарвис» в Telegram главного админа — опасные действия подтверждаются здесь, в приложении (…&jv=ID):
+ *  карточку составил сервер (что именно будет сделано), временный пароль показывается только здесь.
+ *  …&jvo=ID — окно удаления с паролем (одноразовая ссылка сервера); …&jvon=1 — «Включить Джарвиса» (пароль).
+ * ===================================================================== */
+const I18N_V48 = {
+  ru: { jvTitle: '🤖 Джарвис: подтвердите действие', jvGo: '✅ Подтвердить', jvNo: 'Отмена', jvDone: '✅ Выполнено', jvGone: 'Карточка устарела или уже выполнена — попросите Джарвиса ещё раз.', E_JV_EXPIRED: 'Карточка устарела — попросите Джарвиса ещё раз.', E_JV_USED: 'Это действие уже выполнено.' },
+  az: { jvTitle: '🤖 Cərvis: əməliyyatı təsdiqləyin', jvGo: '✅ Təsdiqlə', jvNo: 'Ləğv et', jvDone: '✅ Edildi', jvGone: 'Kartın vaxtı keçib və ya artıq edilib — Cərvisdən yenidən istəyin.', E_JV_EXPIRED: 'Kartın vaxtı keçib — yenidən istəyin.', E_JV_USED: 'Bu artıq edilib.' }
+};
+Object.assign(I18N.ru, I18N_V48.ru);
+Object.assign(I18N.az, I18N_V48.az);
+async function jvOpen(id) {
+  const r = await rpc('jvCard', { id }).catch(() => null);
+  if (!r || !r.ok) { toast(r ? errText(r) : t('E_NETWORK'), 'bad', null, 6000); return; }
+  if (r.state !== 'wait') { toast(t('jvGone'), 'bad', null, 6000); return; }
+  openModal('<h3>' + esc(t('jvTitle')) + '</h3><div style="font-weight:700;margin-bottom:6px">' + esc(r.title) + '</div>' +
+    '<div style="white-space:pre-wrap;max-height:50vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:8px;font-size:13px">' + esc((r.lines || []).join('\n')) + '</div>' +
+    (r.warn ? '<div class="pr-warn" style="white-space:pre-wrap;margin-top:6px">' + esc(r.warn) + '</div>' : '') +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('jvNo')) + '</button><button class="btn primary" data-act="jvGo" data-id="' + esc(id) + '">' + esc(t('jvGo')) + '</button></div>');
+}
+Object.assign(H, {
+  jvGo: async el => {
+    const id = el.dataset.id;
+    const r = await busy(el, () => rpc('jvRun', { id }, 120000)).catch(() => null);
+    if (!r) return toast(t('E_NETWORK'), 'bad');
+    if (!r.ok) {
+      if (r.code === 'E_TG_NEED_PW' && typeof tgElevateModal === 'function') { toast(errText(r), '', null, 6000); tgElevateModal(); return; } // после пароля — нажать ещё раз
+      if (r.code !== 'E_ADMIN_MODE') toast(errText(r), 'bad', null, 8000);
+      return;
+    }
+    if (r.pw) {
+      openModal('<h3>🔑 ' + esc(t('jvDone')) + '</h3><div class="info">' + esc(t('tempPwShow', { login: r.login || '', pw: r.pw })) + '</div>' +
+        '<div class="acts"><button class="btn ghost" data-act="copyCreds" data-text="' + esc(t('credsText', { url: S.webAppUrl || '', login: r.login || '', pw: r.pw })) + '">📋 ' + esc(t('copy')) + '</button><button class="btn primary" data-act="closeModal">OK</button></div>');
+    } else { closeModal(); toast(t('jvDone') + ': ' + (r.title || ''), 'ok', null, 5000); }
+    try { if (typeof reloadMeQuiet === 'function') await reloadMeQuiet(); } catch (e) { }
+  }
+});
+(function () {
+  let want = null;
+  try {
+    const q = new URLSearchParams(location.search);
+    const jv = q.get('jv') || '', jvo = q.get('jvo') || '';
+    if (/^[a-f0-9]{16}$/.test(jv)) want = { k: 'jv', id: jv };
+    else if (/^[a-f0-9]{16}$/.test(jvo)) want = { k: 'jvo', id: jvo }; // одноразовая ссылка сервера на окно удаления
+    else if (q.get('jvon') === '1') want = { k: 'on' };
+  } catch (e) { want = null; }
+  if (!want) return;
+  const go = () => {
+    if (!want || !S.me || !S.sess) return;
+    const w = want; want = null;
+    try { const u = new URL(location.href); ['jv', 'jvo', 'jvon'].forEach(k => u.searchParams.delete(k)); history.replaceState(null, '', u.toString()); } catch (e) { }
+    setTimeout(async () => {
+      try {
+        if (w.k === 'jv') return jvOpen(w.id);
+        if (!(S.me.owner || S.me.ownerWork)) return;
+        // «🔓 Включить Джарвиса»: пароль (в админ-профиль — если он отдельный)
+        if (w.k === 'on') { if (S.me.ownerWork && typeof admEnterModal === 'function') admEnterModal(); else if (typeof tgElevateModal === 'function') tgElevateModal(); return; }
+        const r = await rpc('jvOpenGet', { id: w.id }).catch(() => null);
+        if (!r || !r.ok) { toast(r ? errText(r) : t('E_NETWORK'), 'bad', null, 6000); return; }
+        if (r.what === 'deleteStore') { if (typeof refreshUa === 'function') await refreshUa(); sdModal(r.id); }
+        else if (r.what === 'deleteOrg') { await orgsAdmin(); setTimeout(() => { try { odModal(r.id); } catch (e) { } }, 600); }
+      } catch (e) { }
+    }, 800);
+  };
+  if (typeof afterLogin === 'function') { const oal = afterLogin; afterLogin = function () { const r = oal.apply(this, arguments); go(); return r; }; }
+  window.addEventListener('load', () => setTimeout(go, 1600));
 })();
 
 
