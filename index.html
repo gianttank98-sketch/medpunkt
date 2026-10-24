@@ -58,7 +58,8 @@
   .pill.off { background: var(--amber-soft); color: var(--amber); }
   input.warn-field { border-color: var(--amber) !important; background: var(--amber-soft); }
   .pill.bad { background: var(--red-soft); color: var(--red); }
-  .hdr-ctrl { display: flex; gap: 6px; align-items: center; }
+  .hdr-ctrl { display: flex; gap: 6px; align-items: center; max-width: 100%; min-width: 0; }
+  .hdr-ctrl .admin-btn { min-width: 0; flex: 0 1 auto; max-width: 44vw; overflow: hidden; text-overflow: ellipsis; } /* длинное имя кабинета или человека — с многоточием, без прокрутки вбок */
   .hdr-ctrl select, .seg button { height: 34px; border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 0 8px; font-size: 13px; }
   .seg { display: inline-flex; }
   .seg button { border-radius: 0; font-weight: 600; }
@@ -26199,9 +26200,9 @@ const I18N_V34 = {
     admPaysT: 'Оплаты', admNoPays: 'Оплат нет.',
     admClClose: '⛔ Закрыть клинику', admClCloseAsk: 'Причина закрытия клиники «{n}» (врачи её увидят):', admClMembers: 'Врачи', admClShares: 'консультаций: {n}', admClClosed: 'закрыта',
     pyTitle: '💳 Оплата переводом', pyHint: 'Переведите сумму на реквизиты ниже. В комментарии к переводу укажите код платежа. Затем нажмите «Я оплатил(а)».', pyReq: 'Реквизиты', pyKind: 'Что оплачиваю', pyCode: 'Код платежа появится после нажатия.',
-    pk_pro_m: 'Pro на месяц', pk_pro_y: 'Pro на год', pk_c5: 'Клиника до 5 врачей (месяц)', pk_c10: 'Клиника до 10 врачей (месяц)', pyNote: 'Комментарий (с какой карты, время перевода)', pyReceipt: '📎 Фото чека (по желанию)',
+    pk_pro_m: 'Pro на месяц', pk_pro_y: 'Pro на год', pk_ex_m: 'Эксперт на месяц', pk_ex_y: 'Эксперт на год', pk_c5: 'Клиника до 5 врачей (месяц)', pk_c10: 'Клиника до 10 врачей (месяц)', pyNote: 'Комментарий (с какой карты, время перевода)', pyReceipt: '📎 Фото чека (по желанию)',
     pySend: '✅ Я оплатил(а)', pySent: 'Заявка {c} отправлена. Доступ откроется после проверки{p}.', pyProvTxt: ', а пока — временный доступ до {d}', pyMine: 'Мои заявки', pyCancel: 'Отменить',
-    pySt_pending: '⏳ проверяется', pySt_approved: '✅ подтверждена', pySt_rejected: '❌ отклонена', pySt_cancelled: '⚪ отменена', pyBtn: '💳 Оплатить переводом', pyOff: 'Оплата переводом пока не настроена.',
+    pySt_pending: '⏳ проверяется', pySt_approved: '✅ подтверждена', pySt_rejected: '❌ отклонена', pySt_cancelled: '⚪ отменена', pyBtn: '💳 Оплатить переводом', pyOff: 'Оплата переводом пока не настроена.', pyTgOnly: 'В Telegram оплата — звёздами (⭐). Оплатить переводом можно в веб-версии приложения в браузере.',
     pyAdmPend: 'Ждут проверки', pyAdmAll: 'Все заявки', pyReceiptBtn: '🧾 Чек', pyApprove: '✅ Открыть доступ', pyReject: '❌ Отклонить', pyDays: 'На сколько дней', pyAmount: 'Получено, ₼',
     pyRejectAsk: 'Причина отказа (врач её увидит):', pyDone: 'Доступ открыт до {d}', pyRejected: 'Отклонено', pyStars: '⭐ Оплаты звёздами',
     pyUndo: '↩ Отменить', pyUndoAsk: 'Пароль главного админа (деньги вернули вручную — срок откатится):',
@@ -26237,9 +26238,9 @@ const I18N_V34 = {
     admPaysT: 'Ödənişlər', admNoPays: 'Ödəniş yoxdur.',
     admClClose: '⛔ Klinikanı bağla', admClCloseAsk: '«{n}» klinikasının bağlanma səbəbi (həkimlər görəcək):', admClMembers: 'Həkimlər', admClShares: 'məsləhət: {n}', admClClosed: 'bağlanıb',
     pyTitle: '💳 Köçürmə ilə ödəniş', pyHint: 'Məbləği aşağıdakı rekvizitlərə köçürün. Köçürmənin şərhində ödəniş kodunu yazın. Sonra «Ödədim» basın.', pyReq: 'Rekvizitlər', pyKind: 'Nəyi ödəyirəm', pyCode: 'Ödəniş kodu düyməni basdıqdan sonra görünəcək.',
-    pk_pro_m: 'Pro bir ay', pk_pro_y: 'Pro bir il', pk_c5: '5 həkimədək klinika (ay)', pk_c10: '10 həkimədək klinika (ay)', pyNote: 'Şərh (hansı kartdan, köçürmə vaxtı)', pyReceipt: '📎 Çekin şəkli (istəyə görə)',
+    pk_pro_m: 'Pro bir ay', pk_pro_y: 'Pro bir il', pk_ex_m: 'Ekspert bir ay', pk_ex_y: 'Ekspert bir il', pk_c5: '5 həkimədək klinika (ay)', pk_c10: '10 həkimədək klinika (ay)', pyNote: 'Şərh (hansı kartdan, köçürmə vaxtı)', pyReceipt: '📎 Çekin şəkli (istəyə görə)',
     pySend: '✅ Ödədim', pySent: '{c} müraciəti göndərildi. Yoxlamadan sonra giriş açılacaq{p}.', pyProvTxt: ', hələlik isə {d}-dək müvəqqəti giriş', pyMine: 'Müraciətlərim', pyCancel: 'Ləğv et',
-    pySt_pending: '⏳ yoxlanılır', pySt_approved: '✅ təsdiqlənib', pySt_rejected: '❌ rədd edilib', pySt_cancelled: '⚪ ləğv edilib', pyBtn: '💳 Köçürmə ilə ödə', pyOff: 'Köçürmə ilə ödəniş hələ qurulmayıb.',
+    pySt_pending: '⏳ yoxlanılır', pySt_approved: '✅ təsdiqlənib', pySt_rejected: '❌ rədd edilib', pySt_cancelled: '⚪ ləğv edilib', pyBtn: '💳 Köçürmə ilə ödə', pyOff: 'Köçürmə ilə ödəniş hələ qurulmayıb.', pyTgOnly: 'Telegram-da ödəniş — ulduzlarla (⭐). Köçürmə ilə tətbiqin brauzerdəki veb-versiyasında ödəmək olar.',
     pyAdmPend: 'Yoxlama gözləyir', pyAdmAll: 'Bütün müraciətlər', pyReceiptBtn: '🧾 Çek', pyApprove: '✅ Girişi aç', pyReject: '❌ Rədd et', pyDays: 'Neçə gün', pyAmount: 'Alınıb, ₼',
     pyRejectAsk: 'Rədd səbəbi (həkim görəcək):', pyDone: 'Giriş {d}-dək açıldı', pyRejected: 'Rədd edildi', pyStars: '⭐ Ulduzla ödənişlər',
     pyUndo: '↩ Ləğv et', pyUndoAsk: 'Baş adminin şifrəsi (pul əl ilə qaytarılıb — müddət geri çəkiləcək):',
@@ -26540,8 +26541,8 @@ const CH_READY = [
     az: '🔒 Pasiyentin adı — yalnız sizin telefonunuzda.\n\nAd, FİN, doğum tarixi və sənəd nömrələri nə serverə, nə də Sİ-yə getmir. Sİ yalnız klinikanı görür: yaş, cins, şikayətlər, göstəricilər, analizlər.\n\nHəkim sirri — boş söz deyil.\n\n👇 Pulsuz yoxla' },
   { k: 'clinic', ru: '👥 Мини-клиника: консультация коллеги за минуту.\n\nСоберите в одну клинику знакомых врачей разных специальностей. Сложный пациент — отправьте коллеге обезличенный разбор по коду. Кардиолог ответит невропатологу, хирург — терапевту.\n\nФИО остаётся у вас. Коллега видит только клинику.\n\n👇 Начать',
     az: '👥 Mini-klinika: bir dəqiqədə həmkarın məsləhəti.\n\nMüxtəlif ixtisaslardan tanış həkimləri bir klinikada toplayın. Çətin pasiyent — şəxsiyyətsiz təhlili kodla həmkara göndərin. Kardioloq nevroloqa, cərrah terapevtə cavab verəcək.\n\nAd sizdə qalır. Həmkar yalnız klinikanı görür.\n\n👇 Başla' },
-  { k: 'price', ru: '💳 Сколько стоит?\n\n🎁 7 дней Pro — бесплатно, сразу после регистрации.\n🆓 Бесплатно навсегда: 2 разбора и 3 документа в месяц.\n⭐ Pro: 40 разборов в месяц, документы и рецепты без ограничений — 19 ₼ в месяц или 190 ₼ в год.\n\nОплата звёздами Telegram или переводом.\n\n👇 Попробовать',
-    az: '💳 Qiyməti nədir?\n\n🎁 7 gün Pro — pulsuz, qeydiyyatdan dərhal sonra.\n🆓 Həmişə pulsuz: ayda 2 təhlil və 3 sənəd.\n⭐ Pro: ayda 40 təhlil, sənədlər və reseptlər limitsiz — ayda 19 ₼ və ya ildə 190 ₼.\n\nTelegram ulduzları və ya köçürmə ilə ödəniş.\n\n👇 Yoxla' },
+  { k: 'price', ru: '💳 Сколько стоит?\n\n🎁 7 дней Pro — бесплатно, сразу после регистрации.\n🆓 Бесплатно навсегда: 2 разбора и 3 документа в месяц.\n⭐ Pro: 40 разборов в месяц, документы и рецепты без ограничений — 750 ⭐ в месяц.\n💎 Эксперт: 100 разборов, самая сильная модель ИИ для диагноза — 1500 ⭐ в месяц.\n\nОплата звёздами Telegram прямо в боте.\n\n👇 Попробовать',
+    az: '💳 Qiyməti nədir?\n\n🎁 7 gün Pro — pulsuz, qeydiyyatdan dərhal sonra.\n🆓 Həmişə pulsuz: ayda 2 təhlil və 3 sənəd.\n⭐ Pro: ayda 40 təhlil, sənədlər və reseptlər limitsiz — ayda 750 ⭐.\n💎 Ekspert: 100 təhlil, diaqnoz üçün ən güclü Sİ modeli — ayda 1500 ⭐.\n\nÖdəniş — Telegram ulduzları ilə, birbaşa botda.\n\n👇 Yoxla' },
   { k: 'disclaimer', ru: '⚖️ Важно.\n\nИИ — подсказка, а не диагноз. Решение всегда принимает врач. «Помощник» помогает ничего не упустить, быстрее оформить документы и вовремя спросить коллегу.\n\nВопросы и предложения — пишите в комментарии или в бота: /paysupport.',
     az: '⚖️ Vacibdir.\n\nSİ — məsləhətdir, diaqnoz deyil. Qərarı həmişə həkim verir. «Köməkçi» heç nəyi qaçırmamağa, sənədləri tez tərtib etməyə və vaxtında həmkardan soruşmağa kömək edir.\n\nSuallar və təkliflər — şərhlərdə və ya botda: /paysupport.' }
 ];
@@ -26586,7 +26587,8 @@ function admSetHtml() {
     '<div class="row" style="gap:6px"><div class="field grow"><label>' + esc(t('stClinicAzn')) + ' (5)</label><input type="number" id="stC5" value="' + esc((kinds.c5 || {}).amount || '') + '"></div><div class="field grow"><label>' + esc(t('stClinicAzn')) + ' (10)</label><input type="number" id="stC10" value="' + esc((kinds.c10 || {}).amount || '') + '"></div></div>' +
     '<button class="btn primary" data-act="stPaySave">' + esc(t('admSave')) + '</button></div>' +
     '<div class="card"><b>' + esc(t('stHelper')) + '</b><div class="row" style="gap:6px;flex-wrap:wrap">' + f('starsM', '⭐ / мес', cfg.starsM) + f('starsY', '⭐ / год', cfg.starsY) + f('aznM', '₼ / мес', cfg.aznM) + f('aznY', '₼ / год', cfg.aznY) +
-      f('trialDays', 'Пробных дней', cfg.trialDays) + f('freeCases', 'Free: разборов', cfg.freeCases) + f('freeDocs', 'Free: документов', cfg.freeDocs) + f('proCases', 'Pro: разборов', cfg.proCases) + '</div>' +
+      f('trialDays', 'Пробных дней', cfg.trialDays) + f('freeCases', 'Free: разборов', cfg.freeCases) + f('freeDocs', 'Free: документов', cfg.freeDocs) + f('proCases', 'Pro: разборов', cfg.proCases) +
+      f('exStarsM', 'Эксперт ⭐ / мес', cfg.exStarsM) + f('exStarsY', 'Эксперт ⭐ / год', cfg.exStarsY) + f('exAznM', 'Эксперт ₼ / мес', cfg.exAznM) + f('exAznY', 'Эксперт ₼ / год', cfg.exAznY) + f('exCases', 'Эксперт: разборов', cfg.exCases) + '</div>' +
       '<label class="row" style="gap:8px;align-items:center;margin:6px 0"><input type="checkbox" id="stRegOpen"' + (s.sub && s.sub.regOpen ? ' checked' : '') + '> ' + esc(S.lang === 'az' ? 'Qeydiyyat açıqdır' : 'Регистрация открыта') + '</label>' +
       '<button class="btn primary" data-act="stCfgSave">' + esc(t('admSave')) + '</button></div>' +
     '<div class="card"><b>' + esc(t('stOther')) + '</b><div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn small ghost" data-act="admOldUsers">' + esc(t('stOldUsers')) + '</button><button class="btn small ghost" data-act="tgOpen">' + esc(t('stTg')) + '</button><button class="btn small ghost" data-act="hgOpen">' + esc(t('stHgList')) + '</button></div></div>';
@@ -26627,12 +26629,13 @@ function fileB64(file, max) {
 
 /* ---------- 4. оплата переводом (врач) ---------- */
 async function pyOpen() {
+  if (TGW) return toast(t('pyTgOnly'), 'bad', null, 8000); // правило Telegram: цифровые услуги в боте — только за звёзды
   const r = await rpcA('payInfo', {}).catch(() => null);
   if (!r) return;
   if (!r.on) return toast(t('pyOff'), 'bad');
   const d = kqSt ? (kqSt().data || null) : null;
   const ownClinic = d && d.clinic && d.clinic.owner;
-  const ks = ['pro_m', 'pro_y'].concat(ownClinic ? ['c5', 'c10'] : []);
+  const ks = ['pro_m', 'pro_y', 'ex_m', 'ex_y'].concat(ownClinic ? ['c5', 'c10'] : []);
   openModal('<h3>' + esc(t('pyTitle')) + '</h3><div class="muted" style="margin-bottom:8px">' + esc(t('pyHint')) + '</div>' +
     '<div class="card"><b>' + esc(t('pyReq')) + '</b><div style="white-space:pre-wrap;font-size:16px;margin-top:4px">' + esc(r.req) + '</div></div>' +
     '<div class="field"><label>' + esc(t('pyKind')) + '</label><select id="pyKind">' + ks.map(k => '<option value="' + k + '">' + esc(t('pk_' + k) + ' — ' + r.kinds[k].amount + ' ₼') + '</option>').join('') + '</select></div>' +
@@ -26659,7 +26662,7 @@ async function pySend(btn) {
     hpSubOpen = async function () {
       const r = await oh.apply(this, arguments);
       const acts = $('#modalRoot .acts');
-      if (acts && !$('#modalRoot [data-act=pyOpen]')) acts.insertAdjacentHTML('beforebegin', '<button class="btn block" style="margin-top:8px" data-act="pyOpen">' + esc(t('pyBtn')) + '</button>');
+      if (acts && !TGW && !$('#modalRoot [data-act=pyOpen]')) acts.insertAdjacentHTML('beforebegin', '<button class="btn block" style="margin-top:8px" data-act="pyOpen">' + esc(t('pyBtn')) + '</button>');
       return r;
     };
   }
@@ -26668,7 +26671,7 @@ async function pySend(btn) {
     kqScreenHtml = function () {
       const h = ok.apply(this, arguments);
       const d = kqSt().data;
-      if (!(d && d.clinic && d.clinic.owner) || kqSt().view === 'share') return h;
+      if (TGW || !(d && d.clinic && d.clinic.owner) || kqSt().view === 'share') return h; // в Telegram — только звёзды (правило Telegram)
       return h.replace('<div class="muted" style="margin-top:6px;font-size:12px">', '<button class="btn ghost block" style="margin-top:6px" data-act="pyOpen">' + esc(t('pyBtn')) + '</button><div class="muted" style="margin-top:6px;font-size:12px">');
     };
     if (window.CLINIC_RENDER) window.CLINIC_RENDER.team = kqScreenHtml;
@@ -27003,6 +27006,204 @@ Object.assign(H, {
     return oe.apply(this, arguments);
   };
 })();
+
+/* =====================================================================
+ * v38: 💰 Экономика ИИ — тариф «Эксперт», Opus для диагноза в чате, «💰 Экономика» в Админ-центре.
+ *  Сколько тратить на ИИ, решает сервер (запас организации ≤ доли выручки её тарифа); телефон только подсказывает,
+ *  что вопрос клинический (тогда пропуск — с моделью для диагноза), и показывает тарифы и цифры.
+ * ===================================================================== */
+const I18N_V38 = {
+  ru: {
+    E_PAY_TG_STARS: 'В Telegram оплата — звёздами (⭐). Переводом — в веб-версии приложения.',
+    E_AI_USD: 'Запас ИИ вашего тарифа на этот месяц исчерпан. Он обновится 1-го числа. Больше — тариф «Эксперт» (⭐ Подписка).',
+    hpSubEx: '💎 Эксперт', hpSubExList: '{c} разборов в месяц · самая сильная модель (Opus) для диагноза и клинических вопросов в чате · всё, что в Pro',
+    hpBuyXM: 'Эксперт на месяц — {s} ⭐', hpBuyXY: 'Эксперт на год — {s} ⭐', hpPlanEx: '💎 Эксперт до {d} · разборов {c}/{cm} в этом месяце',
+    hpAiLeft: 'ИИ: использовано {p}% месячного запаса', hpOpusNote: 'Диагноз и разбор — на Opus, пока позволяет месячный запас; дальше — Sonnet.',
+    hpPayTransfer: '💳 Оплатить переводом',
+    admSegEcon: '💰 Экономика', ecMonth: 'Месяц', ecRevenue: 'Выручка (чистыми)', ecSpent: 'Расход ИИ (клиенты)', ecMain: 'ваш собственный расход', ecProfit: 'Прибыль', ecPrev: 'прошлый месяц',
+    ecByModel: 'По моделям', ecRule: 'Правило: на ИИ кабинета тратится не больше {s}% его чистой выручки — прибыль всегда не меньше трат. С {o}% запаса Opus → Sonnet, с {h}% чат → Haiku, на 100% — стоп до 1-го числа.',
+    ecTiers: 'Тарифы: выручка и запас ИИ на врача в месяц', ecTier: 'Тариф', ecNet: 'Чистыми, $', ecBudget: 'Запас ИИ, $', ecFree: 'Free', ecTrial: 'Пробный', ecPro: 'Pro', ecExpert: 'Эксперт', ecClinic: 'Клиника (место)',
+    ecOrgs: 'Кабинеты и организации', ecNoOrgs: 'Пока никто не тратил ИИ в этом месяце.', ecSet: 'Настройки экономики', ecShare: 'Доля выручки на ИИ, %', ecStar: '$ за 1 ⭐ (курс вывода)', ecAzn: '$ за 1 ₼',
+    ecFreeUsd: 'Free: запас $ / мес', ecTrialUsd: 'Пробный: запас $', ecOpusAt: 'Opus → Sonnet с, %', ecHaikuAt: 'Чат → Haiku с, %', ecChatDx: 'Opus в клинических вопросах чата (Эксперт, админ)', ecDx: 'Модель для диагноза',
+    ecOrgFree: 'Орг. Free: $ / мес', ecOrgPrivate: 'Орг. «Частная»: $', ecOrgTeam: 'Орг. «Команда»: $', ecOrgClinic: 'Орг. «Клиника»: $',
+    ecOrgTitle: 'Запас ИИ кабинета', ecOrgUsd: 'Своя сумма, $ в месяц (пусто — по тарифу)', ecOrgEx: '💎 «Эксперт» в подарок (пока оплачен Pro)', ecPricesNote: 'Цены Claude: Opus 5.5 — $4 / $20, Sonnet 5.5 — $2 / $10, Haiku 5.5 — $0.10 / $0.50 за 1 млн токенов (ввод / ответ).',
+    ecT_free: 'Free', ecT_trial: 'пробный', ecT_pro: 'Pro', ecT_expert: 'Эксперт', ecT_clinic: 'клиника', ecT_org: 'организация'
+  },
+  az: {
+    E_PAY_TG_STARS: 'Telegram-da ödəniş — ulduzlarla (⭐). Köçürmə ilə — tətbiqin veb-versiyasında.',
+    E_AI_USD: 'Tarifinizin bu ay üçün Sİ ehtiyatı bitib. Ayın 1-də yenilənəcək. Daha çox — «Ekspert» tarifi (⭐ Abunə).',
+    hpSubEx: '💎 Ekspert', hpSubExList: 'ayda {c} təhlil · diaqnoz və çatda klinik suallar üçün ən güclü model (Opus) · Pro-dakı hər şey',
+    hpBuyXM: 'Ekspert 1 ay — {s} ⭐', hpBuyXY: 'Ekspert 1 il — {s} ⭐', hpPlanEx: '💎 Ekspert {d} tarixinədək · bu ay təhlil {c}/{cm}',
+    hpAiLeft: 'Sİ: aylıq ehtiyatın {p}%-i istifadə olunub', hpOpusNote: 'Diaqnoz və təhlil — aylıq ehtiyat imkan verdikcə Opus-da; sonra — Sonnet.',
+    hpPayTransfer: '💳 Köçürmə ilə ödə',
+    admSegEcon: '💰 İqtisadiyyat', ecMonth: 'Ay', ecRevenue: 'Gəlir (xalis)', ecSpent: 'Sİ xərci (müştərilər)', ecMain: 'öz xərciniz', ecProfit: 'Mənfəət', ecPrev: 'keçən ay',
+    ecByModel: 'Modellər üzrə', ecRule: 'Qayda: kabinetin Sİ-yə xərci xalis gəlirinin {s}%-dən çox olmur — mənfəət həmişə xərcdən az deyil. Ehtiyatın {o}%-dən Opus → Sonnet, {h}%-dən çat → Haiku, 100%-də — ayın 1-dək dayanır.',
+    ecTiers: 'Tariflər: həkim başına aylıq gəlir və Sİ ehtiyatı', ecTier: 'Tarif', ecNet: 'Xalis, $', ecBudget: 'Sİ ehtiyatı, $', ecFree: 'Free', ecTrial: 'Sınaq', ecPro: 'Pro', ecExpert: 'Ekspert', ecClinic: 'Klinika (yer)',
+    ecOrgs: 'Kabinetlər və təşkilatlar', ecNoOrgs: 'Bu ay hələ heç kim Sİ xərcləməyib.', ecSet: 'İqtisadiyyat ayarları', ecShare: 'Gəlirin Sİ payı, %', ecStar: '1 ⭐ üçün $ (çıxarış məzənnəsi)', ecAzn: '1 ₼ üçün $',
+    ecFreeUsd: 'Free: ehtiyat $ / ay', ecTrialUsd: 'Sınaq: ehtiyat $', ecOpusAt: 'Opus → Sonnet, %-dən', ecHaikuAt: 'Çat → Haiku, %-dən', ecChatDx: 'Çatda klinik suallarda Opus (Ekspert, admin)', ecDx: 'Diaqnoz üçün model',
+    ecOrgFree: 'Təşk. Free: $ / ay', ecOrgPrivate: 'Təşk. «Fərdi»: $', ecOrgTeam: 'Təşk. «Komanda»: $', ecOrgClinic: 'Təşk. «Klinika»: $',
+    ecOrgTitle: 'Kabinetin Sİ ehtiyatı', ecOrgUsd: 'Öz məbləğ, ayda $ (boş — tarifə görə)', ecOrgEx: '💎 «Ekspert» hədiyyə (Pro ödənildikcə)', ecPricesNote: 'Claude qiymətləri: Opus 5.5 — $4 / $20, Sonnet 5.5 — $2 / $10, Haiku 5.5 — $0.10 / $0.50, 1 mln token üçün (giriş / cavab).',
+    ecT_free: 'Free', ecT_trial: 'sınaq', ecT_pro: 'Pro', ecT_expert: 'Ekspert', ecT_clinic: 'klinika', ecT_org: 'təşkilat'
+  }
+};
+Object.assign(I18N.ru, I18N_V38.ru);
+Object.assign(I18N.az, I18N_V38.az);
+
+/* ---------- клинический вопрос в чате (то же правило, что на сервере) ---------- */
+const EC_STRONG = /диагн|дифф|дифер|жалоб|симптом|тактик|лечени|что с (ним|ней)|что делать с пациент|diaqnoz|şikayət|simptom|müalicə|taktika/i;
+const EC_WEAK = /боль|болит|температур|лихорад|давлени|пульс|чсс|сатурац|spo2|экг|ecg|мрт|узи|рентген|анализ|лейкоц|гемоглоб|креатин|тропон|назнач|доз[аеуыо]|пациент|больн(ой|ая|ого|ому)|поступил|госпитал|реанимац|шок|кровотеч|инфаркт|инсульт|пневмон|сепсис|ребён|ребен|беремен|аллерг|анафилак|отёк|отек|кашел|одышк|рвот|диаре|судорог|сознани|травм|перелом|ожог|отравл|ağrı|qızdırma|təzyiq|xəstə|doza|analiz|hamilə|uşaq|qanaxma|nəfəs|qusma|ishal|travma|sınıq|yanıq|zəhərlən/i;
+const EC_STOCK = /спиш|списа|остал|остат|склад|парти|сери[яию]|срок годн|истека|приход|прими|приня|перемест|заказ|накладн|qalıq|anbar|sil\b|silin|mədaxil|köçür|sifariş/i;
+function econClinical(s) {
+  s = String(s || '');
+  if (s.replace(/\s/g, '').length < 12) return false;
+  return EC_STRONG.test(s) || (EC_WEAK.test(s) && !EC_STOCK.test(s));
+}
+function econLastUserText(msgs) {
+  const a = Array.isArray(msgs) ? msgs : [];
+  for (let i = a.length - 1; i >= 0; i--) {
+    const m = a[i];
+    if (!m || m.role !== 'user') continue;
+    if (typeof m.content === 'string') return m.content;
+    const tx = (Array.isArray(m.content) ? m.content : []).filter(b => b && b.type === 'text').map(b => String(b.text || '')).join('\n');
+    if (tx) return tx;
+  }
+  return '';
+}
+// пропуск сервера скорости: для клинического вопроса чата — отдельный (с моделью для диагноза)
+let EDGE_DX_NOW = false;
+if (typeof edgePass === 'function' && typeof edgeChat === 'function') {
+  edgePass = async function (mode) {
+    const dx = mode === 'chat' && EDGE_DX_NOW;
+    const key = edgeKey(dx ? 'chatdx' : mode);
+    Object.keys(EDGE.pass).forEach(k => { if (k.split('|').slice(1).join('|') !== key.split('|').slice(1).join('|')) delete EDGE.pass[k]; });
+    const p = EDGE.pass[key];
+    if (p && p.exp - Date.now() > 60000 && p.left > 0) return p;
+    const r = await rpc('aiPass', dx ? { mode, dx: 1 } : { mode }, 30000);
+    if (!r || !r.ok) {
+      if (r && (r.code === 'E_EDGE_OFF' || r.code === 'E_UNKNOWN_ACTION')) EDGE.offUntil = Date.now() + 10 * 60000;
+      const e = new Error((r && r.code) || 'E_NETWORK'); e.res = r; e.passFail = true; throw e;
+    }
+    EDGE.pass[key] = { url: r.url, pass: r.pass, exp: r.exp, left: r.n, key };
+    return EDGE.pass[key];
+  };
+  const edgeChatV38 = edgeChat;
+  edgeChat = function (mode, messages, onText) {
+    EDGE_DX_NOW = mode === 'chat' && econClinical(econLastUserText(messages));
+    try { return edgeChatV38.apply(this, arguments); } finally { EDGE_DX_NOW = false; } // пропуск берётся сразу, до первого await
+  };
+}
+
+/* ---------- «⭐ Подписка»: Free / Pro / Эксперт ---------- */
+function hpPlanTxt(p) {
+  const u = p.used || {}, l = p.limits || {};
+  if (!p.pro) return t('hpPlanFree', { c: u.cases || 0, cm: l.cases, d: u.docs || 0, dm: l.docs });
+  if (p.trial) return t('hpPlanTrial', { d: hpFmtD(p.until), c: u.cases || 0, cm: l.cases });
+  return p.tier === 'expert' ? t('hpPlanEx', { d: hpFmtD(p.expertUntil || p.until), c: u.cases || 0, cm: l.cases }) : t('hpPlanPro', { d: hpFmtD(p.until), c: u.cases || 0, cm: l.cases });
+}
+// строка тарифа: прежняя (с «Pro через клинику» из v33), у «Эксперта» — его текст и его срок
+if (typeof hpPlanBar === 'function') {
+  const opb = hpPlanBar;
+  hpPlanBar = function () {
+    const h = opb.apply(this, arguments);
+    const p = S.me && S.me.plan;
+    if (!p || p.tier !== 'expert' || p.trial) return h;
+    const u = p.used || {}, l = p.limits || {};
+    return h.replace(esc(t('hpPlanPro', { d: hpFmtD(p.until), c: u.cases || 0, cm: l.cases })), esc(hpPlanTxt(p)));
+  };
+}
+hpSubOpen = async function () {
+  const p = (await hpRefreshPlan()) || {};
+  const pr = p.price || {}, tf = p.tariff || {};
+  const buy = (tier, per, key, s, cls) => '<button class="btn ' + cls + ' block" style="margin-bottom:8px" data-act="hpBuy" data-p="' + per + '"' + (tier ? ' data-tier="' + tier + '"' : '') + '>' + esc(t(key, { s })) + '</button>';
+  openModal('<h3>' + esc(t('hpSubTitle')) + '</h3><div class="info">' + esc(t('hpYourPlan')) + ': ' + esc(hpPlanTxt(p)) + '</div>' +
+    (typeof p.aiPct === 'number' ? '<div class="muted" style="margin:-4px 0 8px">' + esc(t('hpAiLeft', { p: p.aiPct })) + '</div>' : '') +
+    '<div class="card"><b>' + esc(t('hpSubFree')) + '</b><div class="muted">' + esc(t('hpSubFreeList', { c: tf.freeCases, d: tf.freeDocs })) + '</div></div>' +
+    '<div class="card"><b>' + esc(t('hpSubPro')) + '</b><div class="muted">' + esc(t('hpSubProList', { c: tf.proCases })) + '</div><div class="muted" style="font-size:12px;margin-top:4px">' + esc(t('hpOpusNote')) + '</div>' +
+      '<div style="margin-top:8px">' + buy('', 'm', 'hpBuyM', pr.starsM, 'primary') + buy('', 'y', 'hpBuyY', pr.starsY, 'ghost') + '</div></div>' +
+    (pr.exStarsM ? '<div class="card"><b>' + esc(t('hpSubEx')) + '</b><div class="muted">' + esc(t('hpSubExList', { c: tf.exCases })) + '</div>' +
+      '<div style="margin-top:8px">' + buy('x', 'm', 'hpBuyXM', pr.exStarsM, 'primary') + buy('x', 'y', 'hpBuyXY', pr.exStarsY, 'ghost') + '</div></div>' : '') +
+    '<div class="muted" style="margin-top:4px">' + esc(t('hpSubAuto')) + '</div>' +
+    (TGW ? '' : '<div class="hint" style="display:block;margin-top:8px">' + esc(t('hpSubOutside')) + '</div>') +
+    (TGW || typeof pyOpen !== 'function' ? '' : '<button class="btn block" style="margin-top:8px" data-act="pyOpen">' + esc(t('pyBtn')) + '</button>') + // перевод — только вне Telegram
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+};
+hpBuy = async function (btn) {
+  const q = { period: btn.dataset.p };
+  if (btn.dataset.tier === 'x') q.tier = 'x';
+  const r = await busy(btn, () => rpcA('subInvoice', q));
+  if (!r || !r.url) return;
+  const m = String(r.url).match(/^https:\/\/t\.me\/\$([A-Za-z0-9_-]+)$/) || String(r.url).match(/^https:\/\/t\.me\/invoice\/([A-Za-z0-9_-]+)$/);
+  if (TGW && m) { S.hpInvoice = m[1]; tgPost('web_app_open_invoice', { slug: m[1] }); }
+  else window.open(r.url, '_blank');
+};
+
+/* ---------- Админ-центр: «💰 Экономика» ---------- */
+if (typeof admSegs === 'function') {
+  const os = admSegs;
+  admSegs = function () { const a = os.apply(this, arguments).slice(); const i = a.findIndex(s => s[0] === 'ledger'); a.splice(i === -1 ? a.length : i + 1, 0, ['econ', 'admSegEcon']); return a; };
+  const ob = admBodyHtml;
+  admBodyHtml = function () { const st = admSt(); if (st.seg === 'econ') return st.econ ? ecHtml() : '<div class="card"><div class="ai-t">' + esc(t('aiThinking')) + '</div></div>'; return ob.apply(this, arguments); };
+  const ol = admLoadSeg;
+  admLoadSeg = async function (force) {
+    const st = admSt();
+    if (st.seg !== 'econ') return ol.apply(this, arguments);
+    if ((st.econ && !force) || st.loading_econ) return;
+    st.loading_econ = true;
+    try { const r = await rpcA('econInfo', {}); if (r) st.econ = r; } catch (e) { } finally { st.loading_econ = false; }
+    if (admSt().seg === 'econ') admRefresh();
+  };
+}
+const ecUsd = n => '$' + (Math.round((Number(n) || 0) * 100) / 100).toFixed(2);
+function ecHtml() {
+  const e = admSt().econ, c = e.cfg || {};
+  const tile = (lbl, v, sub) => '<div class="card" style="flex:1;min-width:140px;margin:0"><div class="muted" style="font-size:12px">' + esc(lbl) + '</div><div style="font-size:22px;font-weight:700">' + esc(v) + '</div>' + (sub ? '<div class="muted" style="font-size:12px">' + esc(sub) + '</div>' : '') + '</div>';
+  const clientSpent = (e.spent || 0) - (e.mainSpent || 0);
+  const bm = e.byModel || {};
+  const tr = (n, net, b) => '<tr><td>' + esc(n) + '</td><td style="text-align:right">' + esc(net === '' ? '—' : ecUsd(net)) + '</td><td style="text-align:right">' + esc(ecUsd(b)) + '</td></tr>';
+  const f = (k, lbl, step) => '<div class="field" style="min-width:140px;flex:1"><label>' + esc(lbl) + '</label><input type="number" step="' + (step || 'any') + '" data-ec="' + k + '" value="' + esc(c[k] === undefined ? '' : c[k]) + '"></div>';
+  return '<div class="muted" style="margin-bottom:6px">' + esc(t('ecMonth')) + ': ' + esc(e.month) + '</div>' +
+    '<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px">' +
+      tile(t('ecRevenue'), ecUsd(e.revenue.usd), e.revenue.stars + ' ⭐ · ' + e.revenue.azn + ' ₼ · ' + t('ecPrev') + ' ' + ecUsd((e.revenuePrev || {}).usd)) +
+      tile(t('ecSpent'), ecUsd(clientSpent), t('ecMain') + ' ' + ecUsd(e.mainSpent) + ' · ' + t('ecPrev') + ' ' + ecUsd(e.spentPrev)) +
+      tile(t('ecProfit'), ecUsd(e.profit), '') + '</div>' +
+    '<div class="muted" style="margin-bottom:10px">' + esc(t('ecByModel')) + ': Opus ' + ecUsd(bm.opus) + ' · Sonnet ' + ecUsd(bm.sonnet) + ' · Haiku ' + ecUsd(bm.haiku) + '</div>' +
+    '<div class="info" style="margin-bottom:10px">' + esc(t('ecRule', { s: c.share, o: c.opusAt, h: c.haikuAt })) + '</div>' +
+    '<div class="card"><b>' + esc(t('ecTiers')) + '</b><table class="tbl" style="width:100%;margin-top:6px"><thead><tr><th style="text-align:left">' + esc(t('ecTier')) + '</th><th style="text-align:right">' + esc(t('ecNet')) + '</th><th style="text-align:right">' + esc(t('ecBudget')) + '</th></tr></thead><tbody>' +
+      tr(t('ecFree'), '', e.budgets.free) + tr(t('ecTrial'), '', e.budgets.trial) + tr(t('ecPro') + ' (' + e.prices.pro.starsM + ' ⭐ / ' + e.prices.pro.aznM + ' ₼)', e.net.pro, e.budgets.pro) +
+      tr(t('ecExpert') + ' (' + e.prices.expert.starsM + ' ⭐ / ' + e.prices.expert.aznM + ' ₼)', e.net.expert, e.budgets.expert) + tr(t('ecClinic'), e.net.clinic, e.budgets.clinic) + '</tbody></table>' +
+      '<div class="muted" style="font-size:12px;margin-top:6px">' + esc(t('ecPricesNote')) + '</div></div>' +
+    '<div class="card"><b>' + esc(t('ecOrgs')) + '</b>' + (e.orgs.length ? '<table class="tbl" style="width:100%;margin-top:6px"><tbody>' + e.orgs.map(o =>
+      '<tr><td>' + esc(o.name) + '<div class="muted" style="font-size:12px">' + esc(t('ecT_' + o.tier) + (o.ovTier ? ' 🎁' : '') + (o.ovUsd !== '' ? ' · ' + ecUsd(o.ovUsd) + '*' : '')) + '</div></td>' +
+      '<td style="text-align:right;white-space:nowrap">' + esc(ecUsd(o.spent) + ' / ' + ecUsd(o.budget)) + '<div style="font-size:12px;color:' + (o.pct >= 90 ? 'var(--bad,#c33)' : o.pct >= 70 ? 'var(--warn,#b70)' : 'inherit') + '">' + esc(o.pct + '%') + '</div></td>' +
+      '<td style="text-align:right"><button class="btn small ghost" data-act="ecOrg" data-id="' + esc(o.id) + '">⚙</button></td></tr>').join('') + '</tbody></table>' : '<div class="muted">' + esc(t('ecNoOrgs')) + '</div>') + '</div>' +
+    '<div class="card"><b>' + esc(t('ecSet')) + '</b><div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px">' +
+      f('share', t('ecShare'), '1') + f('starUsd', t('ecStar')) + f('aznUsd', t('ecAzn')) + f('freeUsd', t('ecFreeUsd')) + f('trialUsd', t('ecTrialUsd')) + f('opusAt', t('ecOpusAt'), '1') + f('haikuAt', t('ecHaikuAt'), '1') +
+      f('orgFree', t('ecOrgFree')) + f('orgPrivate', t('ecOrgPrivate')) + f('orgTeam', t('ecOrgTeam')) + f('orgClinic', t('ecOrgClinic')) + '</div>' +
+      '<div class="field"><label>' + esc(t('ecDx')) + '</label><select id="ecDx">' + (e.models || []).map(m => '<option value="' + esc(m) + '"' + (m === e.dxModel ? ' selected' : '') + '>' + esc(m) + '</option>').join('') + '</select></div>' +
+      '<label class="row" style="gap:8px;align-items:center;margin:6px 0"><input type="checkbox" id="ecChatDx"' + (c.chatDx ? ' checked' : '') + '> ' + esc(t('ecChatDx')) + '</label>' +
+      '<button class="btn primary" data-act="ecSave">' + esc(t('admSave')) + '</button></div>';
+}
+Object.assign(H, {
+  ecSave: async el => {
+    const pw = await admPw(t('stPwAsk')); if (!pw) return;
+    const cfg = {}; $$('#admBody [data-ec]').forEach(i => { cfg[i.dataset.ec] = i.value === '' ? '' : Number(i.value); });
+    cfg.chatDx = ($('#ecChatDx') || {}).checked ? 1 : 0;
+    const r = await busy(el, () => rpcA('econSet', { password: pw, cfg, dxModel: ($('#ecDx') || {}).value }));
+    if (r) { admSt().econ = r; toast(t('stSaved')); admRefresh(); }
+  },
+  ecOrg: el => {
+    const o = (admSt().econ.orgs || []).find(x => x.id === el.dataset.id); if (!o) return;
+    openModal('<h3>' + esc(t('ecOrgTitle')) + '</h3><div class="muted" style="margin-bottom:8px">' + esc(o.name + ' · ' + t('ecT_' + o.tier) + ' · ' + ecUsd(o.spent) + ' / ' + ecUsd(o.budget)) + '</div>' +
+      '<div class="field"><label>' + esc(t('ecOrgUsd')) + '</label><input type="number" step="any" min="0" id="ecOrgUsd" value="' + esc(o.ovUsd) + '"></div>' +
+      (o.tier !== 'org' ? '<label class="row" style="gap:8px;align-items:center;margin:6px 0"><input type="checkbox" id="ecOrgEx"' + (o.ovTier === 'expert' ? ' checked' : '') + '> ' + esc(t('ecOrgEx')) + '</label>' : '') +
+      '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="ecOrgSave" data-id="' + esc(o.id) + '">' + esc(t('admSave')) + '</button></div>');
+  },
+  ecOrgSave: async el => {
+    const v = (($('#ecOrgUsd') || {}).value || '').trim();
+    const r = await busy(el, () => rpcA('econOrgSet', { orgId: el.dataset.id, usd: v, tier: ($('#ecOrgEx') || {}).checked ? 'expert' : '' }));
+    if (r) { closeModal(); admSt().econ = r; admRefresh(); toast(t('stSaved')); }
+  }
+});
 
 
 function init() {
