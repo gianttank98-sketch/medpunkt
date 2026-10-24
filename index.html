@@ -25117,7 +25117,7 @@ async function tgwGo(btn) {
     let h = '<div class="card" style="margin-top:10px" id="tgPinCard"><div class="lbl">' + esc(t('tgPinCard')) + '</div>';
     if (st.inTg) h += '<div class="muted">✈️ ' + esc(t('tgInTg')) + '</div>';
     const acc = st.acc || {};
-    const accL = [['app', 'tgaApp'], ['low', 'tgaLow'], ['stock', 'tgaStock'], ['docs', 'tgaDocs'], ['remind', 'tgaRemind']].filter(x => acc[x[0]]).map(x => t(x[1]));
+    const accL = [['app', 'tgaApp'], ['low', 'tgaLow'], ['stock', 'tgaStock'], ['docs', 'tgaDocs'], ['remind', 'tgaRemind'], ['chat', 'tgaChat']].filter(x => acc[x[0]]).map(x => t(x[1]));
     h += '<div class="muted" style="margin:4px 0">' + esc(accL.length ? t('tgAccMine', { l: accL.join('; ') }) : t('tgAccNone')) + '</div>';
     if (!st.linked) h += '<div class="muted">' + esc(t('tgPinNeedLink')) + '</div>';
     else if (acc.app) {
@@ -25218,7 +25218,7 @@ function tgElevClose() { const d = document.getElementById('tgElev'); if (d) d.r
       b.classList.remove('muted');
       const st = '<div class="muted" style="margin-bottom:6px">' + esc(t('tgaState', { l: x.linked ? t('tgaYes') : t('tgaNo'), p: x.pin ? t('tgaPinYes') : t('tgaPinNo') })) + '</div>';
       if (x.owner) { b.innerHTML = st + '<div class="muted">' + esc(t('tgaOwner')) + '</div>'; return; }
-      b.innerHTML = st + [['app', 'tgaApp'], ['low', 'tgaLow'], ['stock', 'tgaStock'], ['docs', 'tgaDocs'], ['remind', 'tgaRemind']].map(f =>
+      b.innerHTML = st + [['app', 'tgaApp'], ['low', 'tgaLow'], ['stock', 'tgaStock'], ['docs', 'tgaDocs'], ['remind', 'tgaRemind'], ['chat', 'tgaChat']].map(f =>
         '<label class="check"><input type="checkbox" data-tga="' + f[0] + '"' + (x.acc && x.acc[f[0]] ? ' checked' : '') + '><span>' + esc(t(f[1])) + '</span></label>').join('') +
         '<div class="muted" style="margin:6px 0">' + esc(t('tgaHint')) + '</div><button class="btn small primary" data-act="tgaSave" data-id="' + esc(u.id) + '">' + esc(t('save')) + '</button>';
     }).catch(() => { const b = $('#tgaBox'); if (b) b.textContent = t('E_NETWORK'); });
@@ -26438,7 +26438,7 @@ function admPersonRender() {
   const { x, d } = admSt().person;
   const feats = ADM_FEATS.map(f => '<label class="row" style="gap:8px;align-items:center;margin:4px 0"><input type="checkbox" data-ft="' + f + '"' + (x.off.indexOf(f) === -1 ? ' checked' : '') + (x.owner ? ' disabled' : '') + '> ' + esc(t('ft_' + f)) + '</label>').join('');
   const tgAcc = d.tg.acc || {};
-  const tgCard = d.tg.linked ? ['app', 'low', 'stock', 'docs', 'remind'].map(f => '<label class="row" style="gap:8px;align-items:center;margin:4px 0"><input type="checkbox" data-tg="' + f + '"' + (tgAcc[f] ? ' checked' : '') + (x.owner ? ' disabled' : '') + '> ' + esc(t('tg_' + f)) + '</label>').join('') +
+  const tgCard = d.tg.linked ? ['app', 'low', 'stock', 'docs', 'remind', 'chat'].map(f => '<label class="row" style="gap:8px;align-items:center;margin:4px 0"><input type="checkbox" data-tg="' + f + '"' + (tgAcc[f] ? ' checked' : '') + (x.owner ? ' disabled' : '') + '> ' + esc(t('tg_' + f)) + '</label>').join('') +
     (x.owner ? '' : '<button class="btn small" data-act="admTgSave" data-id="' + esc(x.id) + '">' + esc(t('admSave')) + '</button>') : '<div class="muted">' + esc(t('admTgNo')) + '</div>';
   const h = d.helper;
   const helperCard = h ? '<div class="card"><b>' + esc(t('admHelper')) + '</b><div class="muted">' + esc([x.spec ? t('sp_' + x.spec) : '', admPlanTag(x), h.used ? '📊 ' + (h.used.cases || 0) + '/' + (h.limits.cases || '∞') + ' · 🤖 ' + (h.used.ai || 0) + '/' + (h.limits.ai || '∞') : ''].filter(Boolean).join(' · ')) + '</div>' +
@@ -26688,7 +26688,7 @@ Object.assign(H, {
     if (r) { toast(t('admSaved')); await admPeopleReload(); const p = admSt().person; if (p) { p.x = admSt().people.rows.find(x => x.id === p.x.id) || p.x; } }
   },
   admTgSave: async el => {
-    const acc = {}; ['app', 'low', 'stock', 'docs', 'remind'].forEach(f => { const c = $('#modalRoot [data-tg="' + f + '"]'); acc[f] = !!(c && c.checked); });
+    const acc = {}; ['app', 'low', 'stock', 'docs', 'remind', 'chat'].forEach(f => { const c = $('#modalRoot [data-tg="' + f + '"]'); acc[f] = !!(c && c.checked); });
     const r = await busy(el, () => rpcA('tgAccessSet', { userId: el.dataset.id, acc }));
     if (r) toast(t('admSaved'));
   },
@@ -26821,6 +26821,100 @@ if (typeof tgElevateModal === 'function') {
   const oem = tgElevateModal;
   tgElevateModal = function () { if (S.me && S.me.ownerWork) return admEnterModal(); return oem.apply(this, arguments); };
 }
+
+/* =====================================================================
+ * v35: 💬 Чат-помощник в приложении — для всех, кому администратор его не выключил.
+ *  Разговор обычным текстом; инструменты (склад, отчёты, справочник, действия) выдаёт сервер по правам человека.
+ * ===================================================================== */
+const I18N_V35 = {
+  ru: {
+    chSegChat: '💬 Помощник', ft_chat: '💬 Чат-помощник', tg_chat: '💬 Чат-помощник в Telegram (свободный текст)',
+    chatHello: 'Здравствуйте! Спрашивайте обычным текстом: «сколько осталось цефтриаксона?», «что истекает в ноябре?», «доза амиодарона при ФП», «что взять на вызов при анафилаксии?». Я отвечу только из того, что вам открыто. Списать, принять, переместить — подготовлю карточку, вы подтвердите.',
+    chatPh: 'Спросите или поручите: «что заканчивается?», «спиши 1 амп. дексаметазона»…', chatSpend: '📝 Списание',
+    tgaChat: '💬 Чат-помощник (свободный текст)',
+    chatPrivacy: 'ИИ видит только то, что вам открыл администратор. Формы пациентов ему не передаются. Не пишите имена и FİN.'
+  },
+  az: {
+    chSegChat: '💬 Köməkçi', ft_chat: '💬 Çat-köməkçi', tg_chat: '💬 Telegram-da çat-köməkçi (sərbəst mətn)',
+    chatHello: 'Salam! Adi mətnlə soruşun: «seftriaksondan nə qədər qalıb?», «noyabrda nəyin vaxtı bitir?», «QF-də amiodaronun dozası», «anafilaksiyada çağırışa nə götürüm?». Yalnız sizə açıq olanlardan cavab verəcəyəm. Silmək, mədaxil, köçürmə — kart hazırlayaram, siz təsdiqləyəcəksiniz.',
+    chatPh: 'Soruşun və ya tapşırın: «nə qurtarır?», «1 amp. deksametazon sil»…', chatSpend: '📝 Silinmə',
+    tgaChat: '💬 Çat-köməkçi (sərbəst mətn)',
+    chatPrivacy: 'Sİ yalnız admin tərəfindən sizə açılanları görür. Pasiyent formaları ona ötürülmür. Ad və FİN yazmayın.'
+  }
+};
+Object.assign(I18N.ru, I18N_V35.ru);
+Object.assign(I18N.az, I18N_V35.az);
+function chatMine() { return !(typeof isOwner === 'function' && isOwner()); } // не главный админ (или главный админ в рабочем профиле) — чат по правам
+// подписи раздела ИИ: у главного админа — «ИИ: склад», у остальных — «Помощник»
+['ru', 'az'].forEach(l => {
+  const base = { clSegAi: I18N[l].clSegAi, aiHello: I18N[l].aiHello, aiPh: I18N[l].aiPh, aiPrivacy: I18N[l].aiPrivacy };
+  Object.keys(base).forEach(k => {
+    Object.defineProperty(I18N[l], k, { configurable: true, enumerable: true, get() { return chatMine() ? I18N[l][{ clSegAi: 'chSegChat', aiHello: 'chatHello', aiPh: 'chatPh', aiPrivacy: 'chatPrivacy' }[k]] : base[k]; } });
+  });
+});
+if (typeof ADM_FEATS !== 'undefined' && ADM_FEATS.indexOf('chat') === -1) ADM_FEATS.push('chat');
+(function () {
+  // раздел: главный админ — как было; остальные — если чат не выключен (у «Помощника» — свой разбор, раздел скрыт)
+  const segs = window.CLINIC_SEGS || [];
+  window.CLINIC_SEGS = segs.map(s => s[0] !== 'ai' ? s : ['ai', s[1], () => !(typeof isHelper === 'function' && isHelper()) && ((typeof isOwner === 'function' && isOwner()) || (featOn('chat') && !!(S.me && S.me.stores && S.me.stores.length)))]);
+  // статус ключа и расход — только админу (у остальных его запрос лишний)
+  const oa = window.CLINIC_AFTER && window.CLINIC_AFTER.ai;
+  if (oa) window.CLINIC_AFTER.ai = function () { document.body.classList.toggle('chat-mode', chatMine()); if (chatMine()) { aiCss(); return; } return oa.apply(this, arguments); };
+  // фото и PDF в чате не принимаются (в них могут быть личные данные) — кнопки нет
+  const st = document.createElement('style'); st.textContent = 'body.chat-mode #clBody [data-attbar]{display:none!important}'; document.head.appendChild(st);
+  if (typeof AI_TOOL_LABEL !== 'undefined') AI_TOOL_LABEL.propose_spend = 'готовлю списание';
+  // разговор: не главный админ — режим «chat» (инструменты по правам решает сервер)
+  if (typeof aiLoop === 'function') {
+    const ol = aiLoop;
+    aiLoop = function (msgs, mode, onStep) { return ol.call(this, msgs, mode === 'admin' && chatMine() ? 'chat' : mode, onStep); };
+  }
+  if (typeof aiRunTool === 'function') {
+    const ort = aiRunTool;
+    aiRunTool = async function (name, a, mode) {
+      if (mode === 'chat') {
+        if (!chatToolOk(name)) return { error: 'этот инструмент вам не открыт' }; // то же, что решил сервер (защита на телефоне)
+        if (name === 'propose_spend') return chatProposeSpend(a || {});
+        if (name === 'icd_lookup') return ort.call(this, name, a, 'case');
+        if (name === 'propose_edit_lot') return ort.call(this, name, a, 'admin');
+      }
+      const r = await ort.apply(this, arguments);
+      if (mode === 'chat' && r && typeof r.status === 'string') r.status = r.status.replace(/админу|админ/g, 'человеку');
+      return r;
+    };
+  }
+})();
+/** Какие инструменты чата открыты этому человеку (как на сервере: права склада и разделы). */
+function chatToolOk(name) {
+  const helper = typeof isHelper === 'function' && isHelper();
+  const stock = !helper && can(['stock', 'spend', 'receive', 'revision', 'edit', 'move']);
+  const kb = featOn('kb');
+  const m = { search_stock: stock, stock_overview: stock, get_item: stock, list_locations: stock, recent_operations: stock && can(['stock', 'edit', 'revision']), report: !helper && can(['reports']), get_forms: stock && can(['receive', 'edit']),
+    indication_sections: kb, drug_lookup: kb, drug_instruction: kb, dx_lookup: kb, protocols: kb, icd_lookup: kb, open_screen: true,
+    propose_receive: !helper && can('receive'), propose_move: !helper && can('move'), propose_edit_item: !helper && can('edit'), propose_norm: !helper && can('edit'), propose_edit_lot: !helper && can(['edit', 'revision']), propose_spend: !helper && can('spend') };
+  return !!m[name];
+}
+/** Списание по предложению ИИ: карточка → «Подтвердить» → обычное «Списание» (сервер проверит право и партию). */
+function chatProposeSpend(a) {
+  if (!can('spend')) return { error: 'нет права списывать на этом складе' };
+  const lot = lotById(String(a.lotId || '')); if (!lot) return { error: 'нет партии ' + a.lotId + ' — возьми lotId из search_stock / get_item' };
+  const it = itemById(lot.itemId);
+  const qty = Math.round(Number(a.qty));
+  if (!(qty > 0 && qty <= lot.qty)) return { error: 'qty — от 1 до ' + lot.qty };
+  if (typeof lotStatus === 'function' && lotStatus(lot).cls === 'expired') return { error: 'партия просрочена — на пациента нельзя' };
+  const comment = aiClean(a.comment).slice(0, 200);
+  if (it && it.strict && !comment) return { error: 'строгий учёт: нужен комментарий (кому / зачем, без ФИО)' };
+  const text = t('chatSpend') + ': ' + (it ? it.name + ' ' + it.dosage : '') + ' — ' + qty + ' ' + (it ? unitShort(it.unit) : '') + ' (серия ' + (lot.series || '—') + (lot.expiry ? ', до ' + fmtDate(lot.expiry) : '') + ', ' + locName(lot.locationId) + ')' + (comment ? ' · ' + comment : '');
+  const ai = aiSt();
+  const pid = 'p' + Date.now().toString(36) + Math.floor(Math.random() * 1e4);
+  ai.props[pid] = { text: aiClean(text), run: opId => rpcA('spend', { lotId: lot.id, qty, reason: 'PATIENT', comment }, { op: true, opId }), state: 'wait', opId: newOpId(), choice: null, warn: '', full: '' };
+  ai.view.push({ k: 'p', id: pid });
+  return { status: 'показано человеку, ждёт его «Подтвердить» — НЕ списано', proposal: text };
+}
+// Админ-центр: галочка чата в Telegram
+(function () {
+  const L = ['ru', 'az'];
+  L.forEach(l => { if (!I18N[l].tg_chat) I18N[l].tg_chat = I18N_V35[l].tg_chat; });
+})();
 
 
 function init() {
