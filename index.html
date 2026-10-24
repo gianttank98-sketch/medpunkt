@@ -25405,6 +25405,7 @@ async function hpRegGo(btn) {
     const nav = $('nav.bottom.drawer');
     if (nav && isHelper()) {
       nav.querySelectorAll('.m-subs [data-tab="forms"]').forEach(b => { if (['docs', 'rx'].indexOf(b.dataset.seg) === -1) b.remove(); });
+      nav.querySelectorAll('[data-act=hpSub]').forEach(b => { b.textContent = t('hpSubBtn'); });
       if (!nav.querySelector('[data-act=hpSub]')) {
         const html = '<button class="btn primary block" style="margin:6px 0" data-act="hpSub">' + esc(t('hpSubBtn')) + '</button>';
         const fb = nav.querySelector('[data-act=fbOpen]'); if (fb) fb.insertAdjacentHTML('beforebegin', html); else nav.insertAdjacentHTML('beforeend', html);
@@ -25833,6 +25834,7 @@ Object.assign(H, {
   if (typeof omr === 'function') window.menuRender = function () {
     const r = omr.apply(this, arguments);
     const nav = $('nav.bottom.drawer');
+    if (nav) nav.querySelectorAll('[data-act=hgOpen]').forEach(b => { b.textContent = t('hgTitle'); });
     if (nav && isSuper() && !nav.querySelector('[data-act=hgOpen]')) {
       const html = '<button class="btn ghost block" style="margin:6px 0" data-act="hgOpen">' + esc(t('hgTitle')) + '</button>';
       const fb = nav.querySelector('[data-act=fbOpen]'); if (fb) fb.insertAdjacentHTML('beforebegin', html); else nav.insertAdjacentHTML('beforeend', html);
@@ -25840,6 +25842,340 @@ Object.assign(H, {
     return r;
   };
 })();
+
+/* =====================================================================
+ * v33: мини-клиника «Помощника» — коллеги разных специальностей, консультации по коду (обезличенно).
+ * ===================================================================== */
+const I18N_V33 = {
+  ru: {
+    clSegTeam: '👥 Клиника',
+    kqIntro: 'Мини-клиника — это вы и коллеги других специальностей. Вы передаёте коллеге разбор пациента под кодом (K-…): без ФИО, FİN и номеров — только возраст, пол, показатели, жалобы, анализы и предварительный диагноз. Коллега отвечает, ответ приходит вам.',
+    kqCreate: 'Создать свою клинику', kqName: 'Название (например: «Клиника доктора Алиева»)', kqCreateBtn: '➕ Создать',
+    kqJoin: 'Вступить по коду приглашения', kqCode: 'Код от владельца клиники (J…)', kqJoinBtn: '👥 Вступить',
+    kqPaid: '✅ Оплачено до {d} — у всех врачей клиники Pro и консультации', kqUnpaid: '⚠️ Клиника не оплачена — консультации между коллегами недоступны',
+    kqPayC5: 'Клиника до 5 врачей — {s} ⭐ / месяц', kqPayC10: 'Клиника до 10 врачей — {s} ⭐ / месяц', kqPayHint: 'Владелец платит один раз за всех: у каждого врача клиники — Pro (свой Pro не нужен). Продлевается автоматически, отменить — в Telegram.',
+    kqMembers: 'Врачи клиники ({n} из {m})', kqOwner: 'владелец', kqRemove: 'Убрать', kqRemoveAsk: 'Убрать {n} из клиники?',
+    kqInvite: '🔗 Код приглашения', kqInviteTxt: 'Код для коллеги (действует 7 дней): {c}\nКоллега: Клиника → «Вступить по коду».', kqCopy: '📋 Копировать',
+    kqLeave: 'Выйти из клиники', kqLeaveAsk: 'Выйти из клиники? Консультации станут недоступны.', kqLeaveOwnerAsk: 'Закрыть клинику? Вы — единственный врач в ней.',
+    kqInbox: 'Консультации', kqNone: 'Пока нет консультаций. Откройте разбор пациента → «📨 Консультация коллеги».',
+    kqFrom: 'от {n}', kqTo: 'кому: {n}', kqSt_open: '🟡 ждёт ответа', kqSt_answered: '🟢 есть ответ', kqSt_closed: '⚪ закрыта',
+    kqAsk: '📨 Консультация коллеги', kqAskTitle: '📨 Консультация коллеги', kqAskWho: 'Кому', kqAskSpec: 'Любому врачу специальности', kqAskQ: 'Ваш вопрос коллеге', kqAskQPh: 'Например: нужна ли госпитализация? какое обследование добавить?',
+    kqAskNote: 'Уйдёт обезличенный снимок разбора: возраст, пол, показатели, жалобы, ход разбора, анализы, диагноз. ФИО, FİN и номера остаются у вас.', kqSend: '📨 Отправить',
+    kqSent: 'Отправлено: {c}. Ответ придёт в «👥 Клиника».', kqNoClinic: 'Сначала создайте мини-клинику или вступите в неё: Клиника → «👥 Клиника».', kqNoOthers: 'В клинике пока нет других врачей — пригласите коллег кодом.',
+    kqBack: '← К консультациям', kqQuestion: 'Вопрос', kqAnswer: 'Ответ коллеги', kqAnswerPh: 'Ваше мнение, рекомендации…', kqAnswerBtn: '✅ Ответить', kqAnswered: 'Ответ отправлен',
+    kqClose: 'Закрыть консультацию', kqOpenMine: 'Открыть мой разбор', kqTakeOver: '📥 Открыть как свой разбор', kqTaken: 'Создан ваш разбор: продолжайте с ИИ.',
+    kqPatient: 'Пациент', kqVitals: 'Показатели', kqCc: 'Жалобы и обстоятельства', kqCourse: 'Ход разбора у коллеги', kqLabs: 'Анализы и обследования', kqDiff: 'Предварительный диагноз', kqFinal: 'Итог разбора',
+    kqHere: 'Консультации по этому разбору', kqNoAnswer: 'ответа пока нет',
+    kqViaClinic: 'Pro через клинику «{n}» до {d}',
+    E_CLINIC_ALREADY: 'Вы уже в мини-клинике. Чтобы перейти в другую — сначала выйдите.', E_CLINIC_CODE: 'Код не подходит или истёк — попросите новый у владельца клиники.',
+    E_CLINIC_FULL: 'В клинике нет мест (максимум {max}). Владелец может перейти на тариф до 10 врачей.', E_CLINIC_OWNER: 'В клинике есть другие врачи: сначала уберите их или передайте клинику.',
+    kqTransfer: 'Сделать владельцем', kqTransferAsk: 'Передать клинику врачу {n}? Владельцем станет он(а), вы останетесь в клинике. Оплата (подписка Telegram) остаётся на вас — отмените её в Telegram, если платить будет новый владелец.',
+    kqPreview: '👁 Что увидит коллега', kqPrivWarn: 'Проверьте: ФИО и даты рождения, которые телефон знает, заменены на [личное] и [дата]. Если вы писали имя пациента в жалобах вручную — исправьте разбор перед отправкой.',
+    E_CLINIC_REMOVED: 'Владелец клиники убрал вас из неё. Вернуться можно по новому коду приглашения.', E_CLINIC_SEATS: 'В клинике больше врачей, чем мест в этом тарифе (до {max}). Выберите тариф побольше или уберите лишних.', E_CLINIC_SUB_ON: 'Подписка на этот тариф уже идёт — второй раз платить не нужно.', E_CLINIC_NOSPEC: 'В клинике нет других врачей этой специальности.',
+    E_CLINIC_NONE: 'Вы не в мини-клинике.', E_CLINIC_UNPAID: 'Клиника не оплачена — консультации недоступны. Владелец: Клиника → оплата.'
+  },
+  az: {
+    clSegTeam: '👥 Klinika',
+    kqIntro: 'Mini-klinika — siz və digər ixtisaslardan olan həmkarlarınızdır. Pasiyentin təhlilini həmkara kodla (K-…) göndərirsiniz: ad, FİN və nömrələr olmadan — yalnız yaş, cins, göstəricilər, şikayətlər, analizlər və ilkin diaqnoz. Həmkar cavab verir, cavab sizə gəlir.',
+    kqCreate: 'Öz klinikanızı yaradın', kqName: 'Ad (məsələn: «Dr. Əliyevin klinikası»)', kqCreateBtn: '➕ Yarat',
+    kqJoin: 'Dəvət kodu ilə qoşulun', kqCode: 'Klinika sahibindən kod (J…)', kqJoinBtn: '👥 Qoşul',
+    kqPaid: '✅ {d} tarixinədək ödənilib — klinikanın bütün həkimlərində Pro və məsləhətlər', kqUnpaid: '⚠️ Klinika ödənilməyib — həmkarlar arasında məsləhət mümkün deyil',
+    kqPayC5: '5 həkimədək klinika — {s} ⭐ / ay', kqPayC10: '10 həkimədək klinika — {s} ⭐ / ay', kqPayHint: 'Sahib hamı üçün bir dəfə ödəyir: klinikanın hər həkimində Pro olur (ayrıca Pro lazım deyil). Avtomatik uzadılır, ləğv — Telegram-da.',
+    kqMembers: 'Klinikanın həkimləri ({n} / {m})', kqOwner: 'sahib', kqRemove: 'Çıxar', kqRemoveAsk: '{n} klinikadan çıxarılsın?',
+    kqInvite: '🔗 Dəvət kodu', kqInviteTxt: 'Həmkar üçün kod (7 gün etibarlıdır): {c}\nHəmkar: Klinika → «Kodla qoşul».', kqCopy: '📋 Kopyala',
+    kqLeave: 'Klinikadan çıx', kqLeaveAsk: 'Klinikadan çıxılsın? Məsləhətlər əlçatan olmayacaq.', kqLeaveOwnerAsk: 'Klinika bağlansın? Orada yalnız sizsiniz.',
+    kqInbox: 'Məsləhətlər', kqNone: 'Hələ məsləhət yoxdur. Pasiyentin təhlilini açın → «📨 Həmkarın məsləhəti».',
+    kqFrom: '{n}-dan', kqTo: 'kimə: {n}', kqSt_open: '🟡 cavab gözləyir', kqSt_answered: '🟢 cavab var', kqSt_closed: '⚪ bağlanıb',
+    kqAsk: '📨 Həmkarın məsləhəti', kqAskTitle: '📨 Həmkarın məsləhəti', kqAskWho: 'Kimə', kqAskSpec: 'İxtisas üzrə istənilən həkimə', kqAskQ: 'Həmkara sualınız', kqAskQPh: 'Məsələn: hospitalizasiya lazımdırmı? hansı müayinəni əlavə etmək olar?',
+    kqAskNote: 'Təhlilin şəxsiyyətsiz surəti gedəcək: yaş, cins, göstəricilər, şikayətlər, təhlilin gedişi, analizlər, diaqnoz. Ad, FİN və nömrələr sizdə qalır.', kqSend: '📨 Göndər',
+    kqSent: 'Göndərildi: {c}. Cavab «👥 Klinika»-ya gələcək.', kqNoClinic: 'Əvvəlcə mini-klinika yaradın və ya qoşulun: Klinika → «👥 Klinika».', kqNoOthers: 'Klinikada hələ başqa həkim yoxdur — həmkarları kodla dəvət edin.',
+    kqBack: '← Məsləhətlərə', kqQuestion: 'Sual', kqAnswer: 'Həmkarın cavabı', kqAnswerPh: 'Rəyiniz, tövsiyələriniz…', kqAnswerBtn: '✅ Cavab ver', kqAnswered: 'Cavab göndərildi',
+    kqClose: 'Məsləhəti bağla', kqOpenMine: 'Mənim təhlilimi aç', kqTakeOver: '📥 Öz təhlilim kimi aç', kqTaken: 'Sizin təhliliniz yaradıldı: Sİ ilə davam edin.',
+    kqPatient: 'Pasiyent', kqVitals: 'Göstəricilər', kqCc: 'Şikayətlər və hallar', kqCourse: 'Həmkarda təhlilin gedişi', kqLabs: 'Analizlər və müayinələr', kqDiff: 'İlkin diaqnoz', kqFinal: 'Təhlilin nəticəsi',
+    kqHere: 'Bu təhlil üzrə məsləhətlər', kqNoAnswer: 'hələ cavab yoxdur',
+    kqViaClinic: '«{n}» klinikası vasitəsilə Pro, {d} tarixinədək',
+    E_CLINIC_ALREADY: 'Siz artıq mini-klinikadasınız. Başqasına keçmək üçün əvvəlcə çıxın.', E_CLINIC_CODE: 'Kod uyğun deyil və ya vaxtı keçib — klinika sahibindən yenisini istəyin.',
+    E_CLINIC_FULL: 'Klinikada yer yoxdur (maksimum {max}). Sahib 10 həkimlik tarifə keçə bilər.', E_CLINIC_OWNER: 'Klinikada başqa həkimlər var: əvvəlcə onları çıxarın.',
+    kqTransfer: 'Sahib et', kqTransferAsk: 'Klinika {n} həkimə verilsin? O, sahib olacaq, siz klinikada qalacaqsınız. Ödəniş (Telegram abunəsi) sizin üzərinizdə qalır — yeni sahib ödəyəcəksə, onu Telegram-da ləğv edin.',
+    kqPreview: '👁 Həmkar nə görəcək', kqPrivWarn: 'Yoxlayın: telefonun bildiyi ad və doğum tarixləri [личное] və [дата] ilə əvəz olunub. Şikayətlərdə pasiyentin adını əllə yazmısınızsa — göndərməzdən əvvəl təhlili düzəldin.',
+    E_CLINIC_REMOVED: 'Klinika sahibi sizi çıxarıb. Yeni dəvət kodu ilə qayıtmaq olar.', E_CLINIC_SEATS: 'Klinikada bu tarifdəki yerlərdən çox həkim var ({max}-dək). Böyük tarif seçin və ya artıqları çıxarın.', E_CLINIC_SUB_ON: 'Bu tarifə abunə artıq gedir — ikinci dəfə ödəmək lazım deyil.', E_CLINIC_NOSPEC: 'Klinikada bu ixtisasdan başqa həkim yoxdur.',
+    E_CLINIC_NONE: 'Siz mini-klinikada deyilsiniz.', E_CLINIC_UNPAID: 'Klinika ödənilməyib — məsləhət mümkün deyil. Sahib: Klinika → ödəniş.'
+  }
+};
+Object.assign(I18N.ru, I18N_V33.ru);
+Object.assign(I18N.az, I18N_V33.az);
+
+function kqSt() { if (!S.kq) S.kq = { data: null, loading: false, view: 'list', share: null, snap: null }; return S.kq; }
+function kqSpecName(k) { return k ? t('sp_' + k) : ''; }
+async function kqLoad(force) {
+  const st = kqSt();
+  if (st.loading || (st.data && !force)) return st.data;
+  st.loading = true;
+  try { const r = await rpcA('clinicMine', {}); if (r) st.data = r; } catch (e) { } finally { st.loading = false; }
+  return st.data;
+}
+function kqRender() { if (S.screen === 'clinic' && S.clSeg === 'team') renderClinic(); }
+
+/* ---------- экран «👥 Клиника» ---------- */
+function kqScreenHtml() {
+  const st = kqSt();
+  if (st.view === 'share' && st.share) return kqShareHtml();
+  const d = st.data;
+  if (!d) return '<div class="card"><div class="ai-t">' + esc(t('aiThinking')) + '</div></div>';
+  if (!d.clinic) {
+    return '<div class="card"><div class="muted">' + esc(t('kqIntro')) + '</div></div>' +
+      '<div class="card"><b>' + esc(t('kqCreate')) + '</b><div class="field"><label>' + esc(t('kqName')) + '</label><input type="text" id="kqNameIn" maxlength="80"></div><button class="btn primary block" data-act="kqCreate">' + esc(t('kqCreateBtn')) + '</button></div>' +
+      '<div class="card"><b>' + esc(t('kqJoin')) + '</b><div class="field"><label>' + esc(t('kqCode')) + '</label><input type="text" id="kqCodeIn" maxlength="12" autocapitalize="characters" autocomplete="off"></div><button class="btn block" data-act="kqJoin">' + esc(t('kqJoinBtn')) + '</button></div>';
+  }
+  const c = d.clinic, plans = d.plans || {};
+  let h = '<div class="card"><b style="font-size:16px">👥 ' + esc(c.name) + '</b><div class="' + (c.paid ? 'muted' : 'pr-warn') + '" style="margin-top:4px">' + esc(c.paid ? t('kqPaid', { d: hpFmtD(c.until) }) : t('kqUnpaid')) + '</div>';
+  if (c.owner) h += '<div style="margin-top:8px"><button class="btn ' + (c.paid ? 'ghost' : 'primary') + ' block" style="margin-bottom:6px" data-act="kqPay" data-p="c5">' + esc(t('kqPayC5', { s: (plans.c5 || {}).stars })) + '</button><button class="btn ghost block" data-act="kqPay" data-p="c10">' + esc(t('kqPayC10', { s: (plans.c10 || {}).stars })) + '</button><div class="muted" style="margin-top:6px;font-size:12px">' + esc(t('kqPayHint')) + '</div></div>';
+  h += '</div>';
+  h += '<div class="card"><b>' + esc(t('kqMembers', { n: d.members.length, m: c.seats })) + '</b>' + d.members.map(m => '<div class="list-row"><div class="grow"><b>' + esc(m.name) + '</b>' + (m.role === 'owner' ? ' <span class="pill">' + esc(t('kqOwner')) + '</span>' : '') + '<div class="muted">' + esc(kqSpecName(m.spec)) + '</div></div>' +
+    (c.owner && !m.me ? '<button class="btn small ghost" data-act="kqTransfer" data-id="' + esc(m.userId) + '" data-n="' + esc(m.name) + '">' + esc(t('kqTransfer')) + '</button><button class="btn small ghost" data-act="kqRemove" data-id="' + esc(m.userId) + '" data-n="' + esc(m.name) + '">' + esc(t('kqRemove')) + '</button>' : '') + '</div>').join('') +
+    '<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px">' + (c.owner ? '<button class="btn small" data-act="kqInvite">' + esc(t('kqInvite')) + '</button>' : '') + '<button class="btn small ghost" data-act="kqLeave">' + esc(t('kqLeave')) + '</button></div></div>';
+  h += '<div class="card"><b>' + esc(t('kqInbox')) + '</b>' + (d.shares.length ? d.shares.map(kqRowHtml).join('') : '<div class="muted">' + esc(t('kqNone')) + '</div>') + '</div>';
+  return h;
+}
+function kqRowHtml(s) {
+  return '<div class="list-row" data-act="kqOpen" data-id="' + esc(s.id) + '" style="cursor:pointer"><div class="grow"><b>' + esc(s.code) + '</b> ' + esc(s.title || '') +
+    '<div class="muted">' + esc(s.fromMe ? t('kqTo', { n: s.to || kqSpecName(s.toSpec) }) : t('kqFrom', { n: s.from })) + ' · ' + esc(fmtDt(s.createdAt)) + '</div></div><span class="muted" style="white-space:nowrap">' + esc(t('kqSt_' + s.status)) + '</span></div>';
+}
+function kqSnapHtml(sn) {
+  const p = sn.patient || {};
+  const sec = (k, body) => body ? '<div class="card"><b>' + esc(t(k)) + '</b><div style="margin-top:4px">' + body + '</div></div>' : '';
+  const vit = typeof csVitalsText === 'function' ? csVitalsText(sn.vitals || {}) : '';
+  const course = (sn.view || []).filter(v => v.k !== 'u' || v.text !== sn.cc).map(v => v.k === 'u' ? '<div class="ai-b ai-u">' + esc(v.text) + '</div>' : v.k === 'a' ? '<div class="ai-b ai-a">' + aiMd(v.text) + '</div>' : '<div class="ai-b ai-a"><b>❓ ' + esc(v.question) + '</b>' + (v.answer !== null && v.answer !== undefined ? '<div>→ ' + esc(v.answer) + '</div>' : '') + '</div>').join('');
+  const labs = (sn.labs || []).map(x => '<div class="f-rx"><b>' + esc(t('lk_' + x.kind)) + (x.title ? ' — ' + esc(x.title) : '') + '</b>' + (x.date ? ' <span class="muted">' + esc(hpFmtD(x.date)) + '</span>' : '') + '<div style="white-space:pre-wrap">' + esc(x.text) + '</div></div>').join('');
+  const df = sn.diff && sn.diff.items && sn.diff.items.length ? (sn.diff.urgent ? '<div class="pr-warn">' + esc(t('csUrgent')) + ': ' + esc(sn.diff.urgent) + '</div>' : '') + sn.diff.items.map(it => '<div class="cs-row"><span class="cs-dot ' + esc(it.level) + '"></span><span class="grow"><b>' + esc(it.name) + '</b>' + (it.icd ? ' <span class="muted">' + esc(it.icd) + '</span>' : '') + (it.for || it.against ? '<div class="muted" style="font-size:12px">' + (it.for ? '＋ ' + esc(it.for) : '') + (it.against ? ' · − ' + esc(it.against) : '') + '</div>' : '') + '</span><b>' + Number(it.confidence || 0) + '%</b></div>').join('') + (sn.diff.scores ? '<div class="muted">📐 ' + esc(sn.diff.scores) + '</div>' : '') : '';
+  return sec('kqPatient', esc(typeof csPatientText === 'function' ? csPatientText(p) : '')) + sec('kqVitals', esc(vit)) + sec('kqCc', '<div style="white-space:pre-wrap">' + esc(sn.cc || '') + '</div>') +
+    sec('kqLabs', labs) + sec('kqDiff', df) + sec('kqFinal', sn.final ? aiMd(sn.final) : '') + (course ? '<details class="card"><summary><b>' + esc(t('kqCourse')) + '</b></summary><div class="ai-log">' + course + '</div></details>' : '');
+}
+function kqShareHtml() {
+  const st = kqSt(), s = st.share, sn = st.snap || {};
+  let h = '<div class="ai-bar"><button class="btn small ghost" data-act="kqBack">' + esc(t('kqBack')) + '</button><span class="muted">' + esc(t('kqSt_' + s.status)) + '</span></div>' +
+    '<div class="card"><b style="font-size:16px">' + esc(s.code) + '</b> ' + esc(s.title || '') + '<div class="muted">' + esc(s.fromMe ? t('kqTo', { n: s.to || kqSpecName(s.toSpec) }) : t('kqFrom', { n: s.from })) + ' · ' + esc(fmtDt(s.createdAt)) + '</div>' +
+    (s.question ? '<div style="margin-top:6px"><b>' + esc(t('kqQuestion')) + ':</b> <span style="white-space:pre-wrap">' + esc(s.question) + '</span></div>' : '') + '</div>';
+  h += '<div class="card"><b>' + esc(t('kqAnswer')) + '</b><div style="white-space:pre-wrap;margin-top:4px">' + (s.answer ? esc(s.answer) : '<span class="muted">' + esc(t('kqNoAnswer')) + '</span>') + '</div>' +
+    (!s.fromMe && s.status !== 'closed' ? '<div class="field" style="margin-top:8px"><textarea id="kqAnsIn" rows="4" maxlength="6000" placeholder="' + esc(t('kqAnswerPh')) + '"></textarea></div><button class="btn primary block" data-act="kqAnswer">' + esc(t('kqAnswerBtn')) + '</button>' : '') + '</div>';
+  h += kqSnapHtml(sn);
+  h += '<div class="row" style="gap:6px;flex-wrap:wrap;margin:8px 0">' + (s.fromMe ? (s.caseId ? '<button class="btn small" data-act="kqOpenMine" data-id="' + esc(s.caseId) + '">' + esc(t('kqOpenMine')) + '</button>' : '') + (s.status !== 'closed' ? '<button class="btn small ghost" data-act="kqClose">' + esc(t('kqClose')) + '</button>' : '')
+    : '<button class="btn small" data-act="kqTake">' + esc(t('kqTakeOver')) + '</button>') + '</div>';
+  return h;
+}
+async function kqOpen(id) {
+  const st = kqSt();
+  const r = await rpcA('shareGet', { id }).catch(() => null);
+  if (!r) return;
+  st.share = r.share; st.snap = r.snap; st.view = 'share';
+  kqRender(); window.scrollTo(0, 0);
+}
+/** Коллега берёт консультацию себе: новый разбор у него (ИИ продолжает с этими данными). */
+function kqTake() {
+  const st = kqSt(), s = st.share, sn = st.snap || {};
+  if (!s) return;
+  const now = nowLocal().replace('T', ' ');
+  const labs = (sn.labs || []).map(x => typeof labClean === 'function' ? labClean(Object.assign({}, x, { src: 'manual' })) : null).filter(Boolean);
+  const course = (sn.view || []).filter(v => v.k === 'a').slice(-2).map(v => v.text).join('\n\n').slice(0, 6000);
+  const top = sn.diff && sn.diff.items ? sn.diff.items.map(it => it.name + (it.icd ? ' (' + it.icd + ')' : '') + ' ' + it.confidence + '%').join('; ') : '';
+  const first = 'Консультация коллеги ' + s.code + ' (' + (s.from || '') + '). Дата и время: ' + now + '. ' + csPatientText(sn.patient) + '. Показатели: ' + csVitalsText(sn.vitals) + '.\nЖалобы и обстоятельства: ' + (sn.cc || '') +
+    (top ? '\nПредварительный диагноз у коллеги: ' + top : '') + (labs.length ? '\nАнализы и обследования:\n' + labs.map(x => '- ' + (x.date || '') + ' ' + (x.title || x.kind) + ': ' + x.text).join('\n') : '') +
+    (course ? '\nВыводы ИИ у коллеги:\n' + course : '') + (s.question ? '\nВопрос коллеги ко мне: ' + s.question : '') + '\nЯ — ' + kqSpecName((S.me && S.me.spec) || '') + '. Разбери со стороны моей специальности.';
+  const c = { id: csNewId(), ver: 0, title: (s.code + ' ' + (s.title || '')).slice(0, 80), status: 'open', formId: '', data: { v: 1, at: now, enteredAt: now, patient: Object.assign({}, sn.patient || {}), vitals: Object.assign({}, sn.vitals || {}), cc: String(sn.cc || '').slice(0, 3000), msgs: [{ role: 'user', content: [{ type: 'text', text: first.slice(0, 20000) }] }], view: [{ k: 'u', text: (s.code + ': ' + (sn.cc || '')).slice(0, 3000) }], diff: null, pending: null, final: '', labs } };
+  const cs = csSt();
+  cs.cur = c; cs.view = 'case';
+  S.clSeg = 'cases';
+  renderClinic(); window.scrollTo(0, 0);
+  toast(t('kqTaken'));
+  csRun(c);
+}
+/* ---------- кнопка в разборе ---------- */
+(function () {
+  const oc = window.csCaseExtra;
+  window.csCaseExtra = function (c) {
+    const h = oc ? oc(c) : '';
+    if (!isHelper() || !c || !c.id) return h;
+    return h + '<div id="kqHereBox">' + kqHereHtml(c) + '</div><button class="btn ghost block" style="margin:6px 0" data-act="kqAsk">' + esc(t('kqAsk')) + '</button>';
+  };
+})();
+function kqHereHtml(c) {
+  const d = kqSt().data;
+  const mine = d && d.shares ? d.shares.filter(s => s.fromMe && s.caseId === c.id) : [];
+  return mine.length ? '<div class="card"><b>' + esc(t('kqHere')) + '</b>' + mine.map(s => '<div class="f-rx" data-act="kqOpen" data-id="' + esc(s.id) + '" style="cursor:pointer"><b>' + esc(s.code) + '</b> ' + esc(t('kqTo', { n: s.to || kqSpecName(s.toSpec) })) + ' · ' + esc(t('kqSt_' + s.status)) +
+    (s.answer ? '<div style="white-space:pre-wrap">' + esc(s.answer) + '</div>' : '') + '</div>').join('') + '</div>' : '';
+}
+function kqRefreshHere() { const c = csSt().cur, box = $('#kqHereBox'); if (c && box) box.innerHTML = kqHereHtml(c); }
+/** Снимок для коллеги собирает телефон: ФИО, FİN и даты рождения, которые знает только он, заменяются до отправки. */
+function kqPiiWords(c) {
+  const out = [];
+  try {
+    const loc = hpPiiGet();
+    const add = (vals, birth) => dsPiiWords(vals, birth).forEach(w => out.push(w));
+    if (c.data.formId && loc.forms[c.data.formId]) { const f = loc.forms[c.data.formId]; add(FORM_PII_KEYS.map(k => f[k]), f.pBirth); }
+    Object.keys(loc.docs).slice(-400).forEach(id => { const d = loc.docs[id] || {}; add([d.surname, d.name, d.patronymic, d.fin, d.phone, d.address], d.birth); });
+  } catch (e) { }
+  return Array.from(new Set(out)).sort((a, b) => b.length - a.length).slice(0, 3000);
+}
+function kqClientSnap(c) {
+  const d = c.data || {};
+  const words = kqPiiWords(c);
+  const raw = { v: 1, patient: d.patient || {}, vitals: d.vitals || {}, cc: d.cc || '', final: d.final || '', view: (d.view || []).filter(v => v && ['u', 'a', 'q'].indexOf(v.k) !== -1).slice(-80), labs: d.labs || [], diff: d.diff || null };
+  const snap = dsScrub(raw, words);
+  snap.patient = { sex: (d.patient || {}).sex || '', age: (d.patient || {}).age || '', ageYears: (d.patient || {}).ageYears || '', preg: !!(d.patient || {}).preg };
+  snap.vitals = Object.assign({}, d.vitals || {});
+  return { snap, title: dsScrub(String(c.title || ''), words) };
+}
+async function kqAskModal() {
+  const c = csSt().cur; if (!c) return;
+  const d = await kqLoad(true);
+  if (!d || !d.clinic) { toast(t('kqNoClinic'), 'bad', null, 7000); return; }
+  if (!d.clinic.paid) { toast(t('E_CLINIC_UNPAID'), 'bad', null, 7000); return; }
+  const others = d.members.filter(m => !m.me);
+  if (!others.length) { toast(t('kqNoOthers'), 'bad', null, 7000); return; }
+  const specs = Array.from(new Set(others.map(m => m.spec).filter(Boolean)));
+  openModal('<h3>' + esc(t('kqAskTitle')) + '</h3>' +
+    '<div class="field"><label>' + esc(t('kqAskWho')) + '</label><select id="kqTo">' + others.map(m => '<option value="u:' + esc(m.userId) + '">' + esc(m.name + (m.spec ? ' — ' + kqSpecName(m.spec) : '')) + '</option>').join('') +
+      specs.map(sp => '<option value="s:' + esc(sp) + '">' + esc(t('kqAskSpec') + ': ' + kqSpecName(sp)) + '</option>').join('') + '</select></div>' +
+    '<div class="field"><label>' + esc(t('kqAskQ')) + '</label><textarea id="kqQ" rows="4" maxlength="2000" placeholder="' + esc(t('kqAskQPh')) + '"></textarea></div>' +
+    '<div class="muted" style="margin-bottom:8px">🔒 ' + esc(t('kqAskNote')) + '</div>' +
+    (() => { const cs = kqClientSnap(c); return '<details class="card" style="margin-bottom:8px"><summary><b>' + esc(t('kqPreview')) + '</b></summary><div class="hint" style="display:block;margin:6px 0">' + esc(t('kqPrivWarn')) + '</div><div><b>' + esc(cs.title) + '</b></div>' + kqSnapHtml(cs.snap) + '</details>'; })() +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="kqSend">' + esc(t('kqSend')) + '</button></div>');
+}
+async function kqSend(btn) {
+  const c = csSt().cur; if (!c) return;
+  const to = ($('#kqTo') || {}).value || '', q = (($('#kqQ') || {}).value || '').trim();
+  const r = await busy(btn, async () => {
+    if (c.saveP) await c.saveP; else await csSave(c, true);
+    if (!c.ver) await csSave(c, true);
+    const cs = kqClientSnap(c);
+    return rpcA('shareCase', { caseId: c.id, snap: cs.snap, title: cs.title, toUser: to.indexOf('u:') === 0 ? to.slice(2) : '', toSpec: to.indexOf('s:') === 0 ? to.slice(2) : '', question: typeof aiClean === 'function' ? aiClean(q) : q });
+  });
+  if (!r) return;
+  closeModal(); toast(t('kqSent', { c: r.code }), '', null, 6000);
+  await kqLoad(true); kqRefreshHere();
+}
+/* ---------- подключение раздела ---------- */
+if (typeof csOpen === 'function') {
+  const oo = csOpen;
+  csOpen = async function () { const r = await oo.apply(this, arguments); if (isHelper()) kqLoad(true).then(kqRefreshHere); return r; };
+}
+(function () {
+  const segs = window.CLINIC_SEGS || [];
+  if (!segs.some(s => s[0] === 'team')) segs.push(['team', 'clSegTeam', () => isHelper()]);
+  window.CLINIC_SEGS = segs;
+  window.CLINIC_RENDER = Object.assign(window.CLINIC_RENDER || {}, { team: kqScreenHtml });
+  window.CLINIC_AFTER = Object.assign(window.CLINIC_AFTER || {}, { team: () => { const st = kqSt(); if (!st.data && !st.loading) kqLoad().then(kqRender); } });
+  // Pro через клинику — в строке тарифа
+  const opb = window.hpPlanBar;
+  if (typeof opb === 'function') {
+    hpPlanBar = function () {
+      const p = S.me && S.me.plan;
+      if (p && p.viaClinic) return '<div class="card" style="padding:10px 12px">' + esc(t('kqViaClinic', { n: p.clinicName || '', d: hpFmtD(p.until) })) + '</div>';
+      return opb.apply(this, arguments);
+    };
+  }
+})();
+Object.assign(H, {
+  kqCreate: async el => {
+    const name = (($('#kqNameIn') || {}).value || '').trim();
+    if (name.length < 3) return toast(t('E_NAME_REQUIRED'), 'bad');
+    const r = await busy(el, () => rpcA('clinicCreate', { name }));
+    if (r) { await kqLoad(true); kqRender(); }
+  },
+  kqJoin: async el => {
+    const code = (($('#kqCodeIn') || {}).value || '').trim().toUpperCase();
+    const r = await busy(el, () => rpcA('clinicJoin', { code }));
+    if (r) { await kqLoad(true); await hpRefreshPlan(); kqRender(); }
+  },
+  kqInvite: async el => {
+    const r = await busy(el, () => rpcA('clinicInvite', {}));
+    if (!r) return;
+    const txt = t('kqInviteTxt', { c: r.code });
+    openModal('<h3>' + esc(t('kqInvite')) + '</h3><div class="card" style="white-space:pre-wrap;font-size:16px">' + esc(txt) + '</div>' +
+      '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button><button class="btn primary" data-act="copyCreds" data-text="' + esc(txt) + '">' + esc(t('kqCopy')) + '</button></div>');
+  },
+  kqRemove: async el => {
+    if (!confirm(t('kqRemoveAsk', { n: el.dataset.n }))) return;
+    const r = await busy(el, () => rpcA('clinicRemove', { userId: el.dataset.id }));
+    if (r) { await kqLoad(true); kqRender(); }
+  },
+  kqLeave: async el => {
+    const d = kqSt().data;
+    if (!confirm(t(d && d.clinic && d.clinic.owner && d.members.length <= 1 ? 'kqLeaveOwnerAsk' : 'kqLeaveAsk'))) return;
+    const r = await busy(el, () => rpcA('clinicLeave', {}));
+    if (r) { await kqLoad(true); await hpRefreshPlan(); kqRender(); }
+  },
+  kqPay: async el => {
+    const r = await busy(el, () => rpcA('clinicInvoice', { plan: el.dataset.p }));
+    if (!r || !r.url) return;
+    const m = String(r.url).match(/^https:\/\/t\.me\/\$([A-Za-z0-9_-]+)$/) || String(r.url).match(/^https:\/\/t\.me\/invoice\/([A-Za-z0-9_-]+)$/);
+    if (TGW && m) tgPost('web_app_open_invoice', { slug: m[1] });
+    else window.open(r.url, '_blank');
+  },
+  kqOpen: el => kqOpen(el.dataset.id).then(() => { if (S.clSeg !== 'team') { S.clSeg = 'team'; renderClinic(); } }),
+  kqBack: () => { const st = kqSt(); st.view = 'list'; st.share = null; st.snap = null; kqLoad(true).then(kqRender); kqRender(); },
+  kqAnswer: async el => {
+    const st = kqSt(); const text = (($('#kqAnsIn') || {}).value || '').trim();
+    if (text.length < 2) return toast(t('E_REQUIRED'), 'bad');
+    const r = await busy(el, () => rpcA('shareAnswer', { id: st.share.id, text: typeof aiClean === 'function' ? aiClean(text) : text }));
+    if (r) { toast(t('kqAnswered')); await kqOpen(st.share.id); }
+  },
+  kqClose: async el => {
+    const st = kqSt();
+    const r = await busy(el, () => rpcA('shareClose', { id: st.share.id }));
+    if (r) await kqOpen(st.share.id);
+  },
+  kqOpenMine: el => { S.clSeg = 'cases'; renderClinic(); csOpen(el.dataset.id); },
+  kqTransfer: async el => {
+    if (!confirm(t('kqTransferAsk', { n: el.dataset.n }))) return;
+    const r = await busy(el, () => rpcA('clinicTransfer', { userId: el.dataset.id }));
+    if (r) { await kqLoad(true); kqRender(); }
+  },
+  kqTake: () => kqTake(),
+  kqAsk: () => kqAskModal(),
+  kqSend: el => kqSend(el)
+});
+// оплата клиники в Telegram — после закрытия окна оплаты обновить
+if (TGW && typeof hpInvoiceClosed === 'function') {
+  const oic = hpInvoiceClosed;
+  hpInvoiceClosed = async function (status) { if (S.screen === 'clinic' && S.clSeg === 'team' && status === 'paid') { toast(t('hpPaidWait'), '', null, 4000); for (let i = 0; i < 8; i++) { await new Promise(r => setTimeout(r, 2500)); const d = await kqLoad(true); if (d && d.clinic && d.clinic.paid) { await hpRefreshPlan(); kqRender(); return; } } return; } return oic.apply(this, arguments); };
+}
+
+/* ---------- главный админ: мини-клиники, подарок оплаты ---------- */
+Object.assign(I18N.ru, { kcTitle: '🏥 Мини-клиники', kcNone: 'Пока нет мини-клиник.', kcRow: '{m} из {s} врачей', kcGift: '🎁 Оплата', kcDays: 'На сколько дней оплатить клинику? (0 — снять)', kcSeats: 'Мест (врачей)', kcDone: 'Клиника оплачена до {d}', kcNoPay: 'не оплачена' });
+Object.assign(I18N.az, { kcTitle: '🏥 Mini-klinikalar', kcNone: 'Hələ mini-klinika yoxdur.', kcRow: '{m} / {s} həkim', kcGift: '🎁 Ödəniş', kcDays: 'Klinika neçə günlük ödənilsin? (0 — ləğv)', kcSeats: 'Yer (həkim)', kcDone: 'Klinika {d} tarixinədək ödənilib', kcNoPay: 'ödənilməyib' });
+async function kcOpen() {
+  let r = null;
+  try { r = await rpcA('clinicList', {}); } catch (e) { return; }
+  openModal('<h3>' + esc(t('kcTitle')) + ' (' + r.rows.length + ')</h3>' +
+    (r.rows.length ? r.rows.map(x => '<div class="list-row"><div class="grow"><b>' + esc(x.name) + '</b> · ' + esc(x.owner) + '<div class="muted">' + esc(t('kcRow', { m: x.members, s: x.seats })) + ' · ' + esc(x.paid ? t('hgPaid', { d: hpFmtD(x.until) }) : t('kcNoPay')) + '</div></div>' +
+      '<button class="btn small ghost" data-act="kcGift" data-id="' + esc(x.id) + '" data-s="' + esc(x.seats) + '">' + esc(t('kcGift')) + '</button></div>').join('') : '<div class="muted">' + esc(t('kcNone')) + '</div>') +
+    '<div class="acts"><button class="btn ghost" data-act="hgOpen">' + esc(t('hgTitle')) + '</button><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+}
+Object.assign(H, {
+  kcOpen: () => kcOpen(),
+  kcGift: el => {
+    openModal('<h3>' + esc(t('kcGift')) + '</h3><div class="field"><label>' + esc(t('kcDays')) + '</label><input type="number" id="hgDaysIn" min="0" max="366" value="30" inputmode="numeric"></div>' +
+      '<div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">' + [7, 14, 30, 90].map(n => '<button class="btn small ghost" data-act="hgPreset" data-n="' + n + '">' + n + '</button>').join('') + '</div>' +
+      '<div class="field"><label>' + esc(t('kcSeats')) + '</label><select id="kcSeatsIn"><option value="5"' + (el.dataset.s === '10' ? '' : ' selected') + '>5</option><option value="10"' + (el.dataset.s === '10' ? ' selected' : '') + '>10</option></select></div>' +
+      '<div class="acts"><button class="btn ghost" data-act="kcOpen">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="kcGiftGo" data-id="' + esc(el.dataset.id) + '">' + esc(t('save')) + '</button></div>');
+  },
+  kcGiftGo: async el => {
+    const days = Math.round(Number(($('#hgDaysIn') || {}).value));
+    if (!(days >= 0 && days <= 366)) return toast(t('E_BAD_INPUT'), 'bad');
+    const r = await busy(el, () => rpcA('clinicGift', { clinicId: el.dataset.id, days, seats: Number(($('#kcSeatsIn') || {}).value) }));
+    if (r) { toast(t('kcDone', { d: hpFmtD(r.until) })); kcOpen(); }
+  }
+});
+// кнопка в списке врачей «Помощника»
+if (typeof hgOpen === 'function') {
+  const ohg = hgOpen;
+  hgOpen = async function () {
+    await ohg.apply(this, arguments);
+    const acts = $('#modalRoot .acts');
+    if (acts && !acts.querySelector('[data-act=kcOpen]')) acts.insertAdjacentHTML('afterbegin', '<button class="btn ghost" data-act="kcOpen">' + esc(t('kcTitle')) + '</button>');
+  };
+}
 
 
 function init() {
