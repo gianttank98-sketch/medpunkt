@@ -797,11 +797,30 @@ function store(kind) {
 }
 const LS = store('localStorage');
 const SS = store('sessionStorage');
+/* v31: открыто внутри Telegram (Mini App) — данные запуска Telegram из адреса страницы (до того, как адрес очистится).
+ * В Telegram ключ сеанса не хранится на телефоне: только до закрытия окна (sessionStorage), вход — ПИН. */
+const TGW = (function () {
+  try {
+    if (!window.PWA_MODE) return null;
+    // только настоящий Telegram: мост приложения Telegram или окно внутри веб-версии Telegram (ссылка с #tgWebAppData в обычном браузере — не Telegram)
+    if (!(window.TelegramWebviewProxy || (window.external && 'notify' in window.external) || window.parent !== window)) return null;
+    const p = new URLSearchParams(String(location.hash || '').replace(/^#/, ''));
+    const init = p.get('tgWebAppData') || '';
+    if (init) {
+      const o = { init: init, plat: p.get('tgWebAppPlatform') || '', ver: p.get('tgWebAppVersion') || '', theme: p.get('tgWebAppThemeParams') || '' };
+      try { sessionStorage.setItem('MED_TGW', JSON.stringify(o)); } catch (e) { }
+      return o;
+    }
+    const s = JSON.parse(sessionStorage.getItem('MED_TGW') || 'null');
+    return s && s.init ? s : null;
+  } catch (e) { return null; }
+})();
+const SESS_ST = TGW ? SS : LS;
 
 const S = {
   lang: LS.get('MED2_LANG', 'ru'),
   base: null,
-  sess: LS.get('MED4_SESS', ''), me: LS.get('MED4_ME', null), storeId: LS.get('MED4_STORE', ''),
+  sess: SESS_ST.get('MED4_SESS', ''), me: LS.get('MED4_ME', null), storeId: LS.get('MED4_STORE', ''),
   view: null,
   queue: LS.get('MED2_QUEUE', []),
   failed: LS.get('MED2_FAILED', []),
@@ -987,10 +1006,12 @@ function rpc(action, payload, timeoutMs) {
   // ключ сеанса и склад — в каждом запросе (ключ не хранится в очереди операций)
   const p = Object.assign({}, payload || {});
   if (p.sess === undefined && S.sess) p.sess = S.sess;
+  if (TGW && p.sess) p.tgh = S.tgh || (S.tgh = sha256Hex('tglaunch:' + TGW.init)); // сеанс Telegram действует только в этом запуске окна
   if (p.storeId === undefined && S.storeId) p.storeId = S.storeId;
   const handle = v => {
     if (v && !v.ok && v.code === 'E_AUTH' && p.sess && p.sess === S.sess) setTimeout(onAuthLost, 0);
     if (v && !v.ok && v.code === 'E_MUST_CHANGE') setTimeout(() => changePasswordModal(true), 0);
+    if (v && !v.ok && v.code === 'E_TG_NEED_PW' && TGW && typeof tgElevateModal === 'function') setTimeout(tgElevateModal, 0); // Telegram: действие админа — после пароля
     if (v && !v.ok && v.code === 'E_NO_STORE_ACCESS' && p.storeId === S.storeId) setTimeout(reloadMeQuiet, 0);
     return v;
   };
@@ -1005,6 +1026,7 @@ function rpc(action, payload, timeoutMs) {
         if (done) return; done = true; clearTimeout(tm);
         if (v && !v.ok && v.code === 'E_AUTH' && p.sess && p.sess === S.sess) setTimeout(onAuthLost, 0);
         if (v && !v.ok && v.code === 'E_MUST_CHANGE') setTimeout(() => changePasswordModal(true), 0);
+    if (v && !v.ok && v.code === 'E_TG_NEED_PW' && TGW && typeof tgElevateModal === 'function') setTimeout(tgElevateModal, 0); // Telegram: действие админа — после пароля
         if (v && !v.ok && v.code === 'E_NO_STORE_ACCESS' && p.storeId === S.storeId) setTimeout(reloadMeQuiet, 0);
         resolve(v);
       })
@@ -3246,7 +3268,8 @@ function deviceName() {
 /* ---------- сеанс ---------- */
 function saveSession(sess, me) {
   S.sess = sess || ''; S.me = me || null;
-  if (S.sess) LS.set('MED4_SESS', S.sess); else LS.del('MED4_SESS');
+  if (S.sess) SESS_ST.set('MED4_SESS', S.sess); else SESS_ST.del('MED4_SESS');
+  if (TGW) LS.del('MED4_SESS'); // в Telegram ключ сеанса не остаётся на телефоне
   if (S.me) LS.set('MED4_ME', S.me); else LS.del('MED4_ME');
   if (window.PWA_MODE) pwaMirror();
 }
@@ -3308,7 +3331,7 @@ async function loginGo(btn) {
   const login = $('#liLogin').value.trim(), password = $('#liPw').value;
   if (!login || !password) return;
   let r;
-  try { r = await busy(btn, () => rpc('login', { login, password, device: deviceName() }), true); }
+  try { r = await busy(btn, () => rpc('login', { login, password, device: deviceName(), initData: TGW ? TGW.init : undefined }), true); }
   catch (e) { return toast(S.gas ? t('E_NETWORK') : t('E_NO_GAS'), 'bad'); }
   if (!r) return;
   if (!r.ok) { $('#liPw').value = ''; return toast(errText(r), 'bad'); }
@@ -6168,7 +6191,7 @@ async function kvGet(k) {
 function pwaMirror() {
   if (!PWA) return;
   const q = JSON.parse(JSON.stringify(S.queue));
-  const auth = S.sess && S.me ? { userId: S.me.id, sess: S.sess } : null;
+  const auth = !TGW && S.sess && S.me ? { userId: S.me.id, sess: S.sess } : null; // в Telegram ключ сеанса фоновому помощнику не отдаём
   kvSet('queue', q).then(() => kvSet('auth', auth)).then(() => kvSet('api', pwaApi())).then(() => kvSet('done', doneList().slice(-1000))).then(() => { if (q.length) pwaSyncRequest(); });
   pwaBadge();
 }
@@ -24266,7 +24289,7 @@ const I18N_V30 = {
     sigSec: '✍️ Подписи пальцем', sigSign: '✍️ Подписать', sigRedo: 'Переподписать', sigDone: 'подписано {at} (принял: {by})', sigClear: 'Стереть', sigSave: 'Сохранить подпись', sigEmpty: 'Распишитесь в рамке', sigFor: 'Подпись: {r}', sigNote: 'Подпись хранится в документе вместе со временем и тем, кто её принял. Бумажный экземпляр подписывается как обычно.', sigDel: 'Удалить подпись', sigDelAsk: 'Удалить эту подпись?', sigBy: 'принял: {by}', sigDropped: '✍️ Документ изменён после подписи — подписи сняты, подпишите заново', sigRoleWarn: '⚠️ подпись была поставлена в другой графе — проверьте', E_SIG_COPY: 'Эта подпись уже есть в другом документе — нужно расписаться заново',
     mgBtn: '📊 Сводка для руководства', mgTitle: 'Сводка для руководства', mgShift: 'Смена (сегодня)', mgWeek: '7 дней', mgMonth: 'Этот месяц', mgPrev: 'Прошлый месяц', mgFrom: 'С', mgTo: 'По', mgShow: 'Показать', mgPrivacy: '🔒 Только цифры: без ФИО, FİN и диагнозов конкретных людей (врачебная тайна). Классы болезней с 1–2 случаями объединены в «прочее».', mgVisits: 'Обращения', mgClosed: 'оформлено', mgTransfers: 'Переводы / эвакуации', mgInjuries: 'Травмы и отравления', mgTriage: 'Тяжесть (триаж)', mgOutcome: 'Исходы', mgIcd: 'Классы болезней (МКБ-10)', mgOther: 'прочее (1–2 случая)', mgNoIcd: 'без кода МКБ', mgDocs: 'Оформлено документов', mgStock: 'Расход препаратов (на пациентов)', mgStockSt: 'Склад сейчас: просрочено {e}, истекает за 30 дней {s}, не хватает {d}', mgDays: 'По дням', mgDoctors: 'Нагрузка по врачам', mgAi: '🤖 Вывод ИИ', mgAiTitle: 'Вывод', mgPrint: '🖨️ PDF / печать', mgNone: 'За период обращений нет', mgSmall: 'Обращений меньше 5 — подробности не показываются, чтобы по ним нельзя было узнать человека. Выберите период побольше.', mgAge: 'Возраст', mgSex: 'Пол',
     qaBtn: '🏅 Качество документации', qaTitle: 'Качество документации по врачам', qaDoctor: 'Врач', qaDocs: 'Документов', qaClosedPct: 'Закрыто', qaCompl: 'Полнота', qaAi: 'Оценка ИИ', qaOpenOld: 'Не закрыто > суток', qaEdits: 'Правок после закрытия', qaLate: 'Внесено задним числом', qaMiss: 'Чаще всего не заполнено', qaIssues: 'Замечания ИИ-проверки', qaHow: 'Полнота — доля обязательных полей, заполненных в документах и формах врача. Оценка ИИ — средний балл «🤖 Проверить качество документов» по его документам. Это для обучения, а не для наказания.', qaNone: 'За период документов нет',
-    tgBtn: '✈️ Telegram', tgTitle: 'Уведомления в Telegram', tgOff: 'Бот ещё не подключён главным админом.', tgMine: 'Мои напоминания', tgLinked: '✅ Ваш Telegram привязан — напоминания о незакрытых документах придут за час до конца смены.', tgLink: '🔗 Привязать мой Telegram', tgLinkGo: '1) Откройте бота и нажмите «Старт»:', tgLinkCheck: '2) Я нажал «Старт» — проверить', tgUnlink: 'Отвязать', tgAdmin: 'Настройка (главный админ)', tgToken: 'Токен бота (от @BotFather)', tgShiftEnd: 'Конец смены (час, 1–24)', tgPw: 'Пароль главного админа', tgSave: 'Сохранить', tgFind: '🔎 Я нажал «Старт» — найти мой чат', tgOwnerLink: '🔗 Подключить мой чат', tgFoundAsk: 'Найден чат: {n}. Это вы?', tgTest: '🔔 Проверить', tgHelp: 'Как подключить: в Telegram откройте @BotFather → /newbot → придумайте имя → скопируйте токен сюда → «Сохранить». Затем нажмите «Подключить мой чат», откройте бота по ссылке, нажмите «Старт» и «Найти мой чат». Сюда будут приходить: ошибки и отзывы сразу, утром — просрочка и дефицит, вечером — незакрытые документы. ФИО пациентов в Telegram не отправляются.', tgOwnerOn: '✅ Ваш чат найден — уведомления идут', tgOwnerNo: 'Чат главного админа ещё не найден', tgSent: 'Отправлено',
+    tgBtn: '✈️ Telegram', tgTitle: 'Уведомления в Telegram', tgOff: 'Бот ещё не подключён главным админом.', tgMine: 'Мои напоминания', tgLinked: '✅ Ваш Telegram привязан — напоминания о незакрытых документах придут за час до конца смены.', tgLink: '🔗 Привязать мой Telegram', tgLinkGo: '1) Откройте бота и нажмите «Старт»:', tgLinkCheck: '2) Я нажал «Старт» — проверить', tgUnlink: 'Отвязать', tgAdmin: 'Настройка (главный админ)', tgToken: 'Токен бота (от @BotFather)', tgShiftEnd: 'Конец смены (час, 1–24)', tgPw: 'Пароль главного админа', tgSave: 'Сохранить', tgFind: '🔎 Я нажал «Старт» — найти мой чат', tgOwnerLink: '🔗 Подключить мой чат', tgFoundAsk: 'Привязан Telegram: {n}. Если это не вы — сразу нажмите «Отвязать».', tgTest: '🔔 Проверить', tgHelp: 'Как подключить: в Telegram откройте @BotFather → /newbot → придумайте имя → скопируйте токен сюда → «Сохранить». Затем нажмите «Подключить мой чат», откройте бота по ссылке, нажмите «Старт» и «Найти мой чат». Сюда будут приходить: ошибки и отзывы сразу, утром — просрочка и дефицит, вечером — незакрытые документы. ФИО пациентов в Telegram не отправляются.', tgOwnerOn: '✅ Ваш чат найден — уведомления идут', tgOwnerNo: 'Чат главного админа ещё не найден', tgSent: 'Отправлено',
     rmTitle: '⏰ До конца смены ({h}:00) не закрыто: {n}', rmOpen: 'Открыть', rmLater: 'Позже', rmNotify: '🔔 Включить уведомления', rmFormLbl: 'Форма обращения',
     E_SIG_BAD: 'Подпись не сохранилась — попробуйте ещё раз', E_TG_TOKEN: 'Неверный токен бота', E_TG_OFF: 'Бот Telegram не подключён', E_TG_NO_START: 'Бот не видит «/start». Откройте бота по ссылке, нажмите «Старт» и попробуйте снова', E_TOO_MANY: 'Слишком много — удалите лишнее', E_TOO_BIG: 'Слишком большой объём', E_BAD_INPUT: 'Неверное значение', E_NOT_FOUND: 'Не найдено'
   },
@@ -24276,7 +24299,7 @@ const I18N_V30 = {
     sigSec: '✍️ Barmaqla imza', sigSign: '✍️ İmzala', sigRedo: 'Yenidən imzala', sigDone: '{at} imzalanıb (qəbul edib: {by})', sigClear: 'Pozmaq', sigSave: 'İmzanı saxla', sigEmpty: 'Çərçivədə imza atın', sigFor: 'İmza: {r}', sigNote: 'İmza vaxtı və onu qəbul edənlə birlikdə sənəddə saxlanılır. Kağız nüsxə adi qaydada imzalanır.', sigDel: 'İmzanı sil', sigDelAsk: 'Bu imza silinsin?', sigBy: 'qəbul edib: {by}', sigDropped: '✍️ Sənəd imzadan sonra dəyişib — imzalar silindi, yenidən imzalayın', sigRoleWarn: '⚠️ imza başqa qrafada qoyulub — yoxlayın', E_SIG_COPY: 'Bu imza artıq başqa sənəddə var — yenidən imza atmaq lazımdır',
     mgBtn: '📊 Rəhbərlik üçün xülasə', mgTitle: 'Rəhbərlik üçün xülasə', mgShift: 'Növbə (bu gün)', mgWeek: '7 gün', mgMonth: 'Bu ay', mgPrev: 'Keçən ay', mgFrom: 'Başlanğıc', mgTo: 'Son', mgShow: 'Göstər', mgPrivacy: '🔒 Yalnız rəqəmlər: ad-soyad, FİN və konkret adamların diaqnozları olmadan (həkim sirri). 1–2 halı olan xəstəlik sinifləri «digər»də birləşdirilib.', mgVisits: 'Müraciətlər', mgClosed: 'rəsmiləşdirilib', mgTransfers: 'Köçürmə / təxliyə', mgInjuries: 'Travma və zəhərlənmələr', mgTriage: 'Ağırlıq (triaj)', mgOutcome: 'Nəticələr', mgIcd: 'Xəstəlik sinifləri (XBT-10)', mgOther: 'digər (1–2 hal)', mgNoIcd: 'XBT kodu olmadan', mgDocs: 'Rəsmiləşdirilmiş sənədlər', mgStock: 'Dərman sərfi (pasiyentlərə)', mgStockSt: 'Anbar indi: vaxtı keçib {e}, 30 gündə bitir {s}, çatışmır {d}', mgDays: 'Günlər üzrə', mgDoctors: 'Həkimlər üzrə yük', mgAi: '🤖 Sİ nəticəsi', mgAiTitle: 'Nəticə', mgPrint: '🖨️ PDF / çap', mgNone: 'Dövr ərzində müraciət yoxdur', mgSmall: 'Müraciət 5-dən azdır — adamı tanımaq olmasın deyə təfərrüat göstərilmir. Daha uzun dövr seçin.', mgAge: 'Yaş', mgSex: 'Cins',
     qaBtn: '🏅 Sənədləşmənin keyfiyyəti', qaTitle: 'Həkimlər üzrə sənədləşmənin keyfiyyəti', qaDoctor: 'Həkim', qaDocs: 'Sənəd', qaClosedPct: 'Bağlanıb', qaCompl: 'Tamlıq', qaAi: 'Sİ qiyməti', qaOpenOld: 'Bir gündən çox bağlanmayıb', qaEdits: 'Bağlandıqdan sonra düzəliş', qaLate: 'Gecikmiş qeyd', qaMiss: 'Ən çox doldurulmayan', qaIssues: 'Sİ yoxlamasının qeydləri', qaHow: 'Tamlıq — həkimin sənəd və formalarında doldurulmuş məcburi sahələrin payı. Sİ qiyməti — «🤖 Sənədlərin keyfiyyətini yoxla» üzrə orta bal. Bu öyrənmək üçündür, cəza üçün yox.', qaNone: 'Dövr ərzində sənəd yoxdur',
-    tgBtn: '✈️ Telegram', tgTitle: 'Telegram bildirişləri', tgOff: 'Bot hələ baş admin tərəfindən qoşulmayıb.', tgMine: 'Mənim xatırlatmalarım', tgLinked: '✅ Telegram-ınız bağlıdır — bağlanmamış sənədlər barədə xatırlatma növbənin bitməsinə bir saat qalmış gələcək.', tgLink: '🔗 Telegram-ımı bağla', tgLinkGo: '1) Botu açın və «Start» basın:', tgLinkCheck: '2) «Start» basdım — yoxla', tgUnlink: 'Ayır', tgAdmin: 'Ayarlar (baş admin)', tgToken: 'Bot tokeni (@BotFather-dan)', tgShiftEnd: 'Növbənin sonu (saat, 1–24)', tgPw: 'Baş adminin parolu', tgSave: 'Saxla', tgFind: '🔎 «Start» basdım — çatımı tap', tgOwnerLink: '🔗 Çatımı qoş', tgFoundAsk: 'Çat tapıldı: {n}. Bu sizsiniz?', tgTest: '🔔 Yoxla', tgHelp: 'Necə qoşmaq: Telegram-da @BotFather → /newbot → ad seçin → tokeni bura köçürün → «Saxla». Sonra «Çatımı qoş» basın, botu linklə açın, «Start» və «Çatımı tap» basın. Bura gələcək: səhvlər və rəylər dərhal, səhər — vaxtı keçmiş və çatışmayan, axşam — bağlanmamış sənədlər. Pasiyentlərin adları Telegram-a göndərilmir.', tgOwnerOn: '✅ Çatınız tapılıb — bildirişlər gedir', tgOwnerNo: 'Baş adminin çatı hələ tapılmayıb', tgSent: 'Göndərildi',
+    tgBtn: '✈️ Telegram', tgTitle: 'Telegram bildirişləri', tgOff: 'Bot hələ baş admin tərəfindən qoşulmayıb.', tgMine: 'Mənim xatırlatmalarım', tgLinked: '✅ Telegram-ınız bağlıdır — bağlanmamış sənədlər barədə xatırlatma növbənin bitməsinə bir saat qalmış gələcək.', tgLink: '🔗 Telegram-ımı bağla', tgLinkGo: '1) Botu açın və «Start» basın:', tgLinkCheck: '2) «Start» basdım — yoxla', tgUnlink: 'Ayır', tgAdmin: 'Ayarlar (baş admin)', tgToken: 'Bot tokeni (@BotFather-dan)', tgShiftEnd: 'Növbənin sonu (saat, 1–24)', tgPw: 'Baş adminin parolu', tgSave: 'Saxla', tgFind: '🔎 «Start» basdım — çatımı tap', tgOwnerLink: '🔗 Çatımı qoş', tgFoundAsk: 'Telegram bağlandı: {n}. Bu siz deyilsinizsə — dərhal «Ayır» basın.', tgTest: '🔔 Yoxla', tgHelp: 'Necə qoşmaq: Telegram-da @BotFather → /newbot → ad seçin → tokeni bura köçürün → «Saxla». Sonra «Çatımı qoş» basın, botu linklə açın, «Start» və «Çatımı tap» basın. Bura gələcək: səhvlər və rəylər dərhal, səhər — vaxtı keçmiş və çatışmayan, axşam — bağlanmamış sənədlər. Pasiyentlərin adları Telegram-a göndərilmir.', tgOwnerOn: '✅ Çatınız tapılıb — bildirişlər gedir', tgOwnerNo: 'Baş adminin çatı hələ tapılmayıb', tgSent: 'Göndərildi',
     rmTitle: '⏰ Növbənin sonuna qədər ({h}:00) bağlanmayıb: {n}', rmOpen: 'Aç', rmLater: 'Sonra', rmNotify: '🔔 Bildirişləri aç', rmFormLbl: 'Müraciət forması',
     E_SIG_BAD: 'İmza saxlanmadı — yenidən cəhd edin', E_TG_TOKEN: 'Bot tokeni səhvdir', E_TG_OFF: 'Telegram botu qoşulmayıb', E_TG_NO_START: 'Bot «/start» görmür. Botu linklə açın, «Start» basın və yenidən cəhd edin', E_TOO_MANY: 'Çox çoxdur — artığını silin', E_TOO_BIG: 'Həcm çox böyükdür', E_BAD_INPUT: 'Yanlış dəyər', E_NOT_FOUND: 'Tapılmadı'
   }
@@ -24854,7 +24877,7 @@ Object.assign(H, {
   qaShow: el => qaLoad(el),
   tgOpen: () => tgOpen(),
   tgLink: el => tgLink(el),
-  tgLinkCheck: async el => { const r = await busy(el, () => rpcA('tgLinkCheck', {})); if (r) tgOpen(); },
+  tgLinkCheck: async el => { const r = await busy(el, () => rpcA('tgLinkCheck', {})); if (r) { toast(t('tgFoundAsk', { n: r.name || '?' }), '', null, 9000); tgOpen(); } },
   tgUnlink: async el => { const r = await busy(el, () => rpcA('tgUnlink', {})); if (r) tgOpen(); },
   tgSave: async el => {
     const p = { password: ($('#tgPwIn') || {}).value || '', shiftEnd: Number(($('#tgEndIn') || {}).value) || 20 };
@@ -24873,6 +24896,319 @@ Object.assign(H, {
   rmLater: () => { RM.dismissed = mgDay(0); rmRender(); },
   rmGo: el => rmGo(el.dataset.kind, el.dataset.id),
   rmNotify: async () => { try { await Notification.requestPermission(); } catch (e) { } rmRender(); }
+});
+
+/* =====================================================================
+ * v31: приложение внутри Telegram (Mini App): вход «Telegram + ПИН», кнопка «Назад», ссылки; ПИН в профиле;
+ *  включение команд бота (главный админ). Сторонний скрипт Telegram не подключается — связь с Telegram своя, минимальная.
+ * ===================================================================== */
+const I18N_V31 = {
+  ru: {
+    tgwTitle: 'Вход через Telegram', tgwHint: 'Введите ваш ПИН. Задать его можно в приложении: Профиль → ✈️ Telegram.', tgwPin: 'ПИН', tgwGo: 'Войти',
+    tgwUsePw: 'Войти по логину и паролю', tgwUseTg: '← Вход по ПИНу', tgwInfo: 'Вы в приложении внутри Telegram. Данные пациентов идут прямо на ваш сервер — Telegram их не видит. Вход закрывается сам: при закрытии окна, если окно свёрнуто дольше 5 минут, и через 6 часов.',
+    tgPinCard: 'Вход в приложение внутри Telegram', tgPinOn: '✅ ПИН задан — в Telegram откройте бота → «📱 Приложение» → ПИН.', tgPinOff: 'ПИН не задан — в Telegram приложение откроется только по логину и паролю.',
+    tgPinLocked: '⛔ ПИН заблокирован после 10 ошибок. Задайте новый ПИН.', tgPinNeedLink: 'Сначала привяжите свой Telegram (кнопка выше).',
+    tgPinSet: '🔢 Задать ПИН', tgPinChange: '🔢 Сменить ПИН', tgPinDel: 'Убрать ПИН', tgPinNew: 'Новый ПИН ({min}–8 цифр)', tgPinRep: 'Повторите ПИН', tgPinPw: 'Пароль от приложения (для подтверждения)',
+    tgPinMismatch: 'ПИНы не совпадают', tgPinSaved: 'ПИН сохранён. Прежние входы через Telegram закрыты.', tgPinDelAsk: 'Убрать ПИН? Вход через Telegram будет только по паролю.',
+    tgOpenBot: '✈️ Открыть бота', tgBotCard: 'Команды бота и приложение в Telegram', tgBotOn: '✅ Включены: кнопка «📱 Приложение», команды ⚠️ Критичные, 📦 Остатки, 📄 Мои документы.',
+    tgBotOff: 'Выключены. Нужен сервер скорости ИИ новой версии (ai-edge.js 9.15).', tgBotEnable: 'Включить', tgBotDisable: 'Выключить', tgBotNoEdge: 'Сначала подключите сервер скорости ИИ (⚙️ Настройки ИИ).',
+    tgInTg: 'Вы сейчас в Telegram', tgNoPrint: 'В Telegram печать может не работать — для печати откройте обычное приложение.',
+    E_TG_INIT: 'Telegram не подтвердил вход. Закройте окно и откройте приложение из бота заново.', E_TG_INIT_OLD: 'Окно открыто слишком давно. Закройте его и откройте приложение из бота заново.',
+    E_TG_NOT_LINKED: 'Этот Telegram не привязан к вашему пользователю. Войдите по паролю → Профиль → ✈️ Telegram → «Привязать».',
+    E_TG_NO_PIN: 'ПИН не задан. Войдите по паролю → Профиль → ✈️ Telegram → «Задать ПИН».', E_TG_PIN_LOCKED: 'ПИН заблокирован после 10 ошибок. Войдите по паролю и задайте новый ПИН.',
+    E_BAD_PIN: 'Неверный ПИН. Осталось попыток: {left}.', E_TG_USE_PW: 'Нужно сменить временный пароль — войдите по логину и паролю.', E_TG_TAKEN: 'Этот Telegram уже привязан к другому пользователю.',
+    E_TG_NEED_PW: 'Действие администратора в Telegram — подтвердите паролем.', E_TG_NOT_ALLOWED: 'Приложение в Telegram вам не включено. Обратитесь к администратору (Пользователи → ваша карточка → Telegram).',
+    tgElevTitle: '🔐 Подтвердите паролем', tgElevHint: 'Действия администратора (пользователи, права, пароли, склады, настройки) в Telegram — после пароля, на 30 минут и только в этом окне.', tgElevGo: 'Подтвердить', tgElevOk: 'Подтверждено на 30 минут — повторите действие.',
+    tgaTitle: 'Telegram', tgaApp: '📱 Приложение в Telegram (вход по ПИНу)', tgaLow: '⚠️ Критичные (просрочка, срок, дефицит)', tgaStock: '📦 Остатки препаратов', tgaDocs: '📄 Мои незакрытые документы', tgaRemind: '⏰ Вечерние напоминания',
+    tgaHint: 'По умолчанию всё выключено. Внутри приложения в Telegram действуют обычные права склада (выше).', tgaState: 'Telegram: {l}, ПИН: {p}', tgaYes: 'привязан', tgaNo: 'не привязан', tgaPinYes: 'задан', tgaPinNo: 'нет', tgaOwner: 'Главному админу в Telegram доступно всё.',
+    tgAccMine: 'Вам включено в Telegram: {l}', tgAccNone: 'Администратор ещё не включил вам Telegram (приложение, команды, напоминания).', E_USE_CHANGE_PW: 'Свой пароль меняйте через «Сменить пароль» (нужен старый пароль).',
+    E_PIN_FORMAT: 'ПИН — только цифры, от {min} до 8.', E_PIN_WEAK: 'Слишком простой ПИН (одинаковые цифры или подряд). Выберите другой.',
+    E_EDGE_OLD: 'Сервер скорости старой версии: вставьте в Cloudflare новый ai-edge.js и нажмите «Deploy».', E_TG_HOOK: 'Telegram не принял настройку — попробуйте ещё раз.', E_EDGE_OFF: 'Сервер скорости ИИ не подключён.'
+  },
+  az: {
+    tgwTitle: 'Telegram ilə giriş', tgwHint: 'PİN-inizi daxil edin. Onu tətbiqdə təyin etmək olar: Profil → ✈️ Telegram.', tgwPin: 'PİN', tgwGo: 'Daxil ol',
+    tgwUsePw: 'Login və şifrə ilə daxil ol', tgwUseTg: '← PİN ilə giriş', tgwInfo: 'Siz Telegram daxilindəki tətbiqdəsiniz. Pasiyent məlumatları birbaşa serverinizə gedir — Telegram onları görmür. Giriş özü bağlanır: pəncərə bağlananda, 5 dəqiqədən çox kiçildiləndə və 6 saatdan sonra.',
+    tgPinCard: 'Telegram daxilində tətbiqə giriş', tgPinOn: '✅ PİN təyin olunub — Telegram-da botu açın → «📱 Tətbiq» → PİN.', tgPinOff: 'PİN təyin olunmayıb — Telegram-da tətbiq yalnız login və şifrə ilə açılacaq.',
+    tgPinLocked: '⛔ PİN 10 səhvdən sonra bloklanıb. Yeni PİN təyin edin.', tgPinNeedLink: 'Əvvəlcə Telegram-ınızı bağlayın (yuxarıdakı düymə).',
+    tgPinSet: '🔢 PİN təyin et', tgPinChange: '🔢 PİN-i dəyiş', tgPinDel: 'PİN-i sil', tgPinNew: 'Yeni PİN ({min}–8 rəqəm)', tgPinRep: 'PİN-i təkrarlayın', tgPinPw: 'Tətbiqin şifrəsi (təsdiq üçün)',
+    tgPinMismatch: 'PİN-lər uyğun gəlmir', tgPinSaved: 'PİN saxlanıldı. Telegram ilə əvvəlki girişlər bağlandı.', tgPinDelAsk: 'PİN silinsin? Telegram ilə giriş yalnız şifrə ilə olacaq.',
+    tgOpenBot: '✈️ Botu aç', tgBotCard: 'Botun əmrləri və Telegram-da tətbiq', tgBotOn: '✅ Aktivdir: «📱 Tətbiq» düyməsi, ⚠️ Kritik, 📦 Qalıq, 📄 Sənədlərim əmrləri.',
+    tgBotOff: 'Söndürülüb. Süni intellekt sürət serverinin yeni versiyası lazımdır (ai-edge.js 9.15).', tgBotEnable: 'Aktiv et', tgBotDisable: 'Söndür', tgBotNoEdge: 'Əvvəlcə süni intellekt sürət serverini qoşun (⚙️ Süni intellekt ayarları).',
+    tgInTg: 'Siz indi Telegram-dasınız', tgNoPrint: 'Telegram-da çap işləməyə bilər — çap üçün adi tətbiqi açın.',
+    E_TG_INIT: 'Telegram girişi təsdiqləmədi. Pəncərəni bağlayın və tətbiqi botdan yenidən açın.', E_TG_INIT_OLD: 'Pəncərə çox əvvəl açılıb. Bağlayın və tətbiqi botdan yenidən açın.',
+    E_TG_NOT_LINKED: 'Bu Telegram istifadəçinizə bağlı deyil. Şifrə ilə daxil olun → Profil → ✈️ Telegram → «Bağla».',
+    E_TG_NO_PIN: 'PİN təyin olunmayıb. Şifrə ilə daxil olun → Profil → ✈️ Telegram → «PİN təyin et».', E_TG_PIN_LOCKED: 'PİN 10 səhvdən sonra bloklanıb. Şifrə ilə daxil olun və yeni PİN təyin edin.',
+    E_BAD_PIN: 'PİN yanlışdır. Qalan cəhd: {left}.', E_TG_USE_PW: 'Müvəqqəti şifrəni dəyişmək lazımdır — login və şifrə ilə daxil olun.', E_TG_TAKEN: 'Bu Telegram artıq başqa istifadəçiyə bağlıdır.',
+    E_TG_NEED_PW: 'Telegram-da administrator əməliyyatı — şifrə ilə təsdiqləyin.', E_TG_NOT_ALLOWED: 'Telegram-da tətbiq sizə açılmayıb. Administratora müraciət edin (İstifadəçilər → kartınız → Telegram).',
+    tgElevTitle: '🔐 Şifrə ilə təsdiqləyin', tgElevHint: 'Telegram-da administrator əməliyyatları (istifadəçilər, hüquqlar, şifrələr, anbarlar, ayarlar) — şifrədən sonra, 30 dəqiqəlik və yalnız bu pəncərədə.', tgElevGo: 'Təsdiqlə', tgElevOk: '30 dəqiqəlik təsdiqləndi — əməliyyatı təkrarlayın.',
+    tgaTitle: 'Telegram', tgaApp: '📱 Telegram-da tətbiq (PİN ilə giriş)', tgaLow: '⚠️ Kritik (vaxtı keçmiş, bitən, çatışmayan)', tgaStock: '📦 Dərman qalıqları', tgaDocs: '📄 Bağlanmamış sənədlərim', tgaRemind: '⏰ Axşam xatırlatmaları',
+    tgaHint: 'Standart olaraq hamısı söndürülüb. Telegram-dakı tətbiqdə adi anbar hüquqları (yuxarıda) qüvvədədir.', tgaState: 'Telegram: {l}, PİN: {p}', tgaYes: 'bağlıdır', tgaNo: 'bağlı deyil', tgaPinYes: 'var', tgaPinNo: 'yox', tgaOwner: 'Baş adminə Telegram-da hər şey açıqdır.',
+    tgAccMine: 'Telegram-da sizə açıq: {l}', tgAccNone: 'Administrator hələ sizə Telegram-ı açmayıb (tətbiq, əmrlər, xatırlatmalar).', E_USE_CHANGE_PW: 'Öz şifrənizi «Şifrəni dəyiş» ilə dəyişin (köhnə şifrə lazımdır).',
+    E_PIN_FORMAT: 'PİN — yalnız rəqəmlər, {min}-dən 8-ə qədər.', E_PIN_WEAK: 'PİN çox sadədir (eyni və ya ardıcıl rəqəmlər). Başqasını seçin.',
+    E_EDGE_OLD: 'Sürət serveri köhnə versiyadadır: Cloudflare-ə yeni ai-edge.js yapışdırın və «Deploy» basın.', E_TG_HOOK: 'Telegram ayarı qəbul etmədi — yenidən cəhd edin.', E_EDGE_OFF: 'Süni intellekt sürət serveri qoşulmayıb.'
+  }
+};
+Object.assign(I18N.ru, I18N_V31.ru);
+Object.assign(I18N.az, I18N_V31.az);
+
+/* ---------- связь с Telegram (без стороннего скрипта) ---------- */
+const TGB = { back: [], modal: false };
+const TG_WEB_ORIGIN = 'https://web.telegram.org'; // веб-версия Telegram — только ей (ссылки и события не уходят чужой странице-обёртке)
+const TG_IDLE_MS = 5 * 60 * 1000;
+function tgPost(ev, data) {
+  if (!TGW) return;
+  const js = JSON.stringify(data || {});
+  try {
+    if (window.TelegramWebviewProxy && typeof window.TelegramWebviewProxy.postEvent === 'function') { window.TelegramWebviewProxy.postEvent(ev, js); return; }
+    if (window.external && 'notify' in window.external) { window.external.notify(JSON.stringify({ eventType: ev, eventData: data || {} })); return; }
+    if (window.parent && window.parent !== window) window.parent.postMessage(JSON.stringify({ eventType: ev, eventData: data || {} }), TG_WEB_ORIGIN);
+  } catch (e) { }
+}
+function tgOnEvent(type) {
+  if (type === 'back_button_pressed') {
+    if ($('#modalRoot') && $('#modalRoot').innerHTML) closeModal();
+    tgBackSync();
+  }
+}
+function tgBackSync() {
+  const open = !!($('#modalRoot') && $('#modalRoot').innerHTML);
+  if (open === TGB.modal) return;
+  TGB.modal = open;
+  tgPost('web_app_setup_back_button', { is_visible: open });
+}
+/** Ссылки в Telegram: свои ссылки t.me — внутри Telegram, остальные — во внешнем браузере (окно Mini App не закрывается). */
+function tgOpenLink(url) {
+  url = String(url || '');
+  if (/^https:\/\/t\.me\//i.test(url)) { tgPost('web_app_open_tg_link', { path_full: url.replace(/^https:\/\/t\.me/i, '') }); return true; }
+  if (/^https?:\/\//i.test(url)) { tgPost('web_app_open_link', { url: url }); return true; }
+  return false;
+}
+if (TGW) {
+  // события от Telegram: мобильные приложения вызывают Telegram.WebView.receiveEvent, веб-версия — postMessage от родителя
+  window.Telegram = window.Telegram || {};
+  window.Telegram.WebView = Object.assign(window.Telegram.WebView || {}, { receiveEvent: (type) => tgOnEvent(String(type || '')) });
+  window.addEventListener('message', e => {
+    if (e.source !== window.parent || e.origin !== TG_WEB_ORIGIN) return;
+    let d = null;
+    try { d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch (er) { return; }
+    if (d && d.eventType) tgOnEvent(String(d.eventType));
+  });
+  document.body.classList.add('in-tg');
+  // в Telegram: ключ обычного входа и ключ для фонового помощника на этом телефоне не держим
+  LS.del('MED4_SESS');
+  try { kvSet('auth', null); } catch (e) { }
+  // окно свёрнуто дольше 5 минут — вход закрывается (телефон могли взять в руки другие)
+  const idleLock = () => {
+    const at = Number(SS.get('MED_TG_HIDDEN', 0)) || 0;
+    SS.del('MED_TG_HIDDEN');
+    if (at && Date.now() - at > TG_IDLE_MS && S.sess) {
+      const sess = S.sess;
+      rpc('logout', { sess: sess }).catch(() => { });
+      onAuthLost();
+    }
+  };
+  document.addEventListener('visibilitychange', () => { if (document.hidden) SS.set('MED_TG_HIDDEN', Date.now()); else idleLock(); });
+  idleLock();
+  tgPost('web_app_ready');
+  tgPost('web_app_expand');
+  tgPost('web_app_setup_closing_behavior', { need_confirmation: true }); // случайный свайп вниз не потеряет набранное
+  tgPost('web_app_set_header_color', { color: '#1f5fbf' });
+  // кнопка «Назад» Telegram — закрывает открытое окно
+  const oo = window.openModal, oc = window.closeModal;
+  window.openModal = function () { const r = oo.apply(this, arguments); tgBackSync(); return r; };
+  window.closeModal = function () { const r = oc.apply(this, arguments); tgBackSync(); return r; };
+  const ow = window.open;
+  window.open = function (url) { if (tgOpenLink(url)) return null; return ow ? ow.apply(window, arguments) : null; };
+  document.addEventListener('click', e => {
+    const a = e.target.closest && e.target.closest('a[href]');
+    if (!a) return;
+    const href = a.getAttribute('href') || '';
+    if (a.target === '_blank' || /^https:\/\/(t\.me|wa\.me)\//i.test(href)) { if (tgOpenLink(a.href)) e.preventDefault(); }
+  }, true);
+  setTimeout(() => toast(t('tgwInfo'), '', null, 7000), 1200);
+}
+
+/* ---------- экран входа в Telegram ---------- */
+(function () {
+  const origRender = window.renderLogin;
+  window.renderLogin = async function (msg) {
+    if (!TGW || S.tgUsePw || !window.PWA_MODE || !pwaApi() || S.pwaApiEdit || S.setupNeeded) {
+      const r = await origRender.apply(this, arguments);
+      // на экране пароля в Telegram — вернуться к ПИНу
+      const card = $('#loginBox .login-card');
+      if (TGW && S.tgUsePw && card && card.querySelector('#liLogin') && !card.querySelector('[data-act=tgwUseTg]')) card.insertAdjacentHTML('beforeend', '<button class="btn small ghost block" style="margin-top:8px" data-act="tgwUseTg">' + esc(t('tgwUseTg')) + '</button>');
+      return r;
+    }
+    const box = $('#loginBox');
+    const mine = S.queue.length ? '<div class="info">' + esc(t('queueWaitsLogin', { n: S.queue.length })) + '</div>' : '';
+    box.innerHTML = '<div class="card login-card"><div class="login-logo">✈️</div><h2 class="scr" style="text-align:center">' + esc(t('tgwTitle')) + '</h2>' +
+      (msg ? '<div class="info">' + esc(msg) + '</div>' : '') + mine +
+      '<div class="muted" style="margin-bottom:10px;text-align:center">' + esc(t('tgwHint')) + '</div>' +
+      '<div class="field"><label>' + esc(t('tgwPin')) + '</label><input type="password" id="tgwPin" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" style="font-size:24px;letter-spacing:6px;text-align:center"></div>' +
+      '<button class="btn primary block" data-act="tgwGo">' + esc(t('tgwGo')) + '</button>' +
+      '<button class="btn small ghost block" style="margin-top:14px" data-act="tgwUsePw">' + esc(t('tgwUsePw')) + '</button></div>';
+    const pin = $('#tgwPin');
+    pin.addEventListener('keydown', e => { if (e.key === 'Enter') tgwGo($('[data-act=tgwGo]')); });
+    setTimeout(() => pin.focus(), 50);
+  };
+})();
+async function tgwGo(btn) {
+  const pin = ($('#tgwPin').value || '').trim();
+  if (!/^\d{6,8}$/.test(pin)) return toast(t('E_PIN_FORMAT', { min: 6 }), 'bad');
+  let r;
+  try { r = await busy(btn, () => rpc('tgLogin', { initData: TGW.init, pin: pin, device: deviceName() }), true); }
+  catch (e) { return toast(S.gas ? t('E_NETWORK') : t('E_NO_GAS'), 'bad'); }
+  if (!r) return;
+  const inp = $('#tgwPin'); if (inp) inp.value = '';
+  if (!r.ok) {
+    toast(errText(r), 'bad', null, 7000);
+    if (r.code === 'E_TG_USE_PW' || r.code === 'E_TG_NOT_LINKED' || r.code === 'E_TG_NO_PIN' || r.code === 'E_TG_PIN_LOCKED') { S.tgUsePw = true; renderLogin(errText(r)); }
+    return;
+  }
+  afterLogin(r);
+}
+
+/* ---------- профиль → Telegram: ПИН; главный админ — команды бота ---------- */
+(function () {
+  const origTgOpen = window.tgOpen;
+  if (typeof origTgOpen !== 'function') return;
+  window.tgOpen = async function () {
+    await origTgOpen.apply(this, arguments);
+    const st = S.tg || {};
+    const m = $('.modal');
+    if (!m || !st.on) return;
+    const min = 6;
+    let h = '<div class="card" style="margin-top:10px" id="tgPinCard"><div class="lbl">' + esc(t('tgPinCard')) + '</div>';
+    if (st.inTg) h += '<div class="muted">✈️ ' + esc(t('tgInTg')) + '</div>';
+    const acc = st.acc || {};
+    const accL = [['app', 'tgaApp'], ['low', 'tgaLow'], ['stock', 'tgaStock'], ['docs', 'tgaDocs'], ['remind', 'tgaRemind']].filter(x => acc[x[0]]).map(x => t(x[1]));
+    h += '<div class="muted" style="margin:4px 0">' + esc(accL.length ? t('tgAccMine', { l: accL.join('; ') }) : t('tgAccNone')) + '</div>';
+    if (!st.linked) h += '<div class="muted">' + esc(t('tgPinNeedLink')) + '</div>';
+    else if (acc.app) {
+      h += '<div class="' + (st.pin && !st.pinLocked ? 'info' : 'muted') + '">' + esc(st.pinLocked ? t('tgPinLocked') : st.pin ? t('tgPinOn') : t('tgPinOff')) + '</div>' +
+        '<div id="tgPinBox"></div><div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn small primary" data-act="tgPinForm" data-min="' + min + '">' + esc(st.pin ? t('tgPinChange') : t('tgPinSet')) + '</button>' +
+        (st.pin ? '<button class="btn small ghost" data-act="tgPinDel">' + esc(t('tgPinDel')) + '</button>' : '') +
+        (st.bot ? '<a class="btn small ghost" style="display:inline-flex;align-items:center;text-decoration:none" target="_blank" rel="noopener" href="https://t.me/' + esc(encodeURIComponent(st.bot)) + '">' + esc(t('tgOpenBot')) + '</a>' : '') + '</div>';
+    }
+    h += '</div>';
+    const adm = m.querySelector('.card');
+    if (adm) adm.insertAdjacentHTML('beforebegin', h); else { const a0 = m.querySelector('.acts:last-of-type'); if (a0) a0.insertAdjacentHTML('beforebegin', h); else m.insertAdjacentHTML('beforeend', h); }
+    h = '';
+    if (isSuper()) {
+      h += '<div class="card" style="margin-top:10px"><div class="lbl">' + esc(t('tgBotCard')) + '</div>' +
+        '<div class="' + (st.hook ? 'info' : 'muted') + '">' + esc(st.hook ? t('tgBotOn') : st.edge ? t('tgBotOff') : t('tgBotNoEdge')) + '</div>' +
+        '<div class="muted" style="margin:4px 0">' + esc(t('tgPw')) + ' ↑</div>' +
+        '<div class="row" style="gap:6px;flex-wrap:wrap">' + (st.hook ? '<button class="btn small ghost" data-act="tgBotSet" data-on="0">' + esc(t('tgBotDisable')) + '</button>' : (st.edge ? '<button class="btn small primary" data-act="tgBotSet" data-on="1">' + esc(t('tgBotEnable')) + '</button>' : '')) + '</div></div>';
+    }
+    if (h) { const acts = m.querySelector('.acts:last-of-type'); if (acts) acts.insertAdjacentHTML('beforebegin', h); else m.insertAdjacentHTML('beforeend', h); }
+  };
+})();
+function tgPinForm(btn) {
+  const min = Number(btn.dataset.min) || 4;
+  const box = $('#tgPinBox'); if (!box) return;
+  box.innerHTML = '<div class="field"><label>' + esc(t('tgPinNew', { min: min })) + '</label><input type="password" id="tgPin1" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off"></div>' +
+    '<div class="field"><label>' + esc(t('tgPinRep')) + '</label><input type="password" id="tgPin2" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off"></div>' +
+    '<div class="field"><label>' + esc(t('tgPinPw')) + '</label><input type="password" id="tgPinPw" autocomplete="current-password"></div>' +
+    '<button class="btn small primary" data-act="tgPinSave" data-min="' + min + '">' + esc(t('save')) + '</button>';
+  setTimeout(() => { const i = $('#tgPin1'); const a = document.activeElement; if (i && !(a && /^(INPUT|TEXTAREA)$/.test(a.tagName))) i.focus(); }, 30);
+}
+async function tgPinSave(btn) {
+  const p1 = ($('#tgPin1').value || '').trim(), p2 = ($('#tgPin2').value || '').trim(), pw = $('#tgPinPw').value || '';
+  const min = Number(btn.dataset.min) || 4;
+  if (!/^\d+$/.test(p1) || p1.length < min || p1.length > 8) return toast(t('E_PIN_FORMAT', { min: min }), 'bad');
+  if (p1 !== p2) return toast(t('tgPinMismatch'), 'bad');
+  if (!pw) return toast(t('tgPinPw'), 'bad');
+  const r = await busy(btn, () => rpcA('tgPinSet', { pin: p1, password: pw }));
+  ['#tgPin1', '#tgPin2', '#tgPinPw'].forEach(s => { const i = $(s); if (i) i.value = ''; });
+  if (!r) return;
+  toast(t('tgPinSaved'), '', null, 6000);
+  if (S.tg && S.tg.inTg) return onAuthLost(); // свой сеанс Telegram тоже закрыт — войти новым ПИНом
+  tgOpen();
+}
+Object.assign(H, {
+  tgwGo: el => tgwGo(el),
+  tgwUsePw: () => { S.tgUsePw = true; renderLogin(); },
+  tgwUseTg: () => { S.tgUsePw = false; renderLogin(); },
+  tgPinForm: el => tgPinForm(el),
+  tgPinSave: el => tgPinSave(el),
+  tgPinDel: async el => {
+    if (!confirm(t('tgPinDelAsk'))) return;
+    const r = await busy(el, () => rpcA('tgPinDel', {}));
+    if (!r) return;
+    if (S.tg && S.tg.inTg) return onAuthLost();
+    tgOpen();
+  },
+  tgBotSet: async el => {
+    const pw = $('#tgPwIn') ? $('#tgPwIn').value : '';
+    if (!pw) { toast(t('tgPw'), 'bad'); const i = $('#tgPwIn'); if (i) i.focus(); return; }
+    const r = await busy(el, () => rpcA('tgBotSetup', { on: el.dataset.on === '1', password: pw }, { timeout: 90000 }));
+    if (r) { toast(t('saved')); tgOpen(); }
+  }
+});
+// печать в Telegram может не сработать — подсказка один раз
+if (TGW && typeof window.print === 'function') {
+  const op = window.print;
+  let told = false;
+  window.print = function () { if (!told) { told = true; toast(t('tgNoPrint'), '', null, 7000); } try { return op.apply(window, arguments); } catch (e) { } };
+}
+
+/* ---------- действия администратора в Telegram: подтверждение паролем (отдельное окошко поверх текущего) ---------- */
+function tgElevateModal() {
+  if (!TGW || document.getElementById('tgElev')) return;
+  const d = document.createElement('div');
+  d.id = 'tgElev';
+  d.className = 'modal-bg';
+  d.style.zIndex = '10050';
+  d.innerHTML = '<div class="modal" role="dialog"><h3>' + esc(t('tgElevTitle')) + '</h3><div class="muted" style="margin-bottom:8px">' + esc(t('tgElevHint')) + '</div>' +
+    '<div class="field"><label>' + esc(t('password')) + '</label><input type="password" id="tgElevPw" autocomplete="current-password"></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="tgElevClose">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="tgElevGo">' + esc(t('tgElevGo')) + '</button></div></div>';
+  document.body.appendChild(d);
+  setTimeout(() => { const i = document.getElementById('tgElevPw'); if (i) { i.focus(); i.addEventListener('keydown', e => { if (e.key === 'Enter') H.tgElevGo(d.querySelector('[data-act=tgElevGo]')); }); } }, 30);
+}
+function tgElevClose() { const d = document.getElementById('tgElev'); if (d) d.remove(); }
+
+/* ---------- Пользователи → карточка сотрудника → что ему доступно в Telegram ---------- */
+(function () {
+  const orig = window.userEditModal;
+  if (typeof orig !== 'function') return;
+  window.userEditModal = function (id) {
+    const r = orig.apply(this, arguments);
+    const u = id && S.ua ? S.ua.users.find(x => x.id === id) : null;
+    const m = $('.modal');
+    if (!u || !m) return r;
+    m.insertAdjacentHTML('beforeend', '<div class="card" id="tgaCard"><div class="lbl">✈️ ' + esc(t('tgaTitle')) + '</div><div id="tgaBox" class="muted">' + esc(t('loading')) + '</div></div>');
+    rpc('tgAccessGet', { userId: u.id }).then(x => {
+      const b = $('#tgaBox'); if (!b || !x || !x.ok) { if (b) b.textContent = x ? errText(x) : t('E_NETWORK'); return; }
+      b.classList.remove('muted');
+      const st = '<div class="muted" style="margin-bottom:6px">' + esc(t('tgaState', { l: x.linked ? t('tgaYes') : t('tgaNo'), p: x.pin ? t('tgaPinYes') : t('tgaPinNo') })) + '</div>';
+      if (x.owner) { b.innerHTML = st + '<div class="muted">' + esc(t('tgaOwner')) + '</div>'; return; }
+      b.innerHTML = st + [['app', 'tgaApp'], ['low', 'tgaLow'], ['stock', 'tgaStock'], ['docs', 'tgaDocs'], ['remind', 'tgaRemind']].map(f =>
+        '<label class="check"><input type="checkbox" data-tga="' + f[0] + '"' + (x.acc && x.acc[f[0]] ? ' checked' : '') + '><span>' + esc(t(f[1])) + '</span></label>').join('') +
+        '<div class="muted" style="margin:6px 0">' + esc(t('tgaHint')) + '</div><button class="btn small primary" data-act="tgaSave" data-id="' + esc(u.id) + '">' + esc(t('save')) + '</button>';
+    }).catch(() => { const b = $('#tgaBox'); if (b) b.textContent = t('E_NETWORK'); });
+    return r;
+  };
+})();
+Object.assign(H, {
+  tgElevClose: () => tgElevClose(),
+  tgElevGo: async el => {
+    const i = document.getElementById('tgElevPw');
+    const pw = i ? i.value : '';
+    if (!pw) return;
+    let r;
+    try { r = await busy(el, () => rpc('tgElevate', { password: pw }), true); } catch (e) { return toast(t('E_NETWORK'), 'bad'); }
+    if (i) i.value = '';
+    if (!r) return;
+    if (!r.ok) return toast(errText(r), 'bad');
+    tgElevClose();
+    toast(t('tgElevOk'), '', null, 6000);
+  },
+  tgaSave: async el => {
+    const acc = {};
+    document.querySelectorAll('#tgaBox [data-tga]').forEach(c => { acc[c.dataset.tga] = !!c.checked; });
+    const r = await busy(el, () => rpcA('tgAccessSet', { userId: el.dataset.id, acc }));
+    if (r) toast(t('saved'));
+  }
 });
 
 
