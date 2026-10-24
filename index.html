@@ -5279,6 +5279,25 @@ function mergePatch(d, patch) {
   });
   return d;
 }
+/** Слить правку в ЕЩЁ НЕ ОТПРАВЛЕННУЮ правку: «убрать» (null) остаётся в ней — сервер должен узнать, что поле / строку
+ *  убрали (раньше null просто выпадал: снятая отметка, удалённая запись показателей, снятый срок возвращались после обновления). */
+function mergePatchQ(d, patch) {
+  Object.keys(patch || {}).forEach(k => {
+    if (k === '__proto__' || fOwn(F_BAD, k)) return;
+    const v = patch[k];
+    if (fOwn(F_ROWS, k)) {
+      if (!v || typeof v !== 'object') return; // всю таблицу разом не убирают
+      const rows = fOwn(d, k) && d[k] && typeof d[k] === 'object' ? d[k] : (d[k] = {});
+      Object.keys(v).forEach(rid => {
+        if (rid === '__proto__' || fOwn(F_BAD, rid)) return;
+        if (v[rid] === null) { rows[rid] = null; return; }
+        const row = fOwn(rows, rid) && rows[rid] && typeof rows[rid] === 'object' ? rows[rid] : (rows[rid] = {});
+        Object.keys(v[rid] || {}).forEach(f => { if (f === '__proto__' || fOwn(F_BAD, f)) return; row[f] = v[rid][f]; });
+      });
+    } else d[k] = v;
+  });
+  return d;
+}
 function fPendingOps(id) { return S.queue.filter(o => (o.action === 'formSave' && o.payload.id === id) || ((o.action === 'formAttach' || o.action === 'formDetach') && o.payload.formId === id)); }
 /** Что видно в форме = последнее с сервера + неотправленные изменения + то, что печатается прямо сейчас. */
 function fData(id) {
@@ -5314,8 +5333,10 @@ function fFlush() {
   // дописываем в последнюю ещё не ушедшую запись этой формы, чтобы не плодить операции на каждую букву
   const mine = S.queue.filter(o => o.action === 'formSave' && o.payload.id === id && o.userId === (S.me && S.me.id));
   const last = mine[mine.length - 1];
-  if (last && last === S.queue[S.queue.length - 1] && last.opId !== S.inFlight && !last.sent && !last.attempts && !last.payload.close) {
-    mergePatch(last.payload.patch, patch);
+  // «Помощник врача»: ФИО и т. п. отделяются на телефоне при постановке в очередь — дописывать в готовую операцию нельзя
+  const piiLoc = typeof hpPiiOn === 'function' && hpPiiOn();
+  if (!piiLoc && last && last === S.queue[S.queue.length - 1] && last.opId !== S.inFlight && !last.sent && !last.attempts && !last.payload.close) {
+    mergePatchQ(last.payload.patch, patch);
     // дописанная операция получает новый номер: если прежний вариант уже дошёл до сервера (или его отправил фоновый помощник),
     // сервер не примет дополненный за «повтор» — заплатка просто применится ещё раз целиком
     qTrail('merge', last);
@@ -5337,7 +5358,7 @@ function fTouch(id) {
 }
 function fSet(patch, rerender) {
   if (!S.fv) return;
-  S.fd = mergePatch(S.fd || {}, patch);
+  S.fd = mergePatchQ(S.fd || {}, patch);
   clearTimeout(S.fTimer);
   S.fTimer = setTimeout(fFlush, 1200);
   if (rerender) fRenderEditor(true);
@@ -27678,6 +27699,1027 @@ Object.assign(H, {
     } catch (e) { }
     return r;
   };
+})();
+
+/* =====================================================================
+ * v43: 🧮 Шкалы и калькуляторы (9.20a) — считаются на телефоне, без ИИ и без сервера.
+ *  GCS, NEWS2, qSOFA, CURB-65/CRB-65, CHA2DS2-VA(Sc), HAS-BLED, Wells (ТЭЛА, ТГВ), PERC, HEART, Centor/McIsaac, ABCD2,
+ *  Child-Pugh, APGAR, шоковый индекс; ИМТ, ППТ, клиренс креатинина (Кокрофт-Голт), СКФ CKD-EPI 2021, скорректированный Ca,
+ *  анионный интервал, скорректированный Na, осмолярность, САД, QTc, Паркленд, поддерживающая инфузия 4-2-1,
+ *  вес ребёнка по возрасту (APLS), доза по весу, скорость инфузии.
+ *  Результат — «📋 Копировать» или «➕ В форму» (в «Осмотр: примечание» открытой формы обращения).
+ *  В форме обращения сами считаются GCS (по пунктам ЦНС) и NEWS2 (по каждой записи показателей).
+ * ===================================================================== */
+const I18N_V43 = {
+  ru: { scTitle: '🧮 Шкалы', scSearch: 'Найти шкалу…', scCopy: '📋 Копировать', scToForm: '➕ В форму', scCopied: 'Скопировано', scAdded: 'Добавлено в осмотр формы', scNoForm: 'Сначала откройте форму обращения — результат добавится в её осмотр.',
+    scFill: 'Заполните поля', scHint: 'Подсказка для врача, не замена клинического решения. Пороги — по действующим рекомендациям (указаны в карточке).', scGrpScore: 'Шкалы', scGrpCalc: 'Калькуляторы', scO2: 'O₂', scNews: 'NEWS2', scGcs: 'GCS', scNewsNoO2: 'без кислорода; на O₂ — +2', scFromForm: 'Из формы', scSc2: 'NEWS2: шкала SpO₂ 2 (гиперкапническая ДН, цель 88–92%)', scChronic: 'Спутанность не новая (хроническая) — не считать', scConsUnk: 'сознание не отмечено — считаю «A»', scGcsHint: 'GCS по пунктам ЦНС: «на раздражение» = локализует боль (M5); в речи нет «звуки» (V2) — оценка приблизительная' },
+  az: { scTitle: '🧮 Şkalalar', scSearch: 'Şkala tap…', scCopy: '📋 Kopyala', scToForm: '➕ Formaya', scCopied: 'Kopyalandı', scAdded: 'Formanın müayinəsinə əlavə edildi', scNoForm: 'Əvvəlcə müraciət formasını açın — nəticə onun müayinəsinə əlavə olunacaq.',
+    scFill: 'Sahələri doldurun', scHint: 'Həkim üçün köməkdir, klinik qərarı əvəz etmir. Hədlər — qüvvədə olan tövsiyələrə görə (kartda göstərilib).', scGrpScore: 'Şkalalar', scGrpCalc: 'Kalkulyatorlar', scO2: 'O₂', scNews: 'NEWS2', scGcs: 'GCS', scNewsNoO2: 'oksigensiz; O₂-də — +2', scFromForm: 'Formadan', scSc2: 'NEWS2: SpO₂ şkalası 2 (hiperkapnik TÇ, hədəf 88–92%)', scChronic: 'Çaşqınlıq yeni deyil (xroniki) — saymamaq', scConsUnk: 'şüur qeyd edilməyib — «A» sayıram', scGcsHint: 'MSS bəndlərinə görə GCS: «qıcığa» = ağrını lokallaşdırır (M5); nitqdə «səslər» (V2) yoxdur — qiymət təxminidir' }
+};
+Object.assign(I18N.ru, I18N_V43.ru);
+Object.assign(I18N.az, I18N_V43.az);
+const scL = x => Array.isArray(x) ? (S.lang === 'az' ? x[1] || x[0] : x[0]) : String(x || '');
+const scR = (n, d) => { const p = Math.pow(10, d || 0); return Math.round(n * p) / p; };
+const scNum = v => { if (v === undefined || v === null) return null; const t = String(v).trim().replace(',', '.'); if (t === '') return null; const n = Number(t); return isFinite(n) ? n : null; };
+/* ---------- чистые расчёты (их же проверяют тесты) ---------- */
+const SCX = {
+  gcs: (e, v, m) => (e && v && m) ? e + v + m : null,
+  /** NEWS2 (RCP 2017): шкала SpO₂ 1, по решению врача — шкала 2. */
+  news2: x => {
+    const p = { rr: null, spo2: null, o2: 0, sbp: null, hr: null, acvpu: 0, temp: null };
+    if (x.rr != null) p.rr = x.rr <= 8 ? 3 : x.rr <= 11 ? 1 : x.rr <= 20 ? 0 : x.rr <= 24 ? 2 : 3;
+    if (x.spo2 != null) {
+      if (!x.sc2) p.spo2 = x.spo2 <= 91 ? 3 : x.spo2 <= 93 ? 2 : x.spo2 <= 95 ? 1 : 0;
+      // шкала 2 — гиперкапническая дыхательная недостаточность (цель 88–92%), решение врача
+      else p.spo2 = x.spo2 <= 83 ? 3 : x.spo2 <= 85 ? 2 : x.spo2 <= 87 ? 1 : (x.spo2 <= 92 || !x.o2) ? 0 : x.spo2 <= 94 ? 1 : x.spo2 <= 96 ? 2 : 3;
+    }
+    p.o2 = x.o2 ? 2 : 0;
+    if (x.sbp != null) p.sbp = x.sbp <= 90 ? 3 : x.sbp <= 100 ? 2 : x.sbp <= 110 ? 1 : x.sbp <= 219 ? 0 : 3;
+    if (x.hr != null) p.hr = x.hr <= 40 ? 3 : x.hr <= 50 ? 1 : x.hr <= 90 ? 0 : x.hr <= 110 ? 1 : x.hr <= 130 ? 2 : 3;
+    p.acvpu = x.cvpu ? 3 : 0;
+    if (x.temp != null) p.temp = x.temp <= 35.0 ? 3 : x.temp <= 36.0 ? 1 : x.temp <= 38.0 ? 0 : x.temp <= 39.0 ? 1 : 2;
+    const parts = Object.keys(p).map(k => p[k]).filter(v => v != null);
+    const known = ['rr', 'spo2', 'sbp', 'hr', 'temp'].filter(k => p[k] != null).length;
+    const score = parts.reduce((s, v) => s + v, 0);
+    const red3 = Object.keys(p).some(k => p[k] === 3);
+    return { score, known, red3, level: score >= 7 ? 'high' : score >= 5 ? 'med' : red3 ? 'lowmed' : 'low' };
+  },
+  /** СКФ CKD-EPI 2021 (без расы), креатинин в мкмоль/л. */
+  ckdEpi2021: (crUmol, age, female) => {
+    const scr = crUmol / 88.4, k = female ? 0.7 : 0.9, a = female ? -0.241 : -0.302;
+    return 142 * Math.pow(Math.min(scr / k, 1), a) * Math.pow(Math.max(scr / k, 1), -1.200) * Math.pow(0.9938, age) * (female ? 1.012 : 1);
+  },
+  /** Кокрофт-Голт, креатинин в мкмоль/л → мл/мин. */
+  cockcroft: (crUmol, age, kg, female) => (140 - age) * kg * (female ? 1.04 : 1.23) / crUmol,
+  bsa: (cm, kg) => Math.sqrt(cm * kg / 3600),
+  apls: (years, months) => {
+    let y = years == null ? null : Math.floor(years), m = months;
+    if ((y == null || y === 0) && m != null && m >= 12) { y = Math.floor(m / 12); m = null; }
+    if (y == null || y === 0) return m != null ? 0.5 * m + 4 : null;
+    return y <= 5 ? 2 * y + 8 : 3 * y + 7;
+  },
+  holliday: kg => kg <= 10 ? 4 * kg : kg <= 20 ? 40 + 2 * (kg - 10) : 60 + (kg - 20)
+};
+const LVL = { low: 'green', lowmed: 'amber', med: 'amber', high: 'red' };
+/* ---------- описания ---------- */
+const yes = (k, l, pts) => ({ k, t: 'chk', l, pts });
+const SC_LIST = [
+  { id: 'gcs', g: 'score', n: ['Шкала комы Глазго (GCS)', 'Qlazqo koma şkalası (GCS)'], src: 'Teasdale & Jennett',
+    f: [{ k: 'e', t: 'sel', l: ['Глаза (E)', 'Gözlər (E)'], o: [[4, ['4 — открывает сам', '4 — özü açır']], [3, ['3 — на голос', '3 — səsə']], [2, ['2 — на боль', '2 — ağrıya']], [1, ['1 — не открывает', '1 — açmır']]] },
+      { k: 'v', t: 'sel', l: ['Речь (V)', 'Nitq (V)'], o: [[5, ['5 — ориентирован', '5 — oriyentasiyalı']], [4, ['4 — спутанная речь', '4 — qarışıq nitq']], [3, ['3 — отдельные слова', '3 — ayrı sözlər']], [2, ['2 — нечленораздельные звуки', '2 — anlaşılmaz səslər']], [1, ['1 — нет', '1 — yoxdur']]] },
+      { k: 'm', t: 'sel', l: ['Движения (M)', 'Hərəkət (M)'], o: [[6, ['6 — по команде', '6 — əmrlə']], [5, ['5 — локализует боль', '5 — ağrını lokallaşdırır']], [4, ['4 — отдёргивание', '4 — çəkmə']], [3, ['3 — патол. сгибание (декортикация)', '3 — anormal bükmə']], [2, ['2 — патол. разгибание (децеребрация)', '2 — anormal açma']], [1, ['1 — нет', '1 — yoxdur']]] }],
+    calc: v => { const s = SCX.gcs(v.e, v.v, v.m); if (s == null) return null; return { score: 'GCS ' + s + ' (E' + v.e + 'V' + v.v + 'M' + v.m + ')', text: s <= 8 ? ['≤8 — кома: оценить защиту дыхательных путей (часто нужна интубация)', '≤8 — koma: tənəffüs yollarının qorunmasını qiymətləndirmək'] : s <= 12 ? ['9–12 — умеренное угнетение', '9–12 — orta dərəcəli'] : s <= 14 ? ['13–14 — лёгкое угнетение', '13–14 — yüngül'] : ['15 — ясное сознание', '15 — aydın şüur'], lvl: s <= 8 ? 'high' : s <= 12 ? 'med' : s <= 14 ? 'lowmed' : 'low' }; } },
+  { id: 'news2', g: 'score', n: ['NEWS2 — раннее предупреждение', 'NEWS2 — erkən xəbərdarlıq'], src: 'RCP 2017; не для детей до 16 лет и беременных',
+    f: [{ k: 'rr', t: 'num', l: ['ЧДД, /мин', 'TS, /dəq'] }, { k: 'spo2', t: 'num', l: ['SpO₂, %', 'SpO₂, %'] }, yes('o2', ['На кислороде', 'Oksigendə']), yes('sc2', ['Шкала SpO₂ 2 — подтверждённая гиперкапническая ДН (цель 88–92%), по решению врача', 'SpO₂ şkalası 2 — hiperkapnik TÇ (hədəf 88–92%)']),
+      { k: 'sbp', t: 'num', l: ['САД, мм рт. ст.', 'Sistolik AT'] }, { k: 'hr', t: 'num', l: ['ЧСС, /мин', 'ÜVS, /dəq'] }, yes('cvpu', ['Новая спутанность / реагирует на голос, боль, не реагирует', 'Yeni çaşqınlıq / səsə, ağrıya cavab, cavabsız']), { k: 't', t: 'num', l: ['Температура, °C', 'Temperatur, °C'] }],
+    calc: v => { const r = SCX.news2({ rr: v.rr, spo2: v.spo2, o2: v.o2, sc2: v.sc2, sbp: v.sbp, hr: v.hr, cvpu: v.cvpu, temp: v.t }); if (r.known < 5) return null;
+      return { score: 'NEWS2 ' + r.score + (v.sc2 ? ' (SpO₂ шкала 2)' : ''), text: r.level === 'high' ? ['≥7 — высокий риск: экстренная оценка бригадой интенсивной терапии, непрерывный мониторинг, перевод на более высокий уровень помощи', '≥7 — yüksək risk: reanimasiya briqadasının təcili qiymətləndirməsi, fasiləsiz monitorinq, yüksək səviyyəyə köçürmə'] : r.level === 'med' ? ['5–6 — средний риск: срочная оценка врачом, мониторинг не реже 1 раза в час', '5–6 — orta risk: həkimin təcili baxışı, ən azı saatda bir monitorinq'] : r.level === 'lowmed' ? ['3 по одному параметру — срочный осмотр врачом, мониторинг не реже 1 раза в час', 'bir parametrdə 3 — həkimin təcili baxışı, ən azı saatda bir'] : ['0–4 — низкий риск: наблюдение (0 — каждые 12 ч, 1–4 — каждые 4–6 ч)', '0–4 — aşağı risk: müşahidə (0 — 12 saatda, 1–4 — 4–6 saatda)'], lvl: r.level,
+        note: ['Не применяется у детей до 16 лет и при беременности. «Новая спутанность» — только новая (хроническая не считается). Высоко в горах SpO₂ ниже — учитывайте.', '16 yaşdan kiçik uşaqlarda və hamiləlikdə tətbiq edilmir. Yalnız yeni çaşqınlıq sayılır.'] }; } },
+  { id: 'qsofa', g: 'score', n: ['qSOFA — сепсис', 'qSOFA — sepsis'], src: 'Sepsis-3 (2016); SSC 2021 не рекомендует qSOFA как единственный скрининг',
+    f: [yes('rr', ['ЧДД ≥ 22/мин', 'TS ≥ 22/dəq'], 1), yes('ment', ['Изменение сознания (GCS < 15)', 'Şüur dəyişikliyi (GCS < 15)'], 1), yes('sbp', ['САД ≤ 100 мм рт. ст.', 'Sistolik AT ≤ 100'], 1)],
+    calc: v => { const s = ['rr', 'ment', 'sbp'].filter(k => v[k]).length; return { score: 'qSOFA ' + s, text: s >= 2 ? ['≥2 — высокий риск: оценить SOFA, лактат, посевы крови; антибиотик ≤1 ч при шоке или вероятном сепсисе, при возможном сепсисе без шока — быстрая оценка и ≤3 ч (SSC 2021)', '≥2 — yüksək risk: SOFA, laktat, qan əkmələri; şokda və ehtimallı sepsisdə antibiotik ≤1 saat, şoksuz mümkün sepsisdə ≤3 saat (SSC 2021)'] : ['<2 — не исключает сепсис; при подозрении — SOFA/NEWS2 и наблюдение', '<2 — sepsisi istisna etmir'], lvl: s >= 2 ? 'high' : s === 1 ? 'lowmed' : 'low' }; } },
+  { id: 'curb', g: 'score', n: ['CURB-65 / CRB-65 — пневмония', 'CURB-65 / CRB-65 — pnevmoniya'], src: 'BTS / NICE',
+    f: [yes('c', ['Спутанность сознания (новая)', 'Yeni çaşqınlıq'], 1), { k: 'urea', t: 'num', l: ['Мочевина, ммоль/л (пусто — CRB-65)', 'Karbamid, mmol/l (boş — CRB-65)'] }, yes('r', ['ЧДД ≥ 30/мин', 'TS ≥ 30/dəq'], 1), yes('b', ['САД < 90 или ДАД ≤ 60', 'SAT < 90 və ya DAT ≤ 60'], 1), yes('a', ['Возраст ≥ 65 лет', 'Yaş ≥ 65'], 1)],
+    calc: v => { const crb = v.urea == null; const s = ['c', 'r', 'b', 'a'].filter(k => v[k]).length + (!crb && v.urea > 7 ? 1 : 0);
+      if (crb) return { score: 'CRB-65 ' + s, text: s === 0 ? ['0 — низкий риск: лечение дома', '0 — aşağı risk: evdə müalicə'] : s <= 2 ? ['1–2 — направить в стационар на оценку', '1–2 — stasionara göndərmək'] : ['3–4 — высокий риск: срочная госпитализация', '3–4 — yüksək risk: təcili hospitalizasiya'], lvl: s === 0 ? 'low' : s <= 2 ? 'med' : 'high' };
+      return { score: 'CURB-65 ' + s, text: s <= 1 ? ['0–1 — низкий риск (смертность <3%): амбулаторно', '0–1 — aşağı risk: ambulator'] : s === 2 ? ['2 — средний риск (~9%): госпитализация / короткое пребывание', '2 — orta risk: hospitalizasiya'] : ['3–5 — тяжёлая (> 15%; 4–5 — до 40–57%): госпитализация, при 4–5 — оценить ОРИТ', '3–5 — ağır: hospitalizasiya, 4–5 — reanimasiya'], lvl: s <= 1 ? 'low' : s === 2 ? 'med' : 'high' }; } },
+  { id: 'cha2ds2', g: 'score', n: ['CHA₂DS₂-VA (VASc) — ФП, инсульт', 'CHA₂DS₂-VA (VASc) — QF, insult'], src: 'ESC 2024 (CHA₂DS₂-VA, без пола); в скобках — CHA₂DS₂-VASc',
+    f: [yes('c', ['Сердечная недостаточность / ФВ ≤ 40%', 'Ürək çatışmazlığı / AF ≤ 40%'], 1), yes('h', ['Артериальная гипертензия', 'Arterial hipertenziya'], 1), { k: 'age', t: 'num', l: ['Возраст, лет', 'Yaş'] }, yes('d', ['Сахарный диабет', 'Şəkərli diabet'], 1),
+      yes('s', ['Инсульт / ТИА / тромбоэмболия в анамнезе', 'İnsult / TİA / tromboemboliya'], 2), yes('v', ['Сосудистое заболевание: ИМ, стенокардия, реваскуляризация, значимый коронарный атеросклероз, атеросклероз периферических артерий, бляшка аорты', 'Damar xəstəliyi: Mİ, stenokardiya, revaskulyarizasiya, koronar / periferik ateroskleroz, aorta lövhəsi'], 1), yes('f', ['Женский пол (только для VASc)', 'Qadın cinsi (yalnız VASc)'], 1)],
+    calc: v => { if (v.age == null) return null; const age = v.age >= 75 ? 2 : v.age >= 65 ? 1 : 0;
+      const va = (v.c ? 1 : 0) + (v.h ? 1 : 0) + age + (v.d ? 1 : 0) + (v.s ? 2 : 0) + (v.v ? 1 : 0), vasc = va + (v.f ? 1 : 0);
+      return { score: 'CHA₂DS₂-VA ' + va + ' (VASc ' + vasc + ')', text: va >= 2 ? ['≥2 — пероральная антикоагуляция рекомендована (предпочтительно ПОАК), оценить риск кровотечения', '≥2 — oral antikoaqulyasiya tövsiyə olunur'] : va === 1 ? ['1 — антикоагуляцию следует рассмотреть (индивидуально)', '1 — antikoaqulyasiyanı nəzərdən keçirmək'] : ['0 — антикоагуляция не показана', '0 — antikoaqulyasiya göstərilmir'], lvl: va >= 2 ? 'high' : va === 1 ? 'med' : 'low', note: ['Не для механических клапанов и умеренного/тяжёлого митрального стеноза: там антикоагулянт (АВК) независимо от балла, ПОАК противопоказаны.', 'Mexaniki qapaq və orta/ağır mitral stenozda tətbiq edilmir: bal-dan asılı olmayaraq VKA.'] }; } },
+  { id: 'hasbled', g: 'score', n: ['HAS-BLED — риск кровотечения', 'HAS-BLED — qanaxma riski'], src: 'Pisters 2010 / ESC',
+    f: [yes('h', ['Неконтролируемая АГ (САД > 160)', 'Nəzarətsiz hipertenziya (SAT > 160)'], 1), yes('r', ['Нарушение функции почек (диализ, трансплантат, креатинин > 200 мкмоль/л)', 'Böyrək funksiyasının pozulması'], 1), yes('l', ['Нарушение функции печени: цирроз или билирубин > 2N вместе с АЛТ/АСТ/ЩФ > 3N', 'Qaraciyər: sirroz və ya bilirubin > 2N ilə birlikdə ALT/AST/QF > 3N'], 1),
+      yes('s', ['Инсульт в анамнезе', 'Anamnezdə insult'], 1), yes('b', ['Кровотечение в анамнезе / предрасположенность (анемия)', 'Anamnezdə qanaxma / meyllilik'], 1), yes('inr', ['Лабильное МНО (на варфарине, TTR < 60%)', 'Labil BNN'], 1), yes('e', ['Возраст > 65 лет', 'Yaş > 65'], 1), yes('dr', ['Антиагреганты / НПВС', 'Antiaqreqantlar / QSİDP'], 1), yes('al', ['Алкоголь ≥ 8 доз в неделю', 'Alkoqol ≥ 8 doza/həftə'], 1)],
+    calc: v => { const s = ['h', 'r', 'l', 's', 'b', 'inr', 'e', 'dr', 'al'].filter(k => v[k]).length; return { score: 'HAS-BLED ' + s, text: s >= 3 ? ['≥3 — высокий риск кровотечения: устранить модифицируемые факторы, чаще наблюдать (сам по себе не повод отменять антикоагуляцию)', '≥3 — yüksək qanaxma riski: dəyişdirilə bilən amilləri aradan qaldırmaq'] : ['0–2 — низкий / умеренный риск', '0–2 — aşağı / orta risk'], lvl: s >= 3 ? 'high' : s === 2 ? 'med' : 'low' }; } },
+  { id: 'wellspe', g: 'score', n: ['Wells — ТЭЛА', 'Wells — AAT'], src: 'Wells 2000, двухуровневая',
+    f: [yes('dvt', ['Клиника ТГВ (отёк, боль при пальпации вен)', 'DVT klinikası'], 3), yes('alt', ['ТЭЛА — наиболее вероятный диагноз', 'AAT — ən ehtimallı diaqnoz'], 3), yes('hr', ['ЧСС > 100/мин', 'ÜVS > 100'], 1.5), yes('imm', ['Иммобилизация ≥ 3 дней или операция за 4 недели', 'İmmobilizasiya ≥ 3 gün / 4 həftədə əməliyyat'], 1.5),
+      yes('prev', ['ТГВ / ТЭЛА в анамнезе', 'Anamnezdə DVT / AAT'], 1.5), yes('hem', ['Кровохарканье', 'Qanhayxırma'], 1), yes('ca', ['Онкология (лечение ≤ 6 мес или паллиатив)', 'Onkologiya'], 1)],
+    calc: v => { const w = { dvt: 3, alt: 3, hr: 1.5, imm: 1.5, prev: 1.5, hem: 1, ca: 1 }; const s = Object.keys(w).reduce((a, k) => a + (v[k] ? w[k] : 0), 0);
+      return { score: 'Wells (ТЭЛА) ' + s, text: s > 4 ? ['> 4 — ТЭЛА вероятна: КТ-ангиография лёгочных артерий', '> 4 — AAT ehtimallıdır: KT-angioqrafiya'] : ['≤ 4 — ТЭЛА маловероятна: D-димер (с поправкой на возраст: > 50 лет — возраст × 10 мкг/л); при очень низкой вероятности — сначала PERC', '≤ 4 — AAT az ehtimallıdır: D-dimer (yaşa düzəlişlə)'], lvl: s > 4 ? 'high' : 'low' }; } },
+  { id: 'perc', g: 'score', n: ['PERC — исключить ТЭЛА', 'PERC — AAT-ni istisna etmək'], src: 'Kline 2004; только при низкой клинической вероятности (< 15%); SpO₂ — на воздухе (высоко в горах не надёжна)',
+    f: [yes('a', ['Возраст ≥ 50 лет', 'Yaş ≥ 50']), yes('hr', ['ЧСС ≥ 100/мин', 'ÜVS ≥ 100']), yes('sat', ['SpO₂ < 95%', 'SpO₂ < 95%']), yes('hem', ['Кровохарканье', 'Qanhayxırma']), yes('est', ['Эстрогены (КОК, ЗГТ)', 'Estrogenlər']), yes('prev', ['ТГВ / ТЭЛА в анамнезе', 'Anamnezdə DVT / AAT']), yes('leg', ['Односторонний отёк ноги', 'Birtərəfli ayaq ödemi']), yes('sur', ['Операция / травма с госпитализацией за 4 недели', '4 həftədə əməliyyat / travma'])],
+    calc: v => { const s = ['a', 'hr', 'sat', 'hem', 'est', 'prev', 'leg', 'sur'].filter(k => v[k]).length; return { score: 'PERC ' + (s ? s + ' +' : '0'), text: s ? ['Хотя бы один критерий — ТЭЛА не исключена: D-димер / Wells', 'Ən azı bir meyar — AAT istisna edilmir'] : ['Все отрицательны при низкой вероятности — ТЭЛА можно исключить без D-димера', 'Hamısı mənfi — AAT istisna edilə bilər'], lvl: s ? 'med' : 'low' }; } },
+  { id: 'wellsdvt', g: 'score', n: ['Wells — тромбоз глубоких вен', 'Wells — dərin vena trombozu'], src: 'Wells 2003',
+    f: [yes('ca', ['Активная онкология', 'Aktiv onkologiya']), yes('par', ['Паралич, парез, недавний гипс ноги', 'İflic, parez, gips']), yes('bed', ['Постельный режим ≥ 3 дней или крупная операция за 12 недель', 'Yataq rejimi ≥ 3 gün / 12 həftədə əməliyyat']), yes('tend', ['Болезненность по ходу глубоких вен', 'Dərin venalar boyu ağrı']),
+      yes('leg', ['Отёк всей ноги', 'Bütün ayağın ödemi']), yes('calf', ['Окружность голени больше на > 3 см', 'Baldır > 3 sm böyük']), yes('pit', ['Ямочный отёк на больной ноге', 'Xəstə ayaqda çuxurlu ödem']), yes('col', ['Расширенные поверхностные (не варикозные) вены', 'Kollateral səthi venalar']), yes('prev', ['ТГВ в анамнезе', 'Anamnezdə DVT']), yes('alt', ['Другой диагноз не менее вероятен (−2)', 'Başqa diaqnoz eyni ehtimallı (−2)'])],
+    calc: v => { const s = ['ca', 'par', 'bed', 'tend', 'leg', 'calf', 'pit', 'col', 'prev'].filter(k => v[k]).length - (v.alt ? 2 : 0);
+      return { score: 'Wells (ТГВ) ' + s, text: s >= 2 ? ['≥ 2 — ТГВ вероятен: УЗИ вен', '≥ 2 — DVT ehtimallı: venaların USM'] : ['< 2 — маловероятен: D-димер, при положительном — УЗИ', '< 2 — az ehtimallı: D-dimer'], lvl: s >= 2 ? 'high' : 'low' }; } },
+  { id: 'heart', g: 'score', n: ['HEART — боль в груди', 'HEART — döş ağrısı'], src: 'Six 2008; не для ИМпST и новых ишемических изменений ЭКГ',
+    f: [{ k: 'h', t: 'sel', l: ['Анамнез', 'Anamnez'], o: [[0, ['0 — мало подозрителен', '0 — az şübhəli']], [1, ['1 — умеренно', '1 — orta']], [2, ['2 — очень подозрителен', '2 — çox şübhəli']]] },
+      { k: 'e', t: 'sel', l: ['ЭКГ', 'EKQ'], o: [[0, ['0 — норма', '0 — normal']], [1, ['1 — неспецифическая реполяризация, БНПГ, ГЛЖ', '1 — qeyri-spesifik dəyişiklik']], [2, ['2 — значимая депрессия ST', '2 — əhəmiyyətli ST depressiyası']]] },
+      { k: 'a', t: 'num', l: ['Возраст, лет', 'Yaş'] },
+      { k: 'r', t: 'sel', l: ['Факторы риска (АГ, СД, ГХС, курение, ожирение, семейный анамнез)', 'Risk amilləri'], o: [[0, ['0 — нет', '0 — yoxdur']], [1, ['1 — 1–2 фактора', '1 — 1–2 amil']], [2, ['2 — ≥ 3 или известный атеросклероз', '2 — ≥ 3 və ya ateroskleroz']]] },
+      { k: 't', t: 'sel', l: ['Тропонин', 'Troponin'], o: [[0, ['0 — ≤ нормы', '0 — ≤ norma']], [1, ['1 — 1–3 × нормы', '1 — 1–3 × norma']], [2, ['2 — > 3 × нормы', '2 — > 3 × norma']]] }],
+    calc: v => { if (v.a == null || v.h == null || v.e == null || v.r == null || v.t == null) return null; const s = v.h + v.e + (v.a >= 65 ? 2 : v.a >= 45 ? 1 : 0) + v.r + v.t;
+      return { score: 'HEART ' + s, text: s <= 3 ? ['0–3 — низкий риск (MACE ~1–2%): ранняя выписка — только при отрицательном повторном тропонине (0/3 ч или вч-тропонин 0/1–0/2 ч)', '0–3 — aşağı risk: erkən evə buraxılış — yalnız təkrar troponin mənfi olduqda'] : s <= 6 ? ['4–6 — умеренный (~12–17%): наблюдение, повторный тропонин, кардиолог', '4–6 — orta risk'] : ['7–10 — высокий (~50–65%): ранние инвазивные стратегии', '7–10 — yüksək risk'], lvl: s <= 3 ? 'low' : s <= 6 ? 'med' : 'high' }; } },
+  { id: 'centor', g: 'score', n: ['Centor / McIsaac — тонзиллит', 'Centor / McIsaac — tonzillit'], src: 'McIsaac 1998',
+    f: [yes('t', ['Температура > 38 °C', 'Temperatur > 38 °C']), yes('c', ['Нет кашля', 'Öskürək yoxdur']), yes('n', ['Болезненные передние шейные лимфоузлы', 'Ön boyun limfa düyünləri ağrılı']), yes('x', ['Отёк / налёт на миндалинах', 'Badamcıqlarda ödem / ərp']), { k: 'age', t: 'num', l: ['Возраст, лет', 'Yaş'] }],
+    calc: v => { if (v.age == null) return null; if (v.age < 3) return { score: '—', text: ['До 3 лет шкала не применяется (стрептококковый тонзиллит редок)', '3 yaşa qədər tətbiq edilmir'], lvl: 'lowmed' }; const s = ['t', 'c', 'n', 'x'].filter(k => v[k]).length + (v.age >= 3 && v.age <= 14 ? 1 : v.age >= 45 ? -1 : 0);
+      return { score: 'McIsaac ' + s, text: s <= 1 ? ['≤ 1 — стрептококк маловероятен: без теста и антибиотика', '≤ 1 — streptokok az ehtimallı'] : s <= 3 ? ['2–3 — экспресс-тест / посев; антибиотик — при положительном', '2–3 — sürətli test / əkmə'] : ['≥ 4 — тест; при невозможности — эмпирически антибиотик', '≥ 4 — test; mümkün deyilsə — antibiotik'], lvl: s <= 1 ? 'low' : s <= 3 ? 'med' : 'high' }; } },
+  { id: 'abcd2', g: 'score', n: ['ABCD² — после ТИА', 'ABCD² — TİA-dan sonra'], src: 'Johnston 2007',
+    f: [yes('a', ['Возраст ≥ 60 лет', 'Yaş ≥ 60'], 1), yes('b', ['АД ≥ 140/90 при первом измерении', 'AT ≥ 140/90'], 1), { k: 'c', t: 'sel', l: ['Клиника', 'Klinika'], o: [[0, ['0 — другое', '0 — digər']], [1, ['1 — нарушение речи без слабости', '1 — zəiflik olmadan nitq pozğunluğu']], [2, ['2 — односторонняя слабость', '2 — birtərəfli zəiflik']]] },
+      { k: 'd', t: 'sel', l: ['Длительность', 'Müddət'], o: [[0, ['0 — < 10 мин', '0 — < 10 dəq']], [1, ['1 — 10–59 мин', '1 — 10–59 dəq']], [2, ['2 — ≥ 60 мин', '2 — ≥ 60 dəq']]] }, yes('dm', ['Сахарный диабет', 'Şəkərli diabet'], 1)],
+    calc: v => { if (v.c == null || v.d == null) return null; const s = (v.a ? 1 : 0) + (v.b ? 1 : 0) + v.c + v.d + (v.dm ? 1 : 0);
+      return { score: 'ABCD² ' + s, text: s <= 3 ? ['0–3 — низкий риск инсульта за 2 дня (~1%)', '0–3 — aşağı risk'] : s <= 5 ? ['4–5 — умеренный (~4%)', '4–5 — orta risk'] : ['6–7 — высокий (~8%)', '6–7 — yüksək risk'], lvl: s <= 3 ? 'low' : s <= 5 ? 'med' : 'high', note: ['Современные рекомендации: обследовать всех с ТИА в течение 24 ч независимо от балла', 'Bütün TİA xəstələri bal-dan asılı olmayaraq 24 saat ərzində müayinə olunmalıdır'] }; } },
+  { id: 'childpugh', g: 'score', n: ['Child-Pugh — цирроз', 'Child-Pugh — sirroz'], src: 'Pugh 1973',
+    f: [{ k: 'bil', t: 'num', l: ['Билирубин, мкмоль/л', 'Bilirubin, mkmol/l'] }, { k: 'alb', t: 'num', l: ['Альбумин, г/л', 'Albumin, q/l'] }, { k: 'inr', t: 'num', l: ['МНО', 'BNN'] },
+      { k: 'asc', t: 'sel', l: ['Асцит', 'Assit'], o: [[1, ['нет', 'yoxdur']], [2, ['небольшой', 'az']], [3, ['умеренный / выраженный', 'orta / çox']]] }, { k: 'enc', t: 'sel', l: ['Энцефалопатия', 'Ensefalopatiya'], o: [[1, ['нет', 'yoxdur']], [2, ['I–II степени', 'I–II dərəcə']], [3, ['III–IV степени', 'III–IV dərəcə']]] }],
+    calc: v => { if ([v.bil, v.alb, v.inr, v.asc, v.enc].some(x => x == null)) return null;
+      const s = (v.bil < 34 ? 1 : v.bil <= 50 ? 2 : 3) + (v.alb > 35 ? 1 : v.alb >= 28 ? 2 : 3) + (v.inr < 1.7 ? 1 : v.inr <= 2.3 ? 2 : 3) + v.asc + v.enc;
+      const c = s <= 6 ? 'A' : s <= 9 ? 'B' : 'C';
+      return { score: 'Child-Pugh ' + s + ' — класс ' + c, text: c === 'A' ? ['A (5–6) — компенсированный', 'A — kompensasiyalı'] : c === 'B' ? ['B (7–9) — субкомпенсированный', 'B — subkompensasiyalı'] : ['C (10–15) — декомпенсированный', 'C — dekompensasiyalı'], lvl: c === 'A' ? 'low' : c === 'B' ? 'med' : 'high' }; } },
+  { id: 'apgar', g: 'score', n: ['APGAR — новорождённый', 'APGAR — yenidoğulmuş'], src: 'Apgar 1953',
+    f: [['hr', ['ЧСС', 'ÜVS'], ['нет', 'yoxdur'], ['< 100', '< 100'], ['≥ 100', '≥ 100']], ['resp', ['Дыхание', 'Tənəffüs'], ['нет', 'yoxdur'], ['слабое, нерегулярное', 'zəif, qeyri-müntəzəm'], ['хорошее, крик', 'yaxşı, qışqırıq']], ['tone', ['Тонус', 'Tonus'], ['вялый', 'süst'], ['некоторое сгибание', 'bir qədər bükülmə'], ['активные движения', 'aktiv hərəkətlər']],
+      ['refl', ['Рефлексы (реакция на раздражение)', 'Reflekslər'], ['нет', 'yoxdur'], ['гримаса', 'qrimas'], ['крик, кашель, чихание', 'qışqırıq, öskürək']], ['col', ['Цвет кожи', 'Dəri rəngi'], ['синюшный / бледный', 'sianotik / solğun'], ['акроцианоз', 'akrosianoz'], ['розовый', 'çəhrayı']]]
+      .map(x => ({ k: x[0], t: 'sel', l: x[1], o: [[0, ['0 — ' + x[2][0], '0 — ' + x[2][1]]], [1, ['1 — ' + x[3][0], '1 — ' + x[3][1]]], [2, ['2 — ' + x[4][0], '2 — ' + x[4][1]]]] })),
+    calc: v => { if (['hr', 'resp', 'tone', 'refl', 'col'].some(k => v[k] == null)) return null; const s = v.hr + v.resp + v.tone + v.refl + v.col;
+      return { score: 'APGAR ' + s, text: s >= 7 ? ['7–10 — норма', '7–10 — normal'] : s >= 4 ? ['4–6 — умеренная депрессия', '4–6 — orta depressiya'] : ['0–3 — низкая оценка (решение о реанимации не ждёт оценки по Апгар — по дыханию и ЧСС)', '0–3 — aşağı qiymət (reanimasiya Apqarı gözləmir)'], lvl: s >= 7 ? 'low' : s >= 4 ? 'med' : 'high' }; } },
+  { id: 'shock', g: 'score', n: ['Шоковый индекс', 'Şok indeksi'], src: 'Allgöwer',
+    f: [{ k: 'hr', t: 'num', l: ['ЧСС, /мин', 'ÜVS'] }, { k: 'sbp', t: 'num', l: ['САД, мм рт. ст.', 'Sistolik AT'] }],
+    calc: v => { if (!v.hr || !v.sbp) return null; const s = v.hr / v.sbp; return { score: 'ШИ ' + scR(s, 2), text: s >= 1 ? ['≥ 1 — вероятен шок / значимая кровопотеря', '≥ 1 — şok ehtimalı'] : s > 0.7 ? ['0,7–1 — настораживает', '0,7–1 — narahatedici'] : ['≤ 0,7 — норма', '≤ 0,7 — normal'], lvl: s >= 1 ? 'high' : s > 0.7 ? 'med' : 'low' }; } },
+  /* ---------- калькуляторы ---------- */
+  { id: 'bmi', g: 'calc', n: ['ИМТ и площадь поверхности тела', 'BKİ və bədən səthinin sahəsi'], src: 'ВОЗ; Mosteller',
+    f: [{ k: 'cm', t: 'num', l: ['Рост, см', 'Boy, sm'] }, { k: 'kg', t: 'num', l: ['Вес, кг', 'Çəki, kq'] }],
+    calc: v => { if (!v.cm || !v.kg) return null; const b = v.kg / Math.pow(v.cm / 100, 2); return { score: 'ИМТ ' + scR(b, 1) + ' кг/м² · ППТ ' + scR(SCX.bsa(v.cm, v.kg), 2) + ' м²', text: b < 18.5 ? ['дефицит массы', 'çəki çatışmazlığı'] : b < 25 ? ['норма', 'normal'] : b < 30 ? ['избыточная масса', 'artıq çəki'] : b < 35 ? ['ожирение I', 'piylənmə I'] : b < 40 ? ['ожирение II', 'piylənmə II'] : ['ожирение III', 'piylənmə III'], lvl: b < 18.5 || b >= 30 ? 'med' : 'low' }; } },
+  { id: 'crcl', g: 'calc', n: ['Почки: СКФ (CKD-EPI 2021) и клиренс креатинина (Кокрофт-Голт)', 'Böyrək: YFS (CKD-EPI 2021) və kreatinin klirensi'], src: 'CKD-EPI 2021 без расы; Cockcroft-Gault — для доз препаратов',
+    f: [{ k: 'cr', t: 'num', l: ['Креатинин, мкмоль/л', 'Kreatinin, mkmol/l'] }, { k: 'age', t: 'num', l: ['Возраст, лет', 'Yaş'] }, { k: 'kg', t: 'num', l: ['Вес, кг (для Кокрофта-Голта)', 'Çəki, kq'] }, yes('f', ['Женщина', 'Qadın'])],
+    calc: v => { if (!v.cr || !v.age) return null; if (v.age < 18) return { score: '—', text: ['CKD-EPI и Кокрофт-Голт — только для взрослых (у детей — формула Шварца)', 'Yalnız böyüklər üçün (uşaqlarda — Şvars)'], lvl: 'lowmed' }; const e = SCX.ckdEpi2021(v.cr, v.age, v.f); const c = v.kg ? SCX.cockcroft(v.cr, v.age, v.kg, v.f) : null;
+      const st = e >= 90 ? 'G1' : e >= 60 ? 'G2' : e >= 45 ? 'G3a' : e >= 30 ? 'G3b' : e >= 15 ? 'G4' : 'G5';
+      return { score: 'СКФ ' + Math.round(e) + ' мл/мин/1,73 м² (' + st + ')' + (c != null ? ' · КК ' + Math.round(c) + ' мл/мин' : ''), text: ['Только при стабильном креатинине: при ОПП расчёт неверен. Стадия G — для ХБП, нужна давность > 3 мес. Дозы препаратов — обычно по клиренсу (Кокрофт-Голт)', 'Yalnız sabit kreatininlə: KBZ-də hesab yanlışdır. G mərhələsi — XBX üçün (> 3 ay)'], lvl: e < 30 ? 'high' : e < 60 ? 'med' : 'low' }; } },
+  { id: 'lytes', g: 'calc', n: ['Электролиты: анионный интервал, скорректированные Na и Ca, осмолярность', 'Elektrolitlər'], src: 'Na — Katz (1,6) / Hillier (2,4); АИ и Ca — с поправкой на альбумин; ADA 2024 (ГГС)',
+    f: [{ k: 'na', t: 'num', l: ['Na, ммоль/л', 'Na, mmol/l'] }, { k: 'cl', t: 'num', l: ['Cl, ммоль/л', 'Cl, mmol/l'] }, { k: 'hco3', t: 'num', l: ['HCO₃, ммоль/л', 'HCO₃, mmol/l'] }, { k: 'glu', t: 'num', l: ['Глюкоза, ммоль/л', 'Qlükoza, mmol/l'] }, { k: 'urea', t: 'num', l: ['Мочевина, ммоль/л', 'Karbamid, mmol/l'] }, { k: 'ca', t: 'num', l: ['Ca общий, ммоль/л', 'Ca ümumi, mmol/l'] }, { k: 'alb', t: 'num', l: ['Альбумин, г/л', 'Albumin, q/l'] }],
+    calc: v => { const out = []; let lvl = 'low';
+      if (v.na != null && v.cl != null && v.hco3 != null) { const ag = v.na - v.cl - v.hco3; let x = 'АИ ' + scR(ag, 1);
+        if (v.alb != null) { const c = ag + 0.25 * (40 - v.alb); x += ' (с поправкой на альбумин ' + scR(c, 1) + ')'; if (c > 12) lvl = 'med'; } else if (ag > 12) lvl = 'med';
+        out.push(x + ' — норма лаборатории (обычно 8–12; на современных анализаторах 3–11)'); }
+      if (v.na != null && v.glu != null) { const glMg = v.glu * 18; out.push('Na скорр. ' + scR(v.na + 1.6 * Math.max(0, glMg - 100) / 100, 1) + ' (по Hillier 2,4: ' + scR(v.na + 2.4 * Math.max(0, glMg - 100) / 100, 1) + ')'); }
+      if (v.na != null && v.glu != null) { const ef = 2 * v.na + v.glu; out.push('Эффективная осм. ' + Math.round(ef) + ' мОсм/л' + (ef > 300 ? ' — > 300: ГГС вероятно (ADA 2024)' : '')); if (ef > 300) lvl = 'high'; }
+      if (v.na != null && v.glu != null && v.urea != null) { const os = 2 * v.na + v.glu + v.urea; out.push('Осм. расчётная ' + Math.round(os) + ' мОсм/л (норма 275–295)'); }
+      if (v.ca != null && v.alb != null) out.push('Ca скорр. ' + scR(v.ca + 0.02 * (40 - v.alb), 2) + ' ммоль/л (норма 2,15–2,55)');
+      return out.length ? { score: out.join(' · '), text: '', lvl } : null; } },
+  { id: 'map', g: 'calc', n: ['Среднее АД и QTc', 'Orta AT və QTc'], src: 'QTc — Bazett и Fridericia',
+    f: [{ k: 'sbp', t: 'num', l: ['САД', 'SAT'] }, { k: 'dbp', t: 'num', l: ['ДАД', 'DAT'] }, { k: 'qt', t: 'num', l: ['QT, мс', 'QT, ms'] }, { k: 'hr', t: 'num', l: ['ЧСС, /мин', 'ÜVS'] }],
+    calc: v => { const out = []; let lvl = 'low';
+      if (v.sbp && v.dbp) { const m = (v.sbp + 2 * v.dbp) / 3; out.push('САД(ср) ' + Math.round(m) + ' мм рт. ст.' + (m < 65 ? ' — < 65: гипоперфузия' : '')); if (m < 65) lvl = 'high'; }
+      if (v.qt && v.hr) { const rr = 60 / v.hr; const b = v.qt / Math.sqrt(rr), f = v.qt / Math.cbrt(rr), mx = Math.max(b, f); out.push('QTc ' + Math.round(b) + ' мс (Bazett) / ' + Math.round(f) + ' мс (Fridericia)' + (mx >= 500 ? ' — ≥ 500: высокий риск TdP, отменить удлиняющие QT препараты, K/Mg' : mx > 450 ? ' — удлинён (норма: муж. ≤ 450, жен. ≤ 460–470)' : '')); if (mx >= 500) lvl = 'high'; else if (mx > 450 && lvl !== 'high') lvl = 'med'; }
+      return out.length ? { score: out.join(' · '), text: v.hr > 90 && v.qt ? ['При ЧСС > 90 Bazett завышает — смотрите Fridericia', 'ÜVS > 90-da Fridericia daha dəqiqdir'] : '', lvl } : null; } },
+  { id: 'burn', g: 'calc', n: ['Ожоги: стартовая инфузия (Паркленд)', 'Yanıqlar: başlanğıc infuziya (Parkland)'], src: 'ATLS 10 / ABA: 2 мл (взрослые), 3 мл (дети), 4 мл (электротравма) × кг × % площади',
+    f: [{ k: 'kg', t: 'num', l: ['Вес, кг', 'Çəki, kq'] }, { k: 'tbsa', t: 'num', l: ['Площадь ожогов глубже I степени, % (без эритемы; правило девяток / ладони)', 'I dərəcədən dərin yanıqların sahəsi, %'] },
+      { k: 'coef', t: 'sel', l: ['Коэффициент, мл/кг/%', 'Əmsal, ml/kq/%'], o: [[2, ['2 — взрослые (ATLS 10)', '2 — böyüklər']], [3, ['3 — дети', '3 — uşaqlar']], [4, ['4 — электротравма / классический Паркленд', '4 — elektrotravma']]] }, yes('child', ['Ребёнок', 'Uşaq'])],
+    calc: v => { if (!v.kg || !v.tbsa || !v.coef) return null; const t = v.coef * v.kg * v.tbsa; const big = v.child ? v.tbsa > 10 : v.tbsa > 20;
+      return { score: 'Рингер ' + Math.round(t) + ' мл за 24 ч (половина — ' + Math.round(t / 2) + ' мл за первые 8 ч от момента ожога)', text: ['Дальше — по диурезу: взрослые 0,5 мл/кг/ч, дети 1 мл/кг/ч (при миоглобинурии/электротравме — 1–1,5). Детям < 30 кг — ещё поддерживающий раствор с глюкозой. Формальная инфузия показана при > 20% у взрослых и > 10% у детей.', 'Sonra — diurezə görə: böyüklər 0,5 ml/kq/saat, uşaqlar 1 ml/kq/saat.'], lvl: big ? 'high' : 'med' }; } },
+  { id: 'peds', g: 'calc', n: ['Дети: вес по возрасту (APLS) и поддерживающая инфузия 4-2-1', 'Uşaqlar: yaşa görə çəki (APLS) və 4-2-1'], src: 'APLS; Holliday-Segar',
+    f: [{ k: 'y', t: 'num', l: ['Возраст, лет (до года — пусто)', 'Yaş, il'] }, { k: 'mo', t: 'num', l: ['Возраст, месяцев (до года)', 'Yaş, ay'] }, { k: 'kg', t: 'num', l: ['Вес, кг (если известен)', 'Çəki, kq (məlumdursa)'] }],
+    calc: v => { let kg = v.kg, est = false; if (!kg) { if (v.y == null && v.mo == null) return null; if (v.y != null && v.y > 12) return null; kg = SCX.apls(v.y, v.mo); if (kg == null) return null; est = true; }
+      const ml = SCX.holliday(kg); return { score: (est ? 'Вес ≈ ' : 'Вес ') + scR(kg, 1) + ' кг · поддержание ' + Math.round(ml) + ' мл/ч (' + Math.round(ml * 24) + ' мл/сут)', text: [(est ? 'Вес по формуле APLS — ориентир; взвесьте ребёнка при первой возможности. ' : '') + 'Поддерживающий раствор — изотонический (NICE/AAP); взрослым обычно 25–30 мл/кг/сут.', (est ? 'APLS düsturu ilə çəki — təxminidir. ' : '') + 'Saxlayıcı məhlul — izotonik.'], lvl: 'low' }; } },
+  { id: 'dose', g: 'calc', n: ['Доза по весу', 'Çəkiyə görə doza'], src: 'доза в мг/кг — из инструкции / протокола',
+    f: [{ k: 'kg', t: 'num', l: ['Вес, кг', 'Çəki, kq'] }, { k: 'mgkg', t: 'num', l: ['Доза, мг/кг', 'Doza, mq/kq'] }, { k: 'max', t: 'num', l: ['Максимум на приём, мг (если есть)', 'Maksimum, mq'] }, { k: 'conc', t: 'num', l: ['Концентрация, мг/мл (чтобы получить объём)', 'Konsentrasiya, mq/ml'] }],
+    calc: v => { if (!v.kg || !v.mgkg) return null; let mg = v.kg * v.mgkg; const capped = v.max && mg > v.max; if (capped) mg = v.max;
+      return { score: scR(mg, 2) + ' мг' + (v.conc ? ' = ' + scR(mg / v.conc, 2) + ' мл' : '') + (capped ? ' (ограничено максимумом)' : ''), text: ['Проверьте дозу по инструкции и пересчитайте второй раз перед введением', 'Dozanı təlimatla yoxlayın'], lvl: capped ? 'med' : 'low' }; } },
+  { id: 'infusion', g: 'calc', n: ['Скорость инфузии (мкг/кг/мин → мл/ч)', 'İnfuziya sürəti'], src: 'мл/ч = доза × вес × 60 / концентрация',
+    f: [{ k: 'kg', t: 'num', l: ['Вес, кг', 'Çəki, kq'] }, { k: 'mcg', t: 'num', l: ['Доза, мкг/кг/мин', 'Doza, mkq/kq/dəq'] }, { k: 'mg', t: 'num', l: ['Препарата в шприце, мг', 'Şprisdə dərman, mq'] }, { k: 'ml', t: 'num', l: ['Объём шприца, мл', 'Şprisin həcmi, ml'] }],
+    calc: v => { if (!v.kg || !v.mcg || !v.mg || !v.ml) return null; const conc = v.mg * 1000 / v.ml; const r = v.mcg * v.kg * 60 / conc;
+      return { score: scR(r, 1) + ' мл/ч', text: ['Концентрация ' + scR(conc, 1) + ' мкг/мл; 1 мл/ч = ' + scR(conc / v.kg / 60, 3) + ' мкг/кг/мин', 'Konsentrasiya ' + scR(conc, 1) + ' mkq/ml'], lvl: 'low' }; } }
+];
+/* ---------- экран ---------- */
+function scSt() { if (!S.sc) S.sc = { q: '', open: '', v: {} }; return S.sc; }
+function scVals(c) { const st = scSt(); const v = {}; const raw = st.v[c.id] || {}; c.f.forEach(f => { const x = raw[f.k]; v[f.k] = f.t === 'chk' ? !!x : f.t === 'sel' ? (x === undefined || x === '' ? null : Number(x)) : scNum(x); }); return v; }
+function scResult(c) { try { return c.calc(scVals(c)); } catch (e) { return null; } }
+function scResText(c, r) { return scL(c.n) + ': ' + r.score + (r.text ? ' — ' + scL(r.text) : ''); }
+function scCardHtml(c) {
+  const st = scSt(), raw = st.v[c.id] || {}, open = st.open === c.id;
+  if (!open) return '<button class="btn ghost block" style="text-align:left;margin-bottom:6px" data-act="scOpen" data-id="' + c.id + '">' + esc(scL(c.n)) + '</button>';
+  const fld = f => f.t === 'chk' ? '<label class="check"><input type="checkbox" data-sc="' + c.id + '" data-k="' + f.k + '"' + (raw[f.k] ? ' checked' : '') + '><span>' + esc(scL(f.l)) + (f.pts && f.pts !== 1 ? ' <span class="muted">(+' + f.pts + ')</span>' : '') + '</span></label>'
+    : f.t === 'sel' ? '<div class="field"><label>' + esc(scL(f.l)) + '</label><select data-sc="' + c.id + '" data-k="' + f.k + '"><option value="">—</option>' + f.o.map(o => '<option value="' + o[0] + '"' + (String(raw[f.k]) === String(o[0]) ? ' selected' : '') + '>' + esc(scL(o[1])) + '</option>').join('') + '</select></div>'
+    : '<div class="field"><label>' + esc(scL(f.l)) + '</label><input type="text" inputmode="decimal" data-sc="' + c.id + '" data-k="' + f.k + '" value="' + esc(raw[f.k] === undefined ? '' : raw[f.k]) + '"></div>';
+  return '<div class="card" id="sc_' + c.id + '"><div class="row" style="gap:6px;align-items:center"><b class="grow">' + esc(scL(c.n)) + '</b><button class="btn small ghost" data-act="scOpen" data-id="">✕</button></div>' +
+    '<div class="muted" style="font-size:12px;margin-bottom:6px">' + esc(c.src || '') + '</div>' + c.f.map(fld).join('') + '<div id="scRes_' + c.id + '">' + scResHtml(c) + '</div></div>';
+}
+function scResHtml(c) {
+  const r = scResult(c);
+  if (!r) return '<div class="muted">' + esc(t('scFill')) + '</div>';
+  return '<div class="note" style="margin-top:8px"><span class="tag ' + (LVL[r.lvl] || 'grey') + '">' + esc(r.score) + '</span>' + (r.text ? '<div style="margin-top:4px">' + esc(scL(r.text)) + '</div>' : '') + (r.note ? '<div class="muted" style="margin-top:4px">' + esc(scL(r.note)) + '</div>' : '') +
+    '<div class="row" style="gap:6px;margin-top:6px"><button class="btn small ghost" data-act="scCopy" data-id="' + c.id + '">' + esc(t('scCopy')) + '</button><button class="btn small primary" data-act="scToForm" data-id="' + c.id + '">' + esc(t('scToForm')) + '</button></div></div>';
+}
+function scRender() {
+  const box = $('#scBox'); if (!box) return;
+  const st = scSt();
+  const q = st.q.toLowerCase();
+  const list = SC_LIST.filter(c => !q || (c.n[0] + ' ' + c.n[1] + ' ' + c.id).toLowerCase().indexOf(q) !== -1);
+  const grp = g => list.filter(c => c.g === g);
+  box.innerHTML = '<div class="field"><input type="search" id="scQ" placeholder="' + esc(t('scSearch')) + '" value="' + esc(st.q) + '"></div>' +
+    '<div class="muted" style="margin-bottom:8px;font-size:12px">' + esc(t('scHint')) + '</div>' +
+    (grp('score').length ? '<div class="lbl">' + esc(t('scGrpScore')) + '</div>' + grp('score').map(scCardHtml).join('') : '') +
+    (grp('calc').length ? '<div class="lbl" style="margin-top:8px">' + esc(t('scGrpCalc')) + '</div>' + grp('calc').map(scCardHtml).join('') : '');
+}
+(function () {
+  if (!$('#scrCalc')) {
+    const sec = document.createElement('section');
+    sec.id = 'scrCalc'; sec.className = 'hidden';
+    sec.innerHTML = '<div id="scBox"></div>';
+    const rep = $('#scrReports'); rep.parentNode.insertBefore(sec, rep.nextSibling);
+  }
+  const oa = window.screenAllowed;
+  window.screenAllowed = function (scr) { if (scr === 'calc') return !!S.me; return oa(scr); };
+  const os = window.setScreen;
+  window.setScreen = function (scr) {
+    const r = os.apply(this, arguments);
+    const h = $('#scrCalc'); if (h) h.classList.toggle('hidden', S.screen !== 'calc');
+    if (S.screen === 'calc') { ['#scrClinic', '#scrAdmin', '#scrHosp'].forEach(s => { const e = $(s); if (e) e.classList.add('hidden'); }); scRender(); }
+    return r;
+  };
+  const omr = window.menuRender;
+  if (typeof omr === 'function') window.menuRender = function () {
+    const r = omr.apply(this, arguments);
+    const nav = $('nav.bottom.drawer'); if (!nav) return r;
+    nav.querySelectorAll('[data-act=scGo]').forEach(b => b.remove());
+    if (S.me) { const html = '<button class="btn ghost block" style="margin:6px 0" data-act="scGo">' + esc(t('scTitle')) + '</button>'; const fb = nav.querySelector('[data-act=fbOpen]'); if (fb) fb.insertAdjacentHTML('beforebegin', html); else nav.insertAdjacentHTML('beforeend', html); }
+    return r;
+  };
+  const omm = window.menuMark;
+  if (typeof omm === 'function') window.menuMark = function () { const r = omm.apply(this, arguments); const n = $('#scrName'); if (n && S.screen === 'calc') n.textContent = t('scTitle'); return r; };
+  const ora = window.renderAll;
+  window.renderAll = function () { const r = ora.apply(this, arguments); if (S.screen === 'calc' && S.scLang !== S.lang) { S.scLang = S.lang; scRender(); } return r; };
+})();
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (el && el.id === 'scQ') { scSt().q = el.value; const pos = el.selectionStart; scRender(); const q = $('#scQ'); if (q) { q.focus(); try { q.setSelectionRange(pos, pos); } catch (x) { } } return; }
+  if (el && el.dataset && el.dataset.sc && el.tagName === 'INPUT' && el.type !== 'checkbox') { const st = scSt(); (st.v[el.dataset.sc] = st.v[el.dataset.sc] || {})[el.dataset.k] = el.value; const c = SC_LIST.find(x => x.id === el.dataset.sc); const b = $('#scRes_' + el.dataset.sc); if (c && b) b.innerHTML = scResHtml(c); }
+});
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el && el.dataset && el.dataset.sc && (el.type === 'checkbox' || el.tagName === 'SELECT')) { const st = scSt(); (st.v[el.dataset.sc] = st.v[el.dataset.sc] || {})[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value; const c = SC_LIST.find(x => x.id === el.dataset.sc); const b = $('#scRes_' + el.dataset.sc); if (c && b) b.innerHTML = scResHtml(c); }
+});
+/** Добавить строку в «Осмотр: примечание» последней открытой формы (как правку врача — через обычное сохранение формы). */
+function scToForm(text) {
+  // форма — та, из которой пришли, и только в том же складе / отделении, и только если телефон её знает (иначе можно затереть осмотр)
+  const ref = S.scForm && typeof S.scForm === 'object' ? S.scForm : null;
+  const id = ref && ref.storeId === S.storeId ? ref.id : (S.fv && S.fv.id);
+  const c = typeof fCache === 'function' ? fCache() : null;
+  if (!id || !c || !c.full[id] || typeof fData !== 'function') return toast(t('scNoForm'), 'bad');
+  const stt = typeof fStatus === 'function' ? fStatus(id) : '';
+  if (stt === 'deleted' || ((stt === 'closed' || stt === 'closing') && !(typeof can === 'function' && can('formsEdit')))) return toast(t('E_FORM_CLOSED'), 'bad');
+  const prev = String(fData(id).ex_note || '');
+  const line = text + ' [' + (typeof fmtDt === 'function' ? fmtDt(nowLocal()) : '') + ']';
+  const patch = { ex_note: (prev ? prev + '\n' : '') + line };
+  if (S.fv && S.fv.id === id) { fSet(patch, true); fFlush(); }
+  else { const c = fCache(); if (c.full[id]) { c.full[id].data = Object.assign({}, c.full[id].data || {}, patch); fSaveCache(); } fQueue('formSave', { id, patch }, t('formsTitle')); }
+  toast(t('scAdded'), 'ok');
+}
+Object.assign(H, {
+  scGo: () => { if (typeof menuOpen === 'function') try { menuOpen(false); } catch (e) { } if (S.fv && S.fv.id) S.scForm = { id: S.fv.id, storeId: S.storeId }; setScreen('calc'); },
+  scOpen: el => { scSt().open = el.dataset.id; scRender(); const c = el.dataset.id && $('#sc_' + el.dataset.id); if (c) c.scrollIntoView({ block: 'start', behavior: 'smooth' }); },
+  scCopy: async el => { const c = SC_LIST.find(x => x.id === el.dataset.id); const r = c && scResult(c); if (!r) return; try { await navigator.clipboard.writeText(scResText(c, r)); toast(t('scCopied'), 'ok'); } catch (e) { toast(scResText(c, r), '', null, 8000); } },
+  scToForm: el => { const c = SC_LIST.find(x => x.id === el.dataset.id); const r = c && scResult(c); if (r) scToForm(scResText(c, r)); },
+  scFromForm: () => { S.scForm = S.fv && S.fv.id ? { id: S.fv.id, storeId: S.storeId } : null; if (typeof closeModal === 'function') closeModal(); setScreen('calc'); }
+});
+/* ---------- в форме обращения: GCS по пунктам ЦНС и NEWS2 по каждой записи показателей ---------- */
+const SC_GCS_MAP = { cnsEyes: { spont: 4, voice: 3, pain: 2, none: 1 }, cnsSpeech: { ok: 5, confused: 4, incoh: 3, none: 1 }, cnsMove: { cmd: 6, pain: 5, withdraw: 4, flex: 3, ext: 2, none: 1 } };
+function scFormGcs(d) {
+  const pick = k => { const m = SC_GCS_MAP[k]; const on = Object.keys(m).filter(c => typeof isOn === 'function' ? isOn(d, 'ex_' + k, c) : d['ex_' + k + '_' + c] === true); return on.length === 1 ? m[on[0]] : null; };
+  const e = pick('cnsEyes'), v = pick('cnsSpeech'), m = pick('cnsMove');
+  return e && v && m ? { s: e + v + m, e, v, m } : null;
+}
+/** NEWS2 по записи показателей. Сознание — из пунктов ЦНС (GCS < 15 = новая спутанность), если врач не отметил, что она не новая. */
+function scVitNews(r, d) {
+  const n = x => scNum(x);
+  const g = scFormGcs(d);
+  const sbp = n(r.bpRs) != null ? n(r.bpRs) : n(r.bpLs);
+  const x = SCX.news2({ rr: n(r.rr), spo2: n(r.spo2), o2: !!r.o2, sc2: !!d.news2s2, sbp, hr: n(r.pulse), cvpu: g && !d.news2chronic ? g.s < 15 : false, temp: n(r.temp) });
+  x.consUnknown = !g;
+  return x;
+}
+/** NEWS2 не для детей до 16 лет и беременных (RCP). */
+function scNewsNA(d) {
+  if (d.preg === 'yes' || d.preg === 'susp') return true;
+  const a = typeof ageOf === 'function' ? ageOf(d.pBirth, d.arrivedAt) : '';
+  return a !== '' && a !== null && Number(a) < 16;
+}
+(function () {
+  const ore = window.fRenderEditor;
+  if (typeof ore !== 'function') return;
+  window.fRenderEditor = function () {
+    const r = ore.apply(this, arguments);
+    try {
+      const id = S.fv && S.fv.id; const d = id && typeof fData === 'function' ? fData(id) : null;
+      if (!d) return r;
+      const ro = typeof fCanEdit === 'function' ? !fCanEdit(id) : true;
+      // NEWS2 — у каждой записи показателей (и переключатель «на кислороде»)
+      const rows = typeof rowsOf === 'function' && !scNewsNA(d) ? rowsOf(d, 'vit') : [];
+      // настройки NEWS2 для пациента — один раз над показателями
+      const firstVit = rows.length && document.querySelector('#formsBox .f-vit');
+      if (firstVit && !document.querySelector('#formsBox .sc-news-opt') && !ro) firstVit.insertAdjacentHTML('beforebegin', '<div class="sc-news-opt muted" style="font-size:13px;margin:4px 0">' +
+        '<label class="check" style="margin:0"><input type="checkbox" data-act-chg="scNewsOpt" data-k="news2s2"' + (d.news2s2 ? ' checked' : '') + '><span>' + esc(t('scSc2')) + '</span></label>' +
+        '<label class="check" style="margin:0"><input type="checkbox" data-act-chg="scNewsOpt" data-k="news2chronic"' + (d.news2chronic ? ' checked' : '') + '><span>' + esc(t('scChronic')) + '</span></label></div>');
+      rows.forEach(row => {
+        const inp = document.querySelector('#formsBox [data-row="vit"][data-rid="' + CSS.escape(row._id) + '"]'); if (!inp) return;
+        const host = inp.closest('.f-vit') || inp.parentElement; if (!host || host.querySelector('.sc-news')) return;
+        const x = scVitNews(row, d);
+        const badge = (x.known >= 5 ? '<span class="tag ' + (LVL[x.level] || 'grey') + '">' + esc(t('scNews')) + ' ' + x.score + (d.news2s2 ? ' (S2)' : '') + '</span>' : '<span class="tag grey">' + esc(t('scNews')) + ' —</span>') +
+          (x.known >= 5 && x.consUnknown ? ' <span class="muted" style="font-size:12px">' + esc(t('scConsUnk')) + '</span>' : '');
+        host.insertAdjacentHTML('beforeend', '<div class="row sc-news" style="gap:6px;align-items:center;margin-top:4px">' + badge +
+          (ro ? (row.o2 ? '<span class="muted">' + esc(t('scO2')) + '</span>' : '') : '<label class="check" style="margin:0"><input type="checkbox" data-act-chg="scO2" data-rid="' + esc(row._id) + '"' + (row.o2 ? ' checked' : '') + '><span>' + esc(t('scO2')) + '</span></label>') + '</div>');
+      });
+      // GCS — рядом с пунктами ЦНС
+      const g = scFormGcs(d);
+      const cns = document.querySelector('#formsBox [data-f="ex_cnsEyes"]');
+      const host = cns && (cns.closest('.field') || cns.parentElement);
+      if (host && !document.querySelector('#formsBox .sc-gcs')) host.insertAdjacentHTML('afterend', '<div class="sc-gcs" style="margin:4px 0 8px">' + '<div class="muted" style="font-size:12px;margin-bottom:2px">' + esc(t('scGcsHint')) + '</div>' + (g ? '<span class="tag ' + (g.s <= 8 ? 'red' : g.s <= 12 ? 'amber' : g.s <= 14 ? 'amber' : 'green') + '">GCS ' + g.s + ' (E' + g.e + 'V' + g.v + 'M' + g.m + ')</span>' : '<span class="tag grey">GCS —</span>') + '</div>');
+    } catch (e) { }
+    return r;
+  };
+  const om = window.fMenu;
+  if (typeof om === 'function') window.fMenu = function () {
+    om.apply(this, arguments);
+    const col = $('.modal .col-btns'); if (!col || col.querySelector('[data-act=scFromForm]')) return;
+    col.insertAdjacentHTML('afterbegin', '<button class="btn ghost block" data-act="scFromForm">' + esc(t('scTitle')) + '</button>');
+  };
+})();
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el && el.dataset && el.dataset.actChg === 'scNewsOpt' && S.fv && typeof fSet === 'function') { fSet({ [el.dataset.k]: el.checked ? true : null }, true); fFlush(); return; }
+  if (el && el.dataset && el.dataset.actChg === 'scO2' && S.fv) { if (typeof fSet === 'function') { fSet({ vit: { [el.dataset.rid]: { o2: el.checked ? true : null } } }, true); fFlush(); } }
+});
+
+/* =====================================================================
+ * v44: 🔁 Передача смены и ⏰ повторный осмотр (9.20b).
+ *  - «🔁 Передача смены» (список форм): одной кнопкой — все пациенты в работе (диагноз, аллергия, последние показатели
+ *    и NEWS2, что назначено и не введено, когда повторный осмотр) и закрытые за смену (исход). Копировать / печать.
+ *    Только в приложении (там, где у врача и так есть доступ к формам); в Telegram и ИИ не уходит.
+ *  - «⏰ Повторный осмотр через 30 мин / 1 / 2 / 4 ч» в форме → когда пора — полоса сверху и уведомление на телефоне.
+ * ===================================================================== */
+const I18N_V44 = {
+  ru: { shBtn: '🔁 Передача смены', shTitle: 'Передача смены', shWork: 'В работе', shClosed: 'Закрыто за смену', shNone: 'нет', shCopy: '📋 Копировать', shPrint: '🖨 Печать', shCopied: 'Скопировано',
+    shNotGiven: 'Назначено, не введено', shRe: 'Повторный осмотр', shOutcomeNo: 'исход не указан', shAllergy: 'Аллергия', shAllergyUnk: 'аллергоанамнез не собран', shLast: 'Последние', shLoading: 'Собираю…',
+    shHours: 'за последние {h} ч', shStale: 'Не все правки этого телефона ещё дошли до сервера (нет связи) — сводка может быть неполной.',
+    rcTitle: '⏰ Повторный осмотр', rcIn: 'через', rcM30: '30 мин', rcH1: '1 ч', rcH2: '2 ч', rcH4: '4 ч', rcOff: '✕', rcAt: 'в {t}', rcDue: '⏰ Пора повторно осмотреть: {n}', rcOpen: 'Открыть', rcNotif: 'Пора повторно осмотреть пациента' },
+  az: { shBtn: '🔁 Növbənin təhvili', shTitle: 'Növbənin təhvili', shWork: 'İşdə', shClosed: 'Növbədə bağlanıb', shNone: 'yoxdur', shCopy: '📋 Kopyala', shPrint: '🖨 Çap', shCopied: 'Kopyalandı',
+    shNotGiven: 'Təyin olunub, vurulmayıb', shRe: 'Təkrar müayinə', shOutcomeNo: 'nəticə göstərilməyib', shAllergy: 'Allergiya', shAllergyUnk: 'allergiya anamnezi toplanmayıb', shLast: 'Son', shLoading: 'Toplayıram…',
+    shHours: 'son {h} saatda', shStale: 'Bu telefonun bütün düzəlişləri hələ serverə çatmayıb — xülasə natamam ola bilər.',
+    rcTitle: '⏰ Təkrar müayinə', rcIn: 'sonra', rcM30: '30 dəq', rcH1: '1 saat', rcH2: '2 saat', rcH4: '4 saat', rcOff: '✕', rcAt: '{t}-da', rcDue: '⏰ Təkrar müayinə vaxtıdır: {n}', rcOpen: 'Aç', rcNotif: 'Pasiyenti təkrar müayinə etmək vaxtıdır' }
+};
+Object.assign(I18N.ru, I18N_V44.ru);
+Object.assign(I18N.az, I18N_V44.az);
+const SH_HOURS = 12;
+/** «Сейчас» по Баку в виде 'YYYY-MM-DDTHH:mm' (как остальные времена форм). */
+function shNowLocal(addMin) { const d = new Date(Date.now() + 4 * 3600e3 + (addMin || 0) * 60000); return d.toISOString().slice(0, 16); }
+function shOutcome(k) { const o = (typeof FD !== 'undefined' && FD.outcome || []).find(x => x[0] === k); return o ? (S.lang === 'az' ? o[2] : o[1]) : ''; }
+function shVitLine(d) {
+  const rows = typeof rowsOf === 'function' ? rowsOf(d, 'vit') : [];
+  const r = rows[rows.length - 1]; if (!r) return '';
+  const p = [];
+  if (r.bpRs || r.bpRd) p.push('АД ' + (r.bpRs || '?') + '/' + (r.bpRd || '?'));
+  if (r.pulse) p.push('ЧСС ' + r.pulse); if (r.rr) p.push('ЧДД ' + r.rr); if (r.spo2) p.push('SpO₂ ' + r.spo2 + '%' + (r.o2 ? ' (O₂)' : '')); if (r.temp) p.push('t ' + r.temp); if (r.glu) p.push('глю ' + r.glu);
+  let news = '';
+  try { if (typeof scVitNews === 'function') { const x = scVitNews(r, d); if (x.known >= 5) news = ' — NEWS2 ' + x.score; } } catch (e) { }
+  return p.length ? (r.t ? r.t + ' ' : '') + p.join(', ') + news : '';
+}
+async function shBuild() {
+  const r = await rpcA('formsList', {}, { timeout: 60000 }).catch(() => null);
+  if (!r) return null;
+  const since = shNowLocal(-SH_HOURS * 60).replace('T', ' ');
+  const work = r.rows.filter(x => x.status !== 'closed' && x.status !== 'deleted');
+  const closed = r.rows.filter(x => x.status === 'closed' && String(x.closedAt || x.updatedAt || '') >= since);
+  const full = {};
+  // подробности (показатели, назначения) — у тех, кто ещё в работе; не больше 30 за раз
+  const one = async x => {
+    let d = null;
+    try { const c = fCache(); if (c.full[x.id] && c.full[x.id].data && c.full[x.id].rev >= x.rev) d = c.full[x.id].data; } catch (e) { }
+    if (!d) { const g = await rpc('formGet', { id: x.id }, 30000).catch(() => null); d = g && g.ok && g.form ? g.form.data || {} : null; }
+    full[x.id] = d || {};
+  };
+  // по 4 сразу — быстрее, чем по одной
+  const list = work.slice(0, 30);
+  for (let i = 0; i < list.length; i += 4) await Promise.all(list.slice(i, i + 4).map(one));
+  const st = (typeof myStores === 'function' ? myStores() : []).find(s => s.id === S.storeId);
+  const tri = { green: '🟢', yellow: '🟡', red: '🔴', black: '⚫' };
+  const L = [t('shTitle') + ' — ' + (st ? storeName(st) : '') + ' — ' + fmtDt(shNowLocal()) + ' — ' + (S.me ? S.me.name : ''), ''];
+  if ((S.queue || []).some(o => o.action === 'formSave')) L.splice(1, 0, '⚠️ ' + t('shStale'));
+  L.push(t('shWork') + ' (' + work.length + '):');
+  if (!work.length) L.push('  ' + t('shNone'));
+  work.forEach((x, i) => {
+    const d = full[x.id] || {};
+    const age = typeof ageOf === 'function' ? ageOf(x.birthDate, x.arrivedAt || x.createdAt) : '';
+    L.push((i + 1) + ') ' + (tri[x.triage] ? tri[x.triage] + ' ' : '') + (x.patient || '—') + (age !== '' ? ', ' + t('fAge', { n: age }) : '') + (x.sex ? ', ' + (x.sex === 'm' ? '♂' : '♀') : '') + (x.blankNo ? ' · № ' + x.blankNo : '') + ' · ' + fmtDt(x.arrivedAt || x.createdAt));
+    if (x.dx || x.compl) L.push('   Dx: ' + (x.dx || x.compl) + (x.icd ? ' (' + x.icd + ')' : ''));
+    const al = d.allergyNone ? '—' : (d.allergy || x.allergy || '');
+    L.push('   ' + t('shAllergy') + ': ' + (al || t('shAllergyUnk')));
+    const v = shVitLine(d); if (v) L.push('   ' + t('shLast') + ': ' + v);
+    const ng = (typeof rowsOf === 'function' ? rowsOf(d, 'rx') : []).filter(z => z.drug && !z.given).map(z => z.drug + (z.at ? ' (' + z.at + ')' : ''));
+    if (ng.length) L.push('   ' + t('shNotGiven') + ': ' + ng.join('; '));
+    if (d.recheckAt) L.push('   ' + t('shRe') + ': ' + fmtDt(d.recheckAt));
+    if (d.obsNote) L.push('   💬 ' + String(d.obsNote).slice(0, 300));
+    L.push('   ' + (x.outcome ? shOutcome(x.outcome) : t('shOutcomeNo')));
+  });
+  L.push('', t('shClosed') + ' (' + closed.length + ', ' + t('shHours', { h: SH_HOURS }) + '):');
+  if (!closed.length) L.push('  ' + t('shNone'));
+  closed.forEach(x => L.push('• ' + (x.patient || '—') + (x.dx ? ' — ' + x.dx : '') + ' — ' + (shOutcome(x.outcome) || '—')));
+  return L.join('\n');
+}
+async function shOpen(btn) {
+  if (typeof fFlush === 'function') fFlush();
+  try { if (typeof flushQueue === 'function') await flushQueue(); } catch (e) { }
+  const text = await busy(btn, () => shBuild());
+  if (!text) return;
+  S.shText = text;
+  openModal('<h3>' + esc(t('shTitle')) + '</h3><pre style="white-space:pre-wrap;font:inherit;font-size:14px;max-height:60vh;overflow:auto;background:var(--bg2,#f4f6f7);padding:10px;border-radius:10px">' + esc(text) + '</pre>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button><button class="btn ghost" data-act="shPrint">' + esc(t('shPrint')) + '</button><button class="btn primary" data-act="shCopy">' + esc(t('shCopy')) + '</button></div>');
+}
+(function () {
+  const orl = window.renderFormsList;
+  if (typeof orl !== 'function') return;
+  window.renderFormsList = function () {
+    const r = orl.apply(this, arguments);
+    try {
+      const box = $('#formsBox');
+      if (box && !box.querySelector('[data-act=shOpen]') && typeof can === 'function' && can(['forms', 'formsEdit']) && S.gas) {
+        const bar = box.querySelector('.searchbar');
+        const html = '<button class="btn ghost block" style="margin-bottom:8px" data-act="shOpen">' + esc(t('shBtn')) + '</button>';
+        if (bar) bar.insertAdjacentHTML('beforebegin', html); else box.insertAdjacentHTML('afterbegin', html);
+      }
+      rcCheck();
+    } catch (e) { }
+    return r;
+  };
+})();
+
+/* ---------- ⏰ повторный осмотр ---------- */
+(function () {
+  const ore = window.fRenderEditor;
+  if (typeof ore !== 'function') return;
+  window.fRenderEditor = function () {
+    const r = ore.apply(this, arguments);
+    try {
+      const id = S.fv && S.fv.id; const d = id && typeof fData === 'function' ? fData(id) : null;
+      if (!d || (typeof fStatus === 'function' && ['closed', 'deleted'].indexOf(fStatus(id)) !== -1)) return r;
+      if (typeof fCanEdit === 'function' && !fCanEdit(id)) return r;
+      // сразу под шапкой формы — чтобы срок был виден, не раскрывая разделов
+      const box = $('#formsBox'); if (!box || box.querySelector('.rc-row')) return r;
+      const head = Array.from(box.children).find(x => x.classList && x.classList.contains('card') && !x.classList.contains('px-note') && !x.classList.contains('f-sec'));
+      const sec = head || null;
+      const due = d.recheckAt && d.recheckAt <= shNowLocal();
+      const ins = (h) => sec ? sec.insertAdjacentHTML('beforeend', h) : box.insertAdjacentHTML('afterbegin', h);
+      ins('<div class="rc-row" style="margin-top:8px"><div class="lbl">' + esc(t('rcTitle')) + (d.recheckAt ? ' · <span class="tag ' + (due ? 'red' : 'amber') + '">' + esc(t('rcAt', { t: fmtDt(d.recheckAt) })) + '</span>' : '') + '</div>' +
+        '<div class="chips">' + [[30, 'rcM30'], [60, 'rcH1'], [120, 'rcH2'], [240, 'rcH4']].map(x => '<button type="button" class="chip" data-act="rcSet" data-m="' + x[0] + '">' + esc(t('rcIn') === 'через' ? t('rcIn') + ' ' + t(x[1]) : t(x[1]) + ' ' + t('rcIn')) + '</button>').join('') +
+        (d.recheckAt ? '<button type="button" class="chip" data-act="rcSet" data-m="0">' + esc(t('rcOff')) + '</button>' : '') + '</div></div>');
+    } catch (e) { }
+    return r;
+  };
+})();
+/** Чьи повторные осмотры подошли: из того, что телефон уже знает о формах этого склада. */
+function rcDue() {
+  const now = shNowLocal(), out = [];
+  try {
+    const c = fCache();
+    Object.keys(c.full || {}).forEach(id => {
+      const f = c.full[id]; if (!f) return;
+      if (f.status === 'closed' || f.status === 'deleted') return;
+      // с несохранёнными правками (fData видит и их)
+      const d = typeof fData === 'function' ? fData(id) || f.data : f.data;
+      if (!d || !d.recheckAt) return;
+      if (d.recheckAt <= now) out.push({ id, name: [d.pName].filter(Boolean).join(' ') || ('№ ' + (d.blankNo || '—')), at: d.recheckAt });
+    });
+  } catch (e) { }
+  return out.sort((a, b) => a.at.localeCompare(b.at));
+}
+function rcCheck() {
+  if (!S.me || !S.sess || typeof can !== 'function' || !can(['forms', 'formsEdit'])) return;
+  const due = rcDue();
+  let b = $('#rcBanner');
+  if (!due.length) { if (b) b.remove(); return; }
+  const host = $('main') || $('#app') || document.body;
+  if (!b) { b = document.createElement('div'); b.id = 'rcBanner'; b.className = 'card'; b.style.cssText = 'border-left:4px solid var(--red,#c0392b);margin:8px'; host.insertBefore(b, host.firstChild); }
+  b.innerHTML = '<div><b>' + esc(t('rcDue', { n: due.length })) + '</b></div>' + due.slice(0, 5).map(x => '<div class="row" style="gap:6px;align-items:center;margin-top:4px"><span class="grow">' + esc(x.name) + ' · ' + esc(fmtDt(x.at)) + '</span><button class="btn small primary" data-act="rcOpen" data-id="' + esc(x.id) + '">' + esc(t('rcOpen')) + '</button></div>').join('');
+  // уведомление на телефоне — один раз на каждый срок (без ФИО: экран блокировки видят другие)
+  try {
+    const key = due.map(x => x.id + x.at).join('|');
+    if (window.Notification && Notification.permission === 'granted' && LS.get('MED_RC_NOTIFIED', '') !== key) {
+      const title = t('rcDue', { n: due.length }), opt = { body: t('rcNotif'), tag: 'med-recheck' };
+      // Android (приложение на телефоне): только через service worker; запоминаем, что показали, — только если показали
+      const done = () => { try { LS.set('MED_RC_NOTIFIED', key); } catch (e) { } };
+      if (navigator.serviceWorker && navigator.serviceWorker.getRegistration) navigator.serviceWorker.getRegistration().then(reg => { if (reg && reg.showNotification) return reg.showNotification(title, opt).then(done); new Notification(title, opt); done(); }).catch(() => { try { new Notification(title, opt); done(); } catch (e) { } });
+      else { new Notification(title, opt); done(); }
+    }
+  } catch (e) { }
+}
+setInterval(() => { try { rcCheck(); } catch (e) { } }, 60000);
+// сменили склад / отделение — полоса только про его формы
+if (typeof switchStore === 'function') { const ossw = window.switchStore; window.switchStore = function () { const r = ossw.apply(this, arguments); try { const b = $('#rcBanner'); if (b) b.remove(); setTimeout(() => { try { rcCheck(); } catch (e) { } }, 0); } catch (e) { } return r; }; }
+Object.assign(H, {
+  shOpen: el => shOpen(el),
+  shCopy: async () => { try { await navigator.clipboard.writeText(S.shText || ''); toast(t('shCopied'), 'ok'); } catch (e) { toast(t('E_NETWORK'), 'bad'); } },
+  shPrint: () => {
+    const root = $('#printRoot'); if (!root) return;
+    root.innerHTML = '<pre style="white-space:pre-wrap;font:13px/1.4 sans-serif">' + esc(S.shText || '') + '</pre>';
+    document.body.classList.add('print-form');
+    setTimeout(() => { window.print(); setTimeout(() => { document.body.classList.remove('print-form'); root.innerHTML = ''; }, 800); }, 60);
+  },
+  rcSet: el => {
+    const m = Number(el.dataset.m);
+    fSet({ recheckAt: m ? shNowLocal(m) : null }, true); fFlush();
+    if (m && window.Notification && Notification.permission === 'default') { try { Notification.requestPermission(); } catch (e) { } }
+    rcCheck();
+  },
+  rcOpen: el => { const id = el.dataset.id; if (typeof dsSt === 'function') { const st = dsSt(); st.cur = null; st.seg = 'forms'; } if (S.screen !== 'forms') setScreen('forms'); fOpen(id); }
+});
+
+/* =====================================================================
+ * v45: 🌳 Подразделения любой глубины — дерево в «Обзоре больницы», при выборе склада и в правах.
+ * ===================================================================== */
+const I18N_V45 = {
+  ru: { sk_post: 'Пост / кабинет', unAdd: '＋ Подразделение', unAddTitle: 'Новое подразделение в «{n}»', unMove: '↪ Переместить', unMoveTitle: 'Куда переместить «{n}»', unTop: '— верхний уровень (сама организация)',
+    unUp: 'Входит в', unWithSub: 'И на все его подразделения ({n})', unSubAdded: 'Права выданы и на подразделения: {n}', unHint: 'У каждого подразделения — свои остатки, люди и права, формы пациентов, документы и разборы. Внутри можно создавать ещё уровни (до 6).',
+    unTotal: 'вместе с подразделениями', E_UNIT_CYCLE: 'Нельзя поместить подразделение внутрь самого себя.', E_UNIT_DEPTH: 'Слишком глубоко: не больше 6 уровней.', E_STORE_HAS_UNITS: 'Внутри есть действующие подразделения — сначала удалите или переместите их.' },
+  az: { sk_post: 'Post / kabinet', unAdd: '＋ Bölmə', unAddTitle: '«{n}» daxilində yeni bölmə', unMove: '↪ Köçür', unMoveTitle: '«{n}» haraya köçürülsün', unTop: '— yuxarı səviyyə (təşkilatın özü)',
+    unUp: 'Daxildir', unWithSub: 'Və onun bütün bölmələrinə ({n})', unSubAdded: 'Hüquqlar bölmələrə də verildi: {n}', unHint: 'Hər bölmənin öz qalıqları, işçiləri və hüquqları, pasiyent formaları, sənədləri və təhlilləri var. İçində daha səviyyələr yaratmaq olar (6-ya qədər).',
+    unTotal: 'bölmələrlə birlikdə', E_UNIT_CYCLE: 'Bölməni öz içinə yerləşdirmək olmaz.', E_UNIT_DEPTH: 'Çox dərin: 6 səviyyədən çox olmaz.', E_STORE_HAS_UNITS: 'İçində fəal bölmələr var — əvvəlcə onları silin və ya köçürün.' }
+};
+Object.assign(I18N.ru, I18N_V45.ru);
+Object.assign(I18N.az, I18N_V45.az);
+if (typeof HS_KINDS !== 'undefined' && HS_KINDS.indexOf('post') === -1) HS_KINDS.push('post');
+if (typeof HS_ICON !== 'undefined') HS_ICON.post = '🚪';
+/** Дерево: [{s, depth}] — по «входит в»; если родителя в списке нет (нет прав) — на верхний уровень. */
+function unTree(stores) {
+  const ids = {}; stores.forEach(s => { ids[s.id] = s; });
+  const kids = {}, roots = [];
+  const ord = s => (typeof HS_KINDS !== 'undefined' ? HS_KINDS.indexOf(s.kind || 'medpunkt') : 0);
+  stores.forEach(s => { if (s.upId && ids[s.upId] && s.upId !== s.id) (kids[s.upId] = kids[s.upId] || []).push(s); else roots.push(s); });
+  const sort = a => a.sort((x, y) => ord(x) - ord(y) || String(storeName(x)).localeCompare(String(storeName(y)), 'ru'));
+  const out = [], seen = {};
+  const walk = (s, d) => { if (seen[s.id] || d > 10) return; seen[s.id] = 1; out.push({ s, depth: d }); sort(kids[s.id] || []).forEach(c => walk(c, d + 1)); };
+  sort(roots).forEach(s => walk(s, 0));
+  stores.forEach(s => { if (!seen[s.id]) out.push({ s, depth: 0 }); });
+  return out;
+}
+function unDesc(stores, id) { const out = []; const walk = x => stores.forEach(s => { if (s.upId === x && out.indexOf(s.id) === -1) { out.push(s.id); walk(s.id); } }); walk(id); return out; }
+const unPad = d => d ? '<span style="display:inline-block;width:' + (d * 14) + 'px"></span><span class="muted">└ </span>' : '';
+// выбор склада — деревом
+if (typeof storePicker === 'function') {
+  storePicker = function (force) {
+    const list = unTree(myStores().filter(s => !s.sandbox)).concat(myStores().filter(s => s.sandbox).map(s => ({ s, depth: 0 })));
+    openModal('<h3>🏥 ' + esc(t('pickStore')) + '</h3>' + list.map(({ s, depth }) => '<button class="btn ghost block store-pick' + (s.id === S.storeId ? ' on' : '') + '" data-act="storeGo" data-id="' + esc(s.id) + '"><span>' + unPad(depth) + esc((HS_ICON[s.sandbox ? 'sandbox' : s.kind] || '') + ' ' + storeName(s)) + '</span>' +
+      (s.until ? '<span class="tag amber">' + esc(t('permUntil', { d: fmtDate(s.until) })) + '</span>' : '') + '</button>').join('') +
+      (force ? '' : '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>'));
+  };
+}
+// «Обзор больницы» — деревом; у каждого: «＋ Подразделение», «↪ Переместить»; итог вместе с подразделениями
+window.hsOverHtml = function () {
+  const o = hsSt().over;
+  const sel = st => '<select data-act-change="hsKind" data-id="' + esc(st.id) + '" style="max-width:190px">' + HS_KINDS.map(k => '<option value="' + k + '"' + (st.kind === k ? ' selected' : '') + '>' + esc(hsKindName(k)) + '</option>').join('') + '</select>';
+  const num = (n, k, bad) => '<span class="tag ' + (bad && n ? 'red' : 'grey') + '">' + n + ' ' + esc(t(k)) + '</span> ';
+  const nm = st => S.lang === 'az' ? st.nameAz : st.nameRu;
+  const tree = unTree(o.stores.map(s => Object.assign({}, s)));
+  const sum = (id, k) => [id].concat(unDesc(o.stores, id)).reduce((a, x) => a + (Number((o.stores.find(s => s.id === x) || {})[k]) || 0), 0);
+  return '<div class="muted" style="margin-bottom:8px">' + esc(t('hsOverHint')) + '</div><div class="hint" style="display:block;margin-bottom:8px">' + esc(t('unHint')) + '</div>' + tree.map(({ s: st, depth }) => {
+    const kids = unDesc(o.stores, st.id).length;
+    return '<div class="card" style="margin-left:' + Math.min(depth, 6) * 14 + 'px' + (depth ? ';border-left:3px solid #9fb8c4' : '') + '"><div class="row" style="gap:6px;align-items:center;flex-wrap:wrap"><b class="grow">' + esc((HS_ICON[st.kind] || '') + ' ' + nm(st)) + '</b>' + sel(st) + '</div>' +
+      (st.error ? '<div class="muted">' + esc(t('hsErr')) + '</div>' : '<div style="margin-top:4px">' + num(st.staff, 'hsStaff') + num(st.items, 'hsItems') + num(st.expired, 'hsExpired', true) + num(st.soon, 'hsSoon', true) + num(st.low, 'hsLow', true) + num(st.reqIn, 'hsReqIn', true) + num(st.reqOut, 'hsReqOut') + num(st.formsToday, 'hsForms') + '</div>') +
+      (kids ? '<div class="muted" style="margin-top:4px">' + esc(t('unTotal')) + ': ' + sum(st.id, 'staff') + ' ' + esc(t('hsStaff')) + ', ' + sum(st.id, 'expired') + ' ' + esc(t('hsExpired')) + ', ' + sum(st.id, 'low') + ' ' + esc(t('hsLow')) + ', ' + sum(st.id, 'formsToday') + ' ' + esc(t('hsForms')) + '</div>' : '') +
+      '<div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap">' + (depth < 5 ? '<button class="btn small ghost" data-act="unAdd" data-id="' + esc(st.id) + '">' + esc(t('unAdd')) + '</button>' : '') + '<button class="btn small ghost" data-act="unMove" data-id="' + esc(st.id) + '">' + esc(t('unMove')) + '</button></div></div>';
+  }).join('') +
+    '<div class="card"><b>' + esc(t('hsAddDept')) + '</b><div class="row" style="gap:6px;align-items:flex-end;flex-wrap:wrap"><div class="field grow"><label>' + esc(t('hsDeptName')) + '</label><input type="text" id="hsDeptName" maxlength="80"></div>' +
+    '<div class="field"><label>' + esc(t('hsKind')) + '</label><select id="hsDeptKind">' + HS_KINDS.map(k => '<option value="' + k + '">' + esc(hsKindName(k)) + '</option>').join('') + '</select></div>' +
+    '<div class="field"><label>' + esc(t('unUp')) + '</label><select id="hsDeptUp"><option value="">' + esc(t('unTop')) + '</option>' + tree.filter(x => x.depth < 5).map(({ s, depth }) => '<option value="' + esc(s.id) + '">' + '· '.repeat(depth) + esc(nm(s)) + '</option>').join('') + '</select></div>' +
+    '<button class="btn primary" data-act="hsAddDept">＋</button></div></div>';
+};
+async function unAfterChange(force) { const m = await rpc('me').catch(() => null); if (m && m.ok) setMe(m.me); hsSt().over = null; hsLoad(force !== false); }
+Object.assign(H, {
+  hsAddDept: async el => {
+    const name = (($('#hsDeptName') || {}).value || '').trim();
+    if (name.length < 2) return toast(t('E_NAME_REQUIRED'), 'bad');
+    const up = ($('#hsDeptUp') || {}).value || '';
+    const r = await busy(el, () => rpcA('saveStore', { store: Object.assign({ nameRu: name, kind: ($('#hsDeptKind') || {}).value }, up ? { upId: up } : {}) }, { timeout: 90000 }));
+    if (r) { toast(t('saved')); unAfterChange(); }
+  },
+  unAdd: el => {
+    const st = (hsSt().over.stores || []).find(s => s.id === el.dataset.id); if (!st) return;
+    openModal('<h3>' + esc(t('unAddTitle', { n: S.lang === 'az' ? st.nameAz : st.nameRu })) + '</h3><div class="field"><label>' + esc(t('hsDeptName')) + '</label><input type="text" id="unName" maxlength="80"></div>' +
+      '<div class="field"><label>' + esc(t('hsKind')) + '</label><select id="unKind">' + HS_KINDS.map(k => '<option value="' + k + '"' + (k === 'post' ? ' selected' : '') + '>' + esc(hsKindName(k)) + '</option>').join('') + '</select></div>' +
+      '<div class="muted" style="font-size:13px">' + esc(t('unHint')) + '</div>' +
+      '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="unAddGo" data-id="' + esc(st.id) + '">' + esc(t('save')) + '</button></div>');
+  },
+  unAddGo: async el => {
+    const name = (($('#unName') || {}).value || '').trim();
+    if (name.length < 2) return toast(t('E_NAME_REQUIRED'), 'bad');
+    const r = await busy(el, () => rpcA('saveStore', { store: { nameRu: name, kind: ($('#unKind') || {}).value, upId: el.dataset.id } }, { timeout: 90000 }));
+    if (r) { closeModal(); toast(t('saved')); unAfterChange(); }
+  },
+  unMove: el => {
+    const all = hsSt().over.stores || [];
+    const st = all.find(s => s.id === el.dataset.id); if (!st) return;
+    const bad = [st.id].concat(unDesc(all, st.id));
+    const tree = unTree(all.map(s => Object.assign({}, s))).filter(x => bad.indexOf(x.s.id) === -1 && x.depth < 5);
+    openModal('<h3>' + esc(t('unMoveTitle', { n: S.lang === 'az' ? st.nameAz : st.nameRu })) + '</h3><div class="field"><select id="unTo"><option value="">' + esc(t('unTop')) + '</option>' +
+      tree.map(({ s, depth }) => '<option value="' + esc(s.id) + '"' + (s.id === st.upId ? ' selected' : '') + '>' + '· '.repeat(depth) + esc(S.lang === 'az' ? s.nameAz : s.nameRu) + '</option>').join('') + '</select></div>' +
+      '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="unMoveGo" data-id="' + esc(st.id) + '">' + esc(t('save')) + '</button></div>');
+  },
+  unMoveGo: async el => {
+    const r = await busy(el, () => rpcA('storeParentSet', { unitId: el.dataset.id, parentId: ($('#unTo') || {}).value || '' }));
+    if (r) { closeModal(); toast(t('saved')); unAfterChange(false); } // перемещение — без пересчёта всех складов
+  }
+});
+// права: склады — деревом; «и на все его подразделения»
+(function () {
+  const og = window.grantEditModal;
+  if (typeof og !== 'function') return;
+  window.grantEditModal = function (id, userId) {
+    const r = og.apply(this, arguments);
+    try {
+      const sel = $('#geStore'); if (!sel || !S.ua) return r;
+      const stores = (S.ua.stores || []).filter(s => s.active);
+      const cur = sel.value;
+      const tree = unTree(stores.map(s => Object.assign({}, s)));
+      sel.innerHTML = '<option value="*"' + (cur === '*' ? ' selected' : '') + '>' + esc(t('allStores')) + '</option>' + tree.map(({ s, depth }) => '<option value="' + esc(s.id) + '"' + (s.id === cur ? ' selected' : '') + '>' + '· '.repeat(depth) + esc(storeName(s)) + '</option>').join('');
+      sel.closest('.field').insertAdjacentHTML('afterend', '<label class="check hidden" id="geSubWrap"><input type="checkbox" id="geSub"><span id="geSubLbl"></span></label>');
+      const upd = () => { const n = sel.value === '*' ? 0 : unDesc(stores, sel.value).length; const w = $('#geSubWrap'); if (!w) return; w.classList.toggle('hidden', !n || !!id); const l = $('#geSubLbl'); if (l) l.textContent = t('unWithSub', { n }); };
+      sel.addEventListener('change', upd); upd();
+    } catch (e) { }
+    return r;
+  };
+  const os = window.grantSave;
+  if (typeof os !== 'function') return;
+  // «и на подразделения» уходит вместе с правами (сервер заводит каждому подразделению свою строку)
+  window.grantSave = async function (btn) {
+    const sub = $('#geSub');
+    if (!sub || !sub.checked) return os.apply(this, arguments);
+    const perms = $$('[data-perm]').filter(i => i.checked).map(i => i.dataset.perm);
+    if (!perms.length) return toast(t('E_BAD_PERMS'), 'bad');
+    const until = $('#geUntilWrap').classList.contains('hidden') ? '' : $('#geUntil').value;
+    if (!$('#geUntilWrap').classList.contains('hidden') && !until) return toast(t('E_BAD_EXPIRY'), 'bad');
+    const grant = { id: btn.dataset.id, userId: btn.dataset.user, storeId: $('#geStore').value, perms, until, note: $('#geNote').value.trim(), withSub: true };
+    const r = await busy(btn, () => rpcO('saveGrant', { grant }));
+    if (!r) return;
+    toast(r.subAdded ? t('unSubAdded', { n: r.subAdded }) : t('saved'));
+    await refreshUa();
+    userEditModal(btn.dataset.user);
+  };
+})();
+
+/* ---------- 🗑 удалить склад / подразделение и организацию (главный админ) ---------- */
+const I18N_V45D = {
+  ru: { odBtn: '🗑️ Удалить организацию', odTitle: '🗑️ Удалить организацию «{s}»', odText: 'Удалятся все её склады и подразделения: перед удалением каждого — копия таблицы в «Медпункт — резервные копии» на Диске, сама таблица — в корзину Диска (30 дней можно восстановить). Сотрудники организации будут отключены, Telegram отвязан. Отменить нельзя.',
+    odWord: 'Для подтверждения напишите: УДАЛИТЬ', odProgress: 'Удаляю… осталось складов: {n}', odDone: 'Организация удалена. Отключено сотрудников: {n}.', unDel: '🗑️ Удалить', odBlocked: 'Эти склады удалить не вышло — остальные удалены. Исправьте (например, примите передачи в пути) или отметьте «без копии» и нажмите «Удалить» ещё раз. Вход людям организации уже закрыт.', odNoBackup: 'удалить без копии (файла нет)', odStuck: 'Удаление не завершилось — нажмите ещё раз, продолжится с того же места.' },
+  az: { odBtn: '🗑️ Təşkilatı sil', odTitle: '🗑️ «{s}» təşkilatını sil', odText: 'Onun bütün anbarları və bölmələri silinəcək: hər birinin cədvəlinin surəti Diskdəki «Медпункт — резервные копии» qovluğuna, cədvəlin özü — Disk zibil qutusuna (30 gün bərpa etmək olar). Təşkilatın işçiləri söndürüləcək, Telegram ayrılacaq. Geri qaytarmaq olmaz.',
+    odWord: 'Təsdiq üçün yazın: SİL', odProgress: 'Silirəm… qalan anbar: {n}', odDone: 'Təşkilat silindi. Söndürülən işçi: {n}.', unDel: '🗑️ Sil', odBlocked: 'Bu anbarları silmək alınmadı — qalanlar silindi. Düzəldin və ya «surətsiz» qeyd edib yenidən «Sil» basın.', odNoBackup: 'surətsiz sil (fayl yoxdur)', odStuck: 'Silmə bitmədi — yenidən basın, eyni yerdən davam edəcək.' }
+};
+Object.assign(I18N.ru, I18N_V45D.ru);
+Object.assign(I18N.az, I18N_V45D.az);
+(function () {
+  const oe = window.orgEditModal;
+  if (typeof oe !== 'function') return;
+  window.orgEditModal = function (id) {
+    const r = oe.apply(this, arguments);
+    try {
+      if (id && id !== 'O_MAIN' && typeof isSuper === 'function' && isSuper() && !(S.me && S.me.org && S.me.org.id === id)) {
+        const acts = $('.modal .acts');
+        if (acts) acts.insertAdjacentHTML('beforebegin', '<button class="btn danger block" style="margin:6px 0 10px" data-act="odModal" data-id="' + esc(id) + '">' + esc(t('odBtn')) + '</button>');
+      }
+    } catch (e) { }
+    return r;
+  };
+})();
+function odModal(id) {
+  const o = (S.oa && S.oa.orgs || []).find(x => x.id === id); if (!o) return;
+  openModal('<h3>' + esc(t('odTitle', { s: o.name || id })) + '</h3><div class="hint" style="margin-bottom:10px;display:block">' + esc(t('odText')) + '</div>' +
+    '<div class="field"><label>' + esc(t('rsPw')) + '</label><input type="password" id="odPw" autocomplete="current-password"></div>' +
+    '<div class="field"><label>' + esc(t('odWord')) + '</label><input type="text" id="odWord" autocomplete="off" autocapitalize="characters"></div><div id="odProg" class="muted"></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="orgsAdmin">' + esc(t('cancel')) + '</button><button class="btn danger" data-act="odGo" data-id="' + esc(id) + '">' + esc(t('odBtn')) + '</button></div>');
+}
+async function odGo(btn) {
+  const id = btn.dataset.id;
+  const w = String(($('#odWord') || {}).value || '').trim().toUpperCase().replace(/İ/g, 'I');
+  if (w !== 'УДАЛИТЬ' && w !== 'SIL') { toast(t('sdBadWord'), 'bad'); return; }
+  const pw = ($('#odPw') || {}).value || '';
+  const noBackup = $$('#modalRoot [data-odnb]').filter(i => i.checked).map(i => i.dataset.odnb);
+  const res = await busy(btn, async () => {
+    // по шагам: каждый вызов удаляет до 3 складов (копия каждой таблицы — несколько секунд)
+    for (let i = 0; i < 80; i++) {
+      let r;
+      try { r = await rpcO('deleteOrg', { orgId: id, password: pw, confirm: 'DELETE', noBackup }, { timeout: 170000 }); } catch (e) { return null; }
+      if (!r) return null;
+      if (r.done) return r;
+      const p = $('#odProg'); if (p) p.textContent = t('odProgress', { n: r.left });
+      if (r.blocked && r.blocked.length) return r; // что-то не удалилось — показать и спросить
+    }
+    return { stuck: true };
+  }, true);
+  if (!res) return;
+  if (res.stuck) { toast(t('odStuck'), 'bad', null, 9000); return; }
+  if (!res.done) {
+    const box = $('#odProg'); if (!box) return;
+    box.innerHTML = '<div class="f-alert" style="margin:8px 0">' + esc(t('odBlocked')) + '</div>' + res.blocked.map(b => '<div class="list-row"><div class="grow"><b>' + esc(b.name) + '</b><div class="muted">' + esc(errText({ code: b.code })) + '</div></div>' +
+      (b.code === 'E_BACKUP_FAILED' ? '<label class="check" style="margin:0"><input type="checkbox" data-odnb="' + esc(b.id) + '"><span>' + esc(t('odNoBackup')) + '</span></label>' : '') + '</div>').join('');
+    return;
+  }
+  toast(t('odDone', { n: res.users || 0 }), 'ok', null, 8000);
+  try { await reloadMeQuiet(); } catch (e) { }
+  if (typeof H.orgsAdmin === 'function') H.orgsAdmin();
+}
+// в «Обзоре больницы» у главного админа — «🗑️ Удалить» у каждого узла (то же окно «Удалить склад»: пароль и слово)
+(function () {
+  const oh = window.hsOverHtml;
+  window.hsOverHtml = function () {
+    let h = oh.apply(this, arguments);
+    if (typeof isSuper === 'function' && isSuper()) h = h.replace(/(<button class="btn small ghost" data-act="unMove" data-id="([^"]+)">[^<]*<\/button>)/g, (m, b, id) => b + '<button class="btn small ghost" style="color:var(--red)" data-act="unDel" data-id="' + id + '">' + esc(t('unDel')) + '</button>');
+    return h;
+  };
+})();
+Object.assign(H, {
+  odModal: el => odModal(el.dataset.id),
+  odGo: el => odGo(el),
+  unDel: async el => { if (typeof refreshUa === 'function') await refreshUa(); if (typeof sdModal === 'function') sdModal(el.dataset.id); }
+});
+
+/* =====================================================================
+ * v46: документ / форма, составленные в чате бота, — «📱 Открыть» открывает именно их (адрес …&doc=ID или &form=ID, &store=ID).
+ * ===================================================================== */
+(function () {
+  let want = null;
+  try {
+    const q = new URLSearchParams(location.search);
+    const d = q.get('doc') || '', f = q.get('form') || '';
+    if (/^D[a-z0-9]{8,30}$/.test(d)) want = { k: 'doc', id: d };
+    else if (/^F[A-Za-z0-9]{6,40}$/.test(f)) want = { k: 'form', id: f };
+  } catch (e) { want = null; }
+  if (!want) return;
+  const go = () => {
+    if (!want || !S.me || !S.sess) return;
+    const w = want; want = null;
+    let store = '';
+    try { const u = new URL(location.href); store = u.searchParams.get('store') || ''; ['doc', 'form', 'store'].forEach(k => u.searchParams.delete(k)); history.replaceState(null, '', u.toString()); } catch (e) { }
+    try { if (store && store !== S.storeId && typeof switchStore === 'function' && myStores().some(s => s.id === store)) switchStore(store); } catch (e) { }
+    setTimeout(() => {
+      try {
+        if (w.k === 'doc') { if (typeof dsOpen === 'function') dsOpen(w.id); }
+        else { if (typeof dsSt === 'function') { const st = dsSt(); st.cur = null; st.seg = 'forms'; } if (S.screen !== 'forms') setScreen('forms'); fOpen(w.id); }
+      } catch (e) { }
+    }, 700);
+  };
+  if (typeof afterLogin === 'function') { const oal = afterLogin; afterLogin = function () { const r = oal.apply(this, arguments); go(); return r; }; }
+  window.addEventListener('load', () => setTimeout(go, 1600));
+})();
+
+/* =====================================================================
+ * v47: 👑 ИИ главного админа — полный доступ + роли виртуальной больницы (9.22).
+ *  - Роли одной кнопкой при выдаче прав: регистратура, медсестра, старшая медсестра, врач, зав. отделением, аптека,
+ *    лаборант, только просмотр (+ прежние).
+ *  - ИИ склада у главного админа: справка по приложению (app_help), все данные системы (admin_data, без ФИО пациентов),
+ *    любое действие карточкой «Подтвердить» (propose_admin), окна и экраны (open_dialog), сводка недочётов (dev_report).
+ * ===================================================================== */
+const I18N_V47 = {
+  ru: { role_reception: '🛎 Регистратура', role_nurse: '💉 Медсестра', role_seniorNurse: '👩‍⚕️ Старшая медсестра', role_doc: '🩺 Врач отделения', role_head: '🧑‍⚕️ Зав. отделением', role_pharm: '💊 Аптека', role_lab: '🔬 Лаборант', role_view: '👁 Только просмотр', roleTitle: 'Роль (галочки ниже можно поправить)',
+    aiAdmAct: '⚙️ {a}', aiAdmCopy: '📋 Копировать сводку', aiAdmCopied: 'Сводка скопирована — перешлите разработчику', role_admin: '🛡 Админ склада',
+    aiPrivacyBoss: '👑 Главный админ: ИИ видит всю систему — склады и подразделения, сотрудников и права, формы и документы (без ФИО и FİN пациентов), сбои и отзывы — и делает любое действие по вашему «Подтвердить». Удаление склада или организации — только окном с вашим паролем. Попросите «сводку недочётов» или «вердикт за неделю».' },
+  az: { role_reception: '🛎 Qeydiyyat', role_nurse: '💉 Tibb bacısı', role_seniorNurse: '👩‍⚕️ Baş tibb bacısı', role_doc: '🩺 Şöbə həkimi', role_head: '🧑‍⚕️ Şöbə müdiri', role_pharm: '💊 Aptek', role_lab: '🔬 Laborant', role_view: '👁 Yalnız baxış', roleTitle: 'Rol (aşağıdakı qeydləri düzəltmək olar)',
+    aiAdmAct: '⚙️ {a}', aiAdmCopy: '📋 Xülasəni kopyala', aiAdmCopied: 'Xülasə kopyalandı — tərtibatçıya göndərin', role_admin: '🛡 Anbar admini',
+    aiPrivacyBoss: '👑 Baş admin: Sİ bütün sistemi görür (pasiyent adı və FİN-i olmadan) və «Təsdiqlə» ilə istənilən əməliyyatı edir. Anbar və ya təşkilatın silinməsi — yalnız şifrənizlə.' }
+};
+Object.assign(I18N.ru, I18N_V47.ru);
+Object.assign(I18N.az, I18N_V47.az);
+/* ---------- роли виртуальной больницы ---------- */
+Object.assign(ROLE_TPL, {
+  reception: ['forms'],
+  nurse: ['spend', 'stock', 'forms'],
+  seniorNurse: ['spend', 'receive', 'stock', 'move', 'revision', 'transfer', 'reports', 'forms'],
+  doc: ['spend', 'stock', 'forms', 'ai'],
+  head: ['spend', 'receive', 'stock', 'move', 'reports', 'incidents', 'forms', 'formsEdit', 'ai'],
+  pharm: ['receive', 'stock', 'move', 'revision', 'transfer', 'reports', 'edit'],
+  lab: ['stock', 'spend', 'forms'],
+  view: ['stock', 'reports']
+});
+const ROLE_ORDER = ['reception', 'nurse', 'seniorNurse', 'doc', 'head', 'pharm', 'lab', 'view'];
+(function () {
+  const og = window.grantEditModal;
+  if (typeof og !== 'function') return;
+  window.grantEditModal = function () {
+    const r = og.apply(this, arguments);
+    try {
+      const row = document.querySelector('#modalRoot [data-act=grantTpl]');
+      const host = row && row.parentElement;
+      // прежние кнопки (врач медпункта, врач + формы, админ склада) остаются ниже — роли больницы добавляются над ними
+      if (host && !document.querySelector('#modalRoot .role-pick')) host.insertAdjacentHTML('beforebegin', '<div class="lbl role-pick">' + esc(t('roleTitle')) + '</div><div class="row wrap" style="margin-bottom:6px">' +
+        ROLE_ORDER.map(k => '<button class="btn small ghost" data-act="grantTpl" data-tpl="' + k + '">' + esc(t('role_' + k)) + '</button>').join('') + '</div>');
+    } catch (e) { }
+    return r;
+  };
+})();
+
+/* ---------- справка по приложению (для ИИ главного админа) ---------- */
+const APP_GUIDE = [
+  ['удалить склад отделение подразделение', 'Удалить склад / отделение / подразделение (только главный админ): меню ☰ → «🏥 Больница» → «📊 Обзор больницы» → у нужного узла «🗑️ Удалить»; или кнопка с вашим именем (👑) → «🏥 Склады (отделения)» → ✏️ → «🗑️ Удалить склад». Пароль + слово УДАЛИТЬ. Перед удалением — копия таблицы в «Медпункт — резервные копии», таблица — в корзину Диска (30 дней). Если внутри есть подразделения — сначала их. ИИ: open_dialog deleteStore.'],
+  ['удалить место хранения шкаф сумка полка', 'Место хранения: экран «Склад» → ⚙️ (вверху справа) → «Места хранения» → у места «Убрать» (или ＋ Добавить место / переименовать). Остатки с этого места сначала переместите. ИИ: propose_admin deactivateLocation {storeId, locationId} / saveLocation.'],
+  ['удалить организацию клинику', 'Удалить организацию (только главный админ): кнопка 👑 → «🏢 Организации и оплата» → ✏️ у организации → «🗑️ Удалить организацию» → пароль + УДАЛИТЬ. Удаляет по шагам все склады (с копиями), отключает сотрудников и Telegram, отменяет подписки. Основную и свою — нельзя. ИИ: open_dialog deleteOrg.'],
+  ['отделение подразделение пост кабинет создать структура больница дерево', 'Виртуальная больница: меню ☰ → «🏥 Больница» → «📊 Обзор больницы»: дерево подразделений (до 6 уровней), у каждого «＋ Подразделение», «↪ Переместить», тип (отделение, приёмное, реанимация, лаборатория, аптека, пост/кабинет…). У каждого узла — свои остатки, люди, формы, документы. ИИ: propose_admin saveStore {store:{nameRu, kind, upId}} / storeParentSet {unitId, parentId} / storeKindSet {storeId, kind}.'],
+  ['права роль выдать сотрудник регистратура медсестра врач', 'Права: 👑 → «👥 Пользователи и права» → человек → «＋ Права» → склад (деревом), роль одной кнопкой (регистратура, медсестра, старшая медсестра, врач, зав. отделением, аптека, лаборант, только просмотр), срок; галочка «и на все его подразделения». Снять право с отделения — снимаются и выданные вместе с ним. ИИ: propose_admin saveGrant {grant:{userId, storeId, perms, until, withSub}} / revokeGrant {id}.'],
+  ['новый сотрудник пользователь пароль добавить', 'Новый сотрудник: 👑 → «👥 Пользователи и права» → «＋ Новый» → имя, логин, временный пароль (покажется один раз — передайте человеку). Отключить — снять «Активен». Сбросить пароль — в карточке. ИИ: propose_admin saveUser {user:{login, name}} / resetPassword {userId} — временный пароль создаёт телефон при «Подтвердить» и показывает только админу.'],
+  ['telegram галочки бот права тг', 'Telegram сотрудника: «🛡 Админ-центр» → человек → «✈️ Telegram» (или карточка сотрудника → «Telegram»): галочки приложение, критичные, остатки, документы, напоминания, чат, разбор, списание через чат, сводка дня, утренняя сводка. ИИ: propose_admin tgAccessSet {userId, acc:{…}}.'],
+  ['приход списание перемещение ревизия', 'Склад: нижние вкладки/меню ☰ — «Списание», «Приход», «Склад» (остатки), «Ревизия», «Отчёты». ИИ склада: propose_receive, propose_move, propose_edit_item, propose_norm, propose_edit_lot, propose_location.'],
+  ['форма обращения пациент закрыть открыть исправить', 'Формы пациентов: меню ☰ → «Формы» → «Формы обращения»: новая форма, закрыть (нужны № бланка, ФИО, исход), исправить закрытую — право «Исправлять закрытые» (с записью в журнал), удалить черновик / восстановить — «⋯». ИИ: propose_admin formSave {storeId, id, patch, close} / formDelete {storeId, id, reason} / formRestore.'],
+  ['документ заключение эпикриз направление рецепт справка', 'Документы: меню ☰ → «Формы» → «Документы» / «Рецепты»; из формы обращения «⋯» → «➕ документ». Закрыть, переоткрыть (с причиной), удалить. ИИ: propose_admin docSave {storeId, id, patch, close / reopen+reason} / docDelete {storeId, id, reason}.'],
+  ['перевод пациента реанимация отделение принять', 'Перевод пациента: в форме «⋯» → «🛏 Перевести в отделение»; отделение-получатель: «🏥 Больница» → «🛏 Переводы» → «Принять» (новая форма) / «Отказать». ИИ: propose_admin ptxAccept {storeId, id} / ptxReject {storeId, id, answer} / ptxCancel.'],
+  ['заявка аптека выдать', 'Заявки в аптеку: «🏥 Больница» → «📝 Заявки в аптеку» (отделение) / «📥 Входящие» (аптека → «📦 Выдать» передачей). ИИ: propose_admin hreqAnswer {storeId, id, status, answer}.'],
+  ['шкалы калькулятор news2 gcs', 'Шкалы: меню ☰ → «🧮 Шкалы» (или в форме «⋯» → «🧮 Шкалы»): 16 шкал и 8 калькуляторов, «➕ В форму».'],
+  ['передача смены повторный осмотр', 'Передача смены: «Формы» → «🔁 Передача смены» (над списком). Повторный осмотр: в форме «⏰ через 30 мин / 1 / 2 / 4 ч».'],
+  ['песочница учебная', 'Песочница: меню ☰ → «🧪 Песочница» — учебная копия склада, настоящий склад не меняется.'],
+  ['оплата подписка тариф звёзды', 'Оплата: 👑 → «🏢 Организации и оплата» (тариф, оплачено до, лимиты); заявки на оплату переводом — «🛡 Админ-центр» → «💳 Оплаты». В Telegram — только звёздами (/sub).'],
+  ['ошибки сбои недочёты обратная связь', 'Сбои и обратная связь: меню ☰ → «🛠 Сбои и отзывы» (главный админ). ИИ: dev_report — сводка для разработчика.'],
+  ['журнал входов кто заходил', 'Журнал входов и действий: 👑 → «📒 Журнал входов». ИИ: admin_data audit.'],
+  ['выключить раздел ии документы клиника сотруднику', 'Разделы сотрудника (ИИ, документы, рецепты, клиника, база знаний, чат): «🛡 Админ-центр» → человек → разделы. ИИ: propose_admin admFeatSet {userId, off:[…], limCases, limAi, note} — передавай все поля: не указанные лимиты снимаются.']
+];
+function aiAppHelp(q) {
+  const toks = String(q || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(x => x.length >= 3);
+  const scored = APP_GUIDE.map(g => ({ g, n: toks.filter(tk => (g[0] + ' ' + g[1].toLowerCase()).indexOf(tk) !== -1).length })).filter(x => x.n).sort((a, b) => b.n - a.n);
+  return { found: scored.slice(0, 4).map(x => x.g[1]), all_topics: scored.length ? undefined : APP_GUIDE.map(g => g[0]) };
+}
+/* ---------- данные системы — без личных данных пациентов ----------
+ * Сервер (aiAdmGet) уже вычистил ФИО, FİN, даты рождения, адреса, номера и вложения; здесь — второй слой (на всякий случай). */
+const AI_ADM_PII = /^(pName|pFather|patient|pt|fin|pBirth|birthDate|birth|surname|patronymic|fio|phone|address|addr|xqn|blankNo|blankSerial|regNo|histNo|sheetNo|rxNo|docNo|receipt|email|pwHash|pwSalt|tempPassword|token|sess|tgh|att|atts|files|file|photo|photos|img|city|street|house|village|district|regAddr|idNo|idSer|idType|insNo|insSer|slNo|refNo|workplace|employer|agent|escort|receiver|witness|witnesses|device|ip|ua|pinfo|preview)$/i;
+function aiAdmStrip(o, depth, keepName) {
+  depth = depth || 0;
+  if (depth > 10) return null;
+  if (Array.isArray(o)) return o.slice(0, 300).map(x => aiAdmStrip(x, depth + 1, keepName));
+  if (o && typeof o === 'object') {
+    const r = {};
+    Object.keys(o).forEach(k => { if (AI_ADM_PII.test(k) || (!keepName && (k === 'name' || k === 'login'))) return; r[k] = aiAdmStrip(o[k], depth + 1, keepName); });
+    return r;
+  }
+  if (typeof o === 'string') return typeof opsMask === 'function' ? opsMask(o, 4000) : o.slice(0, 4000);
+  return o;
+}
+async function aiAdmData(a) {
+  const sid = a.storeId ? String(a.storeId) : S.storeId;
+  const w = String(a.what || '');
+  const call = async (action, p, to) => { const r = await rpc(action, Object.assign({ storeId: sid }, p || {}), to || 60000).catch(() => null); if (!r) return { error: 'нет связи' }; if (!r.ok) return { error: errText(r) }; delete r.ok; return r; };
+  if (w === 'stores') return { stores: (S.me.stores || []).map(s => ({ id: s.id, name: s.nameRu, kind: s.kind || '', upId: s.upId || '', depth: s.depth || 0, sandbox: !!s.sandbox })) };
+  if (w === 'reviews') { const r = await call('aiReviewList'); return r.error ? r : { freq: r.freq, rows: (r.rows || []).slice(0, 5).map(x => ({ at: x.at, period: x.period, from: x.from, to: x.to, text: String(x.text || '').slice(0, 8000) })) }; }
+  if (w === 'review_now') { const r = await call('aiReviewNow', { days: Number(a.q) || 7 }, 180000); if (r.error) return r; const ai = aiSt(); ai.devCopyAt = ai.view.length; return { verdict: String(r.row && r.row.text || '').slice(0, 12000), note: 'Вердикт сохранён и отправлен админу в Telegram. Перескажи коротко главное.' }; }
+  if (!/^(users|orgs|audit|hospital|forms|form|docs|doc|cases|patients|transfers|requests|errors)$/.test(w)) return { error: 'неизвестно: ' + w };
+  const r = await call('aiAdmGet', { what: w, id: String(a.id || ''), q: String(a.q || '') }, w === 'hospital' ? 120000 : 60000);
+  if (r.error) return r;
+  // имена сотрудников, складов и организаций нужны (users / orgs / hospital / requests / audit); у пациентов имён нет
+  return aiAdmStrip(r, 0, /^(users|orgs|hospital|requests|audit)$/.test(w));
+}
+async function aiDevReport(a) {
+  const days = Math.min(90, Math.max(1, Number(a.days) || 14));
+  const r = await rpc('aiAdmGet', { storeId: S.storeId, what: 'errorsAll' }, 60000).catch(() => null);
+  if (!r || !r.ok) return { error: r ? errText(r) : 'нет связи' };
+  const since = new Date(Date.now() + 4 * 3600e3 - days * 86400000).toISOString().slice(0, 10);
+  const errs = (r.errors || []).filter(e => String(e.lastAt || e.day || '') >= since);
+  const groups = {};
+  errs.forEach(e => {
+    const k = [e.kind, e.code, String(e.msg || '').slice(0, 120), String(e.where || '').split(' @ ')[0]].join(' | ');
+    const g = groups[k] || (groups[k] = { kind: e.kind, code: e.code, msg: String(e.msg || '').slice(0, 200), where: String(e.where || '').slice(0, 160), count: 0, users: {}, versions: {}, last: '', status: e.status || '' });
+    g.count += Number(e.count) || 1; if (e.userId) g.users[e.userId] = 1; if (e.ver) g.versions[e.ver] = 1; if (String(e.lastAt) > g.last) g.last = String(e.lastAt);
+  });
+  const list = Object.keys(groups).map(k => { const g = groups[k]; return { kind: g.kind, code: g.code, msg: g.msg, where: g.where, count: g.count, people: Object.keys(g.users).length, versions: Object.keys(g.versions).slice(0, 5), last: g.last, status: g.status }; }).sort((x, y) => y.count - x.count).slice(0, 60);
+  const fb = (r.feedback || []).filter(f => String(f.at || '') >= since).slice(0, 80).map(f => ({ kind: f.kind, text: String(f.text || '').slice(0, 600), where: f.where, at: f.at, status: f.status }));
+  const ai = aiSt(); ai.devCopyAt = ai.view.length;
+  return aiAdmStrip({ period: since + ' — сегодня', errors: list, feedback: fb, tg: list.filter(x => /^tg:/.test(x.where)).length, note: 'Сгруппируй по важности и напиши сводку для разработчика (см. правила). Админ скопирует её кнопкой.' });
+}
+/* ---------- действия — карточкой «Подтвердить» ---------- */
+const AI_ADM_ACT = {
+  saveStore: { l: 'склад / подразделение', t: 120000 }, storeParentSet: { l: 'переместить подразделение' }, storeKindSet: { l: 'тип отделения' },
+  saveGrant: { l: 'права' }, revokeGrant: { l: 'снять права' }, saveUser: { l: 'сотрудник' }, resetPassword: { l: 'сброс пароля' }, revokeSession: { l: 'завершить сеанс' },
+  saveLocation: { l: 'место хранения', op: 1 }, deactivateLocation: { l: 'убрать место хранения', op: 1 },
+  formSave: { l: 'форма пациента', op: 1 }, formDelete: { l: 'удалить форму', op: 1 }, formRestore: { l: 'восстановить форму', op: 1 },
+  docSave: { l: 'документ', op: 1 }, docDelete: { l: 'удалить документ' }, docRestore: { l: 'восстановить документ' },
+  hreqAnswer: { l: 'ответ на заявку' }, hreqCancel: { l: 'отменить заявку' }, ptxAccept: { l: 'принять перевод', op: 1 }, ptxReject: { l: 'отказать в переводе' }, ptxCancel: { l: 'отменить перевод' },
+  saveOrg: { l: 'организация', t: 120000 }, tgAccessSet: { l: 'Telegram сотрудника' }, admFeatSet: { l: 'разделы сотрудника' }, opsMark: { l: 'отметить сбой' }, fbAnswer: { l: 'ответ на отзыв' }, aiReviewSet: { l: 'частота вердикта ИИ' }
+};
+/** Что показать в карточке: из самих params (а не со слов ИИ), с названиями складов / людей / организаций. */
+const AI_ADM_RISK = /^(tempPassword|orgId|orgAdmin|owner|plan|paidUntil|status|aiMonth|maxUsers|maxStores|active|perms|withSub|off)$/;
+function aiAdmName(k, v) {
+  v = String(v);
+  try {
+    if (/^(storeId|upId|parentId|unitId|fromStore|toStore)$/.test(k) || (k === 'id' && /^S/.test(v))) { const st = (S.me.stores || []).find(x => x.id === v); if (st) return st.nameRu + ' (' + v + ')'; }
+    if (/^(userId)$/.test(k) || (k === 'id' && /^U/.test(v))) { const u = ((S.ua && S.ua.users) || []).find(x => x.id === v); if (u) return u.name + ' (' + v + ')'; }
+    if (k === 'orgId' || (k === 'id' && /^O/.test(v))) { const o = ((S.ua && S.ua.orgs) || []).find(x => x.id === v); if (o) return (o.name || v) + ' (' + v + ')'; }
+  } catch (e) { }
+  return v;
+}
+function aiAdmLines(o, pre, out, risk) {
+  Object.keys(o).forEach(k => {
+    const v = o[k], key = pre ? pre + '.' + k : k;
+    if (AI_ADM_RISK.test(k)) risk.push(key);
+    if (v && typeof v === 'object' && !Array.isArray(v)) aiAdmLines(v, key, out, risk);
+    else out.push(key + ': ' + (Array.isArray(v) ? v.map(x => typeof x === 'object' ? JSON.stringify(x) : String(x)).join(', ') : aiAdmName(k, v)));
+  });
+  return out;
+}
+function aiAdmPw() { const ch = 'abcdefghjkmnpqrstuvwxyz23456789'; let s = ''; const a = new Uint8Array(10); crypto.getRandomValues(a); a.forEach(b => { s += ch[b % ch.length]; }); return s; }
+async function aiAdmPropose(a) {
+  try { if (!S.ua && typeof refreshUa === 'function') await refreshUa(); } catch (e) { }
+  const act = String(a.action || ''), cfg = AI_ADM_ACT[act];
+  if (!cfg) return { error: 'это действие так не делается: ' + act + (/delete(Store|Org)|resetStore/.test(act) ? ' — используй open_dialog' : '') };
+  const params = a.params && typeof a.params === 'object' && !Array.isArray(a.params) ? JSON.parse(JSON.stringify(a.params)) : null;
+  if (!params) return { error: 'params — объект' };
+  delete params.sess; delete params.opId; delete params.password;
+  // пароль ИИ не придумывает и не видит: временный пароль создаёт телефон при «Подтвердить» и показывает только админу
+  let needPw = false;
+  if (act === 'saveUser') { const u = params.user && typeof params.user === 'object' ? params.user : null; if (!u) return { error: 'params.user — объект' }; delete u.tempPassword; needPw = !u.id || !!a.params.user.tempPassword; }
+  if (act === 'resetPassword') { delete params.tempPassword; if (!params.userId) return { error: 'нужен userId' }; needPw = true; }
+  const myId = S.me && S.me.id;
+  if ((act === 'resetPassword' && params.userId === myId) || (act === 'saveUser' && params.user.id && params.user.id === myId && needPw)) return { error: 'свой пароль админ меняет сам через «Сменить пароль» — ИИ его не трогает' };
+  const js = JSON.stringify(params);
+  if (js.length > 6000) return { error: 'слишком большие params — разбей на несколько действий' };
+  const risk = [];
+  const lines = aiAdmLines(params, '', [], risk);
+  if (needPw) lines.push('🔑 временный пароль: создаст телефон и покажет только вам');
+  const summary = aiClean(a.summary).slice(0, 300);
+  const ai = aiSt();
+  const pid = 'p' + Date.now().toString(36) + Math.floor(Math.random() * 1e4);
+  // заголовок карточки — из самого действия; пояснение ИИ — ниже и отдельно
+  const text = t('aiAdmAct', { a: cfg.l }) + ' (' + act + ')' + (summary ? '\nПояснение ИИ: ' + summary : '');
+  const full = lines.join('\n');
+  if (act === 'admFeatSet' && ['limCases', 'limAi', 'note'].some(k => params[k] === undefined)) risk.push('лимиты и заметка не указаны — будут сняты');
+  const warn = risk.length ? '⚠️ Проверьте внимательно: ' + risk.join(', ') + (risk.some(k => /orgId|orgAdmin|owner/.test(k)) ? ' — меняет, в какой организации человек и админ ли он.' : '') + (risk.some(k => /plan|paidUntil|status/.test(k)) ? ' — тариф / оплата / статус.' : '') : '';
+  ai.props[pid] = { text: aiClean(text), state: 'wait', opId: newOpId(), full, warn, choice: null,
+    run: async (opId) => {
+      const send = JSON.parse(js);
+      let pw = '';
+      if (needPw) { pw = aiAdmPw(); if (act === 'resetPassword') send.tempPassword = pw; else send.user.tempPassword = pw; }
+      const r = await rpcA(act, send, Object.assign({ timeout: cfg.t || 60000 }, cfg.op ? { op: true, opId } : {}));
+      if (pw) {
+        const login = act === 'saveUser' ? String(send.user.login || '') : String((((S.ua && S.ua.users) || []).find(x => x.id === send.userId) || {}).login || '');
+        try { openModal('<h3>🔑 ' + esc(t('saved')) + '</h3><div class="info">' + esc(t('tempPwShow', { login, pw })) + '</div><div class="acts"><button class="btn ghost" data-act="copyCreds" data-text="' + esc(t('credsText', { url: S.webAppUrl || '', login, pw })) + '">📋 ' + esc(t('copy')) + '</button><button class="btn primary" data-act="closeModal">OK</button></div>'); } catch (e) { toast(login + ': ' + pw, '', null, 20000); }
+      }
+      try { if (/^(saveStore|storeParentSet|storeKindSet|saveGrant|revokeGrant|saveOrg|saveUser)$/.test(act) && typeof reloadMeQuiet === 'function') await reloadMeQuiet(); } catch (e) { }
+      try { if (/^(saveUser|resetPassword|saveGrant|revokeGrant)$/.test(act) && typeof refreshUa === 'function') await refreshUa(); } catch (e) { }
+      try { if (/^(saveLocation|deactivateLocation)$/.test(act) && typeof refreshState === 'function') refreshState(true); } catch (e) { }
+      // ИИ получает только «выполнено» — без пароля
+      return r && typeof r === 'object' ? Object.assign({}, r, { aiNote: pw ? 'временный пароль показан админу на экране' : '' }) : r;
+    } };
+  ai.view.push({ k: 'p', id: pid });
+  return { status: 'показано админу, ждёт его подтверждения — НЕ выполнено. Скажи, что нужно нажать «Подтвердить».', card: full, warning: warn || undefined };
+}
+async function aiAdmOpen(a) {
+  const d = String(a.dialog || ''), id = String(a.id || ''), sid = String(a.storeId || '');
+  const sw = async () => { if (sid && sid !== S.storeId && myStores().some(s => s.id === sid)) { switchStore(sid); await new Promise(r => setTimeout(r, 700)); } };
+  try {
+    if (d === 'deleteStore') { if (typeof refreshUa === 'function') await refreshUa(); sdModal(id); return { opened: 'окно удаления склада — админ вводит пароль сам' }; }
+    if (d === 'deleteOrg') { await orgsAdmin(); setTimeout(() => { try { odModal(id); } catch (e) { } }, 600); return { opened: 'окно удаления организации — админ вводит пароль сам' }; }
+    if (d === 'store') { if (typeof refreshUa === 'function') await refreshUa(); storeEditModal(id); return { opened: 'store' }; }
+    if (d === 'user') { if (typeof refreshUa === 'function') await refreshUa(); userEditModal(id); return { opened: 'user' }; }
+    if (d === 'users') { usersAdmin(); return { opened: 'users' }; }
+    if (d === 'stores') { storesAdmin(); return { opened: 'stores' }; }
+    if (d === 'orgs') { orgsAdmin(); return { opened: 'orgs' }; }
+    if (d === 'hospital') { H.hsOpen(); hsSt().seg = 'over'; hsRender(); hsLoad(); return { opened: 'hospital' }; }
+    if (d === 'settings') { await sw(); settingsModal(); return { opened: 'settings' }; }
+    if (d === 'admin') { setScreen('admin'); return { opened: 'admin' }; }
+    if (d === 'form') { await sw(); if (typeof dsSt === 'function') { const st = dsSt(); st.cur = null; st.seg = 'forms'; } setScreen('forms'); fOpen(id); return { opened: 'form ' + id }; }
+    if (d === 'doc') { await sw(); dsOpen(id); return { opened: 'doc ' + id }; }
+    if (d === 'ops') { if (H.opsOpen) H.opsOpen(); else if (H.opsAdmin) H.opsAdmin(); return { opened: 'ops' }; }
+  } catch (e) { return { error: 'не открылось: ' + (e && e.message || '') }; }
+  return { error: 'нечего открыть' };
+}
+(function () {
+  const ort = window.aiRunTool;
+  if (typeof ort !== 'function') return;
+  window.aiRunTool = async function (name, a, mode) {
+    if (/^(app_help|admin_data|propose_admin|open_dialog|dev_report)$/.test(name)) {
+      if (!(typeof isSuper === 'function' && isSuper())) return { error: 'только главному админу' };
+      a = a || {};
+      if (name === 'app_help') return aiAppHelp(a.query);
+      if (name === 'admin_data') return aiAdmData(a);
+      if (name === 'propose_admin') return aiAdmPropose(a);
+      if (name === 'open_dialog') return aiAdmOpen(a);
+      if (name === 'dev_report') return aiDevReport(a);
+    }
+    return ort.apply(this, arguments);
+  };
+  Object.assign(AI_TOOL_LABEL, { app_help: 'справка по приложению', admin_data: 'данные системы', propose_admin: 'действие', open_dialog: 'открыть окно', dev_report: 'сводка недочётов' });
+})();
+// под ответом со сводкой недочётов / вердиктом — «📋 Копировать сводку»
+(function () {
+  const orr = window.aiRender;
+  if (typeof orr !== 'function') return;
+  window.aiRender = function () {
+    const r = orr.apply(this, arguments);
+    try {
+      const ai = aiSt();
+      if (ai.devCopyAt !== undefined && ai.devCopyAt !== null) {
+        const k = ai.view.findIndex((v, i) => i >= ai.devCopyAt && v.k === 'a');
+        if (k !== -1) {
+          const nth = ai.view.slice(0, k).filter(v => v.k === 'a').length;
+          const el = $$('#aiLog .ai-b.ai-a')[nth];
+          if (el && !el.querySelector('[data-act=aiDevCopy]')) el.insertAdjacentHTML('beforeend', '<div class="acts"><button class="btn small primary" data-act="aiDevCopy">' + esc(t('aiAdmCopy')) + '</button></div>');
+        }
+      }
+    } catch (e) { }
+    return r;
+  };
+})();
+Object.assign(H, {
+  aiDevCopy: async el => { const box = el.closest('.ai-a'); const txt = box ? box.innerText.replace(t('aiAdmCopy'), '').trim() : ''; try { await navigator.clipboard.writeText(txt); toast(t('aiAdmCopied'), 'ok'); } catch (e) { toast(txt.slice(0, 200), '', null, 8000); } }
+});
+
+// у главного админа — другая подсказка над ИИ склада
+(function () {
+  const ot = window.t;
+  if (typeof ot !== 'function') return;
+  window.t = function (k) { if (k === 'aiPrivacy' && typeof isSuper === 'function' && isSuper()) return ot('aiPrivacyBoss'); return ot.apply(this, arguments); };
 })();
 
 
