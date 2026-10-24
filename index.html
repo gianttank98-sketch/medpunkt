@@ -25630,7 +25630,7 @@ function labPhoto() {
 Object.assign(H, {
   hpRegGo: el => hpRegGo(el),
   hpHaveAcc: () => { S.tgHaveAcc = true; S.tgUsePw = true; renderLogin(); },
-  hpSub: () => { if (typeof menuClose === 'function') try { menuClose(); } catch (e) { } hpSubOpen(); },
+  hpSub: () => { if (typeof menuOpen === 'function') try { menuOpen(false); } catch (e) { } hpSubOpen(); },
   hpBuy: el => hpBuy(el),
   labAdd: () => labAddModal(),
   labSave: () => labSave(),
@@ -26175,6 +26175,651 @@ if (typeof hgOpen === 'function') {
     const acts = $('#modalRoot .acts');
     if (acts && !acts.querySelector('[data-act=kcOpen]')) acts.insertAdjacentHTML('afterbegin', '<button class="btn ghost" data-act="kcOpen">' + esc(t('kcTitle')) + '</button>');
   };
+}
+
+/* =====================================================================
+ * v34: «🛡 Админ-центр» главного админа + отдельный админ-профиль + права по разделам + оплата переводом + канал.
+ * ===================================================================== */
+const I18N_V34 = {
+  ru: {
+    admTitle: '🛡 Админ-центр', admEnter: '🛡 Админ-профиль', admEnterTitle: '🛡 Вход в админ-профиль', admEnterHint: 'Пароль админ-профиля (свой, не пароль входа). Админ-профиль закроется сам через 30 минут без действий.', admEnterGo: 'Войти',
+    admWork: '👨‍⚕️ Рабочий профиль', admBanner: '🛡 Админ-профиль', admUntil: 'до {t}', admNeed: 'Это делается в админ-профиле.',
+    admSegPeople: '👥 Люди', admSegClinics: '🏥 Клиники', admSegPays: '💳 Оплаты', admSegLedger: '📒 Деньги', admSegChannel: '📣 Канал', admSegLog: '📜 Журнал', admSegSet: '⚙ Настройки',
+    admSearch: 'Поиск: имя, логин, телефон, клиника', admF_all: 'Все', admF_med: 'Медпункт', admF_helper: 'Помощник', admF_pending: 'Ждут одобрения', admF_off: 'Заблокированы', admF_pay: 'Ждут оплаты',
+    admNone: 'Никого не найдено.', admMain: 'Основная', admPro: 'Pro до {d}', admTrial: 'пробный до {d}', admFree: 'бесплатный', admGift: 'подарок до {d}', admProv: 'временный до {d}', admPaidTag: 'оплачено до {d}',
+    admBlocked: 'заблокирован', admPendingTag: 'ждёт одобрения', admLast: 'был(а) {d}', admNever: 'ещё не входил(а)',
+    admBlock: '⛔ Заблокировать', admUnblock: '✅ Разблокировать', admBlockAsk: 'Заблокировать {n}? Все его входы закроются.', admApprove: '✅ Одобрить',
+    admPw: '🔑 Временный пароль', admPwAsk: 'Новый временный пароль для {n} (не меньше 8 знаков). При входе его попросят сменить:', admPwDone: 'Пароль задан. Передайте его человеку лично.',
+    admSess: 'Входов (устройств): {n}', admSessOff: '🚪 Закрыть все входы', admSessDone: 'Входы закрыты',
+    admFeats: 'Разделы приложения', admFeatsHint: 'Снимите галочку — раздел у человека пропадёт и в приложении, и в Telegram.', admLim: 'Личные лимиты (пусто — по тарифу)', admLimCases: 'Разборов в месяц', admLimAi: 'Запросов ИИ в месяц', admSave: 'Сохранить', admSaved: 'Сохранено',
+    ft_ai: '🧑‍⚕️ Разбор с ИИ и подсказки ИИ', ft_docs: '📄 Документы', ft_rx: '💊 Рецепты', ft_clinic: '👥 Мини-клиника и консультации', ft_kb: '📚 Справочник: жалобы, диагнозы, протоколы',
+    admStores: '🏥 Права на складах', admTg: '✈️ Telegram', tg_app: 'Приложение в Telegram', tg_low: 'Команда «Кончается»', tg_stock: 'Команда «Остатки»', tg_docs: 'Команда «Документы»', tg_remind: 'Напоминания', admTgNo: 'Telegram не привязан',
+    admHelper: '🩺 Помощник врача', admGiftBtn: '🎁 Подарить Pro', admClinic: '👥 Мини-клиника', admKick: 'Убрать из клиники', admKickAsk: 'Убрать {n} из клиники «{c}»?',
+    admPaysT: 'Оплаты', admNoPays: 'Оплат нет.',
+    admClClose: '⛔ Закрыть клинику', admClCloseAsk: 'Причина закрытия клиники «{n}» (врачи её увидят):', admClMembers: 'Врачи', admClShares: 'консультаций: {n}', admClClosed: 'закрыта',
+    pyTitle: '💳 Оплата переводом', pyHint: 'Переведите сумму на реквизиты ниже. В комментарии к переводу укажите код платежа. Затем нажмите «Я оплатил(а)».', pyReq: 'Реквизиты', pyKind: 'Что оплачиваю', pyCode: 'Код платежа появится после нажатия.',
+    pk_pro_m: 'Pro на месяц', pk_pro_y: 'Pro на год', pk_c5: 'Клиника до 5 врачей (месяц)', pk_c10: 'Клиника до 10 врачей (месяц)', pyNote: 'Комментарий (с какой карты, время перевода)', pyReceipt: '📎 Фото чека (по желанию)',
+    pySend: '✅ Я оплатил(а)', pySent: 'Заявка {c} отправлена. Доступ откроется после проверки{p}.', pyProvTxt: ', а пока — временный доступ до {d}', pyMine: 'Мои заявки', pyCancel: 'Отменить',
+    pySt_pending: '⏳ проверяется', pySt_approved: '✅ подтверждена', pySt_rejected: '❌ отклонена', pySt_cancelled: '⚪ отменена', pyBtn: '💳 Оплатить переводом', pyOff: 'Оплата переводом пока не настроена.',
+    pyAdmPend: 'Ждут проверки', pyAdmAll: 'Все заявки', pyReceiptBtn: '🧾 Чек', pyApprove: '✅ Открыть доступ', pyReject: '❌ Отклонить', pyDays: 'На сколько дней', pyAmount: 'Получено, ₼',
+    pyRejectAsk: 'Причина отказа (врач её увидит):', pyDone: 'Доступ открыт до {d}', pyRejected: 'Отклонено', pyStars: '⭐ Оплаты звёздами',
+    pyUndo: '↩ Отменить', pyUndoAsk: 'Пароль главного админа (деньги вернули вручную — срок откатится):',
+    lgTitle: '📒 Все деньги', lgFrom: 'С', lgTo: 'По', lgShow: 'Показать', lgCsv: '⬇ Таблица (CSV)', lgMonth: 'Месяц', lgQuarter: 'Квартал', lgYear: 'Год', lgStars: '⭐', lgAzn: '₼', lgTransfer: 'перевод', lgStarsM: 'звёзды',
+    lgHint: 'Для налоговой (упрощёнка 2% с оборота): итог в манатах — переводы; звёзды Telegram выводятся через Fragment, их сумма в манатах — по курсу на день вывода.',
+    chTitle: '📣 Канал Telegram', chNone: 'Канал не подключён.', chSetHint: '1) В канале: Управление → Администраторы → Добавить → ваш бот, право «Публикация сообщений». 2) Впишите ссылку на канал (@имя или t.me/имя) и нажмите «Подключить».',
+    chInput: 'Канал', chSetBtn: '🔗 Подключить', chOk: 'Канал подключён: {n}', chText: 'Текст поста', chPhoto: '📷 Картинка (по желанию)', chBtn: 'Кнопка «🩺 Попробовать бесплатно» (ведёт в бота)', chPost: '📣 Опубликовать', chPosted: 'Опубликовано',
+    chReady: 'Готовые посты', chUse: 'В редактор', chStat: 'Кто откуда пришёл', chStarts: 'нажали «Старт»', chRegs: 'зарегистрировались', chSrc_ch: 'из канала', chSrc_bot: 'прямо в бота', chSrc_reg: 'по ссылке ?start=reg', chSrc_web: 'с сайта', chRecent: 'Последние посты', chLink: 'Ссылка для канала',
+    stSplitPw: 'Пароль входа (как обычно)', stSplitAdm: 'Новый пароль админ-профиля (не меньше 10 знаков, НЕ такой, как пароль входа)', stSplitAdm2: 'Повторите пароль админ-профиля', stSplitChange: 'Сменить пароль админ-профиля', stPwAsk: 'Пароль входа главного админа:',
+    E_ADMIN_PW_SAME: 'Пароль админ-профиля должен отличаться от пароля входа.',
+    stSplit: 'Отдельный админ-профиль', stSplitOn: 'Включён: обычный вход — рабочий профиль, админ — по своему паролю.', stSplitOff: 'Выключен: вы всегда главный админ.', stSplitBtnOn: 'Включить', stSplitBtnOff: 'Выключить', stSplitAsk: 'Пароль главного админа:',
+    stPay: 'Оплата переводом', stPayReq: 'Реквизиты для врачей (карта, получатель, банк)', stProv: 'Временный доступ на 2 дня сразу после «Я оплатил(а)» (один раз на человека)', stClinicAzn: 'Цена клиники переводом, ₼', stSaved: 'Сохранено',
+    stHelper: 'Тарифы «Помощника»', stOther: 'Другие настройки', stOldUsers: '👥 Пользователи (по складам)', stTg: '✈️ Telegram', stHgList: '👩‍⚕️ Врачи «Помощника»',
+    lgNone: 'Пока пусто.',
+    E_ADMIN_MODE: 'Это делается в админ-профиле.', E_FEAT_OFF: 'Этот раздел вам выключен администратором.', E_PAY_PENDING: 'У вас уже есть заявка на проверке.', E_BAD_FILE: 'Файл не подходит (нужны фото JPG/PNG или PDF до 2 МБ).',
+    E_CH_BAD: 'Неверная ссылка на канал.', E_CH_NOT_FOUND: 'Канал не найден: проверьте ссылку и что бот добавлен в канал.', E_CH_NOT_ADMIN: 'Бот не админ канала или у него нет права «Публикация сообщений».', E_CH_SEND: 'Telegram не принял пост.'
+  },
+  az: {
+    admTitle: '🛡 Admin mərkəzi', admEnter: '🛡 Admin profili', admEnterTitle: '🛡 Admin profilinə giriş', admEnterHint: 'Admin profilinin şifrəsi (girişin şifrəsi deyil). Admin profili 30 dəqiqə hərəkətsizlikdən sonra özü bağlanır.', admEnterGo: 'Daxil ol',
+    admWork: '👨‍⚕️ İş profili', admBanner: '🛡 Admin profili', admUntil: '{t}-dək', admNeed: 'Bu, admin profilində edilir.',
+    admSegPeople: '👥 İnsanlar', admSegClinics: '🏥 Klinikalar', admSegPays: '💳 Ödənişlər', admSegLedger: '📒 Pul', admSegChannel: '📣 Kanal', admSegLog: '📜 Jurnal', admSegSet: '⚙ Ayarlar',
+    admSearch: 'Axtarış: ad, login, telefon, klinika', admF_all: 'Hamısı', admF_med: 'Tibb məntəqəsi', admF_helper: 'Köməkçi', admF_pending: 'Təsdiq gözləyir', admF_off: 'Bloklanıb', admF_pay: 'Ödəniş gözləyir',
+    admNone: 'Heç kim tapılmadı.', admMain: 'Əsas', admPro: 'Pro {d}-dək', admTrial: 'sınaq {d}-dək', admFree: 'pulsuz', admGift: 'hədiyyə {d}-dək', admProv: 'müvəqqəti {d}-dək', admPaidTag: '{d}-dək ödənilib',
+    admBlocked: 'bloklanıb', admPendingTag: 'təsdiq gözləyir', admLast: '{d} olub', admNever: 'hələ daxil olmayıb',
+    admBlock: '⛔ Blokla', admUnblock: '✅ Blokdan çıxar', admBlockAsk: '{n} bloklansın? Bütün girişləri bağlanacaq.', admApprove: '✅ Təsdiqlə',
+    admPw: '🔑 Müvəqqəti şifrə', admPwAsk: '{n} üçün yeni müvəqqəti şifrə (ən azı 8 simvol). Girişdə dəyişmək istəniləcək:', admPwDone: 'Şifrə təyin olundu. Şəxsən verin.',
+    admSess: 'Girişlər (cihazlar): {n}', admSessOff: '🚪 Bütün girişləri bağla', admSessDone: 'Girişlər bağlandı',
+    admFeats: 'Tətbiq bölmələri', admFeatsHint: 'İşarəni götürün — bölmə həm tətbiqdə, həm Telegram-da yox olacaq.', admLim: 'Şəxsi limitlər (boş — tarifə görə)', admLimCases: 'Ayda təhlil', admLimAi: 'Ayda Sİ sorğusu', admSave: 'Saxla', admSaved: 'Saxlanıldı',
+    ft_ai: '🧑‍⚕️ Sİ ilə təhlil və Sİ məsləhətləri', ft_docs: '📄 Sənədlər', ft_rx: '💊 Reseptlər', ft_clinic: '👥 Mini-klinika və məsləhətlər', ft_kb: '📚 Məlumat: şikayətlər, diaqnozlar, protokollar',
+    admStores: '🏥 Anbar hüquqları', admTg: '✈️ Telegram', tg_app: 'Telegram-da tətbiq', tg_low: '«Qurtarır» əmri', tg_stock: '«Qalıqlar» əmri', tg_docs: '«Sənədlər» əmri', tg_remind: 'Xatırlatmalar', admTgNo: 'Telegram bağlanmayıb',
+    admHelper: '🩺 Həkim köməkçisi', admGiftBtn: '🎁 Pro hədiyyə et', admClinic: '👥 Mini-klinika', admKick: 'Klinikadan çıxar', admKickAsk: '{n} «{c}» klinikasından çıxarılsın?',
+    admPaysT: 'Ödənişlər', admNoPays: 'Ödəniş yoxdur.',
+    admClClose: '⛔ Klinikanı bağla', admClCloseAsk: '«{n}» klinikasının bağlanma səbəbi (həkimlər görəcək):', admClMembers: 'Həkimlər', admClShares: 'məsləhət: {n}', admClClosed: 'bağlanıb',
+    pyTitle: '💳 Köçürmə ilə ödəniş', pyHint: 'Məbləği aşağıdakı rekvizitlərə köçürün. Köçürmənin şərhində ödəniş kodunu yazın. Sonra «Ödədim» basın.', pyReq: 'Rekvizitlər', pyKind: 'Nəyi ödəyirəm', pyCode: 'Ödəniş kodu düyməni basdıqdan sonra görünəcək.',
+    pk_pro_m: 'Pro bir ay', pk_pro_y: 'Pro bir il', pk_c5: '5 həkimədək klinika (ay)', pk_c10: '10 həkimədək klinika (ay)', pyNote: 'Şərh (hansı kartdan, köçürmə vaxtı)', pyReceipt: '📎 Çekin şəkli (istəyə görə)',
+    pySend: '✅ Ödədim', pySent: '{c} müraciəti göndərildi. Yoxlamadan sonra giriş açılacaq{p}.', pyProvTxt: ', hələlik isə {d}-dək müvəqqəti giriş', pyMine: 'Müraciətlərim', pyCancel: 'Ləğv et',
+    pySt_pending: '⏳ yoxlanılır', pySt_approved: '✅ təsdiqlənib', pySt_rejected: '❌ rədd edilib', pySt_cancelled: '⚪ ləğv edilib', pyBtn: '💳 Köçürmə ilə ödə', pyOff: 'Köçürmə ilə ödəniş hələ qurulmayıb.',
+    pyAdmPend: 'Yoxlama gözləyir', pyAdmAll: 'Bütün müraciətlər', pyReceiptBtn: '🧾 Çek', pyApprove: '✅ Girişi aç', pyReject: '❌ Rədd et', pyDays: 'Neçə gün', pyAmount: 'Alınıb, ₼',
+    pyRejectAsk: 'Rədd səbəbi (həkim görəcək):', pyDone: 'Giriş {d}-dək açıldı', pyRejected: 'Rədd edildi', pyStars: '⭐ Ulduzla ödənişlər',
+    pyUndo: '↩ Ləğv et', pyUndoAsk: 'Baş adminin şifrəsi (pul əl ilə qaytarılıb — müddət geri çəkiləcək):',
+    lgTitle: '📒 Bütün pul', lgFrom: 'Başlanğıc', lgTo: 'Son', lgShow: 'Göstər', lgCsv: '⬇ Cədvəl (CSV)', lgMonth: 'Ay', lgQuarter: 'Rüb', lgYear: 'İl', lgStars: '⭐', lgAzn: '₼', lgTransfer: 'köçürmə', lgStarsM: 'ulduz',
+    lgHint: 'Vergi üçün (sadələşdirilmiş vergi, dövriyyədən 2%): manatla yekun — köçürmələr; Telegram ulduzları Fragment ilə çıxarılır, manatla məbləği çıxarış günündəki məzənnə ilə.',
+    chTitle: '📣 Telegram kanalı', chNone: 'Kanal qoşulmayıb.', chSetHint: '1) Kanalda: İdarəetmə → Adminlər → Əlavə et → botunuz, «Mesaj dərci» hüququ. 2) Kanalın linkini yazın (@ad və ya t.me/ad) və «Qoş» basın.',
+    chInput: 'Kanal', chSetBtn: '🔗 Qoş', chOk: 'Kanal qoşuldu: {n}', chText: 'Postun mətni', chPhoto: '📷 Şəkil (istəyə görə)', chBtn: '«🩺 Pulsuz yoxla» düyməsi (bota aparır)', chPost: '📣 Dərc et', chPosted: 'Dərc edildi',
+    chReady: 'Hazır postlar', chUse: 'Redaktora', chStat: 'Kim haradan gəlib', chStarts: '«Start» basıb', chRegs: 'qeydiyyatdan keçib', chSrc_ch: 'kanaldan', chSrc_bot: 'birbaşa bota', chSrc_reg: '?start=reg linki ilə', chSrc_web: 'saytdan', chRecent: 'Son postlar', chLink: 'Kanal üçün link',
+    stSplitPw: 'Girişin şifrəsi (adi)', stSplitAdm: 'Admin profilinin yeni şifrəsi (ən azı 10 simvol, girişin şifrəsi İLƏ EYNİ OLMASIN)', stSplitAdm2: 'Admin profilinin şifrəsini təkrarlayın', stSplitChange: 'Admin profilinin şifrəsini dəyiş', stPwAsk: 'Baş adminin giriş şifrəsi:',
+    E_ADMIN_PW_SAME: 'Admin profilinin şifrəsi girişin şifrəsindən fərqli olmalıdır.',
+    stSplit: 'Ayrıca admin profili', stSplitOn: 'Qoşulub: adi giriş — iş profili, admin — şifrə ilə.', stSplitOff: 'Söndürülüb: siz həmişə baş adminsiniz.', stSplitBtnOn: 'Qoş', stSplitBtnOff: 'Söndür', stSplitAsk: 'Baş adminin şifrəsi:',
+    stPay: 'Köçürmə ilə ödəniş', stPayReq: 'Həkimlər üçün rekvizitlər (kart, alan, bank)', stProv: '«Ödədim»dən dərhal sonra 2 günlük müvəqqəti giriş (hər şəxsə bir dəfə)', stClinicAzn: 'Köçürmə ilə klinika qiyməti, ₼', stSaved: 'Saxlanıldı',
+    stHelper: '«Köməkçi» tarifləri', stOther: 'Digər ayarlar', stOldUsers: '👥 İstifadəçilər (anbarlar üzrə)', stTg: '✈️ Telegram', stHgList: '👩‍⚕️ «Köməkçi» həkimləri',
+    lgNone: 'Hələ boşdur.',
+    E_ADMIN_MODE: 'Bu, admin profilində edilir.', E_FEAT_OFF: 'Bu bölmə admin tərəfindən sizə bağlanıb.', E_PAY_PENDING: 'Yoxlamada artıq müraciətiniz var.', E_BAD_FILE: 'Fayl uyğun deyil (JPG/PNG şəkil və ya 2 MB-dək PDF).',
+    E_CH_BAD: 'Kanal linki səhvdir.', E_CH_NOT_FOUND: 'Kanal tapılmadı: linki və botun kanala əlavə olunduğunu yoxlayın.', E_CH_NOT_ADMIN: 'Bot kanalın admini deyil və ya «Mesaj dərci» hüququ yoxdur.', E_CH_SEND: 'Telegram postu qəbul etmədi.'
+  }
+};
+Object.assign(I18N.ru, I18N_V34.ru);
+Object.assign(I18N.az, I18N_V34.az);
+const ADM_FEATS = ['ai', 'docs', 'rx', 'clinic', 'kb'];
+function featOn(f) { return !(S.me && Array.isArray(S.me.feats) && S.me.feats.indexOf(f) !== -1); }
+function admMode() { return !!(S.me && S.me.owner); }
+function admFmtD(d) { return d ? String(d).slice(0, 10).split('-').reverse().join('.') : ''; }
+function admSt() { if (!S.adm) S.adm = { seg: 'people', q: '', f: 'all', people: null, clinics: null, pays: null, ledger: null, ch: null, log: null }; return S.adm; }
+
+/* ---------- 1. переключение профилей ---------- */
+function admEnterModal() {
+  if ($('#admEnterPw')) return;
+  openModal('<h3>' + esc(t('admEnterTitle')) + '</h3><div class="muted" style="margin-bottom:8px">' + esc(t('admEnterHint')) + '</div>' +
+    '<div class="field"><input type="password" id="admEnterPw" autocomplete="current-password" maxlength="100"></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="admEnterGo">' + esc(t('admEnterGo')) + '</button></div>');
+  setTimeout(() => { const i = $('#admEnterPw'); if (i && !document.activeElement.matches('input,textarea')) i.focus(); }, 50);
+}
+async function admEnterGo(btn) {
+  const pw = ($('#admEnterPw') || {}).value || '';
+  const r = await busy(btn, () => rpcA('adminEnter', { password: pw }));
+  if (!r) return;
+  closeModal();
+  const m = await rpc('me').catch(() => null);
+  if (m && m.ok) { setMe(m.me); S.screen = 'admin'; enterApp(); }
+}
+async function admExit(btn) {
+  await busy(btn, () => rpcA('adminExit', {}));
+  const m = await rpc('me').catch(() => null);
+  if (m && m.ok) { setMe(m.me); S.screen = ''; S.adm = null; enterApp(); }
+}
+(function () {
+  // нужен админ-профиль — сразу предложить войти
+  const orpc = window.rpc;
+  window.rpc = async function () {
+    const r = await orpc.apply(this, arguments);
+    if (r && !r.ok && r.code === 'E_ADMIN_MODE') setTimeout(admEnterModal, 0);
+    return r;
+  };
+})();
+function admBannerHtml() {
+  if (!(S.me && S.me.adminMode)) return '';
+  const u = Number(S.me.adminUntil) || 0;
+  const tm = u ? new Date(u).toTimeString().slice(0, 5) : '';
+  return '<div id="admBanner" style="display:flex;align-items:center;gap:8px;padding:6px 12px;background:#7a1f3d;color:#fff;font-weight:700;font-size:13px"><span class="grow">' + esc(t('admBanner')) + (tm ? ' · ' + esc(t('admUntil', { t: tm })) : '') + '</span>' +
+    '<button class="btn small" style="min-height:0;padding:3px 10px" data-act="admExit">' + esc(t('admWork')) + '</button></div>';
+}
+function admBannerSync() {
+  const old = $('#admBanner'); const h = admBannerHtml();
+  if (old) { if (h) old.outerHTML = h; else old.remove(); }
+  else if (h) document.body.insertAdjacentHTML('afterbegin', h);
+}
+
+/* ---------- 2. экран «Админ-центр» ---------- */
+function admInject() {
+  if (!$('#scrAdmin')) {
+    const sec = document.createElement('section');
+    sec.id = 'scrAdmin'; sec.className = 'hidden';
+    sec.innerHTML = '<div id="admBox"></div>';
+    const rep = $('#scrReports');
+    rep.parentNode.insertBefore(sec, rep.nextSibling);
+  }
+}
+(function () {
+  admInject();
+  const oa = window.screenAllowed;
+  window.screenAllowed = function (scr) { if (scr === 'admin') return admMode(); return oa(scr); };
+  const of = window.firstScreen;
+  window.firstScreen = function () { if (S.me && S.me.adminMode) return 'admin'; return of(); };
+  const os = window.setScreen;
+  window.setScreen = function (scr) {
+    const r = os.apply(this, arguments);
+    const a = $('#scrAdmin'); if (a) a.classList.toggle('hidden', S.screen !== 'admin');
+    if (S.screen === 'admin') { const c = $('#scrClinic'); if (c) c.classList.add('hidden'); admRender(); }
+    admBannerSync();
+    return r;
+  };
+  const ora = window.renderAll;
+  window.renderAll = function () { const r = ora.apply(this, arguments); admBannerSync(); if (S.screen === 'admin' && S.admLang !== S.lang) admRender(); return r; };
+  const omr = window.menuRender;
+  if (typeof omr === 'function') window.menuRender = function () {
+    const r = omr.apply(this, arguments);
+    const nav = $('nav.bottom.drawer');
+    if (!nav) return r;
+    nav.querySelectorAll('[data-act=admOpen],[data-act=admEnter],[data-act=admExit]').forEach(b => b.remove());
+    let html = '';
+    if (admMode()) html = '<button class="btn primary block" style="margin:6px 0" data-act="admOpen">' + esc(t('admTitle')) + '</button>' + (S.me.adminMode ? '<button class="btn ghost block" style="margin:6px 0" data-act="admExit">' + esc(t('admWork')) + '</button>' : '');
+    else if (S.me && S.me.ownerWork) html = '<button class="btn ghost block" style="margin:6px 0" data-act="admEnter">' + esc(t('admEnter')) + '</button>';
+    if (html) { const fb = nav.querySelector('[data-act=fbOpen]'); if (fb) fb.insertAdjacentHTML('beforebegin', html); else nav.insertAdjacentHTML('beforeend', html); }
+    // выключенные разделы — без пунктов меню
+    if (!featOn('docs')) nav.querySelectorAll('.m-subs [data-tab="forms"][data-seg="docs"]').forEach(b => b.remove());
+    if (!featOn('rx') || !featOn('docs')) nav.querySelectorAll('.m-subs [data-tab="forms"][data-seg="rx"]').forEach(b => b.remove());
+    return r;
+  };
+  const omm = window.menuMark;
+  if (typeof omm === 'function') window.menuMark = function () { const r = omm.apply(this, arguments); const n = $('#scrName'); if (n && S.screen === 'admin') n.textContent = t('admTitle'); return r; };
+})();
+function admSegs() { return [['people', 'admSegPeople'], ['clinics', 'admSegClinics'], ['pays', 'admSegPays'], ['ledger', 'admSegLedger'], ['channel', 'admSegChannel'], ['log', 'admSegLog'], ['set', 'admSegSet']]; }
+function admRender() {
+  const box = $('#admBox'); if (!box) return;
+  S.admLang = S.lang;
+  const st = admSt();
+  const seg = st.seg;
+  box.innerHTML = '<div class="seg-wide" style="margin-bottom:10px;flex-wrap:wrap">' + admSegs().map(s => '<button data-act="admSeg" data-seg="' + s[0] + '" class="' + (seg === s[0] ? 'on' : '') + '">' + esc(t(s[1])) + '</button>').join('') + '</div><div id="admBody">' + admBodyHtml() + '</div>';
+  admLoadSeg();
+}
+function admBodyHtml() {
+  const st = admSt();
+  const loading = '<div class="card"><div class="ai-t">' + esc(t('aiThinking')) + '</div></div>';
+  if (st.seg === 'people') return st.people ? admPeopleHtml() : loading;
+  if (st.seg === 'clinics') return st.clinics ? admClinicsHtml() : loading;
+  if (st.seg === 'pays') return st.pays ? admPaysHtml() : loading;
+  if (st.seg === 'ledger') return admLedgerHtml();
+  if (st.seg === 'channel') return st.ch ? admChannelHtml() : loading;
+  if (st.seg === 'log') return st.log ? admLogHtml() : loading;
+  if (st.seg === 'set') return st.set ? admSetHtml() : loading;
+  return '';
+}
+function admRefresh() { const b = $('#admBody'); if (b && S.screen === 'admin') b.innerHTML = admBodyHtml(); }
+async function admLoadSeg(force) {
+  const st = admSt();
+  const seg = st.seg;
+  const need = { people: 'people', clinics: 'clinics', pays: 'pays', channel: 'ch', log: 'log', set: 'set' }[seg];
+  if (!need || (st[need] && !force) || st['loading_' + seg]) return;
+  st['loading_' + seg] = true;
+  try {
+    if (seg === 'people') { const r = await rpcA('admPeople', {}); if (r) st.people = r; }
+    if (seg === 'clinics') { const r = await rpcA('admClinics', {}); if (r) st.clinics = r; }
+    if (seg === 'pays') { const [a, b] = await Promise.all([rpcA('payReqList', {}), rpcA('subPays', {})]); if (a) st.pays = { req: a, stars: b || { rows: [] } }; }
+    if (seg === 'channel') { const r = await rpcA('channelInfo', {}); if (r) st.ch = r; }
+    if (seg === 'log') { const r = await rpcA('authLog', {}); if (r) st.log = r; }
+    if (seg === 'set') { const [a, b] = await Promise.all([rpcA('payReqList', { status: 'pending' }), rpcA('subPays', {})]); if (a) st.set = { pay: a, sub: b || {} }; }
+  } catch (e) { } finally { st['loading_' + seg] = false; }
+  if (admSt().seg === seg) admRefresh();
+}
+
+/* ---- люди ---- */
+function admPlanTag(x) {
+  if (!x.helper) return '';
+  const d = admFmtD(x.paidUntil);
+  if (!x.pro) return t('admFree');
+  return x.note === 'trial' ? t('admTrial', { d }) : x.note === 'gift' ? t('admGift', { d }) : x.note === 'prov' ? t('admProv', { d }) : t('admPro', { d });
+}
+function admPeopleRows() {
+  const st = admSt(); const rows = (st.people && st.people.rows) || [];
+  const q = String(st.q || '').toLowerCase().trim();
+  return rows.filter(x => {
+    if (st.f === 'med' && x.helper) return false;
+    if (st.f === 'helper' && !x.helper) return false;
+    if (st.f === 'pending' && !x.pending) return false;
+    if (st.f === 'off' && (x.active || x.pending)) return false;
+    if (st.f === 'pay' && !x.payPending) return false;
+    if (!q) return true;
+    return [x.name, x.login, x.phone, x.orgName, x.clinic && x.clinic.name, x.spec && t('sp_' + x.spec)].some(v => String(v || '').toLowerCase().indexOf(q) !== -1);
+  }).sort((a, b) => (b.pending - a.pending) || (b.payPending - a.payPending) || String(b.lastSeen).localeCompare(String(a.lastSeen)));
+}
+function admPeopleHtml() {
+  const st = admSt();
+  const list = admPeopleRows();
+  const cnt = k => ((st.people && st.people.rows) || []).filter(x => k === 'all' ? true : k === 'med' ? !x.helper : k === 'helper' ? x.helper : k === 'pending' ? x.pending : k === 'off' ? (!x.active && !x.pending) : x.payPending).length;
+  return '<div class="field"><input type="search" id="admQ" value="' + esc(st.q) + '" placeholder="' + esc(t('admSearch')) + '" autocomplete="off"></div>' +
+    '<div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">' + ['all', 'med', 'helper', 'pending', 'off', 'pay'].map(k => '<button class="chip' + (st.f === k ? ' on' : '') + '" data-act="admF" data-f="' + k + '">' + esc(t('admF_' + k)) + ' ' + cnt(k) + '</button>').join('') + '</div>' +
+    '<div id="admList">' + admListHtml(list) + '</div>';
+}
+function admListHtml(list) {
+  if (!list.length) return '<div class="muted">' + esc(t('admNone')) + '</div>';
+  return list.slice(0, 300).map(x => '<div class="list-row" data-act="admPerson" data-id="' + esc(x.id) + '" style="cursor:pointer"><div class="grow"><b>' + (x.owner ? '👑 ' : x.helper ? '🩺 ' : '👤 ') + esc(x.name) + '</b> <span class="muted">' + esc(x.login || '') + '</span>' +
+    (x.pending ? ' <span class="tag amber">' + esc(t('admPendingTag')) + '</span>' : !x.active ? ' <span class="tag red">' + esc(t('admBlocked')) + '</span>' : '') + (x.payPending ? ' <span class="tag amber">💳</span>' : '') +
+    '<div class="muted">' + esc([x.orgName || t('admMain'), x.spec ? t('sp_' + x.spec) : '', admPlanTag(x), x.clinic ? '👥 ' + x.clinic.name : '', x.tg ? '✈️' : '', x.off.length ? '🚫 ' + x.off.length : '', x.src ? '← ' + (t('chSrc_' + x.src) || x.src) : ''].filter(Boolean).join(' · ')) + '</div>' +
+    '<div class="muted" style="font-size:12px">' + esc(x.lastSeen ? t('admLast', { d: fmtDt(x.lastSeen) }) : t('admNever')) + '</div></div></div>').join('');
+}
+async function admPersonOpen(id) {
+  const st = admSt();
+  const x = ((st.people && st.people.rows) || []).find(r => r.id === id); if (!x) return;
+  openModal('<h3>' + esc(x.name) + '</h3><div class="ai-t">' + esc(t('aiThinking')) + '</div>');
+  const d = await rpcA('admPerson', { userId: id }).catch(() => null);
+  if (!d) return closeModal();
+  st.person = { x, d };
+  admPersonRender();
+}
+function admPersonRender() {
+  const { x, d } = admSt().person;
+  const feats = ADM_FEATS.map(f => '<label class="row" style="gap:8px;align-items:center;margin:4px 0"><input type="checkbox" data-ft="' + f + '"' + (x.off.indexOf(f) === -1 ? ' checked' : '') + (x.owner ? ' disabled' : '') + '> ' + esc(t('ft_' + f)) + '</label>').join('');
+  const tgAcc = d.tg.acc || {};
+  const tgCard = d.tg.linked ? ['app', 'low', 'stock', 'docs', 'remind'].map(f => '<label class="row" style="gap:8px;align-items:center;margin:4px 0"><input type="checkbox" data-tg="' + f + '"' + (tgAcc[f] ? ' checked' : '') + (x.owner ? ' disabled' : '') + '> ' + esc(t('tg_' + f)) + '</label>').join('') +
+    (x.owner ? '' : '<button class="btn small" data-act="admTgSave" data-id="' + esc(x.id) + '">' + esc(t('admSave')) + '</button>') : '<div class="muted">' + esc(t('admTgNo')) + '</div>';
+  const h = d.helper;
+  const helperCard = h ? '<div class="card"><b>' + esc(t('admHelper')) + '</b><div class="muted">' + esc([x.spec ? t('sp_' + x.spec) : '', admPlanTag(x), h.used ? '📊 ' + (h.used.cases || 0) + '/' + (h.limits.cases || '∞') + ' · 🤖 ' + (h.used.ai || 0) + '/' + (h.limits.ai || '∞') : ''].filter(Boolean).join(' · ')) + '</div>' +
+    '<button class="btn small ghost" style="margin-top:6px" data-act="hgGift" data-org="' + esc(d.orgId) + '">' + esc(t('admGiftBtn')) + '</button>' +
+    '<div class="lbl" style="margin-top:8px">' + esc(t('admLim')) + '</div><div class="row" style="gap:6px"><div class="field grow"><label>' + esc(t('admLimCases')) + '</label><input type="number" id="admLimCases" min="0" value="' + esc(x.limCases) + '" inputmode="numeric"></div>' +
+    '<div class="field grow"><label>' + esc(t('admLimAi')) + '</label><input type="number" id="admLimAi" min="0" value="' + esc(x.limAi) + '" inputmode="numeric"></div></div></div>' : '';
+  const clinicCard = x.clinic ? '<div class="card"><b>' + esc(t('admClinic')) + '</b><div>' + esc(x.clinic.name) + ' · ' + esc(x.clinic.role === 'owner' ? t('kqOwner') : '') + '</div>' +
+    (x.clinic.role !== 'owner' ? '<button class="btn small ghost" style="margin-top:6px" data-act="admKick" data-c="' + esc(x.clinic.id) + '" data-cn="' + esc(x.clinic.name) + '" data-id="' + esc(x.id) + '" data-n="' + esc(x.name) + '">' + esc(t('admKick')) + '</button>' : '') + '</div>' : '';
+  const pays = d.pays.length ? d.pays.slice(0, 12).map(p => '<div class="muted">' + esc(fmtDt(p.at)) + ' · ' + esc(p.amount + ' ' + (p.currency === 'XTR' ? '⭐' : '₼')) + ' · ' + esc(p.period) + ' → ' + esc(admFmtD(p.until)) + (p.status !== 'paid' ? ' · ' + esc(p.status) : '') + '</div>').join('') : '<div class="muted">' + esc(t('admNoPays')) + '</div>';
+  openModal('<h3>' + (x.owner ? '👑 ' : '') + esc(x.name) + '</h3><div class="muted">' + esc([x.login, x.phone, x.orgName || t('admMain'), x.createdAt ? fmtDt(x.createdAt) : ''].filter(Boolean).join(' · ')) + '</div>' +
+    '<div class="row" style="gap:6px;flex-wrap:wrap;margin:8px 0">' + (x.owner ? '' : (x.pending ? '<button class="btn small primary" data-act="admApprove" data-id="' + esc(x.id) + '">' + esc(t('admApprove')) + '</button>' : '<button class="btn small ' + (x.active ? 'ghost' : 'primary') + '" data-act="admBlock" data-id="' + esc(x.id) + '">' + esc(x.active ? t('admBlock') : t('admUnblock')) + '</button>')) +
+      '<button class="btn small ghost" data-act="admPw" data-id="' + esc(x.id) + '">' + esc(t('admPw')) + '</button>' + (!x.helper ? '<button class="btn small ghost" data-act="admStores" data-id="' + esc(x.id) + '">' + esc(t('admStores')) + '</button>' : '') + '</div>' +
+    '<div class="muted">' + esc(t('admSess', { n: d.sessions.length })) + (d.sessions.length && !x.owner ? ' <button class="btn small ghost" data-act="admSessOff" data-id="' + esc(x.id) + '">' + esc(t('admSessOff')) + '</button>' : '') + '</div>' +
+    '<div class="card"><b>' + esc(t('admFeats')) + '</b><div class="muted" style="font-size:12px">' + esc(t('admFeatsHint')) + '</div>' + feats + '</div>' + helperCard +
+    (x.owner ? '' : '<button class="btn primary block" style="margin:6px 0" data-act="admFeatSave" data-id="' + esc(x.id) + '">' + esc(t('admSave')) + '</button>') +
+    '<div class="card"><b>' + esc(t('admTg')) + '</b>' + tgCard + '</div>' + clinicCard + '<div class="card"><b>' + esc(t('admPaysT')) + '</b>' + pays + '</div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+}
+async function admPeopleReload() { admSt().people = null; await admLoadSeg(true); }
+
+/* ---- клиники ---- */
+function admClinicsHtml() {
+  const rows = (admSt().clinics.rows || []).slice().sort((a, b) => (a.status === 'closed') - (b.status === 'closed') || String(b.createdAt).localeCompare(String(a.createdAt)));
+  if (!rows.length) return '<div class="muted">' + esc(t('kcNone')) + '</div>';
+  return rows.map(c => '<div class="card' + (c.status === 'closed' ? ' off' : '') + '"><b>' + esc(c.name) + '</b> <span class="muted">' + esc(c.owner) + '</span>' +
+    '<div class="muted">' + esc([t('kcRow', { m: c.members.length, s: c.seats }), c.status === 'closed' ? t('admClClosed') : c.paid ? t('admPaidTag', { d: admFmtD(c.until) }) : t('kcNoPay'), t('admClShares', { n: c.shares })].join(' · ')) + '</div>' +
+    (c.members.length ? '<div style="margin-top:4px">' + c.members.map(m => '<div class="row" style="gap:6px;align-items:center"><span class="grow">' + esc(m.name) + ' <span class="muted">' + esc((m.role === 'owner' ? t('kqOwner') + ' · ' : '') + (m.spec ? t('sp_' + m.spec) : '')) + '</span></span>' +
+      (m.role !== 'owner' ? '<button class="btn small ghost" style="min-height:0;padding:2px 8px" data-act="admKick" data-c="' + esc(c.id) + '" data-cn="' + esc(c.name) + '" data-id="' + esc(m.userId) + '" data-n="' + esc(m.name) + '">✕</button>' : '') + '</div>').join('') + '</div>' : '') +
+    (c.status !== 'closed' ? '<div class="row" style="gap:6px;margin-top:6px"><button class="btn small ghost" data-act="kcGift" data-id="' + esc(c.id) + '" data-s="' + esc(c.seats) + '">' + esc(t('kcGift')) + '</button><button class="btn small ghost" data-act="admClClose" data-id="' + esc(c.id) + '" data-n="' + esc(c.name) + '">' + esc(t('admClClose')) + '</button></div>' : '') + '</div>').join('');
+}
+
+/* ---- оплаты ---- */
+function admPaysHtml() {
+  const p = admSt().pays;
+  const rows = (p.req.rows || []);
+  const pend = rows.filter(r => r.status === 'pending'), other = rows.filter(r => r.status !== 'pending');
+  const row = r => '<div class="card"><div class="row" style="gap:6px;align-items:center"><b class="grow">' + esc(r.code) + ' · ' + esc(r.user) + '</b><span>' + esc(t('pySt_' + r.status)) + '</span></div>' +
+    '<div class="muted">' + esc([t('pk_' + r.kind), r.amount + ' ₼', r.targetName, fmtDt(r.createdAt)].filter(Boolean).join(' · ')) + '</div>' + (r.note ? '<div>💬 ' + esc(r.note) + '</div>' : '') + (r.prov ? '<div class="muted">' + esc(t('admProv', { d: admFmtD(r.prov) })) + '</div>' : '') +
+    (r.reason ? '<div class="muted">❌ ' + esc(r.reason) + '</div>' : '') + (r.status === 'approved' ? '<div class="muted">✅ +' + esc(r.days) + ' · ' + esc(fmtDt(r.decidedAt)) + '</div>' : '') +
+    '<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px">' + (r.receipt ? '<button class="btn small ghost" data-act="pyRcpt" data-id="' + esc(r.id) + '">' + esc(t('pyReceiptBtn')) + '</button>' : '') +
+    (r.status === 'pending' ? '<button class="btn small primary" data-act="pyOk" data-id="' + esc(r.id) + '">' + esc(t('pyApprove')) + '</button><button class="btn small ghost" data-act="pyNo" data-id="' + esc(r.id) + '">' + esc(t('pyReject')) + '</button>' : '') + '</div></div>';
+  const stars = (p.stars.rows || []).slice(0, 50).map(r => '<div class="list-row"><div class="grow">' + esc(fmtDt(r.at)) + ' · ' + esc(r.amount + (r.id.indexOf('man_') === 0 ? ' ₼' : ' ⭐')) + ' · ' + esc(r.period) + ' → ' + esc(admFmtD(r.until)) + ' <span class="muted">' + esc(r.status) + '</span></div>' +
+    (r.status === 'paid' ? '<button class="btn small ghost" data-act="' + (r.id.indexOf('man_') === 0 ? 'pyUndo' : 'admRefund') + '" data-id="' + esc(r.id) + '">' + esc(t('pyUndo')) + '</button>' : '') + '</div>').join('');
+  return '<div class="lbl">' + esc(t('pyAdmPend')) + ' (' + pend.length + ')</div>' + (pend.map(row).join('') || '<div class="muted">' + esc(t('lgNone')) + '</div>') +
+    '<details class="card"><summary><b>' + esc(t('pyAdmAll')) + ' (' + other.length + ')</b></summary>' + other.slice(0, 100).map(row).join('') + '</details>' +
+    '<details class="card"><summary><b>' + esc(t('pyStars')) + '</b></summary>' + (stars || '<div class="muted">' + esc(t('lgNone')) + '</div>') + '</details>';
+}
+function pyApproveModal(id) {
+  const r = (admSt().pays.req.rows || []).find(x => x.id === id); if (!r) return;
+  const kinds = admSt().pays.req.kinds || {};
+  const days = (kinds[r.kind] || {}).days || 30;
+  openModal('<h3>' + esc(t('pyApprove')) + ' · ' + esc(r.code) + '</h3><div class="muted">' + esc(r.user + ' · ' + t('pk_' + r.kind)) + '</div>' +
+    '<div class="field"><label>' + esc(t('pyDays')) + '</label><input type="number" id="pyDaysIn" min="1" max="400" value="' + days + '" inputmode="numeric"></div>' +
+    '<div class="field"><label>' + esc(t('pyAmount')) + '</label><input type="number" id="pyAmtIn" min="0" value="' + esc(r.amount) + '" inputmode="decimal"></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="pyOkGo" data-id="' + esc(id) + '">' + esc(t('pyApprove')) + '</button></div>');
+}
+
+/* ---- деньги ---- */
+function admLedgerHtml() {
+  const st = admSt();
+  const y = new Date().getFullYear();
+  const L = st.ledger;
+  let body = '';
+  if (L) {
+    const tot = L.totals || {};
+    const keys = Object.keys(tot).sort().reverse();
+    const cell = k => esc(((tot[k] || {}).AZN || 0) + ' ₼') + (tot[k] && tot[k].XTR ? ' · ' + esc(tot[k].XTR + ' ⭐') : '');
+    body = '<div class="card"><div class="muted" style="font-size:12px;margin-bottom:6px">' + esc(t('lgHint')) + '</div>' +
+      keys.map(k => '<div class="row" style="justify-content:space-between"><b>' + esc(/Q/.test(k) ? t('lgQuarter') + ' ' + k : k.length === 4 ? t('lgYear') + ' ' + k : t('lgMonth') + ' ' + k) + '</b><span>' + cell(k) + '</span></div>').join('') + '</div>' +
+      (L.rows.length ? L.rows.slice(0, 300).map(r => '<div class="list-row"><div class="grow">' + esc(fmtDt(r.at)) + ' · <b>' + esc(r.amount + (r.currency === 'XTR' ? ' ⭐' : ' ₼')) + '</b> · ' + esc(r.who || r.target) + '<div class="muted">' + esc([r.method === 'transfer' ? t('lgTransfer') + ' ' + r.code : t('lgStarsM'), r.period, r.target, r.status !== 'paid' ? r.status : ''].filter(Boolean).join(' · ')) + '</div></div></div>').join('') : '<div class="muted">' + esc(t('lgNone')) + '</div>');
+  }
+  return '<div class="row" style="gap:6px;align-items:flex-end;flex-wrap:wrap"><div class="field"><label>' + esc(t('lgFrom')) + '</label><input type="date" id="lgFrom" value="' + esc(st.lgFrom || y + '-01-01') + '"></div>' +
+    '<div class="field"><label>' + esc(t('lgTo')) + '</label><input type="date" id="lgTo" value="' + esc(st.lgTo || y + '-12-31') + '"></div><button class="btn" data-act="lgShow">' + esc(t('lgShow')) + '</button>' +
+    (L && L.rows.length ? '<button class="btn ghost" data-act="lgCsv">' + esc(t('lgCsv')) + '</button>' : '') + '</div>' + body;
+}
+function lgCsv() {
+  const L = admSt().ledger; if (!L) return;
+  const q = v => { let x = String(v === undefined || v === null ? '' : v); if (/^[=+\-@\t\r]/.test(x)) x = "'" + x; return '"' + x.replace(/"/g, '""') + '"'; }; // формулы в Excel не исполняются
+  const head = ['Дата', 'Сумма', 'Валюта', 'Способ', 'Код', 'Кто', 'Кабинет/клиника', 'Тариф', 'До', 'Состояние'];
+  const lines = [head.map(q).join(';')].concat(L.rows.map(r => [r.at, r.amount, r.currency, r.method, r.code, r.who, r.target, r.period, r.until, r.status].map(q).join(';')));
+  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'dengi_' + (admSt().lgFrom || '') + '_' + (admSt().lgTo || '') + '.csv';
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
+/* ---- канал ---- */
+const CH_READY = [
+  { k: 'intro', ru: '🩺 Знакомьтесь: «Помощник врача» — искусственный интеллект для врачей любой специальности, прямо в Telegram.\n\nНапишите жалобы пациента — ИИ построит дифференциальный диагноз, подскажет, что спросить и что проверить, предложит план обследования и лечения с дозами.\n\nТерапевты, педиатры, кардиологи, неврологи, хирурги, гинекологи и ещё 20 специальностей.\n\n🎁 7 дней Pro — бесплатно. Нажмите кнопку ниже 👇',
+    az: '🩺 Tanış olun: «Həkim köməkçisi» — istənilən ixtisas üzrə həkimlər üçün süni intellekt, birbaşa Telegram-da.\n\nPasiyentin şikayətlərini yazın — Sİ differensial diaqnoz qurur, nəyi soruşmaq və yoxlamaq lazım olduğunu deyir, müayinə və müalicə planı təklif edir (dozalarla).\n\nTerapevt, pediatr, kardioloq, nevroloq, cərrah, ginekoloq və daha 20 ixtisas.\n\n🎁 7 gün Pro — pulsuz. Aşağıdakı düyməni basın 👇' },
+  { k: 'labs', ru: '🧪 Анализы — по фото.\n\nСфотографируйте бланк анализов или заключение УЗИ — ИИ сам прочитает значения, отметит отклонения и объяснит, что они значат для вашего пациента.\n\nВсё складывается в разбор: динамика видна сразу.\n\n👇 Попробуйте на своём следующем пациенте',
+    az: '🧪 Analizlər — şəkillə.\n\nAnaliz blankının və ya USM rəyinin şəklini çəkin — Sİ dəyərləri özü oxuyur, sapmaları qeyd edir və pasiyentiniz üçün nə demək olduğunu izah edir.\n\nHər şey təhlilə yığılır: dinamika dərhal görünür.\n\n👇 Növbəti pasiyentinizdə yoxlayın' },
+  { k: 'docs', ru: '📄 Документы за секунды.\n\nКонсультативное заключение, направление, эпикриз, справка, рецепт — ИИ заполняет по вашему разбору, вы проверяете и печатаете.\n\n✅ А ещё ИИ проверяет качество документа: чего не хватает и как исправить — до того, как это заметит проверяющий.\n\n👇 Попробовать',
+    az: '📄 Sənədlər saniyələr içində.\n\nMəsləhət rəyi, göndəriş, epikriz, arayış, resept — Sİ təhliliniz əsasında doldurur, siz yoxlayıb çap edirsiniz.\n\n✅ Sİ həm də sənədin keyfiyyətini yoxlayır: nə çatışmır və necə düzəltmək olar — yoxlayan görməzdən əvvəl.\n\n👇 Yoxla' },
+  { k: 'privacy', ru: '🔒 ФИО пациента — только на вашем телефоне.\n\nИмя, FİN, дата рождения и номера документов не уходят ни на сервер, ни в ИИ. ИИ видит только клинику: возраст, пол, жалобы, показатели, анализы.\n\nВрачебная тайна — не пустые слова.\n\n👇 Попробовать бесплатно',
+    az: '🔒 Pasiyentin adı — yalnız sizin telefonunuzda.\n\nAd, FİN, doğum tarixi və sənəd nömrələri nə serverə, nə də Sİ-yə getmir. Sİ yalnız klinikanı görür: yaş, cins, şikayətlər, göstəricilər, analizlər.\n\nHəkim sirri — boş söz deyil.\n\n👇 Pulsuz yoxla' },
+  { k: 'clinic', ru: '👥 Мини-клиника: консультация коллеги за минуту.\n\nСоберите в одну клинику знакомых врачей разных специальностей. Сложный пациент — отправьте коллеге обезличенный разбор по коду. Кардиолог ответит невропатологу, хирург — терапевту.\n\nФИО остаётся у вас. Коллега видит только клинику.\n\n👇 Начать',
+    az: '👥 Mini-klinika: bir dəqiqədə həmkarın məsləhəti.\n\nMüxtəlif ixtisaslardan tanış həkimləri bir klinikada toplayın. Çətin pasiyent — şəxsiyyətsiz təhlili kodla həmkara göndərin. Kardioloq nevroloqa, cərrah terapevtə cavab verəcək.\n\nAd sizdə qalır. Həmkar yalnız klinikanı görür.\n\n👇 Başla' },
+  { k: 'price', ru: '💳 Сколько стоит?\n\n🎁 7 дней Pro — бесплатно, сразу после регистрации.\n🆓 Бесплатно навсегда: 2 разбора и 3 документа в месяц.\n⭐ Pro: 40 разборов в месяц, документы и рецепты без ограничений — 19 ₼ в месяц или 190 ₼ в год.\n\nОплата звёздами Telegram или переводом.\n\n👇 Попробовать',
+    az: '💳 Qiyməti nədir?\n\n🎁 7 gün Pro — pulsuz, qeydiyyatdan dərhal sonra.\n🆓 Həmişə pulsuz: ayda 2 təhlil və 3 sənəd.\n⭐ Pro: ayda 40 təhlil, sənədlər və reseptlər limitsiz — ayda 19 ₼ və ya ildə 190 ₼.\n\nTelegram ulduzları və ya köçürmə ilə ödəniş.\n\n👇 Yoxla' },
+  { k: 'disclaimer', ru: '⚖️ Важно.\n\nИИ — подсказка, а не диагноз. Решение всегда принимает врач. «Помощник» помогает ничего не упустить, быстрее оформить документы и вовремя спросить коллегу.\n\nВопросы и предложения — пишите в комментарии или в бота: /paysupport.',
+    az: '⚖️ Vacibdir.\n\nSİ — məsləhətdir, diaqnoz deyil. Qərarı həmişə həkim verir. «Köməkçi» heç nəyi qaçırmamağa, sənədləri tez tərtib etməyə və vaxtında həmkardan soruşmağa kömək edir.\n\nSuallar və təkliflər — şərhlərdə və ya botda: /paysupport.' }
+];
+function admChannelHtml() {
+  const c = admSt().ch;
+  const stat = c.stat || {};
+  const months = Object.keys(stat).sort().reverse();
+  const srcs = {}; months.forEach(m => Object.keys(stat[m]).forEach(k => { srcs[k.split(':')[0]] = 1; }));
+  const statHtml = months.length ? '<table style="width:100%;font-size:13px"><tr><th></th>' + months.slice(0, 6).map(m => '<th>' + esc(m) + '</th>').join('') + '</tr>' +
+    Object.keys(srcs).map(s => ['start', 'reg'].map(w => '<tr><td>' + esc((t('chSrc_' + s) || s) + ' — ' + t(w === 'start' ? 'chStarts' : 'chRegs')) + '</td>' + months.slice(0, 6).map(m => '<td style="text-align:center">' + (stat[m][s + ':' + w] || 0) + '</td>').join('') + '</tr>').join('')).join('') + '</table>' : '<div class="muted">' + esc(t('lgNone')) + '</div>';
+  return '<div class="card"><b>' + esc(t('chTitle')) + '</b>' + (c.id ? '<div>✅ ' + esc(c.title || c.id) + '</div>' : '<div class="muted">' + esc(t('chNone')) + '</div><div class="muted" style="font-size:12px;margin:6px 0">' + esc(t('chSetHint')) + '</div>') +
+    '<div class="row" style="gap:6px;align-items:flex-end"><div class="field grow"><label>' + esc(t('chInput')) + '</label><input type="text" id="chIn" placeholder="@said_md" value=""></div><button class="btn" data-act="chSet">' + esc(t('chSetBtn')) + '</button></div>' +
+    (c.link ? '<div class="muted" style="font-size:12px">' + esc(t('chLink')) + ': ' + esc(c.link) + '</div>' : '') + '</div>' +
+    (c.id ? '<div class="card"><div class="field"><label>' + esc(t('chText')) + '</label><textarea id="chText" rows="8" maxlength="4000"></textarea></div>' +
+      '<div class="field"><label>' + esc(t('chPhoto')) + '</label><input type="file" id="chPhoto" accept="image/jpeg,image/png,image/webp"></div>' +
+      '<label class="row" style="gap:8px;align-items:center;margin:6px 0"><input type="checkbox" id="chBtn" checked> ' + esc(t('chBtn')) + '</label>' +
+      '<button class="btn primary block" data-act="chPost">' + esc(t('chPost')) + '</button></div>' : '') +
+    '<details class="card"><summary><b>' + esc(t('chReady')) + ' (' + CH_READY.length + ')</b></summary>' + CH_READY.map((p, i) => '<div class="f-rx"><div style="white-space:pre-wrap;font-size:13px">' + esc(p.az) + '</div><div style="white-space:pre-wrap;font-size:13px;margin-top:6px" class="muted">' + esc(p.ru) + '</div>' +
+      '<div class="row" style="gap:6px;margin-top:6px"><button class="btn small ghost" data-act="chUse" data-i="' + i + '" data-l="az">' + esc(t('chUse')) + ' AZ</button><button class="btn small ghost" data-act="chUse" data-i="' + i + '" data-l="ru">' + esc(t('chUse')) + ' RU</button><button class="btn small ghost" data-act="chUse" data-i="' + i + '" data-l="both">AZ + RU</button></div></div>').join('') + '</details>' +
+    '<div class="card"><b>' + esc(t('chStat')) + '</b>' + statHtml + '</div>' +
+    ((c.posts || []).length ? '<details class="card"><summary><b>' + esc(t('chRecent')) + '</b></summary>' + c.posts.map(p => '<div class="muted">' + esc(fmtDt(p.at)) + ' — ' + esc(p.t) + '</div>').join('') + '</details>' : '');
+}
+
+/* ---- журнал ---- */
+function admLogHtml() {
+  const rows = (admSt().log.rows || []);
+  if (!rows.length) return '<div class="muted">' + esc(t('lgNone')) + '</div>';
+  return rows.slice(0, 300).map(r => '<div class="list-row"><div class="grow"><b>' + esc(r.event || '') + '</b> · ' + esc(r.name || '') + (r.byName && r.byName !== r.name ? ' ← ' + esc(r.byName) : '') + '<div class="muted">' + esc([fmtDt(r.time), r.info, r.device].filter(Boolean).join(' · ')) + '</div></div></div>').join('');
+}
+
+/* ---- настройки ---- */
+function admSetHtml() {
+  const s = admSt().set;
+  const cfg = (s.sub && s.sub.cfg) || {};
+  const kinds = (s.pay && s.pay.kinds) || {};
+  const f = (k, lbl, v) => '<div class="field"><label>' + esc(lbl) + '</label><input type="number" data-cfg="' + k + '" value="' + esc(v === undefined ? '' : v) + '" inputmode="numeric"></div>';
+  return '<div class="card"><b>' + esc(t('stSplit')) + '</b><div class="muted">' + esc(S.me && S.me.ownerSplit ? t('stSplitOn') : t('stSplitOff')) + '</div>' +
+    '<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn small ' + (S.me && S.me.ownerSplit ? 'ghost' : 'primary') + '" data-act="stSplit" data-on="' + (S.me && S.me.ownerSplit ? '0' : '1') + '">' + esc(S.me && S.me.ownerSplit ? t('stSplitBtnOff') : t('stSplitBtnOn')) + '</button>' +
+    (S.me && S.me.ownerSplit ? '<button class="btn small ghost" data-act="stSplit" data-on="1">' + esc(t('stSplitChange')) + '</button>' : '') + '</div></div>' +
+    '<div class="card"><b>' + esc(t('stPay')) + '</b><div class="field"><label>' + esc(t('stPayReq')) + '</label><textarea id="stReq" rows="3" maxlength="600">' + esc((s.pay && s.pay.req) || '') + '</textarea></div>' +
+    '<label class="row" style="gap:8px;align-items:center;margin:6px 0"><input type="checkbox" id="stProv"' + (s.pay && s.pay.prov ? ' checked' : '') + '> ' + esc(t('stProv')) + '</label>' +
+    '<div class="row" style="gap:6px"><div class="field grow"><label>' + esc(t('stClinicAzn')) + ' (5)</label><input type="number" id="stC5" value="' + esc((kinds.c5 || {}).amount || '') + '"></div><div class="field grow"><label>' + esc(t('stClinicAzn')) + ' (10)</label><input type="number" id="stC10" value="' + esc((kinds.c10 || {}).amount || '') + '"></div></div>' +
+    '<button class="btn primary" data-act="stPaySave">' + esc(t('admSave')) + '</button></div>' +
+    '<div class="card"><b>' + esc(t('stHelper')) + '</b><div class="row" style="gap:6px;flex-wrap:wrap">' + f('starsM', '⭐ / мес', cfg.starsM) + f('starsY', '⭐ / год', cfg.starsY) + f('aznM', '₼ / мес', cfg.aznM) + f('aznY', '₼ / год', cfg.aznY) +
+      f('trialDays', 'Пробных дней', cfg.trialDays) + f('freeCases', 'Free: разборов', cfg.freeCases) + f('freeDocs', 'Free: документов', cfg.freeDocs) + f('proCases', 'Pro: разборов', cfg.proCases) + '</div>' +
+      '<label class="row" style="gap:8px;align-items:center;margin:6px 0"><input type="checkbox" id="stRegOpen"' + (s.sub && s.sub.regOpen ? ' checked' : '') + '> ' + esc(S.lang === 'az' ? 'Qeydiyyat açıqdır' : 'Регистрация открыта') + '</label>' +
+      '<button class="btn primary" data-act="stCfgSave">' + esc(t('admSave')) + '</button></div>' +
+    '<div class="card"><b>' + esc(t('stOther')) + '</b><div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn small ghost" data-act="admOldUsers">' + esc(t('stOldUsers')) + '</button><button class="btn small ghost" data-act="tgOpen">' + esc(t('stTg')) + '</button><button class="btn small ghost" data-act="hgOpen">' + esc(t('stHgList')) + '</button></div></div>';
+}
+function admPw(lbl) { return new Promise(res => {
+  openModal('<h3>🔑</h3><div class="muted" style="margin-bottom:8px">' + esc(lbl) + '</div><div class="field"><input type="password" id="admPwIn" maxlength="100" autocomplete="current-password"></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="admPwNo">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="admPwOk">OK</button></div>');
+  S.admPwRes = res;
+}); }
+function fileB64(file, max) {
+  return new Promise((res, rej) => {
+    if (!file) return res(null);
+    if (file.size > max) return rej(new Error('E_BAD_FILE'));
+    const fr = new FileReader();
+    fr.onload = () => { const s = String(fr.result); res({ mime: file.type, data: s.slice(s.indexOf(',') + 1) }); };
+    fr.onerror = () => rej(new Error('E_BAD_FILE'));
+    fr.readAsDataURL(file);
+  });
+}
+
+/* ---------- 3. разделы, выключенные человеку (приложение) ---------- */
+(function () {
+  if (typeof canAi === 'function') { const oc = canAi; canAi = function () { return featOn('ai') && oc.apply(this, arguments); }; }
+  const segs = window.CLINIC_SEGS || [];
+  const need = { cases: 'ai', dx: 'kb', proto: 'kb', ind: 'kb', team: 'clinic', ai: 'ai' };
+  window.CLINIC_SEGS = segs.map(s => { const f = s[2], ft = need[s[0]]; return [s[0], s[1], () => (!ft || featOn(ft)) && (!f || f())]; });
+  if (typeof dsSegHtml === 'function') {
+    const od = dsSegHtml;
+    dsSegHtml = function () {
+      const h = od.apply(this, arguments);
+      return h.replace(/<button data-act="dsSeg" data-seg="(docs|rx)"[^>]*>[\s\S]*?<\/button>/g, (m, k) => (k === 'docs' && !featOn('docs')) || (k === 'rx' && (!featOn('rx') || !featOn('docs'))) ? '' : m);
+    };
+  }
+  // разбор: кнопка консультации коллеги — только с мини-клиникой
+  const oce = window.csCaseExtra;
+  window.csCaseExtra = function (c) { const h = oce ? oce(c) : ''; return featOn('clinic') ? h : h.replace(/<div id="kqHereBox">[\s\S]*?<\/div><button class="btn ghost block" style="margin:6px 0" data-act="kqAsk">[\s\S]*?<\/button>/, ''); };
+})();
+
+/* ---------- 4. оплата переводом (врач) ---------- */
+async function pyOpen() {
+  const r = await rpcA('payInfo', {}).catch(() => null);
+  if (!r) return;
+  if (!r.on) return toast(t('pyOff'), 'bad');
+  const d = kqSt ? (kqSt().data || null) : null;
+  const ownClinic = d && d.clinic && d.clinic.owner;
+  const ks = ['pro_m', 'pro_y'].concat(ownClinic ? ['c5', 'c10'] : []);
+  openModal('<h3>' + esc(t('pyTitle')) + '</h3><div class="muted" style="margin-bottom:8px">' + esc(t('pyHint')) + '</div>' +
+    '<div class="card"><b>' + esc(t('pyReq')) + '</b><div style="white-space:pre-wrap;font-size:16px;margin-top:4px">' + esc(r.req) + '</div></div>' +
+    '<div class="field"><label>' + esc(t('pyKind')) + '</label><select id="pyKind">' + ks.map(k => '<option value="' + k + '">' + esc(t('pk_' + k) + ' — ' + r.kinds[k].amount + ' ₼') + '</option>').join('') + '</select></div>' +
+    '<div class="field"><label>' + esc(t('pyNote')) + '</label><input type="text" id="pyNote" maxlength="300"></div>' +
+    '<div class="field"><label>' + esc(t('pyReceipt')) + '</label><input type="file" id="pyRcpt" accept="image/jpeg,image/png,image/webp,application/pdf"></div>' +
+    '<div class="muted" style="font-size:12px;margin-bottom:6px">' + esc(t('pyCode')) + '</div>' +
+    (r.mine.length ? '<details class="card"><summary><b>' + esc(t('pyMine')) + '</b></summary>' + r.mine.map(m => '<div class="row" style="gap:6px;align-items:center"><span class="grow">' + esc(m.code + ' · ' + t('pk_' + m.kind) + ' · ' + m.amount + ' ₼ · ' + t('pySt_' + m.status)) + (m.reason ? ' — ' + esc(m.reason) : '') + '</span>' +
+      (m.status === 'pending' ? '<button class="btn small ghost" data-act="pyCancel" data-id="' + esc(m.id) + '">' + esc(t('pyCancel')) + '</button>' : '') + '</div>').join('') + '</details>' : '') +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button><button class="btn primary" data-act="pySend">' + esc(t('pySend')) + '</button></div>');
+}
+async function pySend(btn) {
+  let receipt = null;
+  try { receipt = await fileB64(($('#pyRcpt') || {}).files ? $('#pyRcpt').files[0] : null, 2000000); } catch (e) { return toast(t('E_BAD_FILE'), 'bad'); }
+  const r = await busy(btn, () => rpcA('payReqCreate', { kind: ($('#pyKind') || {}).value, note: (($('#pyNote') || {}).value || '').trim(), receipt }, { timeout: 90000 }));
+  if (!r) return;
+  closeModal();
+  openModal('<h3>' + esc(r.code) + '</h3><div style="font-size:16px">' + esc(t('pySent', { c: r.code, p: r.prov ? t('pyProvTxt', { d: admFmtD(r.prov) }) : '' })) + '</div><div class="acts"><button class="btn primary" data-act="closeModal">OK</button></div>');
+  if (typeof hpRefreshPlan === 'function') { await hpRefreshPlan(); renderAll(); }
+}
+// кнопка «Оплатить переводом» в окне подписки и в клинике
+(function () {
+  if (typeof hpSubOpen === 'function') {
+    const oh = hpSubOpen;
+    hpSubOpen = async function () {
+      const r = await oh.apply(this, arguments);
+      const acts = $('#modalRoot .acts');
+      if (acts && !$('#modalRoot [data-act=pyOpen]')) acts.insertAdjacentHTML('beforebegin', '<button class="btn block" style="margin-top:8px" data-act="pyOpen">' + esc(t('pyBtn')) + '</button>');
+      return r;
+    };
+  }
+  if (typeof kqScreenHtml === 'function') {
+    const ok = kqScreenHtml;
+    kqScreenHtml = function () {
+      const h = ok.apply(this, arguments);
+      const d = kqSt().data;
+      if (!(d && d.clinic && d.clinic.owner) || kqSt().view === 'share') return h;
+      return h.replace('<div class="muted" style="margin-top:6px;font-size:12px">', '<button class="btn ghost block" style="margin-top:6px" data-act="pyOpen">' + esc(t('pyBtn')) + '</button><div class="muted" style="margin-top:6px;font-size:12px">');
+    };
+    if (window.CLINIC_RENDER) window.CLINIC_RENDER.team = kqScreenHtml;
+  }
+})();
+
+/* ---------- обработчики ---------- */
+Object.assign(H, {
+  admEnter: () => { if (typeof menuOpen === 'function') try { menuOpen(false); } catch (e) { } admEnterModal(); },
+  admEnterGo: el => admEnterGo(el),
+  admExit: el => { if (typeof menuOpen === 'function') try { menuOpen(false); } catch (e) { } admExit(el); },
+  admOpen: () => { if (typeof menuOpen === 'function') try { menuOpen(false); } catch (e) { } setScreen('admin'); },
+  admSeg: el => { admSt().seg = el.dataset.seg; admRender(); window.scrollTo(0, 0); },
+  admF: el => { admSt().f = el.dataset.f; admRefresh(); },
+  admPerson: el => admPersonOpen(el.dataset.id),
+  admStores: el => usersAdmin(el.dataset.id),
+  admOldUsers: () => usersAdmin(),
+  admFeatSave: async el => {
+    const off = ADM_FEATS.filter(f => { const c = $('#modalRoot [data-ft="' + f + '"]'); return c && !c.checked; });
+    const r = await busy(el, () => rpcA('admFeatSet', { userId: el.dataset.id, off, limCases: ($('#admLimCases') || {}).value, limAi: ($('#admLimAi') || {}).value }));
+    if (r) { toast(t('admSaved')); await admPeopleReload(); const p = admSt().person; if (p) { p.x = admSt().people.rows.find(x => x.id === p.x.id) || p.x; } }
+  },
+  admTgSave: async el => {
+    const acc = {}; ['app', 'low', 'stock', 'docs', 'remind'].forEach(f => { const c = $('#modalRoot [data-tg="' + f + '"]'); acc[f] = !!(c && c.checked); });
+    const r = await busy(el, () => rpcA('tgAccessSet', { userId: el.dataset.id, acc }));
+    if (r) toast(t('admSaved'));
+  },
+  admBlock: async el => {
+    const x = admSt().person.x;
+    if (x.active && !confirm(t('admBlockAsk', { n: x.name }))) return;
+    const r = await busy(el, () => rpcA('saveUser', { user: { id: x.id, name: x.name, login: x.login, active: !x.active } }));
+    if (r) { await admPeopleReload(); admPersonOpen(x.id); }
+  },
+  admApprove: async el => {
+    const x = admSt().person.x;
+    const r = await busy(el, () => rpcA('saveUser', { user: { id: x.id, name: x.name, login: x.login, approve: true } }));
+    if (r) { await admPeopleReload(); admPersonOpen(x.id); }
+  },
+  admPw: async el => {
+    const x = admSt().person.x;
+    const pw = prompt(t('admPwAsk', { n: x.name }));
+    if (!pw) return;
+    const r = await busy(el, () => rpcA('resetPassword', { userId: x.id, tempPassword: pw }));
+    if (r) toast(t('admPwDone'), '', null, 6000);
+  },
+  admSessOff: async el => {
+    const r = await busy(el, async () => { const s = await rpcA('userSessions', { userId: el.dataset.id }); for (const x of (s.rows || [])) await rpcA('revokeSession', { sessionId: x.id, id: x.id, userId: el.dataset.id }); return true; });
+    if (r) { toast(t('admSessDone')); admPersonOpen(el.dataset.id); }
+  },
+  admKick: async el => {
+    if (!confirm(t('admKickAsk', { n: el.dataset.n, c: el.dataset.cn }))) return;
+    const r = await busy(el, () => rpcA('admClinicKick', { clinicId: el.dataset.c, userId: el.dataset.id }));
+    if (r) { admSt().clinics = null; admSt().people = null; if ($('#modalRoot .modal')) closeModal(); admRender(); }
+  },
+  admClClose: async el => {
+    const reason = prompt(t('admClCloseAsk', { n: el.dataset.n }));
+    if (!reason) return;
+    const r = await busy(el, () => rpcA('admClinicClose', { clinicId: el.dataset.id, reason }));
+    if (r) { admSt().clinics = null; admRender(); }
+  },
+  pyOpen: () => pyOpen(),
+  pySend: el => pySend(el),
+  pyCancel: async el => { const r = await busy(el, () => rpcA('payReqCancel', { id: el.dataset.id })); if (r) { closeModal(); pyOpen(); } },
+  pyRcpt: async el => {
+    const r = await busy(el, () => rpcA('payReceipt', { id: el.dataset.id }, { timeout: 60000 }));
+    if (!r) return;
+    const url = 'data:' + r.mime + ';base64,' + r.data;
+    openModal(/^image\//.test(r.mime) ? '<img src="' + esc(url) + '" style="max-width:100%;border-radius:8px" alt="">' + '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>'
+      : '<div class="acts"><a class="btn primary" href="' + esc(url) + '" download="check.pdf">PDF</a><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+  },
+  pyOk: el => pyApproveModal(el.dataset.id),
+  pyOkGo: async el => {
+    const r = await busy(el, () => rpcA('payReqDecide', { id: el.dataset.id, approve: true, days: ($('#pyDaysIn') || {}).value, amount: ($('#pyAmtIn') || {}).value }));
+    if (r) { closeModal(); toast(t('pyDone', { d: admFmtD(r.until) })); admSt().pays = null; admSt().people = null; admLoadSeg(true); }
+  },
+  pyNo: async el => {
+    const reason = prompt(t('pyRejectAsk'));
+    if (!reason) return;
+    const r = await busy(el, () => rpcA('payReqDecide', { id: el.dataset.id, approve: false, reason }));
+    if (r) { toast(t('pyRejected')); admSt().pays = null; admLoadSeg(true); }
+  },
+  pyUndo: async el => {
+    const pw = await admPw(t('pyUndoAsk')); if (!pw) return;
+    const r = await rpcA('payManualUndo', { id: el.dataset.id, password: pw }).catch(() => null);
+    if (r) { admSt().pays = null; admSt().seg = 'pays'; admRender(); }
+  },
+  admRefund: async el => {
+    const pw = await admPw(t('pyUndoAsk')); if (!pw) return;
+    const r = await rpcA('subRefund', { id: el.dataset.id, password: pw }).catch(() => null);
+    if (r) { admSt().pays = null; admSt().seg = 'pays'; admRender(); }
+  },
+  admPwOk: () => { const v = ($('#admPwIn') || {}).value || ''; const f = S.admPwRes; S.admPwRes = null; closeModal(); if (f) f(v); },
+  admPwNo: () => { const f = S.admPwRes; S.admPwRes = null; closeModal(); if (f) f(''); },
+  lgShow: async el => {
+    const st = admSt(); st.lgFrom = ($('#lgFrom') || {}).value; st.lgTo = ($('#lgTo') || {}).value;
+    const r = await busy(el, () => rpcA('payLedger', { from: st.lgFrom, to: st.lgTo }));
+    if (r) { st.ledger = r; admRefresh(); }
+  },
+  lgCsv: () => lgCsv(),
+  chSet: async el => {
+    const ch = (($('#chIn') || {}).value || '').trim();
+    const pw = await admPw(t('stPwAsk')); if (!pw) return;
+    const r = await busy(el, () => rpcA('channelSet', { password: pw, channel: ch }));
+    if (r) { toast(t('chOk', { n: r.title })); admSt().ch = null; admLoadSeg(true); }
+  },
+  chUse: el => {
+    const p = CH_READY[Number(el.dataset.i)]; const ta = $('#chText'); if (!p || !ta) return;
+    ta.value = el.dataset.l === 'both' ? p.az + '\n\n———\n\n' + p.ru : p[el.dataset.l];
+    ta.scrollIntoView({ block: 'center' });
+  },
+  chPost: async el => {
+    const text = (($('#chText') || {}).value || '').trim();
+    let photo = null;
+    try { photo = await fileB64(($('#chPhoto') || {}).files ? $('#chPhoto').files[0] : null, 5000000); } catch (e) { return toast(t('E_BAD_FILE'), 'bad'); }
+    const r = await busy(el, () => rpcA('channelPost', { text, photo, button: !!($('#chBtn') || {}).checked }, { timeout: 90000 }));
+    if (r) { toast(t('chPosted')); $('#chText').value = ''; admSt().ch = null; admLoadSeg(true); }
+  },
+  stSplit: el => {
+    const on = el.dataset.on === '1';
+    openModal('<h3>' + esc(t('stSplit')) + '</h3><div class="field"><label>' + esc(t('stSplitPw')) + '</label><input type="password" id="spPw" maxlength="100" autocomplete="current-password"></div>' +
+      (on ? '<div class="field"><label>' + esc(t('stSplitAdm')) + '</label><input type="password" id="spAdm" maxlength="100" autocomplete="new-password"></div><div class="field"><label>' + esc(t('stSplitAdm2')) + '</label><input type="password" id="spAdm2" maxlength="100" autocomplete="new-password"></div>' : '') +
+      '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="stSplitGo" data-on="' + (on ? '1' : '0') + '">OK</button></div>');
+  },
+  stSplitGo: async el => {
+    const on = el.dataset.on === '1';
+    const pw = ($('#spPw') || {}).value || '', ap = ($('#spAdm') || {}).value || '', ap2 = ($('#spAdm2') || {}).value || '';
+    if (on && ap !== ap2) return toast(t('pwMismatch'), 'bad');
+    const r = await busy(el, () => rpcA('ownerSplitSet', { on, password: pw, adminPassword: on ? ap : undefined }));
+    if (!r) return;
+    closeModal();
+    const m = await rpc('me').catch(() => null);
+    if (m && m.ok) setMe(m.me);
+    admSt().seg = 'set'; admRender();
+  },
+  stPaySave: async el => {
+    const pw = await admPw(t('stPwAsk')); if (!pw) return;
+    const r = await busy(el, () => rpcA('paySettings', { password: pw, req: ($('#stReq') || {}).value || '', prov: !!($('#stProv') || {}).checked, azn_c5: ($('#stC5') || {}).value, azn_c10: ($('#stC10') || {}).value }));
+    if (r) { toast(t('stSaved')); admSt().set = null; admLoadSeg(true); }
+  },
+  stCfgSave: async el => {
+    const pw = await admPw(t('stSplitAsk')); if (!pw) return;
+    const cfg = {}; $$('#admBody [data-cfg]').forEach(i => { if (i.value !== '') cfg[i.dataset.cfg] = Number(i.value); });
+    const r = await rpcA('helperCfgSet', { password: pw, cfg, regOpen: !!($('#stRegOpen') || {}).checked }).catch(() => null);
+    if (r) { toast(t('stSaved')); admSt().set = null; admLoadSeg(true); }
+    void el;
+  }
+});
+// поиск по людям — без перерисовки поля
+document.addEventListener('input', e => {
+  if (e.target && e.target.id === 'admQ') { admSt().q = e.target.value; const l = $('#admList'); if (l) l.innerHTML = admListHtml(admPeopleRows()); }
+});
+
+if (typeof tgElevateModal === 'function') {
+  const oem = tgElevateModal;
+  tgElevateModal = function () { if (S.me && S.me.ownerWork) return admEnterModal(); return oem.apply(this, arguments); };
 }
 
 
