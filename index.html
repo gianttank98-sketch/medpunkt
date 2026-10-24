@@ -5430,7 +5430,8 @@ function vitLevel(f, v) {
   }
 }
 /** Отмечен ли вариант в списке с несколькими ответами (анализы, исследования, осмотр). */
-function isOn(d, k, code) { return d[k + '_' + code] === true || String(d[k] || '').split(',').indexOf(code) !== -1; }
+// у снимков отметка и результат — одно поле img_<код>: вписан результат — исследование всё равно отмечено (иначе результат пропадал с экрана)
+function isOn(d, k, code) { const v = d[k + '_' + code]; return v === true || (k === 'img' && typeof v === 'string' && v.trim() !== '') || String(d[k] || '').split(',').indexOf(code) !== -1; }
 function finOk(s) { return !s || /^[0-9A-Z]{7}$/.test(String(s).toUpperCase()); }
 function ageOf(birth, at) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(birth || '')) return '';
@@ -6044,7 +6045,7 @@ Object.assign(H, {
   fFilter: el => { S.fFilter = el.dataset.v; renderFormsList(); },
   fSetV: el => { const k = el.dataset.f, v = el.dataset.v; const cur = fData(S.fv.id)[k]; const nv = String(cur) === v ? null : (k === 'pain' ? Number(v) : v); fSet({ [k]: nv }, true); fFlush(); },
   // каждый вариант — своё поле: медсестра и врач, отметившие разное в одном списке, не затирают друг друга
-  fTogV: el => { const k = el.dataset.f, v = el.dataset.v; fSet({ [k + '_' + v]: isOn(fData(S.fv.id), k, v) ? null : true }, true); fFlush(); },
+  fTogV: el => { const k = el.dataset.f, v = el.dataset.v; const cur = fData(S.fv.id)[k + '_' + v]; if (typeof cur === 'string' && cur.trim() && !confirm(t('remove') + '?')) return; fSet({ [k + '_' + v]: isOn(fData(S.fv.id), k, v) ? null : true }, true); fFlush(); },
   fExamNorm: () => {
     const p = {};
     FD.exam.forEach(g => { const norm = FD.examNorm[g[0]]; if (norm === undefined) return; const want = norm.split(','); g[3].forEach(o => { p['ex_' + g[0] + '_' + o[0]] = want.indexOf(o[0]) !== -1 ? true : null; }); });
@@ -27011,6 +27012,220 @@ Object.assign(H, {
 })();
 
 /* =====================================================================
+ * v37: 🏥 Больница — отделения с типами, заявки в аптеку, выдача передачей, обзор больницы.
+ * ===================================================================== */
+const I18N_V37 = {
+  ru: {
+    hsTitle: '🏥 Больница', hsSegOut: '📝 Заявки в аптеку', hsSegIn: '📥 Входящие заявки', hsSegOver: '📊 Обзор больницы',
+    sk_dept: 'Отделение', sk_er: 'Приёмное', sk_icu: 'Реанимация', sk_lab: 'Лаборатория', sk_pharmacy: 'Аптека / главный склад', sk_medpunkt: 'Медпункт', sk_ambulance: 'Скорая', sk_other: 'Другое', sk_sandbox: 'Песочница',
+    hsNoPharm: 'В вашей организации пока нет аптеки (главного склада). Админ: «📊 Обзор» → тип склада «Аптека».', hsNew: '＋ Новая заявка', hsTo: 'В аптеку', hsName: 'Препарат / расходник', hsQty: 'Сколько', hsNote: 'Примечание', hsAddLine: '＋ Ещё строка', hsSend: '📨 Отправить заявку', hsSent: 'Заявка {c} отправлена',
+    hsNone: 'Заявок нет.', hsSt_open: '🟡 ждёт', hsSt_partial: '🟠 выдано частично', hsSt_done: '🟢 выдано', hsSt_rejected: '❌ отказ', hsSt_cancelled: '⚪ отменена', hsCancel: 'Отменить',
+    hsGive: '📦 Выдать', hsReject: '❌ Отказ', hsRejectAsk: 'Причина отказа:', hsGiveTitle: 'Выдача по заявке {c}', hsLot: 'Партия', hsNoLot: 'нет на складе', hsGiveGo: '📦 Отправить передачей', hsGiveDone: 'Передано: {n}. Отделение примет передачу у себя.', hsAllDone: 'Выдано всё', hsPartial: 'Выдано частично', hsAnswer: 'Комментарий для отделения',
+    hsOverHint: 'По каждому отделению: люди, позиции, просрочено, истекает за 30 дней, ниже минимума, заявки, обращения сегодня.', hsStaff: 'людей', hsItems: 'позиций', hsExpired: 'просрочено', hsSoon: 'истекает', hsLow: 'ниже минимума', hsReqIn: 'заявок к ним', hsReqOut: 'их заявок', hsForms: 'обращений сегодня', hsKind: 'Тип', hsAddDept: '＋ Новое отделение', hsDeptName: 'Название отделения', hsErr: 'не удалось проверить',
+    hsFromStock: 'есть у нас', hsCheckLot: 'Точного совпадения по названию и дозировке нет — проверьте партию и дозировку сами.'
+  },
+  az: {
+    hsTitle: '🏥 Xəstəxana', hsSegOut: '📝 Apteke sifarişlər', hsSegIn: '📥 Daxil olan sifarişlər', hsSegOver: '📊 Xəstəxananın icmalı',
+    sk_dept: 'Şöbə', sk_er: 'Qəbul şöbəsi', sk_icu: 'Reanimasiya', sk_lab: 'Laboratoriya', sk_pharmacy: 'Aptek / əsas anbar', sk_medpunkt: 'Tibb məntəqəsi', sk_ambulance: 'Təcili yardım', sk_other: 'Digər', sk_sandbox: 'Qum qutusu',
+    hsNoPharm: 'Təşkilatınızda hələ aptek (əsas anbar) yoxdur. Admin: «📊 İcmal» → anbar növü «Aptek».', hsNew: '＋ Yeni sifariş', hsTo: 'Aptekə', hsName: 'Dərman / sərf materialı', hsQty: 'Nə qədər', hsNote: 'Qeyd', hsAddLine: '＋ Daha bir sətir', hsSend: '📨 Sifarişi göndər', hsSent: '{c} sifarişi göndərildi',
+    hsNone: 'Sifariş yoxdur.', hsSt_open: '🟡 gözləyir', hsSt_partial: '🟠 qismən verildi', hsSt_done: '🟢 verildi', hsSt_rejected: '❌ imtina', hsSt_cancelled: '⚪ ləğv edildi', hsCancel: 'Ləğv et',
+    hsGive: '📦 Ver', hsReject: '❌ İmtina', hsRejectAsk: 'İmtinanın səbəbi:', hsGiveTitle: '{c} sifarişi üzrə vermə', hsLot: 'Partiya', hsNoLot: 'anbarda yoxdur', hsGiveGo: '📦 Ötürmə ilə göndər', hsGiveDone: 'Ötürüldü: {n}. Şöbə ötürməni özündə qəbul edəcək.', hsAllDone: 'Hamısı verildi', hsPartial: 'Qismən verildi', hsAnswer: 'Şöbə üçün şərh',
+    hsOverHint: 'Hər şöbə üzrə: insanlar, mövqelər, vaxtı keçmiş, 30 gündə bitən, minimumdan aşağı, sifarişlər, bu gün müraciətlər.', hsStaff: 'nəfər', hsItems: 'mövqe', hsExpired: 'vaxtı keçib', hsSoon: 'bitir', hsLow: 'minimumdan az', hsReqIn: 'onlara sifariş', hsReqOut: 'onların sifarişi', hsForms: 'bu gün müraciət', hsKind: 'Növ', hsAddDept: '＋ Yeni şöbə', hsDeptName: 'Şöbənin adı', hsErr: 'yoxlamaq alınmadı',
+    hsFromStock: 'bizdə var', hsCheckLot: 'Ad və dozaya görə dəqiq uyğunluq yoxdur — partiyanı və dozanı özünüz yoxlayın.'
+  }
+};
+Object.assign(I18N.ru, I18N_V37.ru);
+Object.assign(I18N.az, I18N_V37.az);
+const HS_ICON = { dept: '🛏', er: '🆘', icu: '❤️‍🩹', lab: '🔬', pharmacy: '💊', medpunkt: '⛑', ambulance: '🚑', other: '🏷', sandbox: '🧪' };
+const HS_KINDS = ['dept', 'er', 'icu', 'lab', 'pharmacy', 'medpunkt', 'ambulance', 'other'];
+function hsSt() { if (!S.hs) S.hs = { seg: 'out', data: null, over: null, draft: [{ name: '', qty: 1 }] }; return S.hs; }
+function hsAllowed() { return !!(S.me && S.sess && S.storeId && !(typeof sbIn === 'function' && sbIn()) && !(typeof isHelper === 'function' && isHelper())); }
+function hsKindName(k) { return (HS_ICON[k] || '') + ' ' + t('sk_' + k); }
+
+/* ---------- экран ---------- */
+(function () {
+  if (!$('#scrHosp')) {
+    const sec = document.createElement('section');
+    sec.id = 'scrHosp'; sec.className = 'hidden';
+    sec.innerHTML = '<div id="hsBox"></div>';
+    const rep = $('#scrReports'); rep.parentNode.insertBefore(sec, rep.nextSibling);
+  }
+  const oa = window.screenAllowed;
+  window.screenAllowed = function (scr) { if (scr === 'hosp') return hsAllowed(); return oa(scr); };
+  const os = window.setScreen;
+  window.setScreen = function (scr) {
+    const r = os.apply(this, arguments);
+    const h = $('#scrHosp'); if (h) h.classList.toggle('hidden', S.screen !== 'hosp');
+    if (S.screen === 'hosp') { ['#scrClinic', '#scrAdmin'].forEach(s => { const e = $(s); if (e) e.classList.add('hidden'); }); hsRender(); hsLoad(); }
+    return r;
+  };
+  const ora = window.renderAll;
+  window.renderAll = function () { const r = ora.apply(this, arguments); if (S.screen === 'hosp' && S.hsLang !== S.lang) hsRender(); return r; };
+  const omr = window.menuRender;
+  if (typeof omr === 'function') window.menuRender = function () {
+    const r = omr.apply(this, arguments);
+    const nav = $('nav.bottom.drawer'); if (!nav) return r;
+    nav.querySelectorAll('[data-act=hsOpen]').forEach(b => b.remove());
+    if (hsAllowed()) { const html = '<button class="btn ghost block" style="margin:6px 0" data-act="hsOpen">' + esc(t('hsTitle')) + '</button>'; const fb = nav.querySelector('[data-act=fbOpen]'); if (fb) fb.insertAdjacentHTML('beforebegin', html); else nav.insertAdjacentHTML('beforeend', html); }
+    return r;
+  };
+  const omm = window.menuMark;
+  if (typeof omm === 'function') window.menuMark = function () { const r = omm.apply(this, arguments); const n = $('#scrName'); if (n && S.screen === 'hosp') n.textContent = t('hsTitle'); return r; };
+  // выбор склада: по типам, со значками
+  if (typeof storePicker === 'function') {
+    storePicker = function (force) {
+      const stores = myStores().slice().sort((a, b) => HS_KINDS.indexOf(a.kind || 'medpunkt') - HS_KINDS.indexOf(b.kind || 'medpunkt'));
+      openModal('<h3>🏥 ' + esc(t('pickStore')) + '</h3>' + stores.map(s => '<button class="btn ghost block store-pick' + (s.id === S.storeId ? ' on' : '') + '" data-act="storeGo" data-id="' + esc(s.id) + '"><span>' + esc((HS_ICON[s.sandbox ? 'sandbox' : s.kind] || '') + ' ' + storeName(s)) + '</span>' +
+        (s.until ? '<span class="tag amber">' + esc(t('permUntil', { d: fmtDate(s.until) })) + '</span>' : '') + '</button>').join('') +
+        (force ? '' : '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>'));
+    };
+  }
+})();
+async function hsLoad(force) {
+  const st = hsSt();
+  try {
+    if (st.seg === 'over') { if (!st.over || force) { const r = await rpcA('hospOverview', force ? { force: true } : {}, { timeout: 120000 }); if (r) st.over = r; } }
+    else if (!st.data || force) { const r = await rpcA('hreqList', {}); if (r) st.data = r; }
+  } catch (e) { }
+  if (S.screen === 'hosp') hsRender();
+}
+function hsRender() {
+  const box = $('#hsBox'); if (!box) return;
+  S.hsLang = S.lang;
+  const st = hsSt(), d = st.data;
+  const segs = [['out', 'hsSegOut']].concat(d && d.canIn ? [['in', 'hsSegIn']] : []).concat(typeof isOrgAdmin === 'function' && isOrgAdmin() ? [['over', 'hsSegOver']] : []);
+  if (!segs.some(s => s[0] === st.seg)) st.seg = segs[0][0];
+  let body = '';
+  if (st.seg === 'over') body = st.over ? hsOverHtml() : '<div class="ai-t">' + esc(t('aiThinking')) + '</div>';
+  else if (!d) body = '<div class="ai-t">' + esc(t('aiThinking')) + '</div>';
+  else body = st.seg === 'in' ? hsListHtml(d.in, true) : hsOutHtml();
+  const cur = (typeof myStores === 'function' ? myStores() : []).find(s => s.id === S.storeId);
+  box.innerHTML = '<div class="muted" style="margin-bottom:6px">' + esc(cur ? hsKindName(cur.kind || 'medpunkt') + ' · ' + storeName(cur) : '') + '</div>' +
+    '<div class="seg-wide" style="margin-bottom:10px">' + segs.map(s => '<button data-act="hsSeg" data-seg="' + s[0] + '" class="' + (st.seg === s[0] ? 'on' : '') + '">' + esc(t(s[1])) + '</button>').join('') + '</div>' + body;
+}
+function hsOutHtml() {
+  const st = hsSt(), d = st.data;
+  if (!d.pharmacies.length) return '<div class="hint" style="display:block">' + esc(t('hsNoPharm')) + '</div>' + hsListHtml(d.out, false);
+  const names = (S.view && S.view.items ? S.view.items : []).slice(0, 800).map(it => '<option value="' + esc(it.name + (it.dosage ? ' ' + it.dosage : '')) + '">').join('');
+  return '<details class="card"' + (d.out.length ? '' : ' open') + '><summary><b>' + esc(t('hsNew')) + '</b></summary>' +
+    '<div class="field"><label>' + esc(t('hsTo')) + '</label><select id="hsTo">' + d.pharmacies.map(p => '<option value="' + esc(p.id) + '">' + esc(storeName(p)) + '</option>').join('') + '</select></div>' +
+    '<datalist id="hsNames">' + names + '</datalist><div id="hsLines">' + st.draft.map((l, i) => '<div class="row" style="gap:6px;align-items:flex-end"><div class="field grow"><label>' + esc(t('hsName')) + '</label><input type="text" list="hsNames" data-hl="name" data-i="' + i + '" value="' + esc(l.name) + '" maxlength="120"></div>' +
+      '<div class="field" style="width:84px"><label>' + esc(t('hsQty')) + '</label><input type="number" min="1" data-hl="qty" data-i="' + i + '" value="' + esc(l.qty) + '" inputmode="numeric"></div></div>').join('') + '</div>' +
+    '<button class="btn small ghost" data-act="hsAddLine">' + esc(t('hsAddLine')) + '</button><div class="field" style="margin-top:6px"><label>' + esc(t('hsNote')) + '</label><input type="text" id="hsNote" maxlength="300"></div>' +
+    '<button class="btn primary block" data-act="hsSend">' + esc(t('hsSend')) + '</button></details>' + hsListHtml(d.out, false);
+}
+function hsListHtml(rows, incoming) {
+  if (!rows.length) return '<div class="muted">' + esc(t('hsNone')) + '</div>';
+  return rows.map(r => '<div class="card"><div class="row" style="gap:6px;align-items:center"><b class="grow">' + esc(r.code) + ' · ' + esc(incoming ? r.fromName : r.toName) + '</b><span>' + esc(t('hsSt_' + r.status)) + '</span></div>' +
+    '<div class="muted">' + esc(r.by + ' · ' + fmtDt(r.at)) + '</div>' + r.lines.map(l => '<div>• ' + esc(l.name + (l.dosage ? ' ' + l.dosage : '')) + ' — <b>' + esc(l.qty) + '</b> ' + esc(l.unit || '') + (incoming ? hsHaveTag(l) : '') + '</div>').join('') +
+    (r.note ? '<div class="muted">💬 ' + esc(r.note) + '</div>' : '') + (r.answer ? '<div>↩ ' + esc(r.answer) + (r.answeredBy ? ' <span class="muted">(' + esc(r.answeredBy) + ')</span>' : '') + '</div>' : '') +
+    '<div class="row" style="gap:6px;margin-top:6px">' + (incoming && (r.status === 'open' || r.status === 'partial') ? '<button class="btn small primary" data-act="hsGive" data-id="' + esc(r.id) + '">' + esc(t('hsGive')) + '</button><button class="btn small ghost" data-act="hsReject" data-id="' + esc(r.id) + '">' + esc(t('hsReject')) + '</button>' : '') +
+    (!incoming && r.status === 'open' ? '<button class="btn small ghost" data-act="hsCancel" data-id="' + esc(r.id) + '">' + esc(t('hsCancel')) + '</button>' : '') + '</div></div>').join('');
+}
+/** Подбор в аптеке: по названию и дозировке аптечного склада (номер позиции отделения здесь не подходит — у каждого склада свои).
+ *  Точное совпадение «название + дозировка» — одна позиция; иначе — похожие, но числа (дозировка) должны совпасть целиком. */
+const hsNorm = s => String(s || '').toLowerCase().replace(/ё/g, 'е').replace(/ı/g, 'i').replace(/,/g, '.').replace(/[^\p{L}\p{N}.]+/gu, ' ').trim();
+const hsToks = s => hsNorm(s).split(' ').filter(Boolean);
+function hsMatchItems(l) {
+  const items = S.view && S.view.items || [];
+  const want = hsNorm(l.name + (l.dosage ? ' ' + l.dosage : ''));
+  // точно — название + дозировка + форма (ампулы ≠ таблетки); без формы в заявке (свободный текст) — не «точно»
+  const same = items.filter(it => hsNorm(it.name + (it.dosage ? ' ' + it.dosage : '')) === want);
+  const exact = l.form ? same.filter(it => it.form === l.form) : [];
+  if (exact.length) return { items: exact, exact: exact.length === 1 };
+  if (same.length) return { items: same, exact: false };
+  const q = hsToks(l.name + ' ' + (l.dosage || ''));
+  const nums = q.filter(w => /\d/.test(w)), words = q.filter(w => !/\d/.test(w) && w.length >= 3);
+  if (!words.length) return { items: [], exact: false };
+  const like = items.filter(it => { const tk = hsToks(it.name + ' ' + (it.dosage || '') + ' ' + (it.substance || '')); const txt = tk.join(' '); return words.every(w => txt.indexOf(w) !== -1) && nums.every(n => tk.indexOf(n) !== -1); });
+  return { items: like, exact: false };
+}
+function hsMatchLots(l) {
+  if (!S.view || !S.view.lots) return [];
+  const ids = hsMatchItems(l).items.map(it => it.id);
+  return S.view.lots.filter(x => ids.indexOf(x.itemId) !== -1 && x.qty > 0 && !(typeof lotStatus === 'function' && lotStatus(x).cls === 'expired')).sort((a, b) => String(a.expiry || '9').localeCompare(String(b.expiry || '9')));
+}
+function hsHaveTag(l) { const n = hsMatchLots(l).reduce((s, x) => s + x.qty, 0); return ' <span class="tag ' + (n >= l.qty ? 'green' : n ? 'amber' : 'red') + '">' + esc(t('hsFromStock')) + ': ' + n + '</span>'; }
+function hsGiveModal(id) {
+  const r = (hsSt().data.in || []).find(x => x.id === id); if (!r) return;
+  openModal('<h3>' + esc(t('hsGiveTitle', { c: r.code })) + '</h3><div class="muted">' + esc(r.fromName) + '</div>' + r.lines.map((l, i) => {
+    const lots = hsMatchLots(l);
+    return '<div class="card"><b>' + esc(l.name) + '</b> — ' + esc(l.qty) + (lots.length ? '<div class="row" style="gap:6px;align-items:flex-end"><div class="field grow"><label>' + esc(t('hsLot')) + '</label><select data-gl="lot" data-i="' + i + '"><option value="">—</option>' + lots.map(x => { const it = itemById(x.itemId); return '<option value="' + esc(x.id) + '">' + esc((it ? it.name + ' ' + it.dosage : '') + ' · ' + (x.series || '—') + ' · ' + (x.expiry ? fmtDate(x.expiry) : '—') + ' · ' + x.qty) + '</option>'; }).join('') + '</select></div>' +
+      '<div class="field" style="width:84px"><label>' + esc(t('hsQty')) + '</label><input type="number" min="0" data-gl="qty" data-i="' + i + '" value="' + esc(hsMatchItems(l).exact ? Math.min(l.qty, lots.reduce((s, x) => s + x.qty, 0)) : 0) + '"></div></div>' + (hsMatchItems(l).exact ? '' : '<div class="hint" style="display:block">' + esc(t('hsCheckLot')) + '</div>') : '<div class="muted">' + esc(t('hsNoLot')) + '</div>') + '</div>';
+  }).join('') + '<div class="field"><label>' + esc(t('hsAnswer')) + '</label><input type="text" id="hsAns" maxlength="300"></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="hsGiveGo" data-id="' + esc(id) + '">' + esc(t('hsGiveGo')) + '</button></div>');
+  // партия по умолчанию — первая (самый ранний срок), только если позиция совпала точно (название + дозировка)
+  $$('#modalRoot [data-gl=lot]').forEach(s => { const l = r.lines[Number(s.dataset.i)]; if (s.options.length > 1 && l && hsMatchItems(l).exact) s.selectedIndex = 1; });
+}
+async function hsGiveGo(btn) {
+  const r = (hsSt().data.in || []).find(x => x.id === btn.dataset.id); if (!r) return;
+  const sends = [];
+  $$('#modalRoot [data-gl=lot]').forEach(s => { const i = s.dataset.i; const q = Number(($('#modalRoot [data-gl=qty][data-i="' + i + '"]') || {}).value); if (s.value && q > 0) sends.push({ lotId: s.value, qty: Math.round(q), line: r.lines[i] }); });
+  let n = 0;
+  const res = await busy(btn, async () => {
+    // один номер на строку в этом окне: повторное нажатие после сбоя не выдаст уже выданное второй раз
+    // номер — от заявки и её последнего ответа: тот же до следующей выдачи (и после закрытия окна), следующая частичная — новые номера
+    const tok = String(r.id).replace(/[^A-Za-z0-9]/g, '') + '_' + String(r.answeredAt || '0').replace(/\D/g, '');
+    for (const x of sends) { await rpcA('xferSend', { lotId: x.lotId, qty: x.qty, toStoreId: r.from, comment: 'Заявка ' + r.code }, { op: true, opId: 'hq' + tok + '_' + r.lines.indexOf(x.line) }); n++; }
+    const full = r.lines.every((l, i) => sends.some(x => String(r.lines.indexOf(x.line)) === String(i) && x.qty >= l.qty));
+    await rpcA('hreqAnswer', { id: r.id, status: full ? 'done' : 'partial', answer: (($('#hsAns') || {}).value || '').trim() || t(full ? 'hsAllDone' : 'hsPartial') });
+    return true;
+  });
+  if (n) toast(t('hsGiveDone', { n }), '', null, 6000);
+  if (res) { closeModal(); hsSt().data = null; if (typeof refreshState === 'function') refreshState(true); hsLoad(true); }
+}
+function hsOverHtml() {
+  const o = hsSt().over;
+  const sel = st => '<select data-act-change="hsKind" data-id="' + esc(st.id) + '" style="max-width:190px">' + HS_KINDS.map(k => '<option value="' + k + '"' + (st.kind === k ? ' selected' : '') + '>' + esc(hsKindName(k)) + '</option>').join('') + '</select>';
+  const num = (n, k, bad) => '<span class="tag ' + (bad && n ? 'red' : 'grey') + '">' + n + ' ' + esc(t(k)) + '</span> ';
+  return '<div class="muted" style="margin-bottom:8px">' + esc(t('hsOverHint')) + '</div>' + o.stores.slice().sort((a, b) => HS_KINDS.indexOf(a.kind) - HS_KINDS.indexOf(b.kind)).map(st =>
+    '<div class="card"><div class="row" style="gap:6px;align-items:center;flex-wrap:wrap"><b class="grow">' + esc((HS_ICON[st.kind] || '') + ' ' + (S.lang === 'az' ? st.nameAz : st.nameRu)) + '</b>' + sel(st) + '</div>' +
+    (st.error ? '<div class="muted">' + esc(t('hsErr')) + '</div>' : '<div style="margin-top:4px">' + num(st.staff, 'hsStaff') + num(st.items, 'hsItems') + num(st.expired, 'hsExpired', true) + num(st.soon, 'hsSoon', true) + num(st.low, 'hsLow', true) + num(st.reqIn, 'hsReqIn', true) + num(st.reqOut, 'hsReqOut') + num(st.formsToday, 'hsForms') + '</div>') + '</div>').join('') +
+    '<div class="card"><b>' + esc(t('hsAddDept')) + '</b><div class="row" style="gap:6px;align-items:flex-end;flex-wrap:wrap"><div class="field grow"><label>' + esc(t('hsDeptName')) + '</label><input type="text" id="hsDeptName" maxlength="80"></div>' +
+    '<div class="field"><label>' + esc(t('hsKind')) + '</label><select id="hsDeptKind">' + HS_KINDS.map(k => '<option value="' + k + '">' + esc(hsKindName(k)) + '</option>').join('') + '</select></div><button class="btn primary" data-act="hsAddDept">＋</button></div></div>';
+}
+document.addEventListener('change', async e => {
+  const el = e.target;
+  if (el && el.dataset && el.dataset.actChange === 'hsKind') {
+    const r = await rpcA('storeKindSet', { storeId: el.dataset.id, kind: el.value }).catch(() => null);
+    if (r) { toast(t('saved')); const m = await rpc('me').catch(() => null); if (m && m.ok) setMe(m.me); hsSt().over = null; hsLoad(true); }
+  }
+});
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (el && el.dataset && el.dataset.hl) { const l = hsSt().draft[Number(el.dataset.i)]; if (l) l[el.dataset.hl] = el.dataset.hl === 'qty' ? Number(el.value) : el.value; }
+});
+Object.assign(H, {
+  hsOpen: () => { if (typeof menuOpen === 'function') try { menuOpen(false); } catch (e) { } hsSt().data = null; setScreen('hosp'); },
+  hsSeg: el => { hsSt().seg = el.dataset.seg; hsRender(); hsLoad(); },
+  hsAddLine: () => { hsSt().draft.push({ name: '', qty: 1 }); hsRender(); },
+  hsSend: async el => {
+    const st = hsSt();
+    const lines = st.draft.filter(l => String(l.name || '').trim() && Number(l.qty) > 0).map(l => {
+      const it = (S.view && S.view.items || []).find(x => (x.name + (x.dosage ? ' ' + x.dosage : '')) === l.name);
+      return { name: l.name, qty: Math.round(Number(l.qty)), itemId: it ? it.id : '', unit: it ? it.unit : '', form: it ? it.form || '' : '' };
+    });
+    if (!lines.length) return toast(t('E_REQUIRED'), 'bad');
+    const r = await busy(el, () => rpcA('hreqCreate', { toStoreId: ($('#hsTo') || {}).value, lines, note: (($('#hsNote') || {}).value || '').trim() }));
+    if (r) { toast(t('hsSent', { c: r.code })); st.draft = [{ name: '', qty: 1 }]; st.data = null; hsLoad(true); }
+  },
+  hsCancel: async el => { const r = await busy(el, () => rpcA('hreqCancel', { id: el.dataset.id })); if (r) { hsSt().data = null; hsLoad(true); } },
+  hsGive: el => hsGiveModal(el.dataset.id),
+  hsGiveGo: el => hsGiveGo(el),
+  hsReject: async el => {
+    const reason = prompt(t('hsRejectAsk')); if (!reason) return;
+    const r = await busy(el, () => rpcA('hreqAnswer', { id: el.dataset.id, status: 'rejected', answer: reason }));
+    if (r) { hsSt().data = null; hsLoad(true); }
+  },
+  hsAddDept: async el => {
+    const name = (($('#hsDeptName') || {}).value || '').trim();
+    if (name.length < 2) return toast(t('E_NAME_REQUIRED'), 'bad');
+    const r = await busy(el, () => rpcA('saveStore', { store: { nameRu: name, kind: ($('#hsDeptKind') || {}).value } }, { timeout: 90000 }));
+    if (r) { toast(t('saved')); const m = await rpc('me').catch(() => null); if (m && m.ok) setMe(m.me); hsSt().over = null; hsLoad(true); }
+  }
+});
+
+/* =====================================================================
  * v38: 💰 Экономика ИИ — тариф «Эксперт», Opus для диагноза в чате, «💰 Экономика» в Админ-центре.
  *  Сколько тратить на ИИ, решает сервер (запас организации ≤ доли выручки её тарифа); телефон только подсказывает,
  *  что вопрос клинический (тогда пропуск — с моделью для диагноза), и показывает тарифы и цифры.
@@ -27307,6 +27522,163 @@ const I18N_V41 = {
 Object.assign(I18N.ru, I18N_V41.ru);
 Object.assign(I18N.az, I18N_V41.az);
 ['case', 'spend', 'report', 'morning'].forEach(k => { if (TG_FEAT_LBL.every(x => x[0] !== k)) TG_FEAT_LBL.push([k, 'tga' + k[0].toUpperCase() + k.slice(1)]); });
+
+/* =====================================================================
+ * v42: 🛏 Перевод пациента между отделениями — из формы обращения; входящие — в «🏥 Больница» → «🛏 Переводы».
+ * ===================================================================== */
+const I18N_V42 = {
+  ru: {
+    pxBtn: '🛏 Перевести в отделение', pxTitle: 'Перевод пациента', pxTo: 'В отделение', pxReason: 'Причина перевода (коротко, без ФИО)', pxGo: '🛏 Перевести',
+    pxSent: 'Перевод {c} отправлен. Отделение увидит пациента и примет. Не забудьте исход в этой форме.', pxNoTargets: 'В организации нет других отделений.',
+    pxWait: 'Сначала дождитесь, пока форма сохранится на сервере (нужна связь).', pxSeg: '🛏 Переводы', pxIn: 'Поступают к нам', pxOut: 'Мы перевели', pxDone: 'Приняты / отказ',
+    pxNone: 'Нет.', pxAccept: '✅ Принять', pxReject: '❌ Отказать', pxRejectAsk: 'Причина отказа:', pxCancel: 'Отменить',
+    pxAccepted: 'Пациент принят ({c}): в отделении создана новая форма с его данными, анамнезом и показателями. Откройте её и дополните осмотр.', px003: '📄 Сразу карта стационарного (003)', pxOpenForm: '🩺 Открыть форму',
+    pxSt_open: '🟡 ждёт', pxSt_accepted: '🟢 принят', pxSt_rejected: '❌ отказ', pxSt_cancelled: '⚪ отменён', pxFrom: 'из', pxAllergy: 'Аллергия', pxAllergyUnk: '⚠️ Аллергоанамнез не собран', pxSt_expired: '⌛ не ответили 72 ч', pxSrc: '📄 Форма отделения-отправителя', pxNoteTitle: 'Перевод', pxFailed: 'Есть несохранённые изменения этой формы с ошибкой (раздел «Не отправлено»). Разберитесь с ними, потом переводите.',
+    E_PTX_SOURCE: 'Форма отделения-отправителя удалена или недоступна. Попросите перевести заново.',
+    E_PTX_OPEN: 'Этот пациент уже ждёт приёма в другом отделении. Отмените тот перевод или дождитесь ответа.'
+  },
+  az: {
+    pxBtn: '🛏 Şöbəyə köçür', pxTitle: 'Pasiyentin köçürülməsi', pxTo: 'Şöbəyə', pxReason: 'Köçürmənin səbəbi (qısa, adsız)', pxGo: '🛏 Köçür',
+    pxSent: '{c} köçürməsi göndərildi. Şöbə pasiyenti görəcək və qəbul edəcək. Bu formada nəticəni qeyd etməyi unutmayın.', pxNoTargets: 'Təşkilatda başqa şöbə yoxdur.',
+    pxWait: 'Əvvəlcə forma serverdə saxlanılsın (əlaqə lazımdır).', pxSeg: '🛏 Köçürmələr', pxIn: 'Bizə gəlir', pxOut: 'Biz köçürdük', pxDone: 'Qəbul / imtina',
+    pxNone: 'Yoxdur.', pxAccept: '✅ Qəbul et', pxReject: '❌ İmtina', pxRejectAsk: 'İmtinanın səbəbi:', pxCancel: 'Ləğv et',
+    pxAccepted: 'Pasiyent qəbul edildi ({c}): şöbədə onun məlumatları, anamnezi və göstəriciləri ilə yeni forma yaradıldı. Açın və müayinəni tamamlayın.', px003: '📄 Dərhal stasionar xəstə kartı (003)', pxOpenForm: '🩺 Formanı aç',
+    pxSt_open: '🟡 gözləyir', pxSt_accepted: '🟢 qəbul edildi', pxSt_rejected: '❌ imtina', pxSt_cancelled: '⚪ ləğv edildi', pxFrom: 'haradan', pxAllergy: 'Allergiya', pxAllergyUnk: '⚠️ Allergiya anamnezi toplanmayıb', pxSt_expired: '⌛ 72 saat cavab yoxdur', pxSrc: '📄 Göndərən şöbənin forması', pxNoteTitle: 'Köçürmə', pxFailed: 'Bu formanın xəta ilə saxlanılmamış dəyişiklikləri var («Göndərilməyib» bölməsi). Əvvəlcə onları həll edin, sonra köçürün.',
+    E_PTX_SOURCE: 'Göndərən şöbənin forması silinib və ya əlçatan deyil. Yenidən köçürməyi xahiş edin.',
+    E_PTX_OPEN: 'Bu pasiyent artıq başqa şöbədə qəbul gözləyir. O köçürməni ləğv edin və ya cavabı gözləyin.'
+  }
+};
+Object.assign(I18N.ru, I18N_V42.ru);
+Object.assign(I18N.az, I18N_V42.az);
+function pxSt() { if (!S.px) S.px = { data: null }; return S.px; }
+function pxAllowed() { return !!(S.gas && typeof can === 'function' && can('forms') && typeof hsAllowed === 'function' && hsAllowed()); }
+const pxName = (x, k) => S.lang === 'az' ? (x[k + 'Az'] || x[k]) : x[k];
+
+/* ---------- из формы: «Перевести в отделение» ---------- */
+(function () {
+  const om = window.fMenu;
+  if (typeof om !== 'function') return;
+  window.fMenu = function () {
+    om.apply(this, arguments);
+    const id = S.fv && S.fv.id; if (!id || String(id).startsWith('tmp')) return;
+    if (!pxAllowed() || (typeof fStatus === 'function' && fStatus(id) === 'deleted')) return;
+    const col = $('.modal .col-btns'); if (!col) return;
+    col.insertAdjacentHTML('afterbegin', '<button class="btn ghost block" data-act="pxStart">' + esc(t('pxBtn')) + '</button>');
+  };
+})();
+async function pxStart() {
+  const id = S.fv && S.fv.id; if (!id) return;
+  closeModal();
+  const r = await rpcA('ptxTargets', {}).catch(() => null); if (!r) return;
+  if (!r.stores.length) return toast(t('pxNoTargets'), 'bad');
+  const ord = typeof HS_KINDS !== 'undefined' ? HS_KINDS : [];
+  const st = r.stores.slice().sort((a, b) => ord.indexOf(a.kind) - ord.indexOf(b.kind));
+  openModal('<h3>' + esc(t('pxTitle')) + '</h3><div class="field"><label>' + esc(t('pxTo')) + '</label><select id="pxTo">' +
+    st.map(s => '<option value="' + esc(s.id) + '">' + esc(((typeof HS_ICON !== 'undefined' && HS_ICON[s.kind]) || '') + ' ' + (S.lang === 'az' ? s.nameAz || s.nameRu : s.nameRu)) + '</option>').join('') + '</select></div>' +
+    '<div class="field"><label>' + esc(t('pxReason')) + '</label><input type="text" id="pxReason" maxlength="300"></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="pxGo" data-id="' + esc(id) + '">' + esc(t('pxGo')) + '</button></div>');
+}
+async function pxGo(btn) {
+  const id = btn.dataset.id;
+  if (typeof fFlush === 'function') fFlush();
+  // сервер берёт форму из таблицы — сначала всё несохранённое должно дойти
+  try { if (typeof flushQueue === 'function') await flushQueue(); } catch (e) { }
+  if (typeof fPendingOps === 'function' && fPendingOps(id).length) return toast(t('pxWait'), 'bad');
+  if ((S.failed || []).some(o => o.payload && (o.payload.id === id || o.payload.formId === id))) return toast(t('pxFailed'), 'bad', null, 8000);
+  const sid = (S.fv && S.fv.id === id && S.fv.storeId) || S.storeId;
+  const r = await busy(btn, () => rpcA('ptxCreate', { storeId: sid, formId: id, toStoreId: ($('#pxTo') || {}).value, reason: (($('#pxReason') || {}).value || '').trim() }));
+  if (r) { closeModal(); toast(t('pxSent', { c: r.code }), '', null, 8000); pxSt().data = null; }
+}
+
+/* ---------- «🏥 Больница» → «🛏 Переводы» ---------- */
+(function () {
+  const or = window.hsRender, ol = window.hsLoad;
+  if (typeof or !== 'function') return;
+  window.hsRender = function () {
+    const st = hsSt();
+    const mine = st.seg === 'px';
+    if (mine) st.seg = 'out';
+    const r = or.apply(this, arguments);
+    if (mine) st.seg = 'px';
+    if (!pxAllowed()) { if (mine) { st.seg = 'out'; or.apply(this, arguments); } return r; }
+    const bar = $('#hsBox .seg-wide'); if (!bar) return r;
+    bar.insertAdjacentHTML('beforeend', '<button data-act="hsSeg" data-seg="px">' + esc(t('pxSeg')) + '</button>');
+    if (mine) {
+      bar.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.seg === 'px'));
+      let n = bar.nextSibling; while (n) { const nx = n.nextSibling; n.remove(); n = nx; }
+      bar.insertAdjacentHTML('afterend', pxHtml());
+    }
+    return r;
+  };
+  window.hsLoad = async function (force) {
+    if (hsSt().seg !== 'px') return ol.apply(this, arguments);
+    const ps = pxSt();
+    if (!ps.data || force) { const r = await rpcA('ptxList', {}).catch(() => null); if (r) ps.data = r; }
+    if (S.screen === 'hosp') hsRender();
+  };
+})();
+function pxAge(b) { if (!/^\d{4}-\d{2}-\d{2}$/.test(String(b || ''))) return ''; const d = new Date(b + 'T12:00:00'), n = new Date(); let a = n.getFullYear() - d.getFullYear(); if (n.getMonth() < d.getMonth() || (n.getMonth() === d.getMonth() && n.getDate() < d.getDate())) a--; return a >= 0 && a < 130 ? a + (S.lang === 'az' ? ' yaş' : ' лет') : ''; }
+function pxHtml() {
+  const d = pxSt().data;
+  if (!d) return '<div class="ai-t">' + esc(t('aiThinking')) + '</div>';
+  const card = (x, inc) => '<div class="card"><div class="row" style="gap:6px;align-items:center"><b class="grow">' + esc(x.code) + ' · ' + esc(inc ? t('pxFrom') + ' «' + pxName(x, 'fromName') + '»' : '→ «' + pxName(x, 'toName') + '»') + '</b><span>' + esc(t('pxSt_' + x.status)) + '</span></div>' +
+    (x.pt ? '<div><b>' + esc(x.pt.name || '—') + '</b>' + (x.pt.birth ? ' <span class="muted">' + esc(pxAge(x.pt.birth)) + '</span>' : '') + (x.pt.sex ? ' · ' + esc(x.pt.sex === 'm' ? '♂' : '♀') : '') + '</div>' +
+      (x.pt.dx ? '<div>🩺 ' + esc(x.pt.dx) + '</div>' : '') + (x.pt.allergy === null ? '<div style="color:#b7791f">' + esc(t('pxAllergyUnk')) + '</div>' : '<div' + (x.pt.allergy !== '—' ? ' style="color:var(--red)"' : '') + '>⚠️ ' + esc(t('pxAllergy')) + ': ' + esc(x.pt.allergy) + '</div>') : '') +
+    (x.reason ? '<div class="muted">💬 ' + esc(x.reason) + '</div>' : '') + '<div class="muted">' + esc(x.by + ' · ' + fmtDt(x.at)) + '</div>' +
+    (x.answer ? '<div>↩ ' + esc(x.answer) + (x.answeredBy ? ' <span class="muted">(' + esc(x.answeredBy) + ')</span>' : '') + '</div>' : '') +
+    '<div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap">' +
+    (inc && x.status === 'open' ? '<button class="btn small primary" data-act="pxAccept" data-id="' + esc(x.id) + '" data-kind="' + esc(x.toKind || '') + '">' + esc(t('pxAccept')) + '</button><button class="btn small ghost" data-act="pxReject" data-id="' + esc(x.id) + '">' + esc(t('pxReject')) + '</button><button class="btn small ghost" data-act="pxSrc" data-id="' + esc(x.id) + '">' + esc(t('pxSrc')) + '</button>' : '') +
+    (!inc && x.status === 'open' ? '<button class="btn small ghost" data-act="pxCancel" data-id="' + esc(x.id) + '">' + esc(t('pxCancel')) + '</button>' : '') +
+    (inc && x.newForm ? '<button class="btn small ghost" data-act="pxOpenForm" data-id="' + esc(x.newForm) + '">' + esc(t('pxOpenForm')) + '</button>' : '') +
+    (!inc && x.fromForm ? '<button class="btn small ghost" data-act="pxOpenForm" data-id="' + esc(x.fromForm) + '">' + esc(t('pxOpenForm')) + '</button>' : '') + '</div></div>';
+  const sec = (title, rows, inc) => '<div class="lbl" style="margin-top:8px">' + esc(title) + '</div>' + (rows.length ? rows.map(x => card(x, inc)).join('') : '<div class="muted">' + esc(t('pxNone')) + '</div>');
+  return sec(t('pxIn'), d.in, true) + sec(t('pxOut'), d.out, false) + (d.done.length ? sec(t('pxDone'), d.done, true) : '');
+}
+function pxOpenForm(id) { try { closeModal(); } catch (e) { } if (typeof dsSt === 'function') { const st = dsSt(); st.cur = null; st.seg = 'forms'; } if (S.screen !== 'forms') setScreen('forms'); return fOpen(id); }
+Object.assign(H, {
+  pxStart: () => pxStart(),
+  pxGo: el => pxGo(el),
+  pxOpenForm: el => pxOpenForm(el.dataset.id),
+  pxAccept: async el => {
+    const r = await busy(el, () => rpcA('ptxAccept', { id: el.dataset.id }, { op: true, opId: 'ptxa_' + el.dataset.id }));
+    if (!r) return;
+    const res = r.result || {}, f = res.form || {};
+    pxSt().data = null;
+    if (!f.id) { hsLoad(true); return; }
+    openModal('<h3>✅ ' + esc(res.code || '') + '</h3><div>' + esc(t('pxAccepted', { c: res.code || '' })) + '</div><div class="acts" style="flex-wrap:wrap">' +
+      '<button class="btn ghost" data-act="pxOpenForm" data-id="' + esc(f.id) + '">' + esc(t('pxOpenForm')) + '</button>' +
+      (typeof DOC_TPL !== 'undefined' && DOC_TPL.h003 ? '<button class="btn primary" data-act="px003" data-id="' + esc(f.id) + '">' + esc(t('px003')) + '</button>' : '') + '</div>');
+  },
+  px003: async el => { const id = el.dataset.id; closeModal(); await pxOpenForm(id); if (S.fv && S.fv.id === id && H.fDocNew) H.fDocNew({ dataset: { type: 'h003' } }); },
+  pxReject: async el => {
+    const answer = prompt(t('pxRejectAsk')); if (!answer) return;
+    const r = await busy(el, () => rpcA('ptxReject', { id: el.dataset.id, answer }));
+    if (r) { pxSt().data = null; hsLoad(true); }
+  },
+  pxSrc: async el => {
+    const r = await busy(el, () => rpcA('ptxSource', Object.assign({ id: el.dataset.id }, el.dataset.store ? { storeId: el.dataset.store } : {}), { timeout: 60000 }));
+    if (r && r.data) fPrint(r.data, t('pxSrc') + ' · ' + r.fromName + ' · ' + r.code);
+  },
+  pxCancel: async el => { const r = await busy(el, () => rpcA('ptxCancel', { id: el.dataset.id })); if (r) { pxSt().data = null; hsLoad(true); } }
+});
+
+/* ---------- в принятой форме: пометка «🛏 Переведён из …» сверху ---------- */
+(function () {
+  const ore = window.fRenderEditor;
+  if (typeof ore !== 'function') return;
+  window.fRenderEditor = function () {
+    const r = ore.apply(this, arguments);
+    try {
+      const id = S.fv && S.fv.id; const d = id && typeof fData === 'function' ? fData(id) : null;
+      const box = $('#formsBox');
+      if (d && d.ptxNote && box && !box.querySelector('.px-note')) {
+        box.insertAdjacentHTML('afterbegin', '<div class="card px-note" style="border-left:4px solid #2b6c8a"><b>' + esc(t('pxNoteTitle')) + '</b><div style="white-space:pre-wrap;margin-top:4px">' + esc(d.ptxNote) + '</div>' +
+          (d.ptxFrom ? '<button class="btn small ghost" style="margin-top:6px" data-act="pxSrc" data-id="' + esc(d.ptxFrom) + '" data-store="' + esc(S.fv.storeId || S.storeId) + '">' + esc(t('pxSrc')) + '</button>' : '') + '</div>');
+      }
+    } catch (e) { }
+    return r;
+  };
+})();
 
 
 function init() {
