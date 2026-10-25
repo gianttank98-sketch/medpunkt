@@ -31717,9 +31717,13 @@ function bxExp(s) {
 /** Ответ ИИ → поля окна проверки; сверка с каталогом (если такая фирма есть — подтянутся МНН, единица, упаковка). */
 function bxFromAi(a) {
   const allCodes = FORMS.med.concat(FORMS.sup).map(f => f[0]);
-  const vol = String(a.volumeMl || '').replace('.', ',').replace(/\s*(ml|мл)$/i, '');
-  let dose = String(a.dose || '').trim();
-  if (vol && dose.indexOf(vol) === -1) dose = (dose ? dose + ' ' : '') + vol + ' мл';
+  // объём ампулы / флакона: число из volumeMl, иначе «… 1 мл» из дозы / упаковки (но не «мг/мл»)
+  const volRe = /(?:^|[^\/\d,.])(\d+(?:[.,]\d+)?)\s*(?:ml|мл)\b/i;
+  const vm = String(a.volumeMl || '').match(/(\d+(?:[.,]\d+)?)/) || String(a.packInfo || '').match(volRe) || String(a.formText || '').match(volRe);
+  const vol = vm ? vm[1].replace('.', ',') : '';
+  let dose = String(a.dose || '').trim().replace(/[,;\s]+$/, '');
+  // в «Как записано» объём — через запятую («1,82 мг/мл, 1 мл»): так он попадает и в поле «Объём, мл»
+  if (vol && !volRe.test(' ' + dose)) dose = (dose ? dose + ', ' : '') + vol + ' мл';
   const r = { name: String(a.name || '').trim(), form: allCodes.indexOf(a.form) !== -1 ? a.form : (typeof guessForm === 'function' ? guessForm(String(a.formText || '') + ' ' + String(a.packInfo || ''), '') : ''),
     dose, series: String(a.series || '').trim().toUpperCase(), expiry: bxExp(a.expiry), mfr: String(a.mfr || '').trim(), barcode: String(a.barcode || '').replace(/\D/g, ''),
     pack: Number.isInteger(Number(a.packCount)) && Number(a.packCount) >= 1 ? String(Number(a.packCount)) : '', packInfo: String(a.packInfo || '').trim(), sub: String(a.substance || '').trim(),
@@ -32108,6 +32112,10 @@ Object.assign(H, {
     // «10 ampoules», «№10», «N 10», «10 ampul», «20 tablets», «100 шт.»
     const m = s.match(/(?:№|\bN|\bNo\.?)\s?(\d{1,4})\b/) || s.match(/\b(\d{1,4})\s*(?:ampoules?|ampul\w*|ампул\w*|amps?\b|tablets?|tablet\w*|tabletk?\w*|таблет\w*|tabs?\b|capsules?|kapsul\w*|капсул\w*|vials?|flakon\w*|флакон\w*|sachets?|шт\b|pcs\b|ədəd)/i);
     if (m && !r.pack) { const n = Number(m[1]); if (n >= 1 && n <= 1000) r.pack = String(n); }
+    // ампулы / флаконы: объём в «Как записано» через запятую (так он ляжет и в поле «Объём, мл»)
+    if (/^med_(amp|vial|inf|pow)/.test(r.form || '') && r.dose && !/(?:^|[^\/\d,.])\d+(?:[.,]\d+)?\s*(?:ml|мл)\b/i.test(' ' + r.dose)) {
+      const v = (boxDoses(s).vols || []).find(x => Number(String(x).replace(',', '.')) > 0); if (v) r.dose = r.dose.replace(/[,;\s]+$/, '') + ', ' + v + ' мл';
+    }
     if (!r.name) {
       // фирма не нашлась: первые крупные строки — по справочнику веществ и каталогу (CALCIUM GLUCONATE → Кальция глюконат)
       const lines = [String(big || '')].concat(s.split(/\n+/)).map(x => x.replace(/[^A-Za-zА-Яа-яЁёƏəÖöÜüĞğİıŞşÇç \-]/g, ' ').replace(/\s+/g, ' ').trim()).filter(x => x.replace(/[^A-Za-zА-Яа-яЁёƏəÖöÜüĞğİıŞşÇç]/g, '').length >= 5).slice(0, 6);
