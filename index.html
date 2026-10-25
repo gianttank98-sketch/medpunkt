@@ -6122,10 +6122,10 @@ Object.assign(H, {
   fAttOpen: el => fAttOpen(el.dataset.id),
   fAttDel: el => fAttDel(el.dataset.id),
   fMenu: () => fMenu(),
-  fPrintThis: () => { closeModal(); fFlush(); const id = S.fv.id; fPrint(fData(id), (S.me ? S.me.name : '') + ' · ' + fmtDt(nowLocal())); },
+  fPrintThis: () => { closeModal(); if (!S.fv) return; fFlush(); const id = S.fv.id; fPrint(fData(id), (S.me ? S.me.name : '') + ' · ' + fmtDt(nowLocal())); },
   fPrintBlank: () => fPrint(null, ''),
-  fAudit: () => fAudit(),
-  fDelete: () => fDelete(),
+  fAudit: () => { if (!S.fv) return closeModal(); fAudit(); },
+  fDelete: () => { if (!S.fv) return closeModal(); fDelete(); },
   fClose: () => fClose(),
   fEditClosed: () => { S.fv.edit = true; fRenderEditor(true); }
 });
@@ -16190,6 +16190,33 @@ const DOC_TPL = {
       ])],
       ['sign', 'Подпись', 'İmza', [['doctor', 't', 'Врач (ФИО)', 'Həkim', { req: 1, max: 80 }]]]
     ]
+  },
+  // 9.26 (Саид): памятка пациенту — сразу на двух языках (ИИ пишет по разбору / диктовке), без ФИО
+  leaflet: {
+    ic: '📋', ru: 'Памятка пациенту', az: 'Pasiyent üçün yaddaş', no: '', quick: 1, // без ФИО — сразу редактор
+    head: 'PASİYENT ÜÇÜN YADDAŞ · ПАМЯТКА ПАЦИЕНТУ',
+    signs: [['Həkim / Врач']],
+    secs: [
+      ['main', 'Общее', 'Ümumi', [
+        ['inst', 't', 'Учреждение', 'Tibb müəssisəsi', { max: 150 }], ['date', 'd', 'Дата', 'Tarix', { req: 1 }],
+        ['dxIcd', 'icd', 'Диагноз: МКБ-10', 'Diaqnoz: XBT-10', {}], ['dx', 't', 'Диагноз (простыми словами)', 'Diaqnoz (sadə dillə)', { req: 1, max: 200 }]
+      ]],
+      ['az', 'Для пациента — по-азербайджански', 'Pasiyent üçün — azərbaycanca', [
+        ['azWhat', 'ta', 'Что это за болезнь (AZ)', 'Bu nə xəstəlikdir', { max: 1200 }],
+        ['azMeds', 'ta', 'Как принимать лекарства (AZ)', 'Dərmanları necə qəbul etməli', { max: 1500 }],
+        ['azDo', 'ta', 'Что делать и чего не делать (AZ)', 'Nə etməli və nə etməməli', { max: 1200 }],
+        ['azAlarm', 'ta', 'Срочно обратиться, если… (AZ)', 'Təcili həkimə müraciət edin, əgər…', { req: 1, max: 1000 }],
+        ['azNext', 't', 'Следующий визит / контроль (AZ)', 'Növbəti müayinə / nəzarət', { max: 200 }]
+      ]],
+      ['ru', 'Для пациента — по-русски', 'Pasiyent üçün — rusca', [
+        ['ruWhat', 'ta', 'Что это за болезнь', 'Bu nə xəstəlikdir (RU)', { max: 1200 }],
+        ['ruMeds', 'ta', 'Как принимать лекарства', 'Dərmanları necə qəbul etməli (RU)', { max: 1500 }],
+        ['ruDo', 'ta', 'Что делать и чего не делать', 'Nə etməli və nə etməməli (RU)', { max: 1200 }],
+        ['ruAlarm', 'ta', 'Срочно обратиться, если…', 'Təcili həkimə müraciət edin, əgər… (RU)', { max: 1000 }],
+        ['ruNext', 't', 'Следующий визит / контроль', 'Növbəti müayinə / nəzarət (RU)', { max: 200 }]
+      ]],
+      ['sign', 'Подпись', 'İmza', [['doctor', 't', 'Врач', 'Həkim', { req: 1, max: 80 }]]]
+    ]
   }
 };
 /** Поля формы обращения медпункта, которые ИИ может заполнить (ключ формы → описание). */
@@ -16540,7 +16567,7 @@ function dsEditorHtml() {
     '<div class="muted">' + esc((c.doc && c.doc.patient) || '') + (c.doc && c.doc.docNo ? ' · № ' + esc(c.doc.docNo) : '') + ' · ' + esc(c.status === 'closed' ? t('dsClosed') : t('dsDraft')) + (c.doc && c.doc.editsAfterClose ? ' · ✏️ ' + c.doc.editsAfterClose : '') + '</div>' +
     '<div id="dsMissBox">' + dsMissHtml(c) + '</div>' +
     '<div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px"><button class="btn small ghost" data-act="dsPrint">' + esc(t('dsPrint')) + '</button><button class="btn small ghost" data-act="dsLog">' + esc(t('dsLog')) + '</button>' +
-    (c.status !== 'closed' && ['h003', 'epi', 'evac'].indexOf(c.type) !== -1 ? '<button class="btn small ghost" data-act="trOpen" data-from="doc">' + esc(t('trBtn')) + '</button>' : '') + (c.status !== 'closed' && canAi() ? '<button class="btn small ghost" data-act="dsAiHelp">' + esc(t('dsAiHelpBtn')) + '</button>' : '') + (c.status !== 'closed' ? '<button class="btn small primary" data-act="dsClose">' + esc(t('dsClose')) + '</button>' : canFix && !c.reason ? '<button class="btn small ghost" data-act="dsFix">' + esc(t('dsFix')) + '</button>' : '') + '</div>' +
+    (c.status !== 'closed' && ['h003', 'epi', 'evac'].indexOf(c.type) !== -1 ? '<button class="btn small ghost" data-act="trOpen" data-from="doc">' + esc(t('trBtn')) + '</button>' : '') + (c.status !== 'closed' && canAi() ? '<button class="btn small ghost" data-act="dsAiHelp">' + esc(t('dsAiHelpBtn')) + '</button>' : '') + (c.status !== 'closed' && canAi() && typeof dctAllowed === 'function' && dctAllowed() ? '<button class="btn small ghost" data-act="dsDictate">' + esc(t('dctBtn')) + '</button>' : '') + (c.status !== 'closed' ? '<button class="btn small primary" data-act="dsClose">' + esc(t('dsClose')) + '</button>' : canFix && !c.reason ? '<button class="btn small ghost" data-act="dsFix">' + esc(t('dsFix')) + '</button>' : '') + '</div>' +
     (c.reason ? '<div class="hint" style="margin:0 0 8px">✏️ ' + esc(t('dsReason')) + ': ' + esc(c.reason) + '</div>' : '');
   S.dsOpenSec = S.dsOpenSec || {};
   tpl.secs.forEach((sc, i) => {
@@ -16919,7 +16946,7 @@ Object.assign(H, {
   dsBack: async () => { const st = dsSt(); if (!(await dsLeaveOk())) return; st.cur = null; st.list = null; dsRender(); window.scrollTo(0, 0); },
   dsNewPii: async el => {
     const type = el.dataset.type;
-    if (DOC_TPL[type] && DOC_TPL[type].noPatient) {
+    if (DOC_TPL[type] && (DOC_TPL[type].noPatient || DOC_TPL[type].quick)) {
       // журнал (например, предсменный осмотр) — без одного пациента: сразу редактор
       const c = await dsCreate(type, { date: bakuToday(), doctor: S.me ? S.me.name : '' });
       if (!c) return;
@@ -27102,6 +27129,8 @@ const HS_ICON = { dept: '🛏', er: '🆘', icu: '❤️‍🩹', lab: '🔬', p
 const HS_KINDS = ['dept', 'er', 'icu', 'lab', 'pharmacy', 'medpunkt', 'ambulance', 'other'];
 function hsSt() { if (!S.hs) S.hs = { seg: 'out', data: null, over: null, draft: [{ name: '', qty: 1 }] }; return S.hs; }
 function hsAllowed() { return !!(S.me && S.sess && S.storeId && !(typeof sbIn === 'function' && sbIn()) && !(typeof isHelper === 'function' && isHelper())); }
+/** Варианты выбора типа отделения (v50 — по группам). */
+function hsKindOptsX(cur) { if (typeof hsKindOpts === 'function') return hsKindOpts(cur); return HS_KINDS.map(k => '<option value="' + k + '"' + (cur === k ? ' selected' : '') + '>' + esc(hsKindName(k)) + '</option>').join(''); }
 function hsKindName(k) { return (HS_ICON[k] || '') + ' ' + t('sk_' + k); }
 
 /* ---------- экран ---------- */
@@ -27238,13 +27267,13 @@ async function hsGiveGo(btn) {
 }
 function hsOverHtml() {
   const o = hsSt().over;
-  const sel = st => '<select data-act-change="hsKind" data-id="' + esc(st.id) + '" style="max-width:190px">' + HS_KINDS.map(k => '<option value="' + k + '"' + (st.kind === k ? ' selected' : '') + '>' + esc(hsKindName(k)) + '</option>').join('') + '</select>';
+  const sel = st => '<select data-act-change="hsKind" data-id="' + esc(st.id) + '" style="max-width:190px">' + hsKindOptsX(st.kind) + '</select>';
   const num = (n, k, bad) => '<span class="tag ' + (bad && n ? 'red' : 'grey') + '">' + n + ' ' + esc(t(k)) + '</span> ';
   return '<div class="muted" style="margin-bottom:8px">' + esc(t('hsOverHint')) + '</div>' + o.stores.slice().sort((a, b) => HS_KINDS.indexOf(a.kind) - HS_KINDS.indexOf(b.kind)).map(st =>
     '<div class="card"><div class="row" style="gap:6px;align-items:center;flex-wrap:wrap"><b class="grow">' + esc((HS_ICON[st.kind] || '') + ' ' + (S.lang === 'az' ? st.nameAz : st.nameRu)) + '</b>' + sel(st) + '</div>' +
     (st.error ? '<div class="muted">' + esc(t('hsErr')) + '</div>' : '<div style="margin-top:4px">' + num(st.staff, 'hsStaff') + num(st.items, 'hsItems') + num(st.expired, 'hsExpired', true) + num(st.soon, 'hsSoon', true) + num(st.low, 'hsLow', true) + num(st.reqIn, 'hsReqIn', true) + num(st.reqOut, 'hsReqOut') + num(st.formsToday, 'hsForms') + '</div>') + '</div>').join('') +
     '<div class="card"><b>' + esc(t('hsAddDept')) + '</b><div class="row" style="gap:6px;align-items:flex-end;flex-wrap:wrap"><div class="field grow"><label>' + esc(t('hsDeptName')) + '</label><input type="text" id="hsDeptName" maxlength="80"></div>' +
-    '<div class="field"><label>' + esc(t('hsKind')) + '</label><select id="hsDeptKind">' + HS_KINDS.map(k => '<option value="' + k + '">' + esc(hsKindName(k)) + '</option>').join('') + '</select></div><button class="btn primary" data-act="hsAddDept">＋</button></div></div>';
+    '<div class="field"><label>' + esc(t('hsKind')) + '</label><select id="hsDeptKind">' + hsKindOptsX('dept') + '</select></div><button class="btn primary" data-act="hsAddDept">＋</button></div></div>';
 }
 document.addEventListener('change', async e => {
   const el = e.target;
@@ -28308,7 +28337,7 @@ if (typeof storePicker === 'function') {
 // «Обзор больницы» — деревом; у каждого: «＋ Подразделение», «↪ Переместить»; итог вместе с подразделениями
 window.hsOverHtml = function () {
   const o = hsSt().over;
-  const sel = st => '<select data-act-change="hsKind" data-id="' + esc(st.id) + '" style="max-width:190px">' + HS_KINDS.map(k => '<option value="' + k + '"' + (st.kind === k ? ' selected' : '') + '>' + esc(hsKindName(k)) + '</option>').join('') + '</select>';
+  const sel = st => '<select data-act-change="hsKind" data-id="' + esc(st.id) + '" style="max-width:190px">' + hsKindOptsX(st.kind) + '</select>';
   const num = (n, k, bad) => '<span class="tag ' + (bad && n ? 'red' : 'grey') + '">' + n + ' ' + esc(t(k)) + '</span> ';
   const nm = st => S.lang === 'az' ? st.nameAz : st.nameRu;
   const tree = unTree(o.stores.map(s => Object.assign({}, s)));
@@ -28321,7 +28350,7 @@ window.hsOverHtml = function () {
       '<div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap">' + (depth < 5 ? '<button class="btn small ghost" data-act="unAdd" data-id="' + esc(st.id) + '">' + esc(t('unAdd')) + '</button>' : '') + '<button class="btn small ghost" data-act="unMove" data-id="' + esc(st.id) + '">' + esc(t('unMove')) + '</button></div></div>';
   }).join('') +
     '<div class="card"><b>' + esc(t('hsAddDept')) + '</b><div class="row" style="gap:6px;align-items:flex-end;flex-wrap:wrap"><div class="field grow"><label>' + esc(t('hsDeptName')) + '</label><input type="text" id="hsDeptName" maxlength="80"></div>' +
-    '<div class="field"><label>' + esc(t('hsKind')) + '</label><select id="hsDeptKind">' + HS_KINDS.map(k => '<option value="' + k + '">' + esc(hsKindName(k)) + '</option>').join('') + '</select></div>' +
+    '<div class="field"><label>' + esc(t('hsKind')) + '</label><select id="hsDeptKind">' + hsKindOptsX('dept') + '</select></div>' +
     '<div class="field"><label>' + esc(t('unUp')) + '</label><select id="hsDeptUp"><option value="">' + esc(t('unTop')) + '</option>' + tree.filter(x => x.depth < 5).map(({ s, depth }) => '<option value="' + esc(s.id) + '">' + '· '.repeat(depth) + esc(nm(s)) + '</option>').join('') + '</select></div>' +
     '<button class="btn primary" data-act="hsAddDept">＋</button></div></div>';
 };
@@ -28337,7 +28366,7 @@ Object.assign(H, {
   unAdd: el => {
     const st = (hsSt().over.stores || []).find(s => s.id === el.dataset.id); if (!st) return;
     openModal('<h3>' + esc(t('unAddTitle', { n: S.lang === 'az' ? st.nameAz : st.nameRu })) + '</h3><div class="field"><label>' + esc(t('hsDeptName')) + '</label><input type="text" id="unName" maxlength="80"></div>' +
-      '<div class="field"><label>' + esc(t('hsKind')) + '</label><select id="unKind">' + HS_KINDS.map(k => '<option value="' + k + '"' + (k === 'post' ? ' selected' : '') + '>' + esc(hsKindName(k)) + '</option>').join('') + '</select></div>' +
+      '<div class="field"><label>' + esc(t('hsKind')) + '</label><select id="unKind">' + hsKindOptsX('post') + '</select></div>' +
       '<div class="muted" style="font-size:13px">' + esc(t('unHint')) + '</div>' +
       '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="unAddGo" data-id="' + esc(st.id) + '">' + esc(t('save')) + '</button></div>');
   },
@@ -28975,6 +29004,354 @@ Object.assign(H, {
     return ort.apply(this, arguments);
   };
   try { Object.assign(AI_TOOL_LABEL, { remember: 'запомнить', forget: 'забыть' }); } catch (e) { }
+})();
+
+/* =====================================================================
+ * v50 (9.26): больше типов отделений — по группам (неотложная помощь, терапевтические, хирургические, мать и дитя,
+ *  диагностика, амбулаторные, обеспечение). Прежние типы — те же ключи.
+ * ===================================================================== */
+const HS_KIND_DEF = [["er", "🆘", "Приёмное", "Qəbul şöbəsi", "urg"], ["icu", "❤️‍🩹", "Реанимация (ОРИТ)", "Reanimasiya", "urg"], ["nicu", "👶", "Реанимация новорождённых / детская", "Yenidoğulmuş / uşaq reanimasiyası", "urg"], ["or", "🔦", "Операционный блок", "Əməliyyat bloku", "urg"], ["anest", "💤", "Анестезиология", "Anesteziologiya", "urg"], ["ambulance", "🚑", "Скорая", "Təcili yardım", "urg"], ["dept", "🛏", "Отделение (общее)", "Şöbə (ümumi)", "ther"], ["ther", "🩺", "Терапия", "Terapiya", "ther"], ["cardio", "🫀", "Кардиология", "Kardiologiya", "ther"], ["neuro", "🧠", "Неврология", "Nevrologiya", "ther"], ["pulmo", "🫁", "Пульмонология", "Pulmonologiya", "ther"], ["tb", "🫁", "Фтизиатрия (туберкулёз)", "Ftiziatriya (vərəm)", "ther"], ["infect", "🦠", "Инфекционное", "İnfeksion şöbə", "ther"], ["gastro", "🍽", "Гастроэнтерология", "Qastroenterologiya", "ther"], ["nephro", "💧", "Нефрология / диализ", "Nefrologiya / dializ", "ther"], ["endo", "🧪", "Эндокринология", "Endokrinologiya", "ther"], ["hem", "🩸", "Гематология", "Hematologiya", "ther"], ["rheum", "🦵", "Ревматология", "Revmatologiya", "ther"], ["onco", "🎗", "Онкология", "Onkologiya", "ther"], ["derm", "🧴", "Дерматология", "Dermatologiya", "ther"], ["psy", "🧩", "Психиатрия / наркология", "Psixiatriya / narkologiya", "ther"], ["geri", "🧓", "Гериатрия", "Geriatriya", "ther"], ["surg", "✂️", "Хирургия", "Cərrahiyyə", "surg"], ["trauma", "🦴", "Травматология / ортопедия", "Travmatologiya / ortopediya", "surg"], ["nsurg", "🧠", "Нейрохирургия", "Neyrocərrahiyyə", "surg"], ["csurg", "🫀", "Кардиохирургия", "Ürək cərrahiyyəsi", "surg"], ["vasc", "🩸", "Сосудистая хирургия", "Damar cərrahiyyəsi", "surg"], ["thor", "🫁", "Торакальная хирургия", "Torakal cərrahiyyə", "surg"], ["uro", "💧", "Урология", "Urologiya", "surg"], ["burn", "🔥", "Ожоговое", "Yanıq şöbəsi", "surg"], ["ent", "👂", "ЛОР", "LOR", "surg"], ["oph", "👁", "Офтальмология", "Oftalmologiya", "surg"], ["dent", "🦷", "Стоматология / челюстно-лицевая", "Stomatologiya / üz-çənə", "surg"], ["obst", "🤰", "Родильное / акушерство", "Doğum şöbəsi / mamalıq", "mom"], ["gyn", "🌸", "Гинекология", "Ginekologiya", "mom"], ["peds", "🧸", "Педиатрия", "Pediatriya", "mom"], ["neo", "👶", "Неонатология", "Neonatologiya", "mom"], ["lab", "🔬", "Лаборатория", "Laboratoriya", "diag"], ["rad", "☢️", "Лучевая диагностика (рентген, КТ, МРТ)", "Şüa diaqnostikası (rentgen, KT, MRT)", "diag"], ["func", "📈", "Функциональная диагностика (ЭКГ, ЭхоКГ)", "Funksional diaqnostika (EKQ, ExoKQ)", "diag"], ["endosc", "🔭", "Эндоскопия", "Endoskopiya", "diag"], ["path", "⚰️", "Патанатомия / морг", "Patanatomiya / morq", "diag"], ["clinic", "🏥", "Поликлиника / амбулатория", "Poliklinika / ambulatoriya", "out"], ["day", "🌤", "Дневной стационар", "Gündüz stasionarı", "out"], ["rehab", "🏃", "Реабилитация / физиотерапия", "Reabilitasiya / fizioterapiya", "out"], ["medpunkt", "⛑", "Медпункт", "Tibb məntəqəsi", "out"], ["pharmacy", "💊", "Аптека / главный склад", "Aptek / əsas anbar", "sup"], ["proc", "💉", "Процедурный / перевязочная", "Prosedur / sarğı otağı", "sup"], ["blood", "🩸", "Переливание крови", "Qanköçürmə", "sup"], ["cso", "♨️", "Стерилизационная (ЦСО)", "Sterilizasiya (MSŞ)", "sup"], ["post", "🚪", "Пост / кабинет", "Post / kabinet", "sup"], ["admin", "🏛", "Администрация", "Administrasiya", "sup"], ["other", "🏷", "Другое", "Digər", "sup"]];
+const HS_KIND_GRP = [["urg", "Неотложная помощь", "Təcili yardım"], ["ther", "Терапевтические", "Terapevtik"], ["surg", "Хирургические", "Cərrahi"], ["mom", "Мать и дитя", "Ana və uşaq"], ["diag", "Диагностика", "Diaqnostika"], ["out", "Амбулаторные", "Ambulator"], ["sup", "Обеспечение и прочее", "Təminat və digər"]];
+(function () {
+  const ru = {}, az = {};
+  HS_KIND_DEF.forEach(k => { HS_ICON[k[0]] = k[1]; ru['sk_' + k[0]] = k[2]; az['sk_' + k[0]] = k[3]; });
+  HS_KIND_GRP.forEach(g => { ru['skg_' + g[0]] = g[1]; az['skg_' + g[0]] = g[2]; });
+  Object.assign(I18N.ru, ru); Object.assign(I18N.az, az);
+  HS_KINDS.length = 0; HS_KIND_DEF.forEach(k => HS_KINDS.push(k[0])); // порядок — по группам
+})();
+/** Варианты типа — по группам (в списке телефона группы видны заголовками). */
+function hsKindOpts(cur) {
+  return HS_KIND_GRP.map(g => '<optgroup label="' + esc(t('skg_' + g[0])) + '">' + HS_KIND_DEF.filter(k => k[4] === g[0]).map(k => '<option value="' + k[0] + '"' + (cur === k[0] ? ' selected' : '') + '>' + esc(hsKindName(k[0])) + '</option>').join('') + '</optgroup>').join('');
+}
+/* ---------- 🎙 Надиктовать документ: голосом своими словами → ИИ заполняет документ (черновиком на подтверждение) ---------- */
+Object.assign(I18N.ru, { dctBtn: '🎙 Надиктовать', dctTitle: 'Надиктуйте документ', dctHint: 'Своими словами: жалобы, анамнез, осмотр, диагноз, назначения, рекомендации. Нажмите 🎤 и говорите (или напишите). Без ФИО, FİN, телефона пациента — их впишите в документ сами.', dctGo: '📝 Оформить', dctPh: 'Например: мужчина 45 лет, боль за грудиной 2 часа, давящая, иррадиация в левую руку, АД 150/90, ЭКГ — элевация ST в II, III, aVF…', dctEmpty: 'Надиктуйте или напишите хотя бы пару фраз' });
+Object.assign(I18N.az, { dctBtn: '🎙 Diktə et', dctTitle: 'Sənədi diktə edin', dctHint: 'Öz sözlərinizlə: şikayətlər, anamnez, müayinə, diaqnoz, təyinatlar, tövsiyələr. 🎤 basın və danışın (və ya yazın). Pasiyentin adı, FİN-i, telefonu olmadan — onları sənədə özünüz yazın.', dctGo: '📝 Rəsmiləşdir', dctPh: 'Məsələn: 45 yaşlı kişi, 2 saatdır döş sümüyü arxasında sıxıcı ağrı, sol qola yayılır, AT 150/90…', dctEmpty: 'Ən azı bir-iki cümlə diktə edin və ya yazın' });
+function dctAllowed() { return typeof dsAiAssist === 'function' && typeof canAi === 'function' && canAi(); }
+function dctModal() {
+  openModal('<h3>' + esc(t('dctTitle')) + '</h3><div class="muted" style="margin-bottom:6px">' + esc(t('dctHint')) + '</div>' +
+    '<div class="field"><textarea id="dctIn" rows="8" maxlength="6000" placeholder="' + esc(t('dctPh')) + '"></textarea></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="dctGo">' + esc(t('dctGo')) + '</button></div>');
+  setTimeout(() => { const i = $('#dctIn'); if (i) i.focus(); }, 50);
+}
+// поле диктовки — можно голосом (кнопка 🎤)
+(function () {
+  const ok = window.micTargetOk;
+  if (typeof ok === 'function') window.micTargetOk = function (el) { if (el && el.id === 'dctIn') return true; return ok.apply(this, arguments); };
+})();
+/** Текст диктовки — к ИИ без ФИО / FİN / телефонов (что уже вписано в этот документ — тоже вычищается). */
+function dctClean(text) {
+  let s = String(text || '').slice(0, 6000);
+  try { const c = dsSt().cur; if (c && typeof dsDepersonalize === 'function') { const r = dsDepersonalize(c.type, Object.assign({}, c.data || {}, { __dct: s })); if (r && typeof r.__dct === 'string') s = r.__dct; } } catch (e) { }
+  return s.replace(/\+?\d[\d\s()-]{7,}\d/g, '[тел]').replace(/\b(?=[A-Za-z0-9]*\d)(?=[A-Za-z0-9]*[A-Za-z])[A-Za-z0-9]{7}\b/g, '[№]');
+}
+(function () {
+  if (typeof paperMsg !== 'function') return;
+  const opm = paperMsg;
+  paperMsg = async function (c, only) {
+    const base = await opm.apply(this, arguments);
+    if (!S.dctText) return base;
+    const x = S.dctText; S.dctText = '';
+    return base + '\n\nВРАЧ НАДИКТОВАЛ (распознано голосом — возможны ошибки распознавания, исправляй по смыслу):\n«' + x + '»\n' +
+      'Сразу заполни этот документ по надиктованному (черновик — врач подтвердит); чего не хватает для обязательных полей — спроси одним сообщением. Ничего не выдумывай. ФИО, FİN, телефоны не пиши.';
+  };
+})();
+Object.assign(H, {
+  dsDictate: () => dctModal(),
+  dctGo: async () => {
+    const v = (($('#dctIn') || {}).value || '').trim();
+    if (v.length < 10) return toast(t('dctEmpty'), 'bad');
+    try { if (typeof micStop === 'function' && MIC && MIC.on) micStop(); } catch (e) { }
+    S.dctText = dctClean(v);
+    closeModal();
+    await dsAiAssist();
+  }
+});
+// кнопка 🎤 — поверх окна диктовки
+(function () { try { const s = document.createElement('style'); s.textContent = '#micFab.show{z-index:10070}'; document.head.appendChild(s); } catch (e) { } })();
+
+/* =====================================================================
+ * v51 (9.26): навигация как в обычном приложении (Саид, 25.10: «при обновлении всегда возвращается в “Списание”,
+ *  а боковым движением назад — вообще выходит из программы»).
+ *  - Обновление / перезапуск: программа открывается там, где вы были (экран, раздел, открытая форма / документ) —
+ *    в течение 12 часов, тот же человек и склад.
+ *  - «Назад» (жест или кнопка телефона, кнопка «назад» Telegram): закрыть окно → вернуться из формы / документа /
+ *    разбора к списку → на предыдущий экран → на главный экран; выход — только двумя «назад» подряд на главном.
+ * ===================================================================== */
+Object.assign(I18N.ru, { navExit: 'Нажмите «назад» ещё раз, чтобы выйти', clSegAiBoss: '🤖 Джарвис' });
+Object.assign(I18N.az, { navExit: 'Çıxmaq üçün «geri»ni bir daha basın', clSegAiBoss: '🤖 Cərvis' });
+const NAV = { stack: [], back: false, restore: null, restored: false, armed: false, exitAt: 0 };
+const NAV_KEY = 'MED_NAV', NAV_TTL = 12 * 3600 * 1000;
+function navHome() { try { return NAV.origFirst ? NAV.origFirst() : 'spend'; } catch (e) { return 'spend'; } }
+function navModalOpen() { const m = $('#modalRoot'); return !!(m && m.innerHTML) || !!document.getElementById('tgElev'); }
+/** Кнопка «назад» внутри экрана (форма, документ, разбор, профиль пациента…) — видимая на текущем экране. */
+const NAV_INNER = ['fBack', 'dsBack', 'csBack', 'psBackList', 'kqBack', 'bulkBack'];
+function navInnerBtn() {
+  for (const a of NAV_INNER) {
+    const els = Array.from(document.querySelectorAll('[data-act="' + a + '"]'));
+    const el = els.find(e => e.offsetParent !== null && !e.closest('#modalRoot'));
+    if (el) return el;
+  }
+  return null;
+}
+function navCanBack() { return !!S.sess && (navModalOpen() || !!navInnerBtn() || NAV.stack.length > 0 || (S.screen && S.screen !== navHome())); }
+/** Один шаг «назад». true — шаг сделан (из программы не выходим). */
+function navBack() {
+  if (!S.sess) return false;
+  if (document.getElementById('tgElev')) { try { tgElevClose(); } catch (e) { } return true; }
+  if (navModalOpen()) { closeModal(); return true; }
+  const b = navInnerBtn();
+  if (b && H[b.dataset.act]) { try { H[b.dataset.act](b); } catch (e) { } return true; }
+  while (NAV.stack.length) {
+    const prev = NAV.stack.pop();
+    if (prev && prev !== S.screen && screenAllowed(prev)) { NAV.back = true; try { setScreen(prev); } finally { NAV.back = false; } return true; }
+  }
+  if (S.screen && S.screen !== navHome()) { NAV.back = true; try { setScreen(navHome()); } finally { NAV.back = false; } return true; }
+  return false;
+}
+/* ---------- запомнить, где вы ---------- */
+function navSave() {
+  if (!S.sess || !S.me || !S.screen || S.screen === 'login') return;
+  const x = { uid: S.me.id, store: S.storeId, screen: S.screen, clSeg: S.clSeg || '', stk: NAV.stack.slice(-10), at: Date.now() };
+  try { if (S.screen === 'forms') { if (S.fv && S.fv.id) x.form = S.fv.id; const st = typeof dsSt === 'function' ? dsSt() : null; if (st) { x.seg = st.seg || ''; if (st.cur && st.cur.id) x.doc = st.cur.id; } } } catch (e) { }
+  try { if (S.screen === 'clinic' && S.clSeg === 'cases' && typeof csSt === 'function') { const c = csSt(); if (c.cur && c.view === 'case') x.cs = c.cur.id; } } catch (e) { }
+  try { LS.set(NAV_KEY, x); } catch (e) { }
+}
+(function () {
+  let x = null;
+  try { x = LS.get(NAV_KEY, null); } catch (e) { x = null; }
+  if (x && x.at && Date.now() - x.at < NAV_TTL) NAV.restore = x;
+  // открыли по ссылке (документ, форма, разбор, Джарвис…) — открывается ссылка, а не прошлое место
+  try { if (/[?&](doc|form|case|jv|jvo|jvon|store|catalog)=/.test(location.search)) NAV.restore = null; } catch (e) { }
+  // обновление на «нашей» записи истории — она уже стоит, новых не добавляем;
+  // «назад» привёл на запись до обновления (страница загрузилась заново) — это нажатие «назад», а не новый вход
+  let st0 = '', lt = '';
+  try { st0 = (history.state && history.state.med) || ''; } catch (e) { }
+  try { const ne = performance.getEntriesByType('navigation')[0]; lt = (ne && ne.type) || ''; } catch (e) { }
+  if (st0 === 'app') NAV.armed = true;
+  NAV.backLoad = lt === 'back_forward' && st0 === 'root';
+  NAV.origFirst = window.firstScreen;
+  // история экранов (для «назад»)
+  const os = window.setScreen;
+  window.setScreen = function (scr) {
+    // первый показ экрана после входа / обновления — тот, где были (если он вам доступен)
+    if (!NAV.restored && S.me && S.sess) {
+      NAV.restored = true;
+      const x = NAV.restore;
+      if (x && x.uid === S.me.id && (!x.store || x.store === S.storeId) && x.screen && x.screen !== 'login' && screenAllowed(x.screen)) {
+        scr = x.screen;
+        if (x.screen === 'clinic' && x.clSeg) S.clSeg = x.clSeg;
+        NAV.stack = (Array.isArray(x.stk) ? x.stk : []).filter(k => typeof k === 'string' && k !== 'login').slice(-10);
+        NAV.pend = navReopen(x);
+      }
+      if (NAV.backLoad) { NAV.backLoad = false; Promise.resolve(NAV.pend).then(() => setTimeout(() => { if (navBack()) navArm(true); else navExitHint(); }, 50)); }
+    }
+    const prev = S.screen;
+    const r = os.call(this, scr);
+    try {
+      if (!NAV.back && prev && prev !== 'login' && prev !== S.screen) { NAV.stack.push(prev); if (NAV.stack.length > 20) NAV.stack.shift(); }
+      navArm(); navSave(); navTgSync();
+    } catch (e) { }
+    return r;
+  };
+  // выход из учётной записи — забыть место
+  const olo = window.onAuthLost;
+  if (typeof olo === 'function') window.onAuthLost = function () { navForget(); return olo.apply(this, arguments); };
+  const olg = window.logout;
+  if (typeof olg === 'function') window.logout = function () { navForget(); return olg.apply(this, arguments); };
+  document.addEventListener('click', () => setTimeout(() => { navSave(); navTgSync(); }, 300), true);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) navSave(); });
+})();
+function navForget() { try { LS.del(NAV_KEY); } catch (e) { } NAV.stack = []; NAV.restore = null; }
+/** Открытая форма / документ / разбор — снова открыть, когда экран построится. Если человек сам что-то открыл раньше — не мешать. */
+function navReopen(r) {
+  NAV.opened = false;
+  return new Promise(res => setTimeout(async () => {
+    try {
+      if (S.screen !== r.screen || NAV.opened) return res();
+      if (r.screen === 'forms') {
+        if (r.doc && typeof dsOpen === 'function') { const st = dsSt(); if (!st.cur) { st.seg = r.seg || 'docs'; await dsOpen(r.doc); } }
+        else if (r.form && typeof fOpen === 'function') { if (!S.fv) await fOpen(r.form); }
+        else if (r.seg && typeof dsSt === 'function' && r.seg !== 'forms') { const st = dsSt(); if (!st.cur) { st.seg = r.seg; if (typeof dsRender === 'function') dsRender(); } }
+      }
+      if (r.screen === 'clinic' && r.cs && typeof csOpen === 'function') { const c = csSt(); if (!c.cur) await csOpen(r.cs); }
+    } catch (e) { }
+    res();
+  }, 400));
+}
+// что-то открыли сами (по ссылке, нажатием) — отложенное восстановление уже не нужно
+document.addEventListener('click', () => { NAV.opened = true; }, true);
+/* ---------- «назад» телефона / жест: история браузера ---------- */
+// Первую «ловушку» ставим после первого касания: Chrome пропускает записи истории, добавленные до касания.
+function navArm(force) {
+  if (NAV.armed || !S.sess || (typeof TGW !== 'undefined' && TGW)) return; // в Telegram «назад» — его кнопкой (ниже)
+  if (!NAV.act && !force) { NAV.wantArm = true; return; }
+  try { history.replaceState({ med: 'root' }, ''); history.pushState({ med: 'app' }, ''); NAV.armed = true; } catch (e) { }
+}
+['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => { NAV.act = true; if (NAV.wantArm) { NAV.wantArm = false; navArm(); } }, true));
+/** Главный экран, ничего не открыто: подсказка; следующее «назад» в течение 2,5 с — выход (системное, программа его не держит). */
+function navExitHint() {
+  NAV.exitAt = Date.now();
+  toast(t('navExit'), '', null, 2000);
+  clearTimeout(NAV.rearmT);
+  NAV.rearmT = setTimeout(() => { if (!NAV.armed) navArm(true); }, 2500);
+}
+window.addEventListener('popstate', e => {
+  if ((typeof TGW !== 'undefined' && TGW) || !NAV.armed) return;
+  NAV.armed = false;
+  if (navBack()) { navArm(true); return; }
+  navExitHint();
+});
+/* ---------- Telegram: кнопка «назад» видна, когда есть куда вернуться ---------- */
+let NAV_TG_VIS = null;
+function navTgSync() {
+  if (!(typeof TGW !== 'undefined' && TGW) || typeof tgPost !== 'function') return;
+  const v = navCanBack();
+  if (v === NAV_TG_VIS) return;
+  NAV_TG_VIS = v;
+  try { tgPost('web_app_setup_back_button', { is_visible: v }); TGB.modal = v; } catch (e) { }
+}
+if (typeof tgOnEvent === 'function') {
+  const ote = tgOnEvent;
+  tgOnEvent = function (type) {
+    if (type === 'back_button_pressed') { navBack(); setTimeout(navTgSync, 50); return; }
+    return ote.apply(this, arguments);
+  };
+}
+if (typeof tgBackSync === 'function') { tgBackSync = function () { navTgSync(); }; }
+setInterval(() => { try { navTgSync(); } catch (e) { } }, 800);
+/* ---------- «ИИ: склад» у главного админа — «🤖 Джарвис» ---------- */
+(function () {
+  const ot = window.t;
+  if (typeof ot !== 'function') return;
+  window.t = function (k) { if (k === 'clSegAi' && typeof isSuper === 'function' && isSuper()) return ot('clSegAiBoss'); return ot.apply(this, arguments); };
+})();
+
+/* =====================================================================
+ * v52 (9.27): внешний вид и отклик (Саид, 25.10: «не нравится, как переходы происходят, когда куда-то нажимаешь…
+ *  задержки пока терпим, а внешний вид исправь»).
+ *  - Нажатие видно сразу: кнопка / строка «проседает», строка списка показывает «открывается…».
+ *  - Тонкая полоска загрузки сверху, пока ждём сервер (дольше ¼ секунды) — понятно, что программа работает.
+ *  - Плавный переход между экранами и окнами (без мигания).
+ *  - Прокрутка не прыгает: вернулись к списку — на то же место; тот же экран — без прыжка наверх.
+ *  - Документ и разбор, открытые в этот раз, открываются сразу из памяти телефона (до выхода), свежее — тихо в фоне.
+ * ===================================================================== */
+(function () {
+  const s = document.createElement('style');
+  s.id = 'v52Css';
+  s.textContent =
+    'html{-webkit-tap-highlight-color:transparent}button,.btn,.chip,a,[data-act],.list-row,.cs-list-row,summary{touch-action:manipulation}' +
+    '.btn,.chip,[data-tab],.list-row,.cs-list-row,.grp>[data-act],summary{transition:transform .08s ease,filter .08s ease,background-color .12s ease}' +
+    '.btn:active:not(:disabled),.chip:active,[data-tab]:active,.list-row:active,.cs-list-row:active,.grp>[data-act]:active,summary:active{transform:scale(.97);filter:brightness(.92)}' +
+    '.ux-tapped{opacity:.6;position:relative}.ux-tapped::after{content:"";position:absolute;right:12px;top:50%;width:16px;height:16px;margin-top:-8px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:uxSpin .7s linear infinite}' +
+    '@keyframes uxSpin{to{transform:rotate(360deg)}}' +
+    '#uxBar{position:fixed;left:0;right:0;top:0;height:3px;z-index:20000;pointer-events:none;opacity:0;transition:opacity .2s}' +
+    '#uxBar.on{opacity:1}#uxBar::before{content:"";position:absolute;top:0;bottom:0;left:-40%;width:40%;background:var(--accent,#2b6cb0);border-radius:2px;animation:uxBar 1.1s ease-in-out infinite}' +
+    '@keyframes uxBar{0%{left:-40%}100%{left:100%}}' +
+    'section.ux-in{animation:uxIn .16s ease-out}@keyframes uxIn{from{opacity:.35;transform:translateY(6px)}to{opacity:1;transform:none}}' +
+    '.modal-bg{animation:uxFade .14s ease-out}.modal-bg>.modal{animation:uxUp .18s ease-out}' +
+    '@keyframes uxFade{from{opacity:0}to{opacity:1}}@keyframes uxUp{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}' +
+    '@media (prefers-reduced-motion:reduce){section.ux-in,.modal-bg,.modal-bg>.modal,#uxBar::before{animation:none!important}}';
+  document.head.appendChild(s);
+  const bar = document.createElement('div'); bar.id = 'uxBar'; document.body.appendChild(bar);
+})();
+/* ---------- полоска загрузки ---------- */
+const UX = { n: 0, t: null, scroll: {}, listScroll: {}, mem: {} };
+const UX_QUIET = /^(opsReport|opsClient|aiEdgeUsage|ping|state|me|aiStatus|helperPiiPending|tgStatus|notifications)$/; // фоновые — без полоски
+function uxBusy(d) {
+  UX.n = Math.max(0, UX.n + d);
+  const bar = document.getElementById('uxBar'); if (!bar) return;
+  if (UX.n > 0) { if (!UX.t) UX.t = setTimeout(() => { UX.t = null; if (UX.n > 0) bar.classList.add('on'); }, 250); }
+  else { clearTimeout(UX.t); UX.t = null; bar.classList.remove('on'); document.querySelectorAll('.ux-tapped').forEach(e => e.classList.remove('ux-tapped')); }
+}
+/* ---------- документ, уже открытый в этот раз, — сразу из памяти (только до перезагрузки / выхода) ----------
+ * Только когда человек сам открывает документ (dsOpen). Заполнение документов, сбор данных по пациенту и разборы
+ * всегда берут свежее с сервера. Разборы не кэшируются вовсе (при сохранении разбор отправляется целиком). */
+Object.assign(I18N.ru, { uxStale: 'Этот документ изменили в другом месте. Ваши правки сохраняются; чтобы увидеть всё новое — закройте и откройте его снова.' });
+Object.assign(I18N.az, { uxStale: 'Bu sənəd başqa yerdə dəyişdirilib. Düzəlişləriniz saxlanılır; yenilikləri görmək üçün bağlayıb yenidən açın.' });
+const UX_SIG = r => (r && r.doc && (r.doc.rev + '|' + r.doc.updatedAt + '|' + r.doc.status)) || '';
+const UX_MEM_DROP = /^(docSave|docDelete|docRestore|docClose|docPhoto|formSave)$/;
+const UX_MEM_ALL = /^(docPhoto|helperPii|helperMove|switchStore|login|logout|tgLogin|tgElevate|adminEnter|adminExit)/; // меняют сразу многое — память целиком
+UX.gen = {}; UX.genAll = 0; UX.want = null;
+function uxGen(key) { return UX.genAll + ':' + (UX.gen[key] || 0); }
+function uxUntap() { setTimeout(() => document.querySelectorAll('.ux-tapped').forEach(e => e.classList.remove('ux-tapped')), 60); }
+(function () {
+  const orpc = window.rpc;
+  window.rpc = async function (action, payload) {
+    const a = String(action || '');
+    const quiet = UX_QUIET.test(a);
+    if (UX_MEM_ALL.test(a)) { UX.mem = {}; UX.genAll++; }
+    if (UX_MEM_DROP.test(a) && payload && payload.id) { const k = 'docGet:' + (payload.storeId || S.storeId) + ':' + payload.id; delete UX.mem[k]; UX.gen[k] = (UX.gen[k] || 0) + 1; }
+    // память — только для документа, который человек открывает сам прямо сейчас
+    const want = a === 'docGet' && payload && payload.id && UX.want && UX.want.id === payload.id && Date.now() - UX.want.at < 3000;
+    if (want) UX.want = null;
+    const key = want ? 'docGet:' + (payload.storeId || S.storeId) + ':' + payload.id : '';
+    if (key && UX.mem[key] && Date.now() - UX.mem[key].at < 15 * 60000) {
+      const cached = UX.mem[key], g0 = uxGen(key);
+      const args = arguments, self = this;
+      setTimeout(async () => {
+        try {
+          const r = await orpc.apply(self, args);
+          if (uxGen(key) !== g0) return; // пока ждали, документ сохраняли / сменили вход — этот ответ уже не свежий
+          if (!r || !r.ok) { delete UX.mem[key]; return; }
+          const sig = UX_SIG(r);
+          UX.mem[key] = { r: JSON.stringify(r), sig, at: Date.now() };
+          if (sig === cached.sig) return;
+          const st = dsSt();
+          if (!(st.cur && st.cur.id === payload.id)) return;
+          if (S.screen === 'forms' && !Object.keys(st.cur.pend || {}).length && !st.cur.inflight) {
+            const y = window.scrollY; await dsOpen(payload.id); window.scrollTo(0, y);
+          } else if (S.screen === 'forms') toast(t('uxStale'), 'warn', null, 6000);
+        } catch (e) { }
+      }, 30);
+      uxUntap();
+      return JSON.parse(cached.r);
+    }
+    const g0 = key ? uxGen(key) : '';
+    if (!quiet) uxBusy(1);
+    try {
+      const r = await orpc.apply(this, arguments);
+      if (key && r && r.ok && uxGen(key) === g0) UX.mem[key] = { r: JSON.stringify(r), sig: UX_SIG(r), at: Date.now() };
+      return r;
+    } finally { if (!quiet) uxBusy(-1); }
+  };
+  // выход — память очищается
+  const olo = window.onAuthLost;
+  if (typeof olo === 'function') window.onAuthLost = function () { UX.mem = {}; UX.genAll++; return olo.apply(this, arguments); };
+  const olg = window.logout;
+  if (typeof olg === 'function') window.logout = function () { UX.mem = {}; UX.genAll++; return olg.apply(this, arguments); };
+})();
+/* ---------- нажатие на строку списка — сразу видно ---------- */
+document.addEventListener('click', e => {
+  const row = e.target && e.target.closest && e.target.closest('[data-act="dsOpen"],[data-act="fOpenRow"],[data-act="csOpen"],[data-act="psOpen"],.list-row[data-act],.cs-list-row[data-act]');
+  if (row && !row.closest('#modalRoot')) { row.classList.add('ux-tapped'); setTimeout(() => row.classList.remove('ux-tapped'), 8000); }
+}, true);
+/* ---------- экраны: плавно; прокрутка — на месте ---------- */
+(function () {
+  const os = window.setScreen;
+  window.setScreen = function (scr) {
+    const prev = S.screen, y = window.scrollY;
+    if (prev) UX.scroll[prev] = y;
+    const r = os.apply(this, arguments);
+    try {
+      if (scr === prev) window.scrollTo(0, y); // тот же экран (обновление данных) — без прыжка наверх
+      else {
+        const sec = Array.from(document.querySelectorAll('main > section, body > section, section[id^="scr"]')).find(x => !x.classList.contains('hidden') && x.offsetParent !== null);
+        if (sec) { sec.classList.remove('ux-in'); void sec.offsetWidth; sec.classList.add('ux-in'); }
+      }
+    } catch (e) { }
+    return r;
+  };
+  // из списка в форму / документ / разбор — запомнить место в списке; «назад» — вернуть
+  const mark = k => { UX.listScroll[k] = window.scrollY; };
+  const back = k => { const y = UX.listScroll[k]; if (y) setTimeout(() => window.scrollTo(0, y), 60); };
+  if (typeof fOpen === 'function') { const of = fOpen; fOpen = function () { if (!S.fv) mark('forms'); return of.apply(this, arguments); }; }
+  if (typeof dsOpen === 'function') { const od = dsOpen; dsOpen = function (id) { if (!dsSt().cur) mark('docs'); UX.want = { id, at: Date.now() }; return od.apply(this, arguments); }; }
+  if (typeof csOpen === 'function') { const oc = csOpen; csOpen = function () { const st = csSt(); if (!st.cur || st.view !== 'case') mark('cases'); return oc.apply(this, arguments); }; }
+  ['fBack', 'dsBack', 'csBack'].forEach((h, i) => {
+    const k = ['forms', 'docs', 'cases'][i];
+    const oh = H[h];
+    if (typeof oh === 'function') H[h] = function () { const r = oh.apply(this, arguments); Promise.resolve(r).then(() => back(k)); return r; };
+  });
 })();
 
 
