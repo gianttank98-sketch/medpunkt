@@ -30712,6 +30712,527 @@ Object.assign(H, {
   }
 });
 
+/* =====================================================================
+ * v57 (9.33): 👤 карта пациента — одна на человека. Обращения, документы, рецепты, разборы — её части.
+ *  - «Формы» → «👤 Пациенты»: лечатся сейчас / мои / все, поиск, «＋ Новый пациент», карта: данные один раз,
+ *    «Ведёт» (вы или любой врач — из сотрудников или просто имя), лента всего, что с ним связано, кнопки
+ *    «＋ Обращение», «＋ Документ», «🤖 Разбор», «Закончить наблюдение».
+ *  - Документ или форма с ФИО / FİN сами находят карту (FİN; ФИО + дата рождения) или заводят новую и привязываются.
+ *  - Разбор, привязанный к пациенту: «Внести в документ / форму» больше не спрашивает ФИО и FİN.
+ *  - Старые записи — в карты: одинаковый FİN — сразу; ФИО + дата рождения — после «Да».
+ *  - «Помощник врача»: ФИО, FİN, дата рождения, телефон, адрес карты — только на этом телефоне.
+ * ===================================================================== */
+Object.assign(I18N.ru, {
+  ptTitle: '👤 Пациенты', ptActive: '🩺 Лечатся сейчас', ptMine: '👤 Мои', ptAll: 'Все', ptNew: '＋ Новый пациент', ptSearch: 'Фамилия, имя или FİN',
+  ptNone: 'Нет пациентов.', ptLead: 'Ведёт', ptLeadMe: 'Я', ptLeadPh: 'Имя врача (если его нет в программе — просто впишите)', ptStatusA: '🩺 лечится', ptStatusC: '✔ наблюдение закончено',
+  ptClose: '✔ Закончить наблюдение', ptReopen: '🩺 Снова лечится', ptEdit: '✏️ Данные пациента', ptSave: 'Сохранить', ptNewForm: '＋ Обращение', ptNewCase: '🤖 Новый разбор',
+  ptNewDoc: '＋ Документ:', ptTimeline: 'Всё по пациенту', ptEmptyTl: 'Пока ничего не привязано.', ptLog: '🕓 Журнал карты', ptBack: '← Пациенты',
+  ptAllergy: 'Аллергия', ptChronic: 'Хронические болезни', ptPhone: 'Телефон', ptAddress: 'Адрес', ptNote: 'Заметка', ptSurname: 'Фамилия', ptName: 'Имя', ptPatr: 'Отчество',
+  ptBirth: 'Дата рождения', ptSex: 'Пол', ptMale: 'Мужской', ptFemale: 'Женский', ptCaseTag: '🤖 Разбор', ptFormTag: '🩺 Обращение',
+  ptOld: '🔎 Найти в старых записях (обращения и документы без карты)', ptFromOld: '👤 Завести карту и привязать эти записи',
+  ptBuild: '🧩 Собрать карты из старых обращений и документов', ptBuildHint: 'Одинаковый FİN — в одну карту сразу. Где только ФИО и дата рождения — покажу, вы подтвердите.',
+  ptBuildDone: 'Готово: карт создано {c}, привязано записей {l}.', ptBuildMore: 'Ещё не всё — нажмите ещё раз.', ptSuggest: 'Похоже на одного человека — объединить в карту?',
+  ptYes: '✅ Да, один пациент', ptNo: 'Нет', ptLinked: '👤 Привязано к карте пациента', ptFromCard: '👤 Данные взяты из карты пациента — проверьте.',
+  ptNoLater: '№ впишите в документе.', ptExisting: 'Карта с таким FİN уже есть — открыта; пустые поля дополнены.',
+  ptPick: '👤 Найти карту пациента', ptPickPh: 'Фамилия или FİN — подставлю данные', ptOpenCard: '👤 Карта пациента', ptAge: '{n} лет', ptLocal: '🔒 ФИО и FİN — только на этом телефоне',
+  E_PT_FIN: 'FİN — 7 латинских букв и цифр.', E_PT_BAD: 'Неверные данные карты пациента.', E_PT_NEED: 'Нужны фамилия и имя или FİN.', E_PT_NOT_FOUND: 'Карта пациента не найдена.',
+  E_PT_LINK: 'Запись ещё не на сервере — привяжется позже.', E_PT_LINKED: 'Эта запись уже привязана к другой карте.', E_PT_FIN_DUP: 'Карта с таким FİN уже есть.'
+});
+Object.assign(I18N.az, {
+  ptTitle: '👤 Pasiyentlər', ptActive: '🩺 İndi müalicədə', ptMine: '👤 Mənim', ptAll: 'Hamısı', ptNew: '＋ Yeni pasiyent', ptSearch: 'Soyad, ad və ya FİN',
+  ptNone: 'Pasiyent yoxdur.', ptLead: 'Aparır', ptLeadMe: 'Mən', ptLeadPh: 'Həkimin adı (proqramda yoxdursa — sadəcə yazın)', ptStatusA: '🩺 müalicədə', ptStatusC: '✔ müşahidə bitib',
+  ptClose: '✔ Müşahidəni bitir', ptReopen: '🩺 Yenə müalicədə', ptEdit: '✏️ Pasiyentin məlumatları', ptSave: 'Yadda saxla', ptNewForm: '＋ Müraciət', ptNewCase: '🤖 Yeni təhlil',
+  ptNewDoc: '＋ Sənəd:', ptTimeline: 'Pasiyent üzrə hər şey', ptEmptyTl: 'Hələ heç nə bağlanmayıb.', ptLog: '🕓 Kartın jurnalı', ptBack: '← Pasiyentlər',
+  ptAllergy: 'Allergiya', ptChronic: 'Xroniki xəstəliklər', ptPhone: 'Telefon', ptAddress: 'Ünvan', ptNote: 'Qeyd', ptSurname: 'Soyad', ptName: 'Ad', ptPatr: 'Ata adı',
+  ptBirth: 'Doğum tarixi', ptSex: 'Cins', ptMale: 'Kişi', ptFemale: 'Qadın', ptCaseTag: '🤖 Təhlil', ptFormTag: '🩺 Müraciət',
+  ptOld: '🔎 Köhnə qeydlərdə tap (kartsız müraciət və sənədlər)', ptFromOld: '👤 Kart aç və bu qeydləri bağla',
+  ptBuild: '🧩 Köhnə müraciət və sənədlərdən kartlar yığ', ptBuildHint: 'Eyni FİN — dərhal bir karta. Yalnız ad, soyad və doğum tarixi olanları göstərəcəyəm, siz təsdiq edəcəksiniz.',
+  ptBuildDone: 'Hazırdır: yaradılan kart {c}, bağlanan qeyd {l}.', ptBuildMore: 'Hələ hamısı deyil — bir daha basın.', ptSuggest: 'Bir nəfərə oxşayır — bir karta birləşdirilsin?',
+  ptYes: '✅ Bəli, bir pasiyent', ptNo: 'Xeyr', ptLinked: '👤 Pasiyentin kartına bağlandı', ptFromCard: '👤 Məlumatlar pasiyentin kartından götürüldü — yoxlayın.',
+  ptNoLater: '№-ni sənəddə yazın.', ptExisting: 'Bu FİN ilə kart artıq var — açıldı; boş sahələr dolduruldu.',
+  ptPick: '👤 Pasiyentin kartını tap', ptPickPh: 'Soyad və ya FİN — məlumatları dolduracağam', ptOpenCard: '👤 Pasiyentin kartı', ptAge: '{n} yaş', ptLocal: '🔒 Ad və FİN — yalnız bu telefonda',
+  E_PT_FIN: 'FİN — 7 latın hərfi və rəqəm.', E_PT_BAD: 'Pasiyent kartının məlumatları yanlışdır.', E_PT_NEED: 'Soyad və ad və ya FİN lazımdır.', E_PT_NOT_FOUND: 'Pasiyentin kartı tapılmadı.',
+  E_PT_LINK: 'Qeyd hələ serverdə deyil — sonra bağlanacaq.', E_PT_LINKED: 'Bu qeyd artıq başqa karta bağlıdır.', E_PT_FIN_DUP: 'Bu FİN ilə kart artıq var.'
+});
+const PT_PII = ['surname', 'name', 'patronymic', 'birthDate', 'fin', 'phone', 'address'];
+const PT = { cache: {}, link: null, formTried: {} };
+function ptSt() { const st = dsSt(); if (!st.pt) st.pt = { mode: 'active', q: '', list: null, cur: null, build: null }; return st.pt; }
+function ptNewId() { return 'P' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10).replace(/[^a-z0-9]/g, 'x'); }
+function ptFull(p) { return p ? [p.surname, p.name, p.patronymic].filter(Boolean).join(' ') : ''; }
+function ptLabel(p) { return ptFull(p) || ('П-' + String(p && p.id || '').slice(-5).toUpperCase()); }
+/* ---------- «Помощник врача»: личное карты — только на телефоне ---------- */
+function ptLocalOn() { return typeof hpPiiOn === 'function' && hpPiiOn(); }
+function ptLocKey() { return 'MED_PTL:' + (S.me ? S.me.id : '-'); }
+function ptLocGet() { const o = LS.get(ptLocKey(), null); return o && typeof o === 'object' ? o : {}; }
+function ptLocPut(id, vals) { if (!id || !vals) return; const o = ptLocGet(); o[id] = Object.assign({}, o[id] || {}, vals); LS.set(ptLocKey(), o); }
+function ptLocMerge(p) { if (!p || !ptLocalOn()) return p; const l = ptLocGet()[p.id]; return l ? Object.assign(p, l) : p; }
+(function () {
+  const orpc = window.rpc;
+  window.rpc = async function (action, payload) {
+    const a = String(action || '');
+    let p = payload;
+    // привязка «по месту»: документ / форма, созданные из карты или из разбора с картой
+    if (PT.link && p && !p.patientId && ((a === 'docSave' && p.id === PT.link.doc) || (a === 'formSave' && p.id === PT.link.form))) p = Object.assign({}, p, { patientId: PT.link.pid });
+    if (!ptLocalOn() || !/^patient/.test(a)) return orpc.call(this, action, p, arguments[2]);
+    // «Помощник»: личное — на телефон, на сервер — без него; поиск — здесь
+    let q = '';
+    let piiSave = null;
+    if (a === 'patientSave' && p && p.patch) { const pii = {}, keep = {}; Object.keys(p.patch).forEach(k => { (PT_PII.indexOf(k) !== -1 ? pii : keep)[k] = p.patch[k]; }); piiSave = pii; p = Object.assign({}, p, { patch: keep }); }
+    if (a === 'patientList' && p && p.q) { q = String(p.q).trim().toLowerCase(); p = Object.assign({}, p, { q: '' }); }
+    const r = await orpc.call(this, action, p, arguments[2]);
+    if (r && r.ok) {
+      // на телефон — только когда сервер карту принял (иначе «карта-призрак», которой нет на сервере)
+      if (piiSave && r.patient) ptLocPut(r.patient.id, piiSave);
+      if (r.patient) ptLocMerge(r.patient);
+      if (Array.isArray(r.rows)) { r.rows.forEach(ptLocMerge); if (q) r.rows = r.rows.filter(x => [ptFull(x), x.fin].some(v => String(v || '').toLowerCase().indexOf(q) !== -1)); }
+    }
+    return r;
+  };
+})();
+/** Найти карту по ФИО / FİN или завести — и привязать записи. pii: {surname, name, patronymic, birthDate, sex, fin}. */
+async function ptEnsure(pii, links) {
+  const clean = { surname: String(pii.surname || '').trim(), name: String(pii.name || '').trim(), patronymic: String(pii.patronymic || '').trim(), birthDate: /^\d{4}-\d{2}-\d{2}$/.test(String(pii.birthDate || '')) ? pii.birthDate : '', sex: pii.sex === 'm' || pii.sex === 'f' ? pii.sex : '', fin: /^[0-9A-Z]{7}$/.test(String(pii.fin || '').toUpperCase()) ? String(pii.fin).toUpperCase() : '' };
+  if (!clean.surname && !clean.name && !clean.fin) return null;
+  try {
+    if (!ptLocalOn()) {
+      const r = await rpc('patientEnsure', { pii: clean, links: links || [], opId: newOpId() }, 60000);
+      return r && r.ok ? r.patient : null;
+    }
+    // «Помощник»: сопоставить на телефоне (на сервере ФИО нет)
+    const loc = ptLocGet();
+    const nk = (a, b) => { const w = [nameSkel(String(a || '')), nameSkel(String(b || ''))].filter(Boolean).sort(); return w.length === 2 && w.join('').length >= 4 ? w.join('') : ''; }; // порядок фамилии и имени не важен
+    const myK = nk(clean.surname, clean.name);
+    let id = Object.keys(loc).find(k => clean.fin && loc[k].fin === clean.fin) ||
+      Object.keys(loc).find(k => myK && clean.birthDate && loc[k].birthDate === clean.birthDate && nk(loc[k].surname, loc[k].name) === myK && (!clean.fin || !loc[k].fin));
+    if (!id) {
+      id = ptNewId();
+      const r = await rpc('patientSave', { id, patch: Object.assign({}, clean), opId: newOpId() }, 60000);
+      if (!r || !r.ok || !r.patient) return null;
+      id = r.patient.id;
+    }
+    for (const l of links || []) { try { await rpc('patientLink', Object.assign({ patientId: id, opId: newOpId() }, l), 30000); } catch (e) { } }
+    return Object.assign({ id }, loc[id] || clean);
+  } catch (e) { return null; }
+}
+async function ptGet(id, force) {
+  if (!id) return null;
+  if (!force && PT.cache[id] && Date.now() - PT.cache[id].at < 120000) return PT.cache[id].r;
+  const r = await rpc('patientGet', { id }, 60000).catch(() => null);
+  if (!r || !r.ok) return null;
+  if (r.mergedInto) return ptGet(r.mergedInto, force);
+  PT.cache[id] = { r, at: Date.now() };
+  return r;
+}
+/** Данные карты → поля документа (только те, что есть в этом документе) и формы обращения. */
+function ptToDoc(type, p) {
+  const keys = {}; try { dsFields(type).forEach(f => { keys[f.k] = 1; }); } catch (e) { }
+  const out = { surname: p.surname || '', name: p.name || '', patronymic: p.patronymic || '', birth: p.birthDate || '', fin: p.fin || '', sex: p.sex || '' };
+  if (keys.fio) out.fio = ptFull(p);
+  if (keys.phone && p.phone) out.phone = p.phone;
+  return out;
+}
+function ptToForm(p) {
+  const o = { pName: [p.surname, p.name].filter(Boolean).join(' '), pFather: p.patronymic || '', pBirth: p.birthDate || '', pSex: p.sex || '', fin: p.fin || '' };
+  if (p.allergy) o.allergy = p.allergy;
+  if (p.phone) o.phone = p.phone;
+  Object.keys(o).forEach(k => { if (!o[k]) delete o[k]; });
+  return o;
+}
+function ptPiiFromDoc(d) { return { surname: d.surname, name: d.name, patronymic: d.patronymic, birthDate: d.birth, sex: d.sex, fin: d.fin }; }
+function ptPiiFromForm(d) {
+  // как fillPiiFromForm: фамилия — по окончанию (-ov, -ova, -li, -zadə…), иначе «имя фамилия», как подписано поле формы
+  const w = String(d.pName || '').trim().split(/\s+/).filter(Boolean);
+  let surname = '', name = '';
+  if (w.length === 1) surname = w[0];
+  else if (w.length >= 2) { const i = w.findIndex(x => x.length >= 5 && typeof PII_SURNAME_RE !== 'undefined' && PII_SURNAME_RE.test(x)); if (i !== -1) { surname = w[i]; name = w.filter((x, k) => k !== i).join(' '); } else { name = w[0]; surname = w.slice(1).join(' '); } }
+  return { surname, name, patronymic: d.pFather || '', birthDate: d.pBirth || '', sex: d.pSex || '', fin: d.fin || '' };
+}
+/* ---------- форма: id карты уходит с каждой отправкой этой формы (очередь работает и без связи) ---------- */
+PT.formLink = (function () { const o = LS.get('MED_PTFL', null); return o && typeof o === 'object' ? o : {}; })();
+function ptFormLink(formId, pid) { if (!formId || !pid) return; PT.formLink[formId] = pid; const ks = Object.keys(PT.formLink); if (ks.length > 300) ks.slice(0, ks.length - 300).forEach(k => delete PT.formLink[k]); LS.set('MED_PTFL', PT.formLink); }
+(function () {
+  const ofq = window.fQueue;
+  window.fQueue = function (action, payload, label) {
+    if (action === 'formSave' && payload && !payload.patientId) {
+      if (PT.nextForm && S.fv && S.fv.id === payload.id) { ptFormLink(payload.id, PT.nextForm); PT.nextForm = null; }
+      const pid = PT.formLink[payload.id];
+      if (pid) payload = Object.assign({}, payload, { patientId: pid });
+    }
+    return ofq.call(this, action, payload, label);
+  };
+})();
+/* ---------- НОВЫЙ документ / форма с ФИО → карта (сама). Старые записи, открытые для чтения или правки, — только через «Собрать карты» и «Да». ---------- */
+PT.newDocs = {}; PT.newForms = {}; PT.chain = Promise.resolve();
+function ptQueueEnsure(fn) { PT.chain = PT.chain.then(fn).catch(() => null); return PT.chain; } // по одной: две одновременные не заведут две карты
+function ptCaseGotPatient(caseId, pid) {
+  const c = typeof csSt === 'function' ? csSt().cur : null;
+  if (c && caseId && c.id === caseId && !c.data.patientId) { c.data.patientId = pid; try { csSave(c); } catch (e) { } }
+}
+(function () {
+  const dc = dsCreate;
+  dsCreate = function (type, pii, caseId, data0, fixed) {
+    const fx = Object.assign({}, fixed || {}); if (!fx.id) fx.id = dsNewId();
+    PT.newDocs[fx.id] = 1;
+    return dc.call(this, type, pii, caseId, data0, fx);
+  };
+  const orpc = window.rpc;
+  window.rpc = async function (action, payload) {
+    const r = await orpc.apply(this, arguments);
+    try {
+      if (action === 'docSave' && r && r.ok && r.doc && payload && PT.newDocs[payload.id] && !r.doc.patientId && payload.patch && (payload.patch.surname || payload.patch.fin)) {
+        delete PT.newDocs[payload.id];
+        const pii = ptPiiFromDoc(Object.assign({}, r.data || {}, payload.patch));
+        const links = [{ kind: 'doc', id: r.doc.id }].concat(payload.caseId ? [{ kind: 'case', id: payload.caseId }] : []);
+        ptQueueEnsure(() => ptEnsure(pii, links).then(pt => {
+          if (!pt) return;
+          r.doc.patientId = pt.id;
+          ptCaseGotPatient(payload.caseId, pt.id); // разбор знает пациента: следующий документ из него — без вопросов
+          const cur = dsSt().cur; if (cur && cur.id === r.doc.id && cur.doc) cur.doc.patientId = pt.id;
+        }));
+      }
+      // форма, созданная из разбора («Внести в форму»): ФИО пришло целиком, сразу
+      const nf = action === 'formSave' && payload && PT.newForms[payload.id];
+      if (nf && nf.direct && r && r.ok && !payload.patientId && payload.patch && (payload.patch.pName || payload.patch.fin)) {
+        delete PT.newForms[payload.id];
+        const pii = ptPiiFromForm(payload.patch);
+        ptQueueEnsure(() => ptEnsure(pii, [{ kind: 'form', id: payload.id }].concat(nf.caseId ? [{ kind: 'case', id: nf.caseId }] : [])).then(pt => { if (pt) { ptFormLink(payload.id, pt.id); ptCaseGotPatient(nf.caseId, pt.id); } }));
+      }
+    } catch (e) { }
+    return r;
+  };
+  // новая форма (＋ Новая форма) — её можно сопоставить с картой, когда ФИО + дата рождения или FİN введены
+  const fn0 = fNew;
+  fNew = function () { const r = fn0.apply(this, arguments); if (S.fv && S.fv.id) PT.newForms[S.fv.id] = { queued: true }; return r; };
+})();
+// форма обращения: ФИО + дата рождения или FİN введены — найти / завести карту (один раз за форму)
+(function () {
+  if (typeof fHistoryCheck !== 'function') return;
+  const fh = fHistoryCheck;
+  fHistoryCheck = function (d) {
+    const r = fh.apply(this, arguments);
+    try {
+      const id = S.fv && S.fv.id; if (!id || !d || PT.formTried[id] || !PT.newForms[id] || PT.formLink[id]) return r;
+      const c = fCache(); const f = c.full[id];
+      if (f && (f.patientId || f.status === 'closed')) return r;
+      const pii = ptPiiFromForm(d);
+      const ok = /^[0-9A-Z]{7}$/.test(String(pii.fin || '').toUpperCase()) || (pii.surname && pii.name && /^\d{4}-\d{2}-\d{2}$/.test(pii.birthDate));
+      if (!ok) return r;
+      PT.formTried[id] = 1;
+      setTimeout(() => ptQueueEnsure(() => {
+        const f2 = fCache().full[id]; if ((f2 && f2.patientId) || PT.formLink[id]) return null; // уже привязана (пока ждали)
+        return ptEnsure(ptPiiFromForm((f2 && f2.data) || d), [{ kind: 'form', id }]).then(pt => {
+        if (!pt) { delete PT.formTried[id]; return; }
+        ptFormLink(id, pt.id); // форма ещё в очереди — привяжется со следующей отправкой
+        if (c.full[id]) { c.full[id].patientId = pt.id; fSaveCache(); }
+      }); }), 2500);
+    } catch (e) { }
+    return r;
+  };
+})();
+/* ---------- разбор с картой: «Внести в документ / форму» — без вопросов о ФИО ---------- */
+(function () {
+  if (typeof fillApply !== 'function') return;
+  const fa = fillApply;
+  fillApply = async function (id) {
+    const c = csSt().cur;
+    const v = c && (c.data.view || []).find(x => x.k === 'fill' && x.id === id);
+    if (!v || v.state !== 'wait') return fa.apply(this, arguments);
+    if (PT.fillBusy) return; // двойное нажатие — одно внесение
+    PT.fillBusy = id;
+    try {
+      const target = fillTarget(c, v.doc);
+      // номера карточки — те же, что дал бы fillApply (повтор после потери ответа не создаст второй документ)
+      if (!v.fx) { v.fx = { opId: newOpId(), id: dsNewId(), formId: newFormId(), formOp: newOpId() }; csSave(c); }
+      const pid = c.data.patientId;
+      if (!pid) {
+        // карты ещё нет: форма из этого разбора заведёт её сама (ФИО — из окна, один раз)
+        if (v.doc === 'form' && !target) PT.newForms[v.fx.formId] = { direct: true, caseId: c.id };
+        return await fa.apply(this, arguments);
+      }
+      const g = await ptGet(pid).catch(() => null);
+      const p = g && g.patient;
+      if (!p) return await fa.apply(this, arguments);
+      PT.link = { pid, doc: v.fx.id, form: v.fx.formId };
+      if (v.doc === 'form' && !target) ptFormLink(v.fx.formId, pid);
+      PT.piiOverride = { p, pid };
+      try { return await fa.apply(this, arguments); }
+      finally {
+        PT.piiOverride = null; PT.link = null;
+        // документ уже был — привязать к карте (если ещё не привязан)
+        if (target) rpc('patientLink', { kind: v.doc === 'form' ? 'form' : 'doc', id: target, patientId: pid, opId: newOpId() }).catch(() => null);
+      }
+    } finally { PT.fillBusy = null; }
+  };
+})();
+// разбор: id карты уходит на сервер вместе с разбором
+(function () {
+  if (typeof csMeta !== 'function') return;
+  const cm = csMeta;
+  csMeta = function (c) { const m = cm.apply(this, arguments); if (c && c.data && c.data.patientId) m.patientId = c.data.patientId; return m; };
+  if (typeof csStart === 'function') {
+    const cst = csStart;
+    csStart = function () {
+      const dr = csSt().draft, pid = dr && dr.patientId;
+      const r = cst.apply(this, arguments);
+      const c = csSt().cur; if (pid && c && !c.data.patientId) c.data.patientId = pid;
+      return r;
+    };
+  }
+})();
+/* ---------- окно «данные пациента» в документах: найти карту и подставить ---------- */
+(function () {
+  const orig = dsPiiModal;
+  dsPiiModal = function (type, onDone, pre) {
+    // разбор с картой пациента: ФИО и FİN — из карты. Есть фамилия и имя — окно не нужно; нет — окно с тем, что есть.
+    const ov = PT.piiOverride; PT.piiOverride = null;
+    if (ov && ov.p) {
+      const pii = Object.assign({}, ptToDoc(type, ov.p), { no: (pre && pre.no) || '' });
+      if (pii.surname && pii.name) { toast(t('ptFromCard') + (pii.no ? '' : ' ' + t('ptNoLater')), '', null, 6000); return onDone(pii); }
+      pre = Object.assign({}, pre || {}, pii);
+    }
+    const r = orig.call(this, type, onDone, pre);
+    if (ov && ov.p) { const m0 = $('.modal .muted'); if (m0) m0.insertAdjacentHTML('afterend', '<div class="hint" style="margin:0 0 8px">' + esc(t('ptFromCard')) + '</div>'); }
+    try {
+      const m = $('.modal'); if (!m || $('#ptPickIn')) return r;
+      const h3 = m.querySelector('h3');
+      h3.insertAdjacentHTML('afterend', '<div class="field" style="position:relative"><label>' + esc(t('ptPick')) + '</label><input id="ptPickIn" type="search" autocomplete="off" placeholder="' + esc(t('ptPickPh')) + '"><div id="ptPickBox"></div></div>');
+      const inp = $('#ptPickIn');
+      let tm = null;
+      inp.addEventListener('input', () => { clearTimeout(tm); tm = setTimeout(async () => {
+        const q = inp.value.trim(); const box = $('#ptPickBox'); if (!box) return;
+        if (q.length < 2) { box.innerHTML = ''; return; }
+        const res = await rpc('patientList', { q, mode: 'all' }, 30000).catch(() => null);
+        const rows = res && res.ok ? res.rows.slice(0, 8) : [];
+        S.ptPickRows = rows;
+        box.innerHTML = rows.map((x, i) => '<div class="list-row" data-act="ptPickGo" data-i="' + i + '" style="cursor:pointer"><span class="grow"><b>' + esc(ptLabel(x)) + '</b> <span class="muted">' + esc([x.fin, x.birthDate ? fmtDate(x.birthDate) : ''].filter(Boolean).join(' · ')) + '</span></span></div>').join('');
+      }, 300); });
+    } catch (e) { }
+    return r;
+  };
+})();
+Object.assign(H, {
+  ptPickGo: el => {
+    const x = (S.ptPickRows || [])[Number(el.dataset.i)]; if (!x) return;
+    const set = (k, v) => { const e = $('#dpi_' + k); if (e && v) e.value = v; };
+    set('surname', x.surname); set('name', x.name); set('patronymic', x.patronymic); set('birth', x.birthDate); set('fin', x.fin); set('sex', x.sex);
+    const box = $('#ptPickBox'); if (box) box.innerHTML = '<div class="hint" style="display:block">' + esc(t('ptFromCard')) + '</div>';
+  }
+});
+/* ---------- вкладка «👤 Пациенты» ---------- */
+function ptRowHtml(x) {
+  const age = dsAge(x.birthDate);
+  return '<div class="cs-list-row" data-act="ptOpen" data-id="' + esc(x.id) + '"><span>' + (x.status === 'closed' ? '✔' : '🩺') + '</span><div class="grow"><div class="nm">' + esc(ptLabel(x)) + '</div><div class="fd">' +
+    esc([x.fin, age !== '' ? t('ptAge', { n: age }) : '', x.sex === 'm' ? '♂' : x.sex === 'f' ? '♀' : '', x.leadName ? t('ptLead') + ': ' + x.leadName : ''].filter(Boolean).join(' · ')) +
+    (x.allergy ? ' <span style="color:var(--red)">⚠️ ' + esc(x.allergy) + '</span>' : '') + '</div></div></div>';
+}
+const psListHtml0 = psListHtml;
+psListHtml = function () {
+  const pt = ptSt(), st = dsSt();
+  if (pt.cur) return ptCardHtml();
+  // старый поиск по записям (и без карты) → профиль из записей; из него — «Завести карту»
+  if (st.prof) return '<button class="btn small ghost" data-act="ptBack">' + esc(t('ptBack')) + '</button>' + (can('forms') && !ptLocalOn() ? '<button class="btn primary block" style="margin:8px 0" data-act="ptFromOld">' + esc(t('ptFromOld')) + '</button>' : '') + psListHtml0().replace(/^<div class="searchbar">[\s\S]*?<\/div>/, '');
+  const chip = (m, l) => '<button class="chip' + (pt.mode === m ? ' on' : '') + '" data-act="ptMode" data-m="' + m + '">' + esc(t(l)) + '</button>';
+  let h = '<div class="searchbar"><input type="search" id="ptQ" autocomplete="off" placeholder="' + esc(t('ptSearch')) + '" value="' + esc(pt.q || '') + '"></div>' +
+    '<div class="chips" style="margin-bottom:8px">' + chip('active', 'ptActive') + chip('mine', 'ptMine') + chip('all', 'ptAll') + '</div>' +
+    (can('forms') ? '<button class="btn primary block" style="margin-bottom:8px" data-act="ptNew">' + esc(t('ptNew')) + '</button>' : '') +
+    (ptLocalOn() ? '<div class="muted" style="font-size:12.5px;margin-bottom:6px">' + esc(t('ptLocal')) + '</div>' : '');
+  if (pt.list === null) { setTimeout(ptLoad, 0); h += '<div class="muted">' + esc(t('loading')) + '</div>'; }
+  else h += pt.list.length ? '<div class="grp">' + pt.list.map(ptRowHtml).join('') + '</div>' : '<div class="muted">' + esc(t('ptNone')) + '</div>';
+  // поиск и в старых записях (обращения и документы без карты): по ФИО, FİN, № документа
+  h += '<details id="ptOldD" class="card" style="margin-top:12px"' + (pt.oldOpen || st.pres || st.pq ? ' open' : '') + '><summary><b>' + esc(t('ptOld')) + '</b></summary><div style="margin-top:8px">' + psListHtml0() + '</div></details>';
+  if (!ptLocalOn() && can('forms')) h += ptBuildHtml();
+  return h;
+};
+function ptBuildHtml() {
+  const b = ptSt().build;
+  let h = '<div class="card" style="margin-top:12px"><button class="btn ghost block" data-act="ptBuild">' + esc(t('ptBuild')) + '</button><div class="muted" style="font-size:12.5px;margin-top:4px">' + esc(t('ptBuildHint')) + '</div>';
+  if (b && b.msg) h += '<div class="hint" style="display:block;margin-top:6px">' + esc(b.msg) + '</div>';
+  if (b && b.suggest && b.suggest.length) h += '<div class="lbl" style="margin-top:8px">' + esc(t('ptSuggest')) + '</div>' + b.suggest.map((g, i) => '<div class="f-rx"><b>' + esc(g.name || '—') + '</b> <span class="muted">' + esc(g.birth ? fmtDate(g.birth) : '') + '</span>' +
+    '<div class="muted" style="font-size:12.5px">' + g.refs.map(r => esc((r.kind === 'form' ? '🩺 ' : '📄 ') + r.label + ' · ' + String(r.at || '').slice(0, 10))).join('<br>') + '</div>' +
+    '<div class="row" style="gap:6px;margin-top:6px"><button class="btn small primary" data-act="ptSugYes" data-i="' + i + '">' + esc(t('ptYes')) + '</button><button class="btn small ghost" data-act="ptSugNo" data-i="' + i + '">' + esc(t('ptNo')) + '</button></div></div>').join('');
+  return h + '</div>';
+}
+async function ptLoad() {
+  const pt = ptSt();
+  const seq = pt.seq = (pt.seq || 0) + 1;
+  const r = await rpc('patientList', { q: pt.q || '', mode: pt.q ? 'all' : pt.mode }, 30000).catch(() => null);
+  if (seq !== pt.seq) return; // пришёл ответ на старый запрос — пока печатали, ушёл новый
+  pt.list = r && r.ok ? r.rows : [];
+  if (S.screen === 'forms' && dsSt().seg === 'patients' && !pt.cur) { dsRender(true); ptBindQ(); }
+}
+document.addEventListener('toggle', e => { if (e.target && e.target.id === 'ptOldD') ptSt().oldOpen = e.target.open; }, true);
+function ptBindQ() { const q = $('#ptQ'); if (q && !q.__pt) { q.__pt = 1; q.addEventListener('input', () => { const pt = ptSt(); pt.q = q.value.trim(); pt.focusQ = true; clearTimeout(pt.qT); pt.qT = setTimeout(() => { pt.list = null; ptLoad(); }, 400); }); } }
+(function () {
+  const dr = dsRender;
+  dsRender = function () {
+    const r = dr.apply(this, arguments);
+    try { if (dsSt().seg === 'patients') { ptBindQ(); const q = $('#ptQ'); const pt = ptSt(); if (q && document.activeElement !== q && pt.focusQ) { q.focus(); try { q.setSelectionRange(q.value.length, q.value.length); } catch (e) { } pt.focusQ = false; } } } catch (e) { }
+    return r;
+  };
+})();
+/* ---------- карта пациента ---------- */
+function ptCardHtml() {
+  const pt = ptSt(), g = pt.cur, p = g.patient;
+  const age = dsAge(p.birthDate);
+  const items = (g.forms || []).map(f => ({ at: f.arrivedAt || f.createdAt, act: 'psOpenForm', id: f.id, title: t('ptFormTag') + (f.blankNo ? ' № ' + f.blankNo : ''), sub: [f.icd, f.dx, f.status === 'closed' ? t('dsClosed') : t('dsDraft')].filter(Boolean).join(' · ') }))
+    .concat((g.docs || []).map(d => { const tp = DOC_TPL[d.type] || {}; return { at: d.updatedAt || d.createdAt, act: 'dsOpen', id: d.id, title: (tp.ic || '📄') + ' ' + (tp[S.lang === 'az' ? 'az' : 'ru'] || d.type) + (d.docNo ? ' № ' + d.docNo : ''), sub: [d.icd, d.dx, d.status === 'closed' ? t('dsClosed') : t('dsDraft')].filter(Boolean).join(' · ') }; }))
+    .concat((g.cases || []).map(c => ({ at: c.updatedAt || c.createdAt, act: 'ptOpenCase', id: c.id, title: t('ptCaseTag') + ': ' + (c.title || ''), sub: [c.icd, c.dx].filter(Boolean).join(' · ') })))
+    .sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  const docBtns = Object.keys(DOC_TPL).filter(k => !DOC_TPL[k].noPatient && !DOC_TPL[k].quick).map(k => '<button class="chip" data-act="ptNewDoc" data-type="' + k + '">' + DOC_TPL[k].ic + ' ' + esc(S.lang === 'az' ? DOC_TPL[k].az : DOC_TPL[k].ru) + '</button>').join('');
+  return '<button class="btn small ghost" data-act="ptBack">' + esc(t('ptBack')) + '</button>' +
+    '<div class="card" style="margin-top:8px"><div class="row" style="align-items:flex-start;gap:8px"><div class="grow"><div class="nm" style="font-size:17px">👤 ' + esc(ptLabel(p)) + '</div>' +
+    '<div class="muted">' + esc([p.fin, p.birthDate ? fmtDate(p.birthDate) : '', age !== '' ? t('ptAge', { n: age }) : '', p.sex === 'm' ? '♂ ' + t('ptMale') : p.sex === 'f' ? '♀ ' + t('ptFemale') : '', p.phone].filter(Boolean).join(' · ')) + '</div></div>' +
+    '<span class="tag ' + (p.status === 'closed' ? 'brand' : 'green') + '">' + esc(p.status === 'closed' ? t('ptStatusC') : t('ptStatusA')) + '</span></div>' +
+    '<div style="margin-top:6px"><b>' + esc(t('ptAllergy')) + ':</b> ' + (p.allergy ? '<span style="color:var(--red);font-weight:700">⚠️ ' + esc(p.allergy) + '</span>' : '—') + '</div>' +
+    (p.chronic ? '<div style="margin-top:4px"><b>' + esc(t('ptChronic')) + ':</b> ' + esc(p.chronic) + '</div>' : '') +
+    '<div style="margin-top:4px"><b>' + esc(t('ptLead')) + ':</b> ' + esc(p.leadName || '—') + '</div>' +
+    (p.note ? '<div class="muted" style="margin-top:4px">' + esc(p.note) + '</div>' : '') +
+    '<div class="row wrap" style="gap:6px;margin-top:8px">' + (can('forms') ? '<button class="btn small ghost" data-act="ptEdit">' + esc(t('ptEdit')) + '</button>' +
+      '<button class="btn small ghost" data-act="ptStatus" data-v="' + (p.status === 'closed' ? 'active' : 'closed') + '">' + esc(p.status === 'closed' ? t('ptReopen') : t('ptClose')) + '</button>' : '') +
+    '<button class="btn small ghost" data-act="ptLogOpen">' + esc(t('ptLog')) + '</button></div></div>' +
+    (can('forms') ? '<div class="card"><div class="row wrap" style="gap:6px"><button class="btn primary" data-act="ptNewForm">' + esc(t('ptNewForm')) + '</button>' + (canAi() ? '<button class="btn" data-act="ptNewCase">' + esc(t('ptNewCase')) + '</button>' : '') + '</div>' +
+      '<div class="lbl" style="margin-top:8px">' + esc(t('ptNewDoc')) + '</div><div class="dx-row">' + docBtns + '</div></div>' : '') +
+    (canAi() ? '<button class="btn block" style="margin:6px 0" data-act="ptAudit">' + esc(t('psAudit')) + '</button><div id="psAuditBox">' + psAuditHtml() + '</div>' : '') +
+    '<div class="lbl">' + esc(t('ptTimeline')) + ' (' + items.length + ')</div>' +
+    (items.length ? '<div class="grp">' + items.map(x => '<div class="cs-list-row" data-act="' + x.act + '" data-id="' + esc(x.id) + '"><div class="grow"><div class="nm">' + esc(x.title) + '</div><div class="fd">' + esc(fmtDt(String(x.at || ''))) + (x.sub ? ' · ' + esc(x.sub) : '') + '</div></div></div>').join('') + '</div>' : '<div class="muted">' + esc(t('ptEmptyTl')) + '</div>');
+}
+async function ptOpen(id, force) {
+  const g = await ptGet(id, force);
+  if (!g) return;
+  const pt = ptSt(); pt.cur = g;
+  // проверка качества документов — как в прежнем профиле (без ФИО к ИИ)
+  const st = dsSt(); st.prof = { head: { patient: ptFull(g.patient), fin: g.patient.fin, birthDate: g.patient.birthDate, sex: g.patient.sex }, forms: g.forms || [], docs: g.docs || [] }; st.audit = null;
+  if (S.screen !== 'forms') setScreen('forms');
+  try { fFlush(); } catch (e) { } // последние буквы открытой формы — в очередь
+  st.seg = 'patients'; st.cur = null; S.fv = null;
+  dsRender(); window.scrollTo(0, 0);
+}
+function ptEditModal(p) {
+  p = p || { sex: '', status: 'active', leadName: S.me ? S.me.name : '', leadId: S.me ? S.me.id : '' };
+  const fld = (k, lbl, ty, extra) => '<div class="field"><label>' + esc(lbl) + '</label><input id="pte_' + k + '" type="' + (ty || 'text') + '" value="' + esc(p[k] || '') + '"' + (extra || '') + '></div>';
+  S.ptEditId = p.id || '';
+  openModal('<h3>' + esc(p.id ? t('ptEdit') : t('ptNew')) + '</h3>' + (ptLocalOn() ? '<div class="muted" style="margin-bottom:6px">' + esc(t('ptLocal')) + '</div>' : '') +
+    '<div class="grid2">' + fld('surname', t('ptSurname')) + fld('name', t('ptName')) + '</div>' + fld('patronymic', t('ptPatr')) +
+    '<div class="grid2">' + fld('birthDate', t('ptBirth'), 'date') + fld('fin', 'FİN', 'text', ' maxlength="7" autocapitalize="characters"') + '</div>' +
+    '<div class="field"><label>' + esc(t('ptSex')) + '</label><select id="pte_sex"><option value=""></option><option value="m"' + (p.sex === 'm' ? ' selected' : '') + '>' + esc(t('ptMale')) + '</option><option value="f"' + (p.sex === 'f' ? ' selected' : '') + '>' + esc(t('ptFemale')) + '</option></select></div>' +
+    '<div class="grid2">' + fld('phone', t('ptPhone'), 'tel') + fld('address', t('ptAddress')) + '</div>' +
+    '<div class="field"><label>' + esc(t('ptAllergy')) + '</label><input id="pte_allergy" value="' + esc(p.allergy || '') + '" maxlength="300"></div>' +
+    '<div class="field"><label>' + esc(t('ptChronic')) + '</label><textarea id="pte_chronic" rows="2" maxlength="500">' + esc(p.chronic || '') + '</textarea></div>' +
+    '<div class="field"><label>' + esc(t('ptLead')) + '</label><div class="row" style="gap:6px"><input id="pte_leadName" class="grow" maxlength="80" placeholder="' + esc(t('ptLeadPh')) + '" value="' + esc(p.leadName || '') + '"><button type="button" class="btn small ghost" data-act="ptLeadMe">' + esc(t('ptLeadMe')) + '</button></div><input type="hidden" id="pte_leadId" value="' + esc(p.leadId || '') + '"></div>' +
+    '<div class="field"><label>' + esc(t('ptNote')) + '</label><textarea id="pte_note" rows="2" maxlength="1000">' + esc(p.note || '') + '</textarea></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="ptSave">' + esc(t('ptSave')) + '</button></div>');
+  const ln = $('#pte_leadName'); if (ln) ln.addEventListener('input', () => { const li = $('#pte_leadId'); if (li && S.me && ln.value.trim() !== S.me.name) li.value = ''; });
+}
+async function ptNewDocFor(type, g) {
+  const p = g.patient;
+  if (!DOC_TPL[type] || DOC_TPL[type].noPatient || DOC_TPL[type].quick) return;
+  const id = dsNewId();
+  PT.link = { pid: p.id, doc: id };
+  let c = null;
+  try { c = await dsCreate(type, ptToDoc(type, p), '', null, { id, opId: newOpId() }); } finally { PT.link = null; }
+  if (!c) return;
+  delete PT.cache[p.id];
+  const st = dsSt(); st.cur = c; st.seg = type === 'rx' ? 'rx' : 'docs'; dsRender(); window.scrollTo(0, 0);
+  toast(t('ptFromCard'));
+}
+Object.assign(H, {
+  ptMode: el => { const pt = ptSt(); pt.mode = el.dataset.m; pt.list = null; dsRender(true); },
+  ptOpen: el => ptOpen(el.dataset.id, true), // карта — всегда свежая с сервера (лента могла пополниться)
+  ptBack: () => { const pt = ptSt(), st = dsSt(); pt.cur = null; pt.list = null; st.prof = null; st.audit = null; dsRender(); },
+  ptFromOld: async el => {
+    const g = dsSt().prof; if (!g) return;
+    const h0 = g.head || {};
+    // ФИО — из документа (там раздельно), иначе из формы
+    const d = (g.docs || [])[0];
+    let pii = null;
+    if (d) { const r = await rpc('docGet', { id: d.id }, 60000).catch(() => null); if (r && r.ok && r.data) pii = ptPiiFromDoc(r.data); }
+    if (!pii || !(pii.surname || pii.fin)) { const f = (g.forms || [])[0]; const r = f ? await rpc('formGet', { id: f.id }, 60000).catch(() => null) : null; if (r && r.ok && r.form) pii = ptPiiFromForm(r.form.data || {}); }
+    if (!pii) pii = { surname: h0.patient || '', fin: h0.fin, birthDate: h0.birthDate, sex: h0.sex };
+    const links = (g.forms || []).map(f => ({ kind: 'form', id: f.id })).concat((g.docs || []).map(x => ({ kind: 'doc', id: x.id }))).slice(0, 5);
+    const pt = await busy(el, () => ptEnsure(pii, links));
+    if (!pt) return toast(t('E_PT_NEED'), 'bad');
+    // больше 5 записей — остальные по одной
+    for (const l of (g.forms || []).map(f => ({ kind: 'form', id: f.id })).concat((g.docs || []).map(x => ({ kind: 'doc', id: x.id }))).slice(5, 60)) await rpc('patientLink', Object.assign({ patientId: pt.id, opId: newOpId() }, l), 30000).catch(() => null);
+    const st = dsSt(); st.prof = null; st.pres = null; st.pq = '';
+    ptOpen(pt.id, true);
+  },
+  ptNew: () => ptEditModal(null),
+  ptEdit: () => { const g = ptSt().cur; if (g) ptEditModal(g.patient); },
+  ptLeadMe: () => { const a = $('#pte_leadName'), b = $('#pte_leadId'); if (a && S.me) a.value = S.me.name; if (b && S.me) b.value = S.me.id; },
+  ptSave: async el => {
+    const g = k => { const e = $('#pte_' + k); return e ? e.value.trim() : ''; };
+    const patch = { surname: g('surname'), name: g('name'), patronymic: g('patronymic'), birthDate: g('birthDate'), fin: g('fin').toUpperCase(), sex: g('sex'), phone: g('phone'), address: g('address'), allergy: g('allergy'), chronic: g('chronic'), leadName: g('leadName'), leadId: g('leadId'), note: g('note') };
+    if (!patch.surname && !patch.name && !patch.fin) return toast(t('E_PT_NEED'), 'bad');
+    if (patch.fin && !/^[0-9A-Z]{7}$/.test(patch.fin)) return toast(t('E_PT_FIN'), 'bad');
+    const id = S.ptEditId || ptNewId();
+    const r = await busy(el, () => rpcA('patientSave', { id, patch, opId: newOpId() }));
+    if (!r) return;
+    closeModal();
+    if (r.existing) toast(t('ptExisting'), '', null, 6000);
+    delete PT.cache[r.patient.id];
+    const pt = ptSt(); pt.list = null;
+    ptOpen(r.patient.id, true);
+  },
+  ptStatus: async el => {
+    const g = ptSt().cur; if (!g) return;
+    const r = await busy(el, () => rpcA('patientSave', { id: g.patient.id, patch: {}, status: el.dataset.v, opId: newOpId() }));
+    if (r) { delete PT.cache[g.patient.id]; ptSt().list = null; ptOpen(g.patient.id, true); }
+  },
+  ptNewDoc: el => { const g = ptSt().cur; if (g) ptNewDocFor(el.dataset.type, g); },
+  ptNewForm: () => {
+    const g = ptSt().cur; if (!g || !can('forms')) return;
+    const st = dsSt(); st.seg = 'forms'; st.cur = null;
+    if (S.screen !== 'forms') setScreen('forms');
+    PT.nextForm = g.patient.id; // первая же отправка новой формы несёт id карты
+    fNew();
+    PT.nextForm = null;
+    const id = S.fv && S.fv.id; if (!id) return;
+    PT.formTried[id] = 1;
+    fSet(ptToForm(g.patient), true);
+    const c = fCache(); if (c.full[id]) { c.full[id].patientId = g.patient.id; fSaveCache(); }
+    delete PT.cache[g.patient.id];
+    toast(t('ptFromCard'));
+  },
+  ptNewCase: () => {
+    const g = ptSt().cur; if (!g || !canAi()) return;
+    const p = g.patient, age = dsAge(p.birthDate);
+    S.clSeg = 'cases';
+    const cst = csSt(); cst.view = 'new'; cst.cur = null;
+    cst.draft = { patient: { sex: p.sex || '', age: age === '' ? '' : age < 18 ? 'child' : age >= 65 ? 'old' : 'adult', ageYears: age === '' ? '' : age, preg: false }, vitals: {}, cc: '', patientId: p.id };
+    setScreen('clinic');
+    try { csRender(); } catch (e) { }
+    window.scrollTo(0, 0);
+  },
+  ptOpenCase: el => { S.clSeg = 'cases'; setScreen('clinic'); csOpen(el.dataset.id); },
+  ptAudit: () => psAudit(),
+  ptLogOpen: async () => {
+    const g = ptSt().cur; if (!g) return;
+    const r = await rpcA('patientLog', { id: g.patient.id }).catch(() => null); if (!r) return;
+    openModal('<h3>' + esc(t('ptLog')) + '</h3>' + (r.rows.slice().reverse().map(x => '<div class="list-row"><div class="grow"><b>' + esc(x.time) + '</b> · ' + esc(x.userName) + '<div class="muted">' + esc(x.event) + (x.info ? ' — ' + esc(x.info) : '') + '</div></div></div>').join('') || '<div class="muted">—</div>') +
+      '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+  },
+  ptBuild: async el => {
+    const r = await busy(el, () => rpcA('patientsBuild', {}, { timeout: 300000 }));
+    if (!r) return;
+    const pt = ptSt();
+    pt.build = { suggest: r.suggest || [], msg: t('ptBuildDone', { c: r.created, l: r.linked }) + (r.more ? ' ' + t('ptBuildMore') : '') };
+    pt.list = null; dsRender(true);
+  },
+  ptSugYes: async el => {
+    const pt = ptSt(); const g = pt.build && pt.build.suggest[Number(el.dataset.i)]; if (!g) return;
+    const pii = { surname: g.surname || '', name: g.first || '', patronymic: g.patronymic || '', birthDate: /^\d{4}-\d{2}-\d{2}$/.test(g.birth) ? g.birth : '', sex: g.sex === 'm' || g.sex === 'f' ? g.sex : '' };
+    const r = await busy(el, () => rpcA('patientsBuildConfirm', { refs: g.refs.map(x => ({ kind: x.kind, id: x.id })), pii, opId: newOpId() }));
+    if (!r) return;
+    pt.build.suggest.splice(Number(el.dataset.i), 1); pt.list = null; dsRender(true);
+  },
+  ptSugNo: el => { const pt = ptSt(); if (pt.build) pt.build.suggest.splice(Number(el.dataset.i), 1); dsRender(true); }
+});
+// «Пациенты» — сразу список карт (без старого поиска)
+(function () {
+  const seg = H.dsSeg;
+  H.dsSeg = async function (el) { const r = await seg.apply(this, arguments); if (el && el.dataset.seg === 'patients') { const pt = ptSt(), st = dsSt(); if (pt.cur) { st.prof = null; st.audit = null; } pt.cur = null; pt.list = null; dsRender(); } return r; };
+})();
+
 
 function init() {
   vizTipInit();
