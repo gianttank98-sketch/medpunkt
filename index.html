@@ -31977,6 +31977,129 @@ Object.assign(H, {
   };
 })();
 
+/* =====================================================================
+ * v60 (9.36): 🌐 ИИ упаковки с интернетом · «🌐 Найти в интернете» в приходе и в ревизии · своя карточка находится сама.
+ *  Как препарат попадает на склад: фото / штрихкод / название → (1) ваша карточка на складе (штрихкод, название) —
+ *  чтобы не плодить дубли, (2) каталог АР по штрихкоду / названию, (3) ИИ: фото + интернет. Серия и срок — только с упаковки.
+ * ===================================================================== */
+Object.assign(I18N.ru, {
+  wbBtn: '🌐 Найти в интернете', wbNeed: 'Впишите название (или штрихкод) — найду в интернете.', wbBusy: '🌐 Ищу в интернете…', wbSrc: '🌐 Проверено в интернете:',
+  wbOff: 'Поиск в интернете у ключа ИИ выключен — прочитано только по фото. Включить: console.anthropic.com → Settings → Privacy / Web search.',
+  wbMine: '🗂 Уже есть на складе — добавить к этой карточке (не создавать новую):', wbMineAuto: '🗂 Штрихкод совпал с вашей карточкой «{n}» — выбрана она.',
+  wbCatBc: '📗 По штрихкоду в каталоге АР: {n}'
+});
+Object.assign(I18N.az, {
+  wbBtn: '🌐 İnternetdə tap', wbNeed: 'Adı (və ya barkodu) yazın — internetdə tapacağam.', wbBusy: '🌐 İnternetdə axtarıram…', wbSrc: '🌐 İnternetdə yoxlanıldı:',
+  wbOff: 'Sİ açarında internet axtarışı söndürülüb — yalnız fotoya görə oxundu. Açmaq: console.anthropic.com → Settings → Privacy / Web search.',
+  wbMine: '🗂 Anbarda artıq var — bu karta əlavə et (yenisini yaratma):', wbMineAuto: '🗂 Barkod sizin «{n}» kartınızla üst-üstə düşdü — o seçildi.',
+  wbCatBc: '📗 Barkoda görə AR kataloqunda: {n}'
+});
+function wbCodes() { return 'Коды формы / вида: ' + FORMS.med.concat(FORMS.sup).map(f => f[0] + ' — ' + f[3].replace(/^\S+\s/, '')).join('; ') + '.'; }
+/** ИИ по фото — теперь через сервер с интернетом (boxRead). */
+bxAi = async function () {
+  const n = Math.min(5, BX.photos.length);
+  openModal('<h3>' + esc(t('bxAiReading', { n })) + '</h3><div class="muted" id="ocrProg">⏳ ' + esc(t('wbBusy')) + '</div>');
+  const gsP = bxBarcode();
+  const images = [];
+  for (const p of BX.photos.slice(0, 5)) { try { images.push({ media: 'image/jpeg', data: await photoB64(p.file, 1400) }); } catch (e) { } }
+  const cat = BX.target === 'found' ? (S.rfCat || 'med') : BX.target === 'edit' ? ((itemById(BX.ref) || {}).category || 'med') : (S.rcv && S.rcv.cat === 'sup' ? 'sup' : 'med');
+  const text = 'Прочитай упаковку на фото (' + images.length + ' фото: стороны упаковки и содержимое). Скорее ' + (cat === 'sup' ? 'расходник / медицинское изделие (но если на фото лекарство — читай как лекарство)' : 'лекарство (но если на фото расходник или изделие — читай как расходник)') + '. ' + wbCodes();
+  let r = null, res = null;
+  try {
+    res = await rpcA('boxRead', { images, text }, { timeout: 240000 });
+    r = bxFromAi(res.read || {});
+  } catch (e) { r = null; }
+  const gs = await gsP.catch(() => null);
+  if (!r) { toast(t('bxNoAi'), 'bad'); return bxLocal(); }
+  if (gs) { if (gs.series) r.series = gs.series; if (gs.expiry) r.expiry = gs.expiry; if (gs.gtin || gs.ean) r.barcode = gs.gtin || gs.ean; }
+  r.sources = res.sources || []; r.webOff = !!res.webOff;
+  bxReview(r, '');
+};
+/** «🌐 Найти в интернете» — по названию и / или штрихкоду, без фото. */
+async function wbFind(target) {
+  const q = target === 'found' ? (($('#rfName') || {}).value || '').trim() : (($('#rcvName') || {}).value || '').trim();
+  const bc = target === 'found' ? '' : (($('#rcvBarcode') || {}).value || '').trim();
+  if (q.length < 2 && bc.replace(/\D/g, '').length < 8) return toast(t('wbNeed'), 'bad');
+  BX.target = target; BX.ref = ''; BX.photos = [];
+  S.wbKeep = target === 'found' ? { qty: (($('#rfQty') || {}).value || ''), series: (($('#rfSeries') || {}).value || '') } : null;
+  openModal('<h3>' + esc(t('wbBusy')) + '</h3><div class="muted">' + esc(q || bc) + '</div>');
+  let res = null;
+  try { res = await rpcA('drugWeb', { q, barcode: bc, codes: wbCodes() }, { timeout: 240000 }); } catch (e) { closeModal(); return; }
+  const r = bxFromAi(res.read || {});
+  r.series = ''; r.expiry = '';
+  r.sources = res.sources || []; r.webOff = !!res.webOff;
+  bxReview(r, '');
+}
+/** Окно проверки: + своя карточка на складе (по штрихкоду — сразу; по названию — на выбор), + каталог по штрихкоду, + источники. */
+(function () {
+  const rv = bxReview;
+  bxReview = function (r, raw) {
+    // 1) своя карточка по штрихкоду — главнее всего (это точно тот же товар)
+    const bc = String(r.barcode || '').replace(/\D/g, '');
+    const byBc = bc ? (S.view.items || []).find(i => i.barcode && String(i.barcode).replace(/\D/g, '') === bc) : null;
+    if (byBc) { r.pick = { kind: 'item', item: byBc }; r.name = byBc.name; r.form = byBc.form; r.dose = byBc.dosage; r.guess = false; r.mineAuto = byBc.name + ' · ' + byBc.dosage; }
+    // 2) каталог АР по штрихкоду (если своей карточки нет)
+    else if (bc && S.cat && S.catBc && typeof own === 'function') {
+      const i = own(S.catBc, bc); const e = typeof i === 'number' ? S.cat[i] : null;
+      if (e && !(r.pick && r.pick.kind === 'item')) { r.pick = { kind: 'cat', e, alts: [e] }; r.catBc = e.b + (e.d ? ' ' + e.d : ''); if (!r.name) r.name = e.b; if (!r.dose) r.dose = e.d; if (!r.form) r.form = e.code; r.guess = false; }
+    }
+    rv.call(this, r, raw);
+    const m = $('.modal'); if (!m) return;
+    const h = m.querySelector('h3');
+    let top = '';
+    if (r.mineAuto) top += '<div class="info" style="margin-bottom:8px">' + esc(t('wbMineAuto', { n: r.mineAuto })) + '</div>';
+    if (r.catBc) top += '<div class="info" style="margin-bottom:8px">' + esc(t('wbCatBc', { n: r.catBc })) + '</div>';
+    // 3) похожие свои карточки по названию — выбрать, чтобы не завести дубль
+    if (!r.mineAuto && r.name) {
+      const k = skel(r.name).slice(0, 6);
+      const sim = k.length >= 4 ? (S.view.items || []).filter(i => skel(i.name).indexOf(k) === 0 || (r.sub && i.substance && skel(i.substance) === skel(r.sub) && i.form === r.form)).slice(0, 8) : [];
+      if (sim.length) { S.wbSim = sim; top += '<div class="lbl" style="margin:0 0 4px">' + esc(t('wbMine')) + '</div><div class="chips" style="flex-wrap:wrap">' + sim.map((i, n) => '<button class="chip" data-act="wbPickMine" data-i="' + n + '">' + esc(i.name + ' · ' + i.dosage + ' · ' + formName(i.form)) + '</button>').join('') + '</div>'; }
+    }
+    if (r.sources && r.sources.length) top += '<details class="hint" style="display:block;margin-bottom:8px"><summary>' + esc(t('wbSrc')) + ' ' + r.sources.length + '</summary>' + r.sources.map(s => '<div style="font-size:12.5px;word-break:break-all">• ' + esc(s.title || '') + ' — ' + esc(s.url) + '</div>').join('') + '</details>';
+    if (r.webOff) top += '<div class="muted" style="font-size:12.5px;margin-bottom:6px">' + esc(t('wbOff')) + '</div>';
+    if (top && h) h.insertAdjacentHTML('afterend', top);
+  };
+})();
+Object.assign(H, {
+  wbFind: el => wbFind(el.dataset.target || 'receive'),
+  wbPickMine: el => {
+    const it = (S.wbSim || [])[Number(el.dataset.i)]; const r = S.boxFound; if (!it || !r) return;
+    r.pick = { kind: 'item', item: it };
+    const set = (k, v) => { const e = $('#bx_' + k); if (e) e.value = v || ''; const c = $('#bxOn_' + k); if (c) c.checked = true; };
+    set('name', it.name); set('form', it.form); set('dose', it.dosage);
+    $$('[data-act=wbPickMine]').forEach(b => b.classList.toggle('on', b === el));
+  }
+});
+// ревизия «＋ Найдено» из «🌐 Найти в интернете» — количество и серию, что уже вписаны, не терять
+(function () {
+  const ap = bxApplyTo;
+  bxApplyTo = function () {
+    const keep = BX.target === 'found' ? S.wbKeep : null;
+    const r = ap.apply(this, arguments);
+    if (keep) { if (keep.qty && $('#rfQty')) $('#rfQty').value = keep.qty; if (keep.series && $('#rfSeries') && !$('#rfSeries').value) $('#rfSeries').value = keep.series; S.wbKeep = null; }
+    return r;
+  };
+  const rf = revFoundModal;
+  revFoundModal = function () {
+    const r = rf.apply(this, arguments);
+    const b = $('.modal [data-act=bxFoundPhoto]'); if (b && bxAiOk()) b.insertAdjacentHTML('afterend', '<button type="button" class="btn ghost block" style="margin-bottom:8px" data-act="wbFind" data-target="found">' + esc(t('wbBtn')) + '</button>');
+    return r;
+  };
+})();
+// приход: кнопка рядом с «фото коробки»
+(function () {
+  const go = () => {
+    try {
+      const b = $('[data-act=boxPhoto]'); if (!b || $('#wbRcvBtn')) return;
+      b.insertAdjacentHTML('afterend', '<button type="button" id="wbRcvBtn" class="btn ghost" data-act="wbFind" data-target="receive">' + esc(t('wbBtn')) + '</button>');
+      const w = b.parentNode; if (w) w.style.flexWrap = 'wrap';
+    } catch (e) { }
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
+  const ra = window.renderAll;
+  window.renderAll = function () { const r = ra.apply(this, arguments); try { const x = $('#wbRcvBtn'); if (x) { x.classList.toggle('hidden', !bxAiOk()); x.textContent = t('wbBtn'); } else go(); } catch (e) { } return r; };
+})();
+
 
 function init() {
   vizTipInit();
