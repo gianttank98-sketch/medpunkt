@@ -32099,6 +32099,32 @@ Object.assign(H, {
   const ra = window.renderAll;
   window.renderAll = function () { const r = ra.apply(this, arguments); try { const x = $('#wbRcvBtn'); if (x) { x.classList.toggle('hidden', !bxAiOk()); x.textContent = t('wbBtn'); } else go(); } catch (e) { } return r; };
 })();
+/* ---------- чтение на телефоне (без ИИ): штук в упаковке и название по МНН, если фирма не нашлась ---------- */
+(function () {
+  const bp = boxParse;
+  boxParse = function (text, gs, big) {
+    const r = bp.apply(this, arguments);
+    const s = String(text || '');
+    // «10 ampoules», «№10», «N 10», «10 ampul», «20 tablets», «100 шт.»
+    const m = s.match(/(?:№|\bN|\bNo\.?)\s?(\d{1,4})\b/) || s.match(/\b(\d{1,4})\s*(?:ampoules?|ampul\w*|ампул\w*|amps?\b|tablets?|tablet\w*|tabletk?\w*|таблет\w*|tabs?\b|capsules?|kapsul\w*|капсул\w*|vials?|flakon\w*|флакон\w*|sachets?|шт\b|pcs\b|ədəd)/i);
+    if (m && !r.pack) { const n = Number(m[1]); if (n >= 1 && n <= 1000) r.pack = String(n); }
+    if (!r.name) {
+      // фирма не нашлась: первые крупные строки — по справочнику веществ и каталогу (CALCIUM GLUCONATE → Кальция глюконат)
+      const lines = [String(big || '')].concat(s.split(/\n+/)).map(x => x.replace(/[^A-Za-zА-Яа-яЁёƏəÖöÜüĞğİıŞşÇç \-]/g, ' ').replace(/\s+/g, ' ').trim()).filter(x => x.replace(/[^A-Za-zА-Яа-яЁёƏəÖöÜüĞğİıŞşÇç]/g, '').length >= 5).slice(0, 6);
+      const cat = S.rcv && S.rcv.cat === 'sup' ? 'sup' : 'med';
+      for (const l of lines) {
+        let res = null; try { res = nameSuggestions(l.slice(0, 60), cat); } catch (e) { res = null; }
+        const top = res && res.list && res.list[0]; // и «похожее» (CALCIUM → KALSİUM): помечено «проверьте»
+        if (!top) continue;
+        if (top.kind === 'item') { r.pick = { kind: 'item', item: top.item }; r.name = top.item.name; if (!r.form) r.form = top.item.form; break; }
+        if (top.kind === 'sub') { r.name = top.so.s; r.sub = top.so.s; r.guess = true; break; }
+        if (top.kind === 'cat') { r.name = top.ce.b; r.guess = true; break; }
+        if (top.label) { r.name = top.label; r.guess = true; break; }
+      }
+    }
+    return r;
+  };
+})();
 
 
 function init() {
