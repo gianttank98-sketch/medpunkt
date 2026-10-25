@@ -31587,6 +31587,396 @@ H.nlSeed = async el => {
   if (r) { toast(t('nlDone')); renderAll(); }
 };
 
+/* =====================================================================
+ * v59 (9.35): 📷 упаковка со всех сторон · штрихкод не перетирает вписанное · правка карточки и партии по фото ·
+ *  разные коробки одной карточки (по 5 и по 10) · сверка серий в ревизии.
+ *  Саид, 25.10: «…сфотографировать и отправить как содержимое, так и все стороны упаковки»; «читает название, пишет, что прочёл,
+ *  но не додумывается добавить»; «когда в конце штрихкод сканирует, меняется форма — должно быть наоборот: пишешь серию и
+ *  штрихкод — он запоминает»; «редактировать данные карточек повторно, менять даже номер и серию, вообще всё»;
+ *  «две коробки одного препарата, но разное количество ампул и серии другие — пусть учитывает, и во время ревизии — проверь серии».
+ * ===================================================================== */
+Object.assign(I18N.ru, {
+  bxTitle: '📷 Фото упаковки', bxHint: 'Снимите упаковку со всех сторон: название, дозу, серию и срок (часто на торце или клапане), штрихкод — и содержимое (ампулу, блистер, флакон). Чем больше сторон — тем точнее.',
+  bxCam: '📷 Снять', bxGal: '🖼 Из галереи', bxAi: '🤖 Прочитать с ИИ (точнее)', bxLocal: '🔎 Прочитать на телефоне (без интернета)', bxNeed: 'Добавьте хотя бы одно фото.', bxN: 'Фото: {n}',
+  bxAiReading: '🤖 ИИ читает упаковку ({n} фото)…', bxPhoto: 'Фото {i} из {n}', bxPack: 'Штук в упаковке', bxPackHint: 'по фото — проверьте', bxGuess: 'В каталоге не нашлось — название как на коробке, проверьте.',
+  bxNotes: '❓ ИИ сомневается', bxNoAi: 'ИИ не ответил — читаю на телефоне.', bxEditPhoto: '📷 Обновить по фото упаковки', bxLots: 'Партии этой карточки', bxLotEdit: '✏️',
+  bxLotPack: 'Штук в упаковке этой партии', bxLotPackHint: 'если у этой партии коробки другие (например, по 5, а не по 10)', bxPackPer: 'по {n} в уп.',
+  bxPackDiff: '📦 У карточки — по {a} в упаковке, у этой партии — по {b}. Карточка та же, партия запомнит своё количество.',
+  bxScanKeep: 'Штрихкод {code} записан. Остальное, что вы вписали, не тронуто.', bxSerDiff: '⚠️ На коробке серия {box}, у вас вписана {you} — оставлена ваша, проверьте.',
+  bxRevBtn: '📷 Сверить серию по коробке', bxRevHit: '✓ Серия {s} — найдена ({n}), выделена.', bxRevMiss: 'Серии {s} в «{loc}» нет', bxRevMissHint: 'Это та же партия с ошибкой в серии — выберите её. Или это новая партия — «＋ Найдено».',
+  bxRevThis: 'Это она — серия на коробке {s}', bxRevNew: '＋ Это другая партия (найдено)', bxRevNoSer: 'На фото серия не прочиталась. Впишите её вручную в партии (✏️).',
+  bxApplyEdit: 'Заполнено с фото — проверьте и нажмите «Сохранить».', bxSub: 'Действующее вещество (МНН)', bxPackInfo: 'Упаковка (как написано)', bxCond: 'Хранение', bxBarcode: 'Штрихкод',
+  bxFoundPhoto: '📷 Заполнить по фото упаковки', bxMax: 'Не больше 5 фото — выберите самые чёткие.'
+});
+Object.assign(I18N.az, {
+  bxTitle: '📷 Qablaşdırmanın fotosu', bxHint: 'Qablaşdırmanı bütün tərəflərdən çəkin: ad, doza, seriya və son istifadə tarixi (çox vaxt yan tərəfdə və ya qapaqda), barkod — və içindəkini (ampul, blister, flakon). Nə qədər çox tərəf — o qədər dəqiq.',
+  bxCam: '📷 Çək', bxGal: '🖼 Qalereyadan', bxAi: '🤖 Sİ ilə oxu (daha dəqiq)', bxLocal: '🔎 Telefonda oxu (internetsiz)', bxNeed: 'Ən azı bir foto əlavə edin.', bxN: 'Foto: {n}',
+  bxAiReading: '🤖 Sİ qablaşdırmanı oxuyur ({n} foto)…', bxPhoto: 'Foto {i} / {n}', bxPack: 'Qutuda ədəd', bxPackHint: 'fotoya görə — yoxlayın', bxGuess: 'Kataloqda tapılmadı — ad qutuda yazıldığı kimi, yoxlayın.',
+  bxNotes: '❓ Sİ əmin deyil', bxNoAi: 'Sİ cavab vermədi — telefonda oxuyuram.', bxEditPhoto: '📷 Qablaşdırmanın fotosuna görə yenilə', bxLots: 'Bu kartın partiyaları', bxLotEdit: '✏️',
+  bxLotPack: 'Bu partiyanın qutusunda ədəd', bxLotPackHint: 'bu partiyanın qutuları fərqlidirsə (məsələn, 10 yox, 5)', bxPackPer: 'qutuda {n}',
+  bxPackDiff: '📦 Kartda — qutuda {a}, bu partiyada — {b}. Kart eynidir, partiya öz sayını yadda saxlayacaq.',
+  bxScanKeep: 'Barkod {code} yazıldı. Yazdığınız başqa heç nəyə toxunulmadı.', bxSerDiff: '⚠️ Qutuda seriya {box}, sizdə {you} yazılıb — sizinki saxlanıldı, yoxlayın.',
+  bxRevBtn: '📷 Seriyanı qutuya görə yoxla', bxRevHit: '✓ Seriya {s} — tapıldı ({n}), işarələndi.', bxRevMiss: '«{loc}»-da {s} seriyası yoxdur', bxRevMissHint: 'Bu, seriyası səhv yazılmış eyni partiyadırsa — onu seçin. Yeni partiyadırsa — «＋ Tapıldı».',
+  bxRevThis: 'Budur — qutuda seriya {s}', bxRevNew: '＋ Bu başqa partiyadır (tapıldı)', bxRevNoSer: 'Fotoda seriya oxunmadı. Onu partiyada əl ilə yazın (✏️).',
+  bxApplyEdit: 'Fotodan dolduruldu — yoxlayın və «Yadda saxla» basın.', bxSub: 'Təsiredici maddə', bxPackInfo: 'Qablaşdırma (yazıldığı kimi)', bxCond: 'Saxlanma', bxBarcode: 'Barkod',
+  bxFoundPhoto: '📷 Qablaşdırmanın fotosuna görə doldur', bxMax: '5 fotodan çox olmaz — ən aydınlarını seçin.'
+});
+const BX = { photos: [], target: 'receive', ref: '' };
+function bxAiOk() { return typeof canAi === 'function' && canAi(); }
+/* ---------- окно «фото упаковки»: несколько снимков ---------- */
+function bxOpen(target, ref) {
+  BX.photos = []; BX.target = target || 'receive'; BX.ref = ref || '';
+  openModal('<h3>' + esc(t('bxTitle')) + '</h3><div class="muted" style="margin-bottom:8px">' + esc(t('bxHint')) + '</div>' +
+    '<div id="bxThumbs" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"><label class="btn ghost">' + esc(t('bxCam')) + '<input type="file" accept="image/*" capture="environment" id="bxCamIn" style="display:none"></label>' +
+    '<label class="btn ghost">' + esc(t('bxGal')) + '<input type="file" accept="image/*" multiple id="bxGalIn" style="display:none"></label></div>' +
+    '<div class="acts" style="flex-wrap:wrap">' + (bxAiOk() ? '<button class="btn primary" data-act="bxGo" data-how="ai">' + esc(t('bxAi')) + '</button>' : '') +
+    '<button class="btn ' + (bxAiOk() ? 'ghost' : 'primary') + '" data-act="bxGo" data-how="local">' + esc(t('bxLocal')) + '</button><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button></div>');
+  ['#bxCamIn', '#bxGalIn'].forEach(sel => { const i = $(sel); if (i) i.addEventListener('change', async () => { for (const f of Array.from(i.files || []).slice(0, 5)) await bxAdd(f); i.value = ''; }); });
+}
+async function bxAdd(file) {
+  if (BX.photos.length >= 5) return toast(t('bxMax'), 'bad');
+  let thumb = '';
+  try { thumb = await makeThumb(file); } catch (e) { return toast(t('E_BAD_PHOTO'), 'bad'); }
+  BX.photos.push({ file, thumb });
+  bxDraw();
+}
+function bxDraw() {
+  const box = $('#bxThumbs'); if (!box) return;
+  box.innerHTML = BX.photos.map((p, i) => '<div style="position:relative"><img src="' + p.thumb + '" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line)">' +
+    '<button type="button" class="btn small ghost" data-act="bxDel" data-i="' + i + '" style="position:absolute;top:-6px;right:-6px;padding:0 6px;min-height:0">✕</button></div>').join('') +
+    (BX.photos.length ? '<div class="muted" style="align-self:center">' + esc(t('bxN', { n: BX.photos.length })) + '</div>' : '');
+}
+/** Штрихкод со всех фото: квадратный GS1 (код + серия + срок) лучше обычного. */
+async function bxBarcode() {
+  let best = null;
+  for (const p of BX.photos) {
+    let code = '';
+    try { code = await decodeBarcode(p.file); } catch (e) { code = ''; }
+    if (!code) continue;
+    const gs = parseGs1(code);
+    if (gs && (gs.series || gs.expiry)) return gs;
+    if (!best) best = gs || { ean: String(code).trim() };
+  }
+  return best;
+}
+async function bxLocal() {
+  openModal('<h3>' + esc(t('boxReading')) + '</h3><div class="muted" id="ocrProg">' + esc(t('ocrLoading')) + '</div><div class="muted" style="margin-top:8px">' + esc(t('ocrFirstTime')) + '</div>');
+  const gs = await bxBarcode();
+  let txt = '', lines = [];
+  for (let i = 0; i < BX.photos.length; i++) {
+    ocrProgress(t('bxPhoto', { i: i + 1, n: BX.photos.length }));
+    try {
+      const data = await ocrData(BX.photos[i].file, 'aze+rus+eng');
+      txt += '\n' + String(data.text || '');
+      (data.lines || []).forEach(l => { if (l.text && l.text.trim()) lines.push({ t: l.text, h: l.bbox ? l.bbox.y1 - l.bbox.y0 : 0 }); });
+    } catch (e) { if (!gs && !txt) { closeModal(); return toast(t('ocrNoNet'), 'bad', null, 8000); } }
+  }
+  S.ocrNote = null;
+  lines.sort((a, b) => b.h - a.h);
+  const big = lines.slice(0, 3).map(l => l.t).join(' ');
+  const r = boxParse(txt, gs, big);
+  if (!r.name) { const g = bxGuessName(lines); if (g) { r.name = g; r.guess = true; } }
+  bxReview(r, txt);
+}
+/** Название не нашлось в каталоге — самая крупная строка без слов формы/упаковки (как на коробке). */
+function bxGuessName(lines) {
+  for (const l of lines.slice(0, 5)) {
+    const w = String(l.t).replace(/[®™©]/g, ' ').split(/[^A-Za-zА-Яа-яЁёƏəÖöÜüĞğİıŞşÇç0-9\-]+/).filter(x => x.length >= 3 && !/^\d+$/.test(x) && !BOX_GENERIC.test(x.replace(/İ/g, 'I').toLowerCase()));
+    if (w.length) return w.slice(0, 3).join(' ');
+  }
+  return '';
+}
+async function bxAi() {
+  const n = BX.photos.length;
+  openModal('<h3>' + esc(t('bxAiReading', { n })) + '</h3><div class="muted" id="ocrProg">⏳</div>');
+  const gsP = bxBarcode();
+  const imgs = [];
+  for (const p of BX.photos.slice(0, 5)) { try { imgs.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: await photoB64(p.file, 1400) } }); } catch (e) { } }
+  const cat = BX.target === 'found' ? (S.rfCat || 'med') : BX.target === 'edit' ? ((itemById(BX.ref) || {}).category || 'med') : (S.rcv && S.rcv.cat === 'sup' ? 'sup' : 'med');
+  const codes = FORMS.med.concat(FORMS.sup).map(f => f[0] + ' — ' + f[3].replace(/^\S+\s/, '')).join('; ');
+  const text = 'Прочитай упаковку на фото (' + n + ' фото: стороны упаковки и содержимое). Скорее ' + (cat === 'sup' ? 'расходник / медицинское изделие (но если на фото лекарство — читай как лекарство)' : 'лекарство (но если на фото расходник или изделие — читай как расходник)') + '. Коды формы / вида: ' + codes + '.';
+  let r = null;
+  try {
+    const res = await rpcA('aiChat', { mode: 'box', messages: [{ role: 'user', content: imgs.concat([{ type: 'text', text }]) }] }, { timeout: 150000 });
+    const call = (res.content || []).find(b => b.type === 'tool_use' && b.name === 'box_read');
+    if (call) r = bxFromAi(call.input || {});
+  } catch (e) { r = null; }
+  const gs = await gsP.catch(() => null);
+  if (!r) { toast(t('bxNoAi'), 'bad'); return bxLocal(); }
+  // GS1 с коробки — точнее глаз: серия, срок, код
+  if (gs) { if (gs.series) r.series = gs.series; if (gs.expiry) r.expiry = gs.expiry; if (gs.gtin || gs.ean) r.barcode = gs.gtin || gs.ean; }
+  bxReview(r, '');
+}
+function bxExp(s) {
+  s = String(s || '').trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/); if (m) return s;
+  m = s.match(/^(\d{4})-(\d{2})$/); if (m) return m[1] + '-' + m[2] + '-' + String(lastDay(+m[1], +m[2])).padStart(2, '0');
+  return typeof boxExpiry === 'function' ? boxExpiry('EXP ' + s) : '';
+}
+/** Ответ ИИ → поля окна проверки; сверка с каталогом (если такая фирма есть — подтянутся МНН, единица, упаковка). */
+function bxFromAi(a) {
+  const allCodes = FORMS.med.concat(FORMS.sup).map(f => f[0]);
+  const vol = String(a.volumeMl || '').replace('.', ',').replace(/\s*(ml|мл)$/i, '');
+  let dose = String(a.dose || '').trim();
+  if (vol && dose.indexOf(vol) === -1) dose = (dose ? dose + ' ' : '') + vol + ' мл';
+  const r = { name: String(a.name || '').trim(), form: allCodes.indexOf(a.form) !== -1 ? a.form : (typeof guessForm === 'function' ? guessForm(String(a.formText || '') + ' ' + String(a.packInfo || ''), '') : ''),
+    dose, series: String(a.series || '').trim().toUpperCase(), expiry: bxExp(a.expiry), mfr: String(a.mfr || '').trim(), barcode: String(a.barcode || '').replace(/\D/g, ''),
+    pack: Number.isInteger(Number(a.packCount)) && Number(a.packCount) >= 1 ? String(Number(a.packCount)) : '', packInfo: String(a.packInfo || '').trim(), sub: String(a.substance || '').trim(),
+    notes: String(a.notes || '').trim(), cond: ['normal', 'fridge', 'dark'].indexOf(a.storage) !== -1 ? a.storage : '', pick: null };
+  if (r.barcode && !/^\d{8,14}$/.test(r.barcode)) r.barcode = '';
+  // своя карточка или каталог: по названию + дозе (как при чтении на телефоне)
+  try {
+    const bb = boxBrand(r.name + ' ' + r.dose, r.name);
+    if (bb && bb.kind === 'item') r.pick = { kind: 'item', item: bb.item };
+    else if (bb && bb.kind === 'cat') {
+      const doses = boxDoses(r.dose).doses;
+      const list = bb.list.slice().sort((x, y) => (doses.some(d => normDose(y.d).indexOf(d) !== -1) ? 1 : 0) - (doses.some(d => normDose(x.d).indexOf(d) !== -1) ? 1 : 0));
+      r.pick = { kind: 'cat', e: list[0], alts: list.slice(0, 12) };
+    } else if (bb && bb.kind === 'sup') r.pick = { kind: 'sup', e: bb.list[0] };
+  } catch (e) { }
+  if (!r.pick) r.guess = !!r.name;
+  return r;
+}
+/** Окно проверки: прежнее окно «нашлось на коробке» + штук в упаковке + сомнения ИИ. */
+function bxReview(r, raw) {
+  S.boxFound = r;
+  boxReviewModal(r, raw);
+  const m = $('.modal'); if (!m) return;
+  const dose = $('#bx_dose'); const doseField = dose && dose.closest('.field');
+  if (doseField) doseField.insertAdjacentHTML('afterend', '<div class="field"><label class="check" style="margin:0 0 4px"><input type="checkbox" id="bxOn_pack"' + (r.pack ? ' checked' : '') + '><span>' + esc(t('bxPack')) + (r.pack ? ' <span class="muted">(' + esc(t('bxPackHint')) + ')</span>' : '') + '</span></label><input type="number" id="bx_pack" min="1" inputmode="numeric" value="' + esc(r.pack || '') + '"></div>');
+  const fld = (k, lbl, ctl, on) => '<div class="field"><label class="check" style="margin:0 0 4px"><input type="checkbox" id="bxOn_' + k + '"' + (on ? ' checked' : '') + '><span>' + esc(lbl) + '</span></label>' + ctl + '</div>';
+  const nameF = $('#bx_name') && $('#bx_name').closest('.field');
+  if (nameF) nameF.insertAdjacentHTML('afterend', fld('sub', t('bxSub'), '<input type="text" id="bx_sub" value="' + esc(r.sub || '') + '">', !!r.sub));
+  const packF = $('#bx_pack') && $('#bx_pack').closest('.field');
+  if (packF) packF.insertAdjacentHTML('afterend', fld('packInfo', t('bxPackInfo'), '<input type="text" id="bx_packInfo" value="' + esc(r.packInfo || '') + '">', !!r.packInfo) +
+    fld('cond', t('bxCond'), '<select id="bx_cond">' + ['normal', 'fridge', 'dark'].map(c => '<option value="' + c + '"' + (c === (r.cond || 'normal') ? ' selected' : '') + '>' + esc(t('cond' + c[0].toUpperCase() + c.slice(1))) + '</option>').join('') + '</select>', !!r.cond));
+  // штрихкод — всегда виден (можно вписать или поправить)
+  if (!$('#bx_barcode')) { const mf = $('#bx_mfr') && $('#bx_mfr').closest('.field'); if (mf) mf.insertAdjacentHTML('afterend', fld('barcode', t('bxBarcode'), '<input type="text" id="bx_barcode" inputmode="numeric" value="' + esc(r.barcode || '') + '">', !!r.barcode)); }
+  const nm = $('#bx_name'); if (nm && r.guess) nm.closest('.field').insertAdjacentHTML('beforeend', '<div class="note">' + esc(t('bxGuess')) + '</div>');
+  if (r.notes) { const h = m.querySelector('h3'); if (h) h.insertAdjacentHTML('afterend', '<div class="hint" style="display:block;margin-bottom:8px">' + esc(t('bxNotes')) + ': ' + esc(r.notes) + '</div>'); }
+  // на коробке нет числа — не просить «впишите сами», если оно прочиталось
+  if (r.pack) { const note = $$('.modal .note').find(n => n.textContent === t('boxPackNote')); if (note) note.remove(); }
+  if (BX.target !== 'receive') { const b = $('.modal [data-act=boxApply]'); if (b) b.dataset.act = 'bxApplyTo'; }
+}
+/** Приход: прежнее «Применить» + штук в упаковке. */
+(function () {
+  const ba = boxApply;
+  boxApply = function () {
+    const x = bxReadReview();
+    const r = ba.apply(this, arguments);
+    if (x.pack) { const pc = $('#rcvPackCount'); if (pc && !pc.closest('.field').classList.contains('hidden')) { pc.value = x.pack; if (typeof updateQtyCalc === 'function') updateQtyCalc(); } }
+    const s = $('#rcvSub'); if (s && x.sub) s.value = x.sub;
+    if (x.packInfo) { const pi = $('#rcvPackInfo'); if (pi) pi.value = x.packInfo + (x.mfr && x.packInfo.indexOf(x.mfr) === -1 ? ' · ' + x.mfr : ''); }
+    if (x.cond && $('#rcvCond')) $('#rcvCond').value = x.cond;
+    if (x.barcode && $('#rcvBarcode')) $('#rcvBarcode').value = x.barcode;
+    return r;
+  };
+})();
+/** Что врач оставил отмеченным в окне проверки. */
+function bxReadReview() {
+  const on = k => { const c = $('#bxOn_' + k); return !!(c && c.checked); };
+  const val = k => { const el = $('#bx_' + k); return el ? el.value.trim() : ''; };
+  const pack = on('pack') && /^\d+$/.test(val('pack')) && +val('pack') >= 1 ? val('pack') : '';
+  return { name: on('name') ? val('name') : '', form: on('form') ? val('form') : '', dose: on('dose') ? val('dose') : '', series: on('series') ? val('series').toUpperCase() : '',
+    expiry: on('expiry') && /^\d{4}-\d{2}-\d{2}$/.test(val('expiry')) ? val('expiry') : '', mfr: on('mfr') ? val('mfr') : '', barcode: on('barcode') ? val('barcode').replace(/\s+/g, '') : '',
+    pack, sub: on('sub') ? val('sub') : '', packInfo: on('packInfo') ? val('packInfo') : '', cond: on('cond') ? val('cond') : '' };
+}
+/** Правка карточки / партии по фото: окно правки открывается снова, с прочитанным (сохраняет врач). */
+function bxApplyTo() {
+  const r = S.boxFound; if (!r) return closeModal();
+  const v = bxReadReview();
+  if (BX.target === 'rev') return bxRevCheck(v);
+  const set = (sel, x) => { const el = $(sel); if (el && x) { el.value = x; el.style.borderColor = 'var(--brand)'; } };
+  const setExp = (pfx, e) => { if (!e) return; const no = $('#' + pfx + 'No'); if (no) no.checked = false; set('#' + pfx + 'Y', e.slice(0, 4)); set('#' + pfx + 'M', e.slice(5, 7)); const d = +e.slice(8, 10) === lastDay(+e.slice(0, 4), +e.slice(5, 7)) ? '' : e.slice(8, 10); const dd = $('#' + pfx + 'D'); if (dd) dd.value = d; };
+  if (BX.target === 'edit') {
+    editItemModal(BX.ref);
+    set('#eiName', v.name); if (v.form && $('#eiForm')) { const c = formInfo(v.form).cat; set('#eiCat', c); set('#eiForm', v.form); }
+    set('#eiDose', v.dose); set('#eiBarcode', v.barcode); set('#eiPack', v.pack);
+    set('#eiSub', v.sub); set('#eiCond', v.cond);
+    if (v.packInfo || v.mfr) { const pi = $('#eiPackInfo'); const base = v.packInfo || (pi ? pi.value : ''); if (pi) set('#eiPackInfo', base + (v.mfr && base.indexOf(v.mfr) === -1 ? (base ? ' · ' : '') + v.mfr : '')); }
+  } else if (BX.target === 'found') {
+    // ревизия, «＋ Найдено»: всё прочитанное — в окно; штрихкод, штук в упаковке, МНН, упаковка — в карточку при применении ревизии
+    revFoundModal();
+    if (v.form) { const c = formInfo(v.form).cat; if (S.rfCat !== c) rfSetCat(c); set('#rfForm', v.form); const u = $('#rfUnit'); if (u) u.value = formInfo(v.form).unit; }
+    set('#rfName', v.name); set('#rfDose', v.dose); set('#rfSeries', v.series); setExp('rfExp', v.expiry);
+    S.rfExtra = { barcode: v.barcode, packCount: v.pack ? Number(v.pack) : '', substance: v.sub, packInfo: v.packInfo + (v.mfr && v.packInfo.indexOf(v.mfr) === -1 ? (v.packInfo ? ' · ' : '') + v.mfr : ''), condition: v.cond };
+  } else if (BX.target === 'lot') {
+    editLotModal(BX.ref);
+    set('#elSeries', v.series); setExp('elExp', v.expiry); set('#elPack', v.pack);
+  }
+  toast(t('bxApplyEdit'), '', null, 5000);
+}
+/* ---------- ревизия: сверить серию с коробкой ---------- */
+function bxRevCheck(v) {
+  closeModal();
+  const r = S.rev; if (!r) return;
+  const s = normSeries(v.series || '');
+  if (!s) return toast(t('bxRevNoSer'), 'bad', null, 7000);
+  const lots = revLotsAt(r.cur);
+  const hit = lots.filter(l => normSeries(l.series) === s);
+  if (hit.length) {
+    S.seriesHit = {}; hit.forEach(l => { S.seriesHit[l.id] = 1; });
+    renderRevision();
+    const el = $('[data-rvcard="' + hit[0].id + '"]'); if (el) el.scrollIntoView({ block: 'center' });
+    return toast(t('bxRevHit', { s, n: hit.length }), '', null, 6000);
+  }
+  // нет такой серии в этом месте: та же партия с ошибкой в серии — или другая (найдено)
+  const k = v.name ? skel(v.name) : '';
+  const cand = lots.filter(l => { const it = itemById(l.itemId); return it && (!k || skel(it.name).indexOf(k.slice(0, 5)) !== -1 || (v.barcode && it.barcode === v.barcode)); });
+  const list = cand.length ? cand : lots;
+  S.bxRev = v;
+  openModal('<h3>' + esc(t('bxRevMiss', { s, loc: locName(r.cur) })) + '</h3><div class="muted" style="margin-bottom:8px">' + esc(t('bxRevMissHint')) + '</div>' +
+    list.slice(0, 15).map(l => { const it = itemById(l.itemId); return '<div class="list-row"><div class="grow"><b>' + esc(it.name) + '</b> ' + esc(it.dosage) + '<div class="muted">' + expMeta(l) + '</div></div><button class="btn small ghost" data-act="bxRevThis" data-lot="' + esc(l.id) + '">' + esc(t('bxRevThis', { s })) + '</button></div>'; }).join('') +
+    '<div class="acts" style="flex-wrap:wrap"><button class="btn primary" data-act="bxRevNew">' + esc(t('bxRevNew')) + '</button><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button></div>');
+}
+Object.assign(H, {
+  boxPhoto: () => bxOpen('receive'),
+  bxDel: el => { BX.photos.splice(Number(el.dataset.i), 1); bxDraw(); },
+  bxGo: el => { if (!BX.photos.length) return toast(t('bxNeed'), 'bad'); return el.dataset.how === 'ai' ? bxAi() : bxLocal(); },
+  bxApplyTo: () => bxApplyTo(),
+  bxEditPhoto: el => bxOpen('edit', el.dataset.id),
+  bxLotPhoto: el => bxOpen('lot', el.dataset.lot),
+  bxRev: () => bxOpen('rev'),
+  bxFoundPhoto: () => bxOpen('found'),
+  bxRevThis: el => {
+    const v = S.bxRev || {}; const lot = revLotsAt(S.rev.cur).find(l => l.id === el.dataset.lot); if (!lot) return closeModal();
+    const ln = revLine(lot);
+    // меняется только серия; срок — как был (или как уже исправлен в этой ревизии); срок с коробки — отдельно, через ✏️
+    const exp = ln.edit ? ln.nexpiry : lot.expiry;
+    ln.edit = true; ln.nseries = normSeries(v.series); ln.nexpiry = exp || ''; ln.nnoExpiry = !exp;
+    revSave(); closeModal(); renderRevision();
+    const c = $('[data-rvcard="' + lot.id + '"]'); if (c) c.scrollIntoView({ block: 'center' });
+  },
+  bxRevNew: () => {
+    const v = S.bxRev || {};
+    revFoundModal();
+    const set = (sel, x) => { const e = $(sel); if (e && x) e.value = x; };
+    set('#rfName', v.name); set('#rfDose', v.dose); set('#rfSeries', normSeries(v.series || ''));
+    if (v.form && $('#rfForm')) { const c = formInfo(v.form).cat; if (S.rfCat !== c && typeof rfSetCat === 'function') rfSetCat(c); set('#rfForm', v.form); const u = $('#rfUnit'); if (u) u.value = formInfo(v.form).unit; }
+    if (v.expiry) { const no = $('#rfExpNo'); if (no) no.checked = false; set('#rfExpY', v.expiry.slice(0, 4)); set('#rfExpM', v.expiry.slice(5, 7)); const d = +v.expiry.slice(8, 10) === lastDay(+v.expiry.slice(0, 4), +v.expiry.slice(5, 7)) ? '' : v.expiry.slice(8, 10); const dd = $('#rfExpD'); if (dd) dd.value = d; }
+    S.rfExtra = { barcode: v.barcode, packCount: v.pack ? Number(v.pack) : '', substance: v.sub, packInfo: v.packInfo || '', condition: v.cond };
+  }
+});
+(function () {
+  const rf = revFoundModal;
+  revFoundModal = function () {
+    S.rfExtra = null;
+    const r = rf.apply(this, arguments);
+    const h = $('.modal h3'); if (h) h.insertAdjacentHTML('afterend', '<button type="button" class="btn ghost block" style="margin-bottom:8px" data-act="bxFoundPhoto">' + esc(t('bxFoundPhoto')) + '</button>');
+    return r;
+  };
+  const rs = revFoundSave;
+  revFoundSave = function () {
+    const n0 = S.rev ? S.rev.found.length : 0;
+    const r = rs.apply(this, arguments);
+    const x = S.rfExtra;
+    if (x && S.rev && S.rev.found.length > n0) {
+      const f = S.rev.found[S.rev.found.length - 1];
+      ['barcode', 'packCount', 'packInfo', 'condition'].forEach(k => { if (x[k]) f.item[k] = x[k]; });
+      if (x.substance && !f.item.substance) f.item.substance = x.substance;
+      S.rfExtra = null; revSave();
+    }
+    return r;
+  };
+  const rw = revWorkHtml;
+  revWorkHtml = function () {
+    const h = rw.apply(this, arguments);
+    // кнопка — над списком партий места
+    return h.replace('<div class="chips">', '<button class="btn ghost block" style="margin-bottom:8px" data-act="bxRev">' + esc(t('bxRevBtn')) + '</button><div class="chips">');
+  };
+})();
+/* ---------- штрихкод в приходе: дописывает код (и пустые серию / срок), но не меняет вписанное ---------- */
+(function () {
+  const sc = onScanFile;
+  onScanFile = async function (file) {
+    if (S.scanTarget !== 'receive') return sc.apply(this, arguments);
+    const ids = ['#rcvName', '#rcvSub', '#rcvForm', '#rcvDose', '#rcvUnit', '#rcvPackCount', '#rcvPackInfo', '#rcvCond', '#rcvMin'];
+    const g = sel => (($(sel) || {}).value || '');
+    const was = {}; ids.forEach(x => { const e = $(x); if (e) was[x] = e.value; });
+    const wasSer = g('#rcvSeries'), wasExp = { y: g('#rcvExpY'), m: g('#rcvExpM'), d: g('#rcvExpD'), no: !!($('#rcvNoExp') || {}).checked };
+    const wasChk = { strict: ($('#rcvStrict') || {}).checked };
+    const wasCat = S.rcv.cat, wasPick = S.rcv.pickedItemId, wasNote = ($('#rcvNameNote') || {}).innerHTML, wasMode = S.rcv.qtyMode, wasCode = g('#rcvBarcode');
+    const filled = !!String(was['#rcvName'] || '').trim();
+    const r = await sc.apply(this, arguments);
+    const code = g('#rcvBarcode');
+    const boxSer = g('#rcvSeries'), boxExp = { y: g('#rcvExpY'), m: g('#rcvExpM'), d: g('#rcvExpD'), no: !!($('#rcvNoExp') || {}).checked };
+    if (filled) {
+      // название уже вписано — карточка / каталог по штрихкоду ничего не меняют
+      if (S.rcv.cat !== wasCat) { S.rcv.cat = wasCat; renderReceiveSelects(); }
+      ids.forEach(x => { const e = $(x); if (e && was[x] !== undefined) e.value = was[x]; });
+      if ($('#rcvStrict')) $('#rcvStrict').checked = wasChk.strict;
+      S.rcv.pickedItemId = wasPick;
+      if ($('#rcvNameNote')) $('#rcvNameNote').innerHTML = wasNote;
+      S.rcv.qtyMode = wasMode;
+    }
+    // серия и срок: вписанное вами — главнее; с квадратного кода GS1 — только в пустые
+    if (String(wasSer).trim()) {
+      $('#rcvSeries').value = wasSer;
+      if (boxSer && normSeries(boxSer) !== normSeries(wasSer)) toast(t('bxSerDiff', { box: boxSer, you: wasSer }), 'bad', null, 9000);
+    }
+    const setE = e => { if ($('#rcvNoExp')) $('#rcvNoExp').checked = e.no; if ($('#rcvExpWrap')) $('#rcvExpWrap').classList.toggle('hidden', !!e.no); $('#rcvExpY').value = e.y; $('#rcvExpM').value = e.m; $('#rcvExpD').value = e.d; };
+    if (wasExp.y || wasExp.no) setE(wasExp); else if (boxExp.y) setE(boxExp); // день с кода (2027-03-15) сохраняется
+    if ($('#rcvBarcode')) $('#rcvBarcode').value = code;
+    try { updateDoseLabel(); if (filled) S.rcv.qtyMode = wasMode; updateQtyCalc(); if (filled) S.rcv.qtyMode = wasMode; } catch (e) { }
+    if (filled && code && code !== wasCode) toast(t('bxScanKeep', { code }), '', null, 5000);
+    return r;
+  };
+})();
+/* ---------- партия помнит, сколько в её упаковке (у одной карточки коробки по 5 и по 10) ---------- */
+(function () {
+  const em = expMeta;
+  expMeta = function (l) {
+    const h = em.apply(this, arguments);
+    const it = l && itemById(l.itemId);
+    const pc = l && Number(l.packCount);
+    return pc && (!it || Number(it.packCount) !== pc) ? h + ' · 📦 ' + esc(t('bxPackPer', { n: pc })) : h;
+  };
+  const rc = receiveCheck;
+  receiveCheck = function () {
+    const r = rc.apply(this, arguments);
+    try {
+      const p = S.pendingReceive; if (!p || !$('.modal')) return r;
+      const exist = S.view.items.find(i => itemKey(i.name, i.form, i.dosage) === itemKey(p.item.name, p.item.form, p.item.dosage));
+      const a = exist && Number(exist.packCount), b = Number(p.item.packCount);
+      if (a && b && a !== b) { const sum = $('.modal .sum'); if (sum) sum.insertAdjacentHTML('afterend', '<div class="info" style="margin-top:10px">' + esc(t('bxPackDiff', { a, b })) + '</div>'); }
+    } catch (e) { }
+    return r;
+  };
+  // правка партии: + штук в упаковке этой партии, + по фото
+  const el0 = editLotModal;
+  editLotModal = function (lotId) {
+    const r = el0.apply(this, arguments);
+    const lot = lotById(lotId); if (!lot || !$('#elSeries')) return r;
+    const acts = $('.modal .acts');
+    if (acts) acts.insertAdjacentHTML('beforebegin', '<div class="field"><label>' + esc(t('bxLotPack')) + '</label><input type="number" id="elPack" min="1" inputmode="numeric" value="' + esc(lot.packCount || '') + '"><div class="muted" style="font-size:12.5px">' + esc(t('bxLotPackHint')) + '</div></div>' +
+      '<button type="button" class="btn ghost block" style="margin-bottom:8px" data-act="bxLotPhoto" data-lot="' + esc(lotId) + '">' + esc(t('bxEditPhoto')) + '</button>');
+    return r;
+  };
+  window.editLotSave = async function (btn, lotId) {
+    const e = readExp('elExp');
+    if (!e) return toast(t('E_BAD_EXPIRY'), 'bad');
+    const pk0 = $('#elPack'); const lot0 = lotById(lotId);
+    const pk = pk0 && String(pk0.value.trim()) !== String((lot0 && lot0.packCount) || '') ? pk0 : null; // только если поменяли: при слиянии с партией-близнецом её число не затрётся
+    const pc = pk ? pk.value.trim() : undefined;
+    if (pc && !(/^\d+$/.test(pc) && +pc >= 1)) return toast(t('E_BAD_PACK'), 'bad');
+    const r = await busy(btn, () => rpcA('editLot', Object.assign({ lotId, series: $('#elSeries').value, expiry: e.expiry, noExpiry: e.noExpiry }, pk ? { packCount: pc === '' ? '' : Number(pc) } : {}), { op: true }));
+    if (!r) return;
+    closeModal(); toast(t('saved'));
+  };
+  // карточка: все партии (серия, срок, место, штук в упаковке) — править здесь же; и «обновить по фото»
+  const ei0 = editItemModal;
+  editItemModal = function (id) {
+    const r = ei0.apply(this, arguments);
+    const it = itemById(id); if (!it || !$('#eiName')) return r;
+    const lots = (S.view.lots || []).filter(l => l.itemId === id && l.id.indexOf('tmp_') !== 0);
+    const acts = $('.modal .acts');
+    if (acts) acts.insertAdjacentHTML('beforebegin', '<button type="button" class="btn ghost block" style="margin:6px 0" data-act="bxEditPhoto" data-id="' + esc(id) + '">' + esc(t('bxEditPhoto')) + '</button>' +
+      (lots.length && can(['edit', 'revision']) ? '<div class="lbl">' + esc(t('bxLots')) + '</div><div class="grp" style="margin-bottom:8px">' + lots.map(l => '<div class="list-row"><div class="grow">📍 ' + esc(locName(l.locationId)) + ' · <b>' + l.qty + '</b> ' + esc(unitShort(it.unit)) + '<div class="muted">' + expMeta(l) + '</div></div><button type="button" class="btn small ghost" data-act="editLotModal" data-lot="' + esc(l.id) + '">' + esc(t('bxLotEdit')) + '</button></div>').join('') + '</div>' : ''));
+    return r;
+  };
+})();
+
 
 function init() {
   vizTipInit();
