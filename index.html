@@ -31725,7 +31725,7 @@ function bxFromAi(a) {
   // в «Как записано» объём — через запятую («1,82 мг/мл, 1 мл»): так он попадает и в поле «Объём, мл»
   if (vol && !volRe.test(' ' + dose)) dose = (dose ? dose + ', ' : '') + vol + ' мл';
   const r = { name: String(a.name || '').trim(), form: allCodes.indexOf(a.form) !== -1 ? a.form : (typeof guessForm === 'function' ? guessForm(String(a.formText || '') + ' ' + String(a.packInfo || ''), '') : ''),
-    dose, series: String(a.series || '').trim().toUpperCase(), expiry: bxExp(a.expiry), mfr: String(a.mfr || '').trim(), barcode: String(a.barcode || '').replace(/\D/g, ''),
+    dose, series: String(a.series || '').toUpperCase().replace(/\s+/g, ''), /* серия — без пробелов: пробел, если он правда есть, врач поставит сам */ expiry: bxExp(a.expiry), mfr: String(a.mfr || '').trim(), barcode: String(a.barcode || '').replace(/\D/g, ''),
     pack: Number.isInteger(Number(a.packCount)) && Number(a.packCount) >= 1 ? String(Number(a.packCount)) : '', packInfo: String(a.packInfo || '').trim(), sub: String(a.substance || '').trim(),
     notes: String(a.notes || '').trim(), cond: ['normal', 'fridge', 'dark'].indexOf(a.storage) !== -1 ? a.storage : '', pick: null };
   if (r.barcode && !/^\d{8,14}$/.test(r.barcode)) r.barcode = '';
@@ -32111,6 +32111,7 @@ Object.assign(H, {
     const s = String(text || '');
     // «10 ampoules», «№10», «N 10», «10 ampul», «20 tablets», «100 шт.»
     const m = s.match(/(?:№|\bN|\bNo\.?)\s?(\d{1,4})\b/) || s.match(/\b(\d{1,4})\s*(?:ampoules?|ampul\w*|ампул\w*|amps?\b|tablets?|tablet\w*|tabletk?\w*|таблет\w*|tabs?\b|capsules?|kapsul\w*|капсул\w*|vials?|flakon\w*|флакон\w*|sachets?|шт\b|pcs\b|ədəd)/i);
+    if (r.series) r.series = String(r.series).replace(/\s+/g, '');
     if (m && !r.pack) { const n = Number(m[1]); if (n >= 1 && n <= 1000) r.pack = String(n); }
     // ампулы / флаконы: объём в «Как записано» через запятую (так он ляжет и в поле «Объём, мл»)
     if (/^med_(amp|vial|inf|pow)/.test(r.form || '') && r.dose && !/(?:^|[^\/\d,.])\d+(?:[.,]\d+)?\s*(?:ml|мл)\b/i.test(' ' + r.dose)) {
