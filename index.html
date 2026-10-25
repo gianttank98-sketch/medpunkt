@@ -16334,10 +16334,34 @@ function piiVariants(w) {
   out.forEach(v => { if (v.length >= 3) { res.push(v); if (v.length >= 6) res.push(v.slice(0, v.length - 2)); } });
   return res;
 }
+/** «Скелет» имени: одна запись для латиницы и кириллицы (Məmmədov = Мамедов = Мамедову, Hüseyn = Гусейн, Cəfər = Джафар):
+ *  буквы → общие, гласные убраны, двойные — одна. Для вычистки имён, написанных иначе, чем в карте (голосом — по-русски). */
+const PII_SK = { а: 'a', б: 'b', в: 'v', г: 'k', д: 'd', е: 'e', ё: 'e', ж: 'j', з: 'z', и: 'i', й: 'i', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'k', ц: 's', ч: 'c', ш: 's', щ: 's', ъ: '', ы: 'i', ь: '', э: 'e', ю: 'u', я: 'a',
+  ə: 'e', ı: 'i', ö: 'o', ü: 'u', ğ: 'k', q: 'k', x: 'k', h: 'k', g: 'k', ç: 'c', ş: 's', c: 'j', y: 'i', w: 'v' };
+function piiSkel(w) {
+  const low = String(w || '').toLowerCase().replace(/̇/g, '').replace(/дж/g, 'ж');
+  return low.split('').map(ch => PII_SK[ch] !== undefined ? PII_SK[ch] : ch).join('').replace(/[^a-z]/g, '').replace(/[aeiou]/g, '').replace(/(.)\1+/g, '$1');
+}
+function piiVSkel(w) {
+  const low = String(w || '').toLowerCase().replace(/̇/g, '').replace(/дж/g, 'ж');
+  return low.split('').map(ch => PII_SK[ch] !== undefined ? PII_SK[ch] : ch).join('').replace(/[^a-z]/g, '').replace(/[ae]/g, 'a').replace(/(.)\1+/g, '$1');
+}
+const PII_SK_CACHE = new WeakMap();
+function piiSkels(words) {
+  if (!Array.isArray(words)) return [];
+  let r = PII_SK_CACHE.get(words); if (r) return r;
+  const set = new Set();
+  // короткий «скелет» (Əliyev → l-v) совпал бы с обычными словами («левый») — для таких имён сравниваем с гласными (Əliyev = Алиев = Алиеву)
+  words.forEach(w => String(w || '').split(/[^\p{L}]+/u).forEach(p => { if (p.length >= 4) { const k = piiSkel(p); if (k.length >= 3) set.add(k); else { const v = piiVSkel(p).replace(/(.{4,})[aiou]$/, '$1'); if (v.length >= 4) set.add('~' + v); } /* Leyla → «lail»: Лейлы, Лейле */ } }));
+  r = Array.from(set); PII_SK_CACHE.set(words, r); return r;
+}
 /** Убрать из свободного текста ФИО, FİN, номера документов, адрес, дату рождения, телефоны (рекурсивно). */
 function dsScrub(v, words, depth) {
   if (typeof v === 'string') {
     let s = v;
+    // имя, написанное по-другому (другим алфавитом, с падежным окончанием): по «скелету» согласных
+    const sk = piiSkels(words);
+    if (sk.length) { try { s = s.replace(/\p{L}{4,}/gu, tok => { const k = piiSkel(tok); let v = null; return sk.some(x => x[0] === '~' ? ((v = v || piiVSkel(tok)).indexOf(x.slice(1)) === 0 && v.length <= x.length + 2) : (k.length >= 3 && k.indexOf(x) === 0 && k.length <= x.length + 2)) ? '[личное]' : tok; }); } catch (e) { } }
     words.forEach(w => {
       if (!w || w.length < 3) return;
       const esc2 = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -30773,6 +30797,7 @@ function ptLocMerge(p) { if (!p || !ptLocalOn()) return p; const l = ptLocGet()[
     let p = payload;
     // привязка «по месту»: документ / форма, созданные из карты или из разбора с картой
     if (PT.link && p && !p.patientId && ((a === 'docSave' && p.id === PT.link.doc) || (a === 'formSave' && p.id === PT.link.form))) p = Object.assign({}, p, { patientId: PT.link.pid });
+    else if (a === 'formSave' && p && !p.patientId && PT.formLink && PT.formLink[p.id]) p = Object.assign({}, p, { patientId: PT.formLink[p.id] });
     if (!ptLocalOn() || !/^patient/.test(a)) return orpc.call(this, action, p, arguments[2]);
     // «Помощник»: личное — на телефон, на сервер — без него; поиск — здесь
     let q = '';
@@ -31034,6 +31059,7 @@ psListHtml = function () {
   const chip = (m, l) => '<button class="chip' + (pt.mode === m ? ' on' : '') + '" data-act="ptMode" data-m="' + m + '">' + esc(t(l)) + '</button>';
   let h = '<div class="searchbar"><input type="search" id="ptQ" autocomplete="off" placeholder="' + esc(t('ptSearch')) + '" value="' + esc(pt.q || '') + '"></div>' +
     '<div class="chips" style="margin-bottom:8px">' + chip('active', 'ptActive') + chip('mine', 'ptMine') + chip('all', 'ptAll') + '</div>' +
+    (typeof window.ptListTop === 'function' ? window.ptListTop() : '') +
     (can('forms') ? '<button class="btn primary block" style="margin-bottom:8px" data-act="ptNew">' + esc(t('ptNew')) + '</button>' : '') +
     (ptLocalOn() ? '<div class="muted" style="font-size:12.5px;margin-bottom:6px">' + esc(t('ptLocal')) + '</div>' : '');
   if (pt.list === null) { setTimeout(ptLoad, 0); h += '<div class="muted">' + esc(t('loading')) + '</div>'; }
@@ -31077,6 +31103,7 @@ function ptCardHtml() {
   const items = (g.forms || []).map(f => ({ at: f.arrivedAt || f.createdAt, act: 'psOpenForm', id: f.id, title: t('ptFormTag') + (f.blankNo ? ' № ' + f.blankNo : ''), sub: [f.icd, f.dx, f.status === 'closed' ? t('dsClosed') : t('dsDraft')].filter(Boolean).join(' · ') }))
     .concat((g.docs || []).map(d => { const tp = DOC_TPL[d.type] || {}; return { at: d.updatedAt || d.createdAt, act: 'dsOpen', id: d.id, title: (tp.ic || '📄') + ' ' + (tp[S.lang === 'az' ? 'az' : 'ru'] || d.type) + (d.docNo ? ' № ' + d.docNo : ''), sub: [d.icd, d.dx, d.status === 'closed' ? t('dsClosed') : t('dsDraft')].filter(Boolean).join(' · ') }; }))
     .concat((g.cases || []).map(c => ({ at: c.updatedAt || c.createdAt, act: 'ptOpenCase', id: c.id, title: t('ptCaseTag') + ': ' + (c.title || ''), sub: [c.icd, c.dx].filter(Boolean).join(' · ') })))
+    .concat(typeof window.ptExtraItems === 'function' ? window.ptExtraItems(g) : []) // v58: записи наблюдения и фото
     .sort((a, b) => String(b.at).localeCompare(String(a.at)));
   const docBtns = Object.keys(DOC_TPL).filter(k => !DOC_TPL[k].noPatient && !DOC_TPL[k].quick).map(k => '<button class="chip" data-act="ptNewDoc" data-type="' + k + '">' + DOC_TPL[k].ic + ' ' + esc(S.lang === 'az' ? DOC_TPL[k].az : DOC_TPL[k].ru) + '</button>').join('');
   return '<button class="btn small ghost" data-act="ptBack">' + esc(t('ptBack')) + '</button>' +
@@ -31087,18 +31114,20 @@ function ptCardHtml() {
     (p.chronic ? '<div style="margin-top:4px"><b>' + esc(t('ptChronic')) + ':</b> ' + esc(p.chronic) + '</div>' : '') +
     '<div style="margin-top:4px"><b>' + esc(t('ptLead')) + ':</b> ' + esc(p.leadName || '—') + '</div>' +
     (p.note ? '<div class="muted" style="margin-top:4px">' + esc(p.note) + '</div>' : '') +
-    '<div class="row wrap" style="gap:6px;margin-top:8px">' + (can('forms') ? '<button class="btn small ghost" data-act="ptEdit">' + esc(t('ptEdit')) + '</button>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">' + (can('forms') ? '<button class="btn small ghost" data-act="ptEdit">' + esc(t('ptEdit')) + '</button>' +
       '<button class="btn small ghost" data-act="ptStatus" data-v="' + (p.status === 'closed' ? 'active' : 'closed') + '">' + esc(p.status === 'closed' ? t('ptReopen') : t('ptClose')) + '</button>' : '') +
     '<button class="btn small ghost" data-act="ptLogOpen">' + esc(t('ptLog')) + '</button></div></div>' +
-    (can('forms') ? '<div class="card"><div class="row wrap" style="gap:6px"><button class="btn primary" data-act="ptNewForm">' + esc(t('ptNewForm')) + '</button>' + (canAi() ? '<button class="btn" data-act="ptNewCase">' + esc(t('ptNewCase')) + '</button>' : '') + '</div>' +
-      '<div class="lbl" style="margin-top:8px">' + esc(t('ptNewDoc')) + '</div><div class="dx-row">' + docBtns + '</div></div>' : '') +
+    (typeof window.ptCardTop === 'function' ? window.ptCardTop(g) : '') +
+    (can('forms') ? '<div class="card"><div style="display:flex;flex-wrap:wrap;gap:6px"><button class="btn primary" data-act="ptNewForm">' + esc(t('ptNewForm')) + '</button>' + (canAi() ? '<button class="btn" data-act="ptNewCase">' + esc(t('ptNewCase')) + '</button>' : '') + '</div>' +
+      '<details style="margin-top:8px"><summary class="lbl" style="cursor:pointer">' + esc(t('ptNewDoc')) + ' ▾</summary><div class="dx-row" style="margin-top:6px">' + docBtns + '</div></details></div>' : '') +
     (canAi() ? '<button class="btn block" style="margin:6px 0" data-act="ptAudit">' + esc(t('psAudit')) + '</button><div id="psAuditBox">' + psAuditHtml() + '</div>' : '') +
     '<div class="lbl">' + esc(t('ptTimeline')) + ' (' + items.length + ')</div>' +
     (items.length ? '<div class="grp">' + items.map(x => '<div class="cs-list-row" data-act="' + x.act + '" data-id="' + esc(x.id) + '"><div class="grow"><div class="nm">' + esc(x.title) + '</div><div class="fd">' + esc(fmtDt(String(x.at || ''))) + (x.sub ? ' · ' + esc(x.sub) : '') + '</div></div></div>').join('') + '</div>' : '<div class="muted">' + esc(t('ptEmptyTl')) + '</div>');
 }
 async function ptOpen(id, force) {
+  const seq = PT.openSeq = (PT.openSeq || 0) + 1;
   const g = await ptGet(id, force);
-  if (!g) return;
+  if (!g || seq !== PT.openSeq) return; // пришёл ответ на старое открытие — новее уже в пути
   const pt = ptSt(); pt.cur = g;
   // проверка качества документов — как в прежнем профиле (без ФИО к ИИ)
   const st = dsSt(); st.prof = { head: { patient: ptFull(g.patient), fin: g.patient.fin, birthDate: g.patient.birthDate, sex: g.patient.sex }, forms: g.forms || [], docs: g.docs || [] }; st.audit = null;
@@ -31232,6 +31261,331 @@ Object.assign(H, {
   const seg = H.dsSeg;
   H.dsSeg = async function (el) { const r = await seg.apply(this, arguments); if (el && el.dataset.seg === 'patients') { const pt = ptSt(), st = dsSt(); if (pt.cur) { st.prof = null; st.audit = null; } pt.cur = null; pt.list = null; dsRender(); } return r; };
 })();
+
+/* =====================================================================
+ * v58 (9.34): 📝 наблюдение — дневник в карте пациента.
+ *  - «📝 Наблюдение» → выбрать пациента, который лечится («👤 Мои» сверху, потом все, кто лечится) → запись:
+ *    время осмотра, текст (🎤 голосом), показатели, анализы (быстрые кнопки), фото (снять / из галереи, с подписью).
+ *  - Всё попадает в ленту карты; работает и без связи (очередь), фото ждут в памяти телефона.
+ *  - Исправить можно (прежний текст сохраняется — «история исправлений»); удалить — с причиной.
+ *  - «🤖 Документ из наблюдения»: ИИ пишет выбранный документ по дневнику (без ФИО, FİN, дат рождения — обезличено).
+ * ===================================================================== */
+Object.assign(I18N.ru, {
+  pnBtn: '📝 Наблюдение', pnPickTitle: '📝 Наблюдение — кого осматриваете?', pnMine: '👤 Мои пациенты', pnOthers: '🩺 Все, кто лечится', pnNoneMine: 'Вы пока никого не ведёте.',
+  pnNoneAll: 'Сейчас никто не лечится. Пациента можно завести: «＋ Новый пациент».', pnTitle: '📝 Наблюдение', pnAt: 'Время осмотра', pnText: 'Что видите, что сделали (можно голосом 🎤)',
+  pnTextPh: 'Например: состояние средней тяжести, жалуется на… В лёгких… Живот мягкий… Введено…', pnVitals: 'Показатели', pnLabs: 'Анализы', pnLabAdd: '＋ Строка',
+  pnLabName: 'Анализ', pnLabVal: 'Результат', pnLabUnit: 'Ед.', pnPhotos: 'Фото (анализы, ЭКГ, рана, снимок)', pnCam: '📷 Снять', pnGal: '🖼 Из галереи', pnCaption: 'Подпись к фото',
+  pnSave: 'Сохранить в карту', pnSaved: '📝 Записано в карту пациента', pnQueued: '📝 Записано — уйдёт на сервер, когда будет связь', pnEmpty: 'Напишите хоть что-то, впишите показатель или добавьте фото.',
+  pnPending: '⏳ ждёт отправки', pnPhotoTag: '📷 Фото', pnNoteTag: '📝', pnBy: 'записал(а)', pnEdited: 'исправлено {n} раз', pnEdit: '✏️ Исправить', pnDel: '🗑 Удалить',
+  pnDelReason: 'Причина удаления (видна в журнале):', pnHist: '🕓 История исправлений', pnHistNone: 'Не исправлялось.', pnWas: 'было', pnLoadingPhoto: 'Загружаю фото…',
+  pnAiBtn: '🤖 Документ из наблюдения', pnAiTitle: '🤖 Какой документ написать по наблюдению?', pnAiHint: 'ИИ получит записи без ФИО, FİN и даты рождения и заполнит черновик — вы проверите. Что неясно — спросит.',
+  pnAiNone: 'В наблюдении пока нет записей.', pnAiWait: 'Есть записи, которые ещё не дошли до сервера. Дождитесь связи.', pnLocalHint: 'ФИО и FİN в тексте заменятся на [личное] — они хранятся только на этом телефоне.',
+  pnPhotoBig: 'Фото слишком большое.', pnVitBad: '«{n}»: впишите число от {lo} до {hi} (глюкоза — в ммоль/л).',
+  pnPhotoPii: 'На фото анализов и ЭКГ часто видно ФИО. Фото хранится на сервере (не только на телефоне). Отправить?', pnLabPick: 'Быстро:',
+  E_PN_BAD: 'Неверная запись наблюдения.', E_PN_EMPTY: 'Пустая запись.', E_PN_NOT_FOUND: 'Запись не найдена.', E_PN_NOT_MINE: 'Исправить или удалить запись может только её автор или админ форм.'
+});
+Object.assign(I18N.az, {
+  pnBtn: '📝 Müşahidə', pnPickTitle: '📝 Müşahidə — kimi müayinə edirsiniz?', pnMine: '👤 Mənim pasiyentlərim', pnOthers: '🩺 Müalicədə olanların hamısı', pnNoneMine: 'Hələ heç kimi aparmırsınız.',
+  pnNoneAll: 'İndi müalicədə olan yoxdur. Pasiyenti əlavə etmək olar: «＋ Yeni pasiyent».', pnTitle: '📝 Müşahidə', pnAt: 'Müayinə vaxtı', pnText: 'Nə görürsünüz, nə etdiniz (səslə də olar 🎤)',
+  pnTextPh: 'Məsələn: vəziyyəti orta ağırlıqdadır, şikayət edir… Ağciyərlərdə… Qarın yumşaqdır… Yeridilib…', pnVitals: 'Göstəricilər', pnLabs: 'Analizlər', pnLabAdd: '＋ Sətir',
+  pnLabName: 'Analiz', pnLabVal: 'Nəticə', pnLabUnit: 'Vahid', pnPhotos: 'Foto (analiz, EKQ, yara, şəkil)', pnCam: '📷 Çək', pnGal: '🖼 Qalereyadan', pnCaption: 'Foto üçün qeyd',
+  pnSave: 'Karta yaz', pnSaved: '📝 Pasiyentin kartına yazıldı', pnQueued: '📝 Yazıldı — əlaqə olanda serverə gedəcək', pnEmpty: 'Nəsə yazın, göstərici daxil edin və ya foto əlavə edin.',
+  pnPending: '⏳ göndərilməyi gözləyir', pnPhotoTag: '📷 Foto', pnNoteTag: '📝', pnBy: 'yazdı', pnEdited: '{n} dəfə düzəldilib', pnEdit: '✏️ Düzəlt', pnDel: '🗑 Sil',
+  pnDelReason: 'Silinmə səbəbi (jurnalda görünür):', pnHist: '🕓 Düzəlişlərin tarixçəsi', pnHistNone: 'Düzəldilməyib.', pnWas: 'idi', pnLoadingPhoto: 'Foto yüklənir…',
+  pnAiBtn: '🤖 Müşahidədən sənəd', pnAiTitle: '🤖 Müşahidəyə görə hansı sənədi yazaq?', pnAiHint: 'Sİ qeydləri ad, FİN və doğum tarixi olmadan alacaq və qaralama dolduracaq — siz yoxlayacaqsınız. Aydın olmayanı soruşacaq.',
+  pnAiNone: 'Müşahidədə hələ qeyd yoxdur.', pnAiWait: 'Hələ serverə çatmayan qeydlər var. Əlaqəni gözləyin.', pnLocalHint: 'Mətndəki ad və FİN [личное] ilə əvəz olunacaq — onlar yalnız bu telefonda saxlanılır.',
+  pnPhotoBig: 'Foto çox böyükdür.', pnVitBad: '«{n}»: {lo}-dan {hi}-dək rəqəm yazın (qlükoza — mmol/l).',
+  pnPhotoPii: 'Analiz və EKQ fotolarında çox vaxt ad-soyad görünür. Foto serverdə saxlanılır (yalnız telefonda yox). Göndərilsin?', pnLabPick: 'Tez:',
+  E_PN_BAD: 'Müşahidə qeydi yanlışdır.', E_PN_EMPTY: 'Boş qeyd.', E_PN_NOT_FOUND: 'Qeyd tapılmadı.', E_PN_NOT_MINE: 'Qeydi yalnız müəllifi və ya formalar admini düzəldə və ya silə bilər.'
+});
+// быстрые анализы: [название, единица]
+const PN_LAB_QUICK = [['Hb', 'г/л'], ['Лейкоциты', '×10⁹/л'], ['Тромбоциты', '×10⁹/л'], ['СОЭ', 'мм/ч'], ['Глюкоза', 'ммоль/л'], ['Креатинин', 'мкмоль/л'], ['Мочевина', 'ммоль/л'],
+  ['K⁺', 'ммоль/л'], ['Na⁺', 'ммоль/л'], ['СРБ', 'мг/л'], ['Тропонин', 'нг/л'], ['D-димер', 'мкг/мл'], ['АЛТ', 'Ед/л'], ['АСТ', 'Ед/л'], ['Билирубин', 'мкмоль/л'], ['Лактат', 'ммоль/л'],
+  ['pH', ''], ['pCO₂', 'мм рт. ст.'], ['pO₂', 'мм рт. ст.'], ['МНО', ''], ['ОАМ', '']];
+const PN = { draft: null, photos: [] };
+function pnNewId() { return 'N' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10).replace(/[^a-z0-9]/g, 'x'); }
+function pnVitText(v) { return CS_VITALS.filter(x => v && v[x[0]] !== undefined && v[x[0]] !== '').map(x => t(x[1]) + ' ' + v[x[0]]).join(', '); }
+function pnLabsText(a) { return (a || []).map(x => x.name + ' ' + [x.value, x.unit].filter(Boolean).join(' ') + (x.note ? ' (' + x.note + ')' : '')).join('; '); }
+/** Записи, которые ещё в очереди телефона (без связи) — тоже видны в ленте. */
+function pnQueuedFor(pid) { return (S.queue || []).filter(o => (o.action === 'pnoteSave' || o.action === 'pnotePhoto') && o.payload && o.payload.patientId === pid); }
+// лента карты: записи и фото
+window.ptExtraItems = function (g) {
+  const have = {};
+  const out = (g.notes || []).map(n => { have[n.id] = 1; return pnItem(n, false); });
+  pnQueuedFor(g.patient.id).forEach(o => { if (!have[o.payload.id]) out.push(pnItem(Object.assign({ kind: o.action === 'pnotePhoto' ? 'photo' : 'note' }, o.payload), true)); });
+  return out;
+};
+function pnItem(n, pending) {
+  const photo = n.kind === 'photo';
+  const head = photo ? t('pnPhotoTag') + (n.caption ? ': ' + n.caption : '') : t('pnNoteTag') + ' ' + (String(n.text || '').split('\n')[0].slice(0, 90) || pnVitText(n.vitals) || pnLabsText(n.labs).slice(0, 90));
+  const sub = [photo ? '' : (n.text ? pnVitText(n.vitals) : ''), photo || !(n.labs || []).length ? '' : t('pnLabs') + ': ' + (n.labs || []).length, n.createdByName ? t('pnBy') + ' ' + n.createdByName : '', pending ? t('pnPending') : '', n.edits ? t('pnEdited', { n: n.edits }) : ''].filter(Boolean).join(' · ');
+  return { at: String(n.at || '').replace('T', ' '), act: pending ? 'pnNoop' : 'pnView', id: n.id, title: head, sub };
+}
+window.ptCardTop = function (g) {
+  if (!can('forms')) return '';
+  return '<div class="card"><div style="display:flex;flex-wrap:wrap;gap:6px"><button class="btn primary" data-act="pnNew" data-id="' + esc(g.patient.id) + '">' + esc(t('pnBtn')) + '</button>' +
+    (canAi() ? '<button class="btn" data-act="pnAi">' + esc(t('pnAiBtn')) + '</button>' : '') + '</div></div>';
+};
+window.ptListTop = function () { return can('forms') ? '<button class="btn primary block" style="margin-bottom:8px;font-size:16px" data-act="pnPick">' + esc(t('pnBtn')) + '</button>' : ''; };
+/* ---------- выбор пациента ---------- */
+async function pnPick() {
+  openModal('<h3>' + esc(t('pnPickTitle')) + '</h3><div id="pnPickBox"><div class="muted">' + esc(t('loading')) + '</div></div><div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn ghost" data-act="pnPickNew">' + esc(t('ptNew')) + '</button></div>');
+  const [m, a] = await Promise.all([rpc('patientList', { mode: 'mine' }, 30000).catch(() => null), rpc('patientList', { mode: 'active' }, 30000).catch(() => null)]);
+  const box = $('#pnPickBox'); if (!box) return;
+  const mine = m && m.ok ? m.rows : [], ids = {}; mine.forEach(x => { ids[x.id] = 1; });
+  const rest = (a && a.ok ? a.rows : []).filter(x => !ids[x.id]);
+  const row = x => '<div class="cs-list-row" data-act="pnPickGo" data-id="' + esc(x.id) + '"><span>👤</span><div class="grow"><div class="nm">' + esc(ptLabel(x)) + '</div><div class="fd">' +
+    esc([x.fin, x.birthDate ? t('ptAge', { n: dsAge(x.birthDate) }) : '', x.leadName ? t('ptLead') + ': ' + x.leadName : ''].filter(Boolean).join(' · ')) + (x.allergy ? ' <span style="color:var(--red)">⚠️ ' + esc(x.allergy) + '</span>' : '') + '</div></div></div>';
+  box.innerHTML = '<div class="lbl">' + esc(t('pnMine')) + '</div>' + (mine.length ? '<div class="grp">' + mine.map(row).join('') + '</div>' : '<div class="muted" style="margin-bottom:8px">' + esc(t('pnNoneMine')) + '</div>') +
+    '<div class="lbl" style="margin-top:10px">' + esc(t('pnOthers')) + '</div>' + (rest.length ? '<div class="grp" style="max-height:45vh;overflow:auto">' + rest.map(row).join('') + '</div>' : (mine.length ? '' : '<div class="muted">' + esc(t('pnNoneAll')) + '</div>'));
+}
+/* ---------- запись наблюдения ---------- */
+async function pnEdit(pid, note) {
+  const g = await ptGet(pid, true); if (!g) return;
+  const p = g.patient, n = note || {};
+  PN.draft = { pid: p.id, id: n.id || '', p }; // карта могла быть объединена — пишем в итоговую
+  PN.photos = [];
+  const v = n.vitals || {};
+  const nowL = nowLocal();
+  openModal('<h3>' + esc(t('pnTitle')) + ' — ' + esc(ptLabel(p)) + '</h3>' +
+    (p.allergy ? '<div class="hint" style="display:block;margin-bottom:6px;color:var(--red)">⚠️ ' + esc(t('ptAllergy')) + ': ' + esc(p.allergy) + '</div>' : '') +
+    (ptLocalOn() ? '<div class="muted" style="font-size:12.5px;margin-bottom:6px">' + esc(t('pnLocalHint')) + '</div>' : '') +
+    '<div class="field"><label>' + esc(t('pnAt')) + '</label><input type="datetime-local" id="pnAt" value="' + esc((n.at ? String(n.at).replace(' ', 'T') : nowL).slice(0, 16)) + '" max="' + esc(nowL) + '"></div>' +
+    '<div class="field"><label>' + esc(t('pnText')) + '</label><textarea id="pnText" rows="6" maxlength="6000" placeholder="' + esc(t('pnTextPh')) + '">' + esc(n.text || '') + '</textarea></div>' +
+    '<div class="lbl">' + esc(t('pnVitals')) + '</div><div class="cs-vit" style="margin-bottom:8px">' + CS_VITALS.map(x => '<div><label>' + esc(t(x[1])) + '</label><input class="pn-v" data-k="' + x[0] + '" type="number" step="any" inputmode="decimal" value="' + esc(v[x[0]] === undefined ? '' : String(v[x[0]])) + '"></div>').join('') + '</div>' +
+    '<div class="lbl">' + esc(t('pnLabs')) + '</div><div id="pnLabs">' + (n.labs || []).map(pnLabRow).join('') + '</div>' +
+    '<div class="muted" style="font-size:12.5px;margin:4px 0 2px">' + esc(t('pnLabPick')) + '</div><div class="dx-row">' + PN_LAB_QUICK.map((q, i) => '<button type="button" class="chip" data-act="pnLabQ" data-i="' + i + '">' + esc(q[0]) + '</button>').join('') +
+    '<button type="button" class="chip" data-act="pnLabAdd">' + esc(t('pnLabAdd')) + '</button></div>' +
+    (n.id ? '' : '<div class="lbl" style="margin-top:8px">' + esc(t('pnPhotos')) + '</div><div id="pnPh"></div><div class="row" style="gap:6px;margin-bottom:6px"><label class="btn small ghost">' + esc(t('pnCam')) + '<input type="file" accept="image/*" capture="environment" id="pnCamIn" style="display:none"></label>' +
+      '<label class="btn small ghost">' + esc(t('pnGal')) + '<input type="file" accept="image/*" multiple id="pnGalIn" style="display:none"></label></div>') +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="pnSave">' + esc(t('pnSave')) + '</button></div>');
+  ['#pnCamIn', '#pnGalIn'].forEach(sel => { const i = $(sel); if (i) i.addEventListener('change', () => { Array.from(i.files || []).slice(0, 10).forEach(pnAddPhoto); i.value = ''; }); });
+}
+function pnLabRow(x) {
+  x = x || {};
+  return '<div class="row pn-lab" style="gap:4px;margin-bottom:4px"><input class="grow pn-ln" maxlength="80" placeholder="' + esc(t('pnLabName')) + '" value="' + esc(x.name || '') + '" style="min-width:0;flex:2">' +
+    '<input class="pn-lv" maxlength="40" placeholder="' + esc(t('pnLabVal')) + '" value="' + esc(x.value || '') + '" style="min-width:0;flex:1.2" inputmode="decimal">' +
+    '<input class="pn-lu" maxlength="20" placeholder="' + esc(t('pnLabUnit')) + '" value="' + esc(x.unit || '') + '" style="min-width:0;flex:1"><button type="button" class="btn small ghost" data-act="pnLabDel">✕</button></div>';
+}
+async function pnAddPhoto(file) {
+  let b64;
+  try { b64 = await photoB64(file, 2000); } catch (e) { return toast(t('pnPhotoBig'), 'bad'); }
+  PN.photos.push({ b64, caption: '' });
+  pnDrawPhotos();
+}
+function pnDrawPhotos() {
+  const box = $('#pnPh'); if (!box) return;
+  box.innerHTML = PN.photos.map((x, i) => '<div class="row" style="gap:6px;margin-bottom:6px;align-items:center"><img src="data:image/jpeg;base64,' + x.b64 + '" style="width:64px;height:64px;object-fit:cover;border-radius:8px">' +
+    '<input class="grow pn-cap" data-i="' + i + '" maxlength="200" placeholder="' + esc(t('pnCaption')) + '" value="' + esc(x.caption) + '"><button type="button" class="btn small ghost" data-act="pnPhDel" data-i="' + i + '">✕</button></div>').join('');
+  $$('.pn-cap', box).forEach(el => el.addEventListener('input', () => { const x = PN.photos[Number(el.dataset.i)]; if (x) x.caption = el.value; }));
+}
+/** «Помощник врача»: ФИО / FİN карты — только на телефоне, из текста записи они убираются. */
+function pnClean(text, p) {
+  if (!ptLocalOn() || !p) return text;
+  const words = dsPiiWords([p.surname, p.name, p.patronymic, ptFull(p), p.fin, p.phone, p.address], p.birthDate);
+  return dsScrub(text, words);
+}
+async function pnSaveGo(el) {
+  const d = PN.draft; if (!d || PN.saving) return;
+  const text = pnClean((($('#pnText') || {}).value || '').trim(), d.p);
+  const vitals = {}; let bad = null;
+  $$('.pn-v').forEach(i => {
+    i.style.borderColor = '';
+    if (i.value === '') return;
+    const lim = CS_VITALS.find(x => x[0] === i.dataset.k); const n = Number(String(i.value).replace(',', '.'));
+    if (isFinite(n) && n >= lim[2] && n <= lim[3]) vitals[i.dataset.k] = n;
+    else { i.style.borderColor = 'var(--red)'; if (!bad) bad = { i, lbl: t(lim[1]), lo: lim[2], hi: lim[3] }; }
+  });
+  // показатель вне разумных пределов (например, глюкоза в мг/дл) — не теряем молча, а просим поправить
+  if (bad) { bad.i.focus(); return toast(t('pnVitBad', { n: bad.lbl, lo: bad.lo, hi: bad.hi }), 'bad', null, 6000); }
+  const labs = $$('.pn-lab').map(r => ({ name: pnClean($('.pn-ln', r).value.trim(), d.p), value: pnClean($('.pn-lv', r).value.trim(), d.p), unit: $('.pn-lu', r).value.trim() })).filter(x => x.name && x.value);
+  let at = (($('#pnAt') || {}).value || nowLocal()); if (at > nowLocal()) at = nowLocal();
+  at = at.replace('T', ' ').slice(0, 16);
+  const hasNote = !!(text || Object.keys(vitals).length || labs.length);
+  if (!hasNote && !PN.photos.length) return toast(t('pnEmpty'), 'bad');
+  // «Помощник врача»: на распечатках анализов и ЭКГ часто видно ФИО — фото уйдёт на сервер как есть
+  if (PN.photos.length && ptLocalOn() && !confirm(t('pnPhotoPii'))) return;
+  try { if (typeof micStop === 'function' && MIC && MIC.on) micStop(); } catch (e) { }
+  if (d.id) {
+    // исправление — сразу на сервер (прежний текст сохранится в истории)
+    const r = await busy(el, () => rpcA('pnoteSave', { id: d.id, patientId: d.pid, at, text, vitals, labs, opId: newOpId() }));
+    if (!r) return;
+    closeModal(); toast(t('pnSaved'));
+    return ptAfterNote(d.pid);
+  }
+  // двойное нажатие: черновик забран сразу — второе нажатие ничего не создаст
+  PN.saving = true; PN.draft = null; const photos = PN.photos; PN.photos = [];
+  if (el) el.disabled = true;
+  const label = t('pnTitle') + ' — ' + ptLabel(d.p);
+  try {
+  if (hasNote) fQueue('pnoteSave', { id: pnNewId(), patientId: d.pid, at, text, vitals, labs }, label);
+  for (const ph of photos) {
+    const key = 'p' + newOpId();
+    try { await idbPut(key, ph.b64); } catch (e) { S.photoMem = S.photoMem || {}; S.photoMem[key] = ph.b64; }
+    fQueue('pnotePhoto', { id: pnNewId(), patientId: d.pid, at, caption: pnClean(String(ph.caption || '').slice(0, 200), d.p), mime: 'image/jpeg', idb: key }, t('pnPhotoTag') + ' — ' + ptLabel(d.p));
+  }
+  } finally { PN.saving = false; }
+  closeModal();
+  toast(S.online ? t('pnSaved') : t('pnQueued'));
+  ptAfterNote(d.pid);
+}
+/** Карта открыта — обновить ленту (сразу — с записями из очереди, потом — с сервера). */
+function pnOnCard(pid) { const pt = ptSt(), st = dsSt(); return S.screen === 'forms' && st.seg === 'patients' && !st.cur && !S.fv && pt.cur && pt.cur.patient.id === pid && !$('.modal'); }
+function ptAfterNote(pid) {
+  delete PT.cache[pid];
+  const pt = ptSt();
+  if (S.screen === 'forms' && dsSt().seg === 'patients' && pt.cur && pt.cur.patient.id === pid) { dsRender(true); clearTimeout(PN.rT); PN.rT = setTimeout(() => { if (pnOnCard(pid)) ptOpen(pid, true); }, 1500); }
+  else ptOpen(pid, true);
+}
+PREP.pnotePhoto = PREP.formAttach;
+DONE.pnotePhoto = function (op) { if (op.payload.idb) idbDel(op.payload.idb); if (S.photoMem) delete S.photoMem[op.payload.idb]; pnRefreshIfOpen(op.payload.patientId); };
+DONE.pnoteSave = function (op) { pnRefreshIfOpen(op.payload.patientId); };
+function pnRefreshIfOpen(pid) {
+  delete PT.cache[pid];
+  const pt = ptSt();
+  if (pnOnCard(pid)) { clearTimeout(PN.rT); PN.rT = setTimeout(() => { if (pnOnCard(pid)) ptOpen(pid, true); }, 600); } // врач ушёл в документ — не выдёргивать
+}
+// поле записи — можно голосом (кнопка 🎤)
+(function () {
+  const ok = window.micTargetOk;
+  if (typeof ok === 'function') window.micTargetOk = function (el) { if (el && el.id === 'pnText') return true; return ok.apply(this, arguments); };
+})();
+/* ---------- просмотр записи / фото ---------- */
+async function pnView(id) {
+  const g = ptSt().cur; if (!g) return;
+  const n = (g.notes || []).find(x => x.id === id); if (!n) return;
+  const canEd = n.mine || can('formsEdit');
+  const meta = '<div class="muted" style="margin-bottom:6px">' + esc(fmtDt(n.at)) + ' · ' + esc(t('pnBy')) + ' ' + esc(n.createdByName || '') + (n.edits ? ' · ' + esc(t('pnEdited', { n: n.edits })) : '') + '</div>';
+  const acts = '<div class="acts" style="flex-wrap:wrap">' + (n.kind === 'note' && canEd ? '<button class="btn ghost" data-act="pnEditGo" data-id="' + esc(n.id) + '">' + esc(t('pnEdit')) + '</button>' : '') +
+    (n.edits ? '<button class="btn ghost" data-act="pnHist" data-id="' + esc(n.id) + '">' + esc(t('pnHist')) + '</button>' : '') +
+    (canEd ? '<button class="btn ghost" data-act="pnDel" data-id="' + esc(n.id) + '">' + esc(t('pnDel')) + '</button>' : '') +
+    '<button class="btn primary" data-act="closeModal">' + esc(t('close')) + '</button></div>';
+  if (n.kind === 'photo') {
+    openModal('<h3>' + esc(t('pnPhotoTag')) + (n.caption ? ': ' + esc(n.caption) : '') + '</h3>' + meta + '<div id="pnImg" class="muted">' + esc(t('pnLoadingPhoto')) + '</div>' + acts);
+    const r = await rpc('pnoteFile', { id }, 90000).catch(() => null);
+    const box = $('#pnImg'); if (!box) return;
+    box.innerHTML = r && r.ok ? '<img src="data:' + esc(r.mime || 'image/jpeg') + ';base64,' + r.b64 + '" style="max-width:100%;border-radius:8px">' : esc(r ? errText(r) : t('E_NETWORK'));
+    return;
+  }
+  openModal('<h3>' + esc(t('pnTitle')) + '</h3>' + meta + (n.text ? '<div style="white-space:pre-wrap;margin-bottom:8px">' + esc(n.text) + '</div>' : '') +
+    (Object.keys(n.vitals || {}).length ? '<div style="margin-bottom:6px"><b>' + esc(t('pnVitals')) + ':</b> ' + esc(pnVitText(n.vitals)) + '</div>' : '') +
+    ((n.labs || []).length ? '<div><b>' + esc(t('pnLabs')) + ':</b></div><div class="grp" style="margin-bottom:6px">' + n.labs.map(x => '<div class="list-row"><span class="grow">' + esc(x.name) + '</span><b>' + esc(x.value) + '</b> <span class="muted">' + esc(x.unit || '') + '</span></div>').join('') + '</div>' : '') + acts);
+}
+Object.assign(H, {
+  pnPick: () => pnPick(),
+  pnPickGo: el => { closeModal(); pnEdit(el.dataset.id); },
+  pnPickNew: () => { closeModal(); ptEditModal(null); },
+  pnNew: el => pnEdit(el.dataset.id),
+  pnNoop: () => toast(t('pnPending')),
+  pnView: el => pnView(el.dataset.id),
+  pnSave: el => pnSaveGo(el),
+  pnLabAdd: () => { const b = $('#pnLabs'); if (b) { b.insertAdjacentHTML('beforeend', pnLabRow()); const r = $$('.pn-lab', b); const last = r[r.length - 1]; if (last) $('.pn-ln', last).focus(); } },
+  pnLabQ: el => { const q = PN_LAB_QUICK[Number(el.dataset.i)]; const b = $('#pnLabs'); if (!q || !b) return; b.insertAdjacentHTML('beforeend', pnLabRow({ name: q[0], unit: q[1] })); const r = $$('.pn-lab', b); const last = r[r.length - 1]; if (last) $('.pn-lv', last).focus(); },
+  pnLabDel: el => { const r = el.closest('.pn-lab'); if (r) r.remove(); },
+  pnPhDel: el => { PN.photos.splice(Number(el.dataset.i), 1); pnDrawPhotos(); },
+  pnEditGo: el => { const g = ptSt().cur; const n = g && (g.notes || []).find(x => x.id === el.dataset.id); if (!n) return; closeModal(); pnEdit(g.patient.id, n); },
+  pnDel: async el => {
+    const g = ptSt().cur; if (!g) return;
+    const reason = (prompt(t('pnDelReason'), '') || '').trim();
+    if (reason.length < 3) return;
+    const r = await busy(el, () => rpcA('pnoteDelete', { id: el.dataset.id, reason, opId: newOpId() }));
+    if (r) { closeModal(); ptOpen(g.patient.id, true); }
+  },
+  pnHist: async el => {
+    const r = await rpcA('pnoteHistory', { id: el.dataset.id }).catch(() => null); if (!r) return;
+    openModal('<h3>' + esc(t('pnHist')) + '</h3>' + (r.rows.length ? r.rows.slice().reverse().map(h => '<div class="f-rx"><div class="muted">' + esc(t('pnWas')) + ' · ' + esc(fmtDt(h.savedAt || '')) + ' · ' + esc(h.by || '') + ' · ' + esc(t('pnAt')) + ': ' + esc(fmtDt(h.at || '')) + '</div>' +
+      (h.text ? '<div style="white-space:pre-wrap">' + esc(h.text) + '</div>' : '') + (Object.keys(h.vitals || {}).length ? '<div>' + esc(pnVitText(h.vitals)) + '</div>' : '') + ((h.labs || []).length ? '<div>' + esc(pnLabsText(h.labs)) + '</div>' : '') + '</div>').join('') : '<div class="muted">' + esc(t('pnHistNone')) + '</div>') +
+      '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+  },
+  pnAi: () => {
+    const g = ptSt().cur; if (!g) return;
+    if (!(g.notes || []).length) return toast(t('pnAiNone'), 'bad');
+    const types = Object.keys(DOC_TPL).filter(k => !DOC_TPL[k].noPatient && !DOC_TPL[k].quick);
+    openModal('<h3>' + esc(t('pnAiTitle')) + '</h3><div class="muted" style="margin-bottom:8px">' + esc(t('pnAiHint')) + '</div><div class="dx-row">' +
+      types.map(k => '<button class="chip" data-act="pnAiGo" data-type="' + k + '">' + DOC_TPL[k].ic + ' ' + esc(S.lang === 'az' ? DOC_TPL[k].az : DOC_TPL[k].ru) + '</button>').join('') + '</div>' +
+      '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button></div>');
+  },
+  pnAiGo: async el => {
+    const g = ptSt().cur; if (!g) return;
+    if (pnQueuedFor(g.patient.id).length) return toast(t('pnAiWait'), 'bad');
+    closeModal();
+    const type = el.dataset.type;
+    const diary = pnDiaryText(g);
+    // черновик этого вида у пациента уже есть — дописываем его, иначе новый (ФИО — из карты)
+    const draft = (g.docs || []).filter(d => d.type === type && d.status !== 'closed').sort((a, b) => String(b.updatedAt || b.createdAt).localeCompare(String(a.updatedAt || a.createdAt)))[0];
+    if (draft) { dsSt().seg = type === 'rx' ? 'rx' : 'docs'; await dsOpen(draft.id); }
+    else await ptNewDocFor(type, g);
+    const cur = dsSt().cur;
+    if (!cur || cur.type !== type) return;
+    // дневник — только для разбора ЭТОГО документа (если оформление сорвётся — не попадёт к другому пациенту)
+    S.pnAi = { pid: g.patient.id, text: diary, docId: cur.id, type };
+    try { await dsAiAssist(); } finally { S.pnAi = null; }
+  }
+});
+/** Дневник для ИИ: по порядку времени, обезличено (ФИО, FİN, телефон, адрес, дата рождения карты вычищаются из текста). */
+function pnDiaryText(g) {
+  const p = g.patient;
+  const age = dsAge(p.birthDate);
+  const words = dsPiiWords([p.surname, p.name, p.patronymic, ptFull(p), p.fin, p.phone, p.address], p.birthDate);
+  const lines = (g.notes || []).slice().sort((a, b) => String(a.at).localeCompare(String(b.at))).map(n => {
+    if (n.kind === 'photo') return '[' + n.at + '] фото' + (n.caption ? ': ' + n.caption : '') + ' (само фото ИИ не передаётся)';
+    return '[' + n.at + '] ' + [n.text, Object.keys(n.vitals || {}).length ? 'Показатели: ' + pnVitText(n.vitals) : '', (n.labs || []).length ? 'Анализы: ' + pnLabsText(n.labs) : ''].filter(Boolean).join('\n  ');
+  });
+  const head = 'Пациент: ' + (p.sex === 'm' ? 'мужчина' : p.sex === 'f' ? 'женщина' : 'пол не указан') + (age !== '' ? ', ' + age + ' лет' : '') + '. Аллергия: ' + (p.allergy || 'не указана') + (p.chronic ? '. Хронические: ' + p.chronic : '') + '.';
+  return dsScrub(head + '\n' + lines.join('\n'), words).slice(0, 30000);
+}
+// разбор «оформления» из наблюдения: привязан к карте; в первое сообщение — дневник
+(function () {
+  if (typeof paperMsg !== 'function') return;
+  const pm = paperMsg;
+  paperMsg = async function (c) {
+    const base = await pm.apply(this, arguments);
+    const x = S.pnAi;
+    if (!x || !c || !c.data || (c.data.docs || {})[x.type] !== x.docId) return base;
+    S.pnAi = null;
+    if (c && c.data && !c.data.patientId) c.data.patientId = x.pid;
+    return base + '\n\nДНЕВНИК НАБЛЮДЕНИЯ ВРАЧА (записи по времени осмотра, обезличено; [личное] — вычищенные личные данные):\n' + x.text +
+      '\n\nЗаполни этот документ по дневнику (черновик — врач подтвердит): даты и время событий — из записей; динамику состояния, показателей и анализов — как в записях; ничего не выдумывай. Чего не хватает для обязательных полей — спроси одним сообщением.';
+  };
+})();
+/* ---------- 9.34: в отделении нет мест хранения — сказать прямо и дать создать (раньше в списке были только заголовки зон) ---------- */
+Object.assign(I18N.ru, { nlTitle: '📍 В этом отделении нет мест хранения', nlText: 'Без них нельзя принять, списать или переместить препарат. Создайте стандартные места (пост, сумка, шкаф, холодильник, сейф) — переименовать или убрать можно потом в ⚙️ → «Места хранения». Или добавьте своё.',
+  nlSeed: '🧩 Создать стандартные места', nlOwn: '＋ Своё место', nlAsk: 'Попросите администратора склада добавить места хранения (⚙️ → «Места хранения»).', nlNone: '— нет мест хранения —', nlDone: 'Места хранения созданы.',
+  E_HAS_LOCATIONS: 'Места хранения уже есть.' });
+Object.assign(I18N.az, { nlTitle: '📍 Bu şöbədə saxlama yeri yoxdur', nlText: 'Onlarsız dərmanı qəbul etmək, silmək və ya köçürmək olmaz. Standart yerləri yaradın (post, çanta, şkaf, soyuducu, seyf) — adını dəyişmək və ya silmək sonra ⚙️ → «Saxlama yerləri»ndə olar. Və ya özünüz əlavə edin.',
+  nlSeed: '🧩 Standart yerləri yarat', nlOwn: '＋ Öz yerim', nlAsk: 'Anbarın administratorundan saxlama yerləri əlavə etməsini xahiş edin (⚙️ → «Saxlama yerləri»).', nlNone: '— saxlama yeri yoxdur —', nlDone: 'Saxlama yerləri yaradıldı.',
+  E_HAS_LOCATIONS: 'Saxlama yerləri artıq var.' });
+function nlEmpty() { return !!(S.view && S.sess && !(S.view.locations || []).length); }
+(function () {
+  const lo = locOptions;
+  window.locOptions = function (selected, withAll, allLabel) {
+    if (!nlEmpty()) {
+      // пустую зону не показывать (на телефоне заголовок зоны выглядит как пункт, который нельзя выбрать)
+      const h = lo.apply(this, arguments);
+      return h.replace(/<optgroup label="[^"]*"><\/optgroup>/g, '');
+    }
+    return (withAll ? '<option value="ALL">' + esc(allLabel || t('allLocations')) + '</option>' : '') + '<option value="">' + esc(t('nlNone')) + '</option>';
+  };
+  const ra = renderAll;
+  window.renderAll = function () {
+    const r = ra.apply(this, arguments);
+    try {
+      ['spend', 'receive', 'stock', 'revision'].forEach(s => {
+        const box = $('#scr' + s[0].toUpperCase() + s.slice(1)); if (!box) return;
+        const old = $('.nl-banner', box);
+        if (!nlEmpty() || S.screen !== s) { if (old) old.remove(); return; }
+        if (old) return;
+        box.insertAdjacentHTML('afterbegin', '<div class="card nl-banner" style="border:2px solid var(--amber)"><b>' + esc(t('nlTitle')) + '</b><div class="muted" style="margin:4px 0 8px">' + esc(can('edit') ? t('nlText') : t('nlAsk')) + '</div>' +
+          (can('edit') ? '<div style="display:flex;flex-wrap:wrap;gap:6px"><button class="btn primary" data-act="nlSeed">' + esc(t('nlSeed')) + '</button><button class="btn ghost" data-act="placeModal" data-id="">' + esc(t('nlOwn')) + '</button></div>' : '') + '</div>');
+      });
+    } catch (e) { }
+    return r;
+  };
+})();
+H.nlSeed = async el => {
+  const r = await busy(el, () => rpcA('seedLocations', {}, { op: true, opId: newOpId() }));
+  if (r) { toast(t('nlDone')); renderAll(); }
+};
 
 
 function init() {
