@@ -34778,6 +34778,83 @@ Object.assign(H, {
   caPrintAll: () => caPrintHtml('<div class="vr-doc"><h1>' + esc(t('caTitle')) + '</h1>' + caListHtml(S.caList || [], true) + '</div>')
 });
 
+/* =====================================================================
+ * v67 (9.40): 🩺 Дежурный — программа сама ищет у себя проблемы. Экран для главного админа (и тех, кому он разрешил):
+ *  последний недельный отчёт, утренняя самопроверка данных, робот (отвечает ли программа и как быстро), медленные
+ *  действия; «Проверить сейчас», «Отчёт сейчас»; главный админ отмечает, кому ещё показывать.
+ * ===================================================================== */
+const WA_T = {
+  ru: { waBtn: '🩺 Дежурный', waTitle: '🩺 Дежурный — проблемы программы', waRun: '🔎 Проверить сейчас', waWeek: '🧠 Отчёт за неделю сейчас', waReport: 'Отчёт за неделю', waNoReport: 'Отчёта ещё нет — придёт в понедельник утром (или нажмите «Отчёт сейчас»).',
+    waNight: 'Самопроверка данных', waNoNight: 'Ещё не проверялось — нажмите «Проверить сейчас».', waRobot: 'Робот: программа отвечает?', waNoRobot: 'Робот проверяет раз в час — данные появятся.',
+    waRobotSum: 'Проверок: {n} · сбоев: {b} · обычно {m} с · худшее {w} с', waSlow: 'Медленные действия (дольше 3 с)', waSlowNone: 'Нет — всё быстрее 3 секунд.', waSlowToday: 'сегодня', waWho: 'Кто ещё видит «Дежурного»',
+    waSave: 'Сохранить', waSaved: 'Сохранено', waHow: 'Новая ошибка, проблема в данных и «программа не отвечает» приходят в Telegram сразу; остальное — в отчёте по понедельникам. ИИ видит только коды ошибок и цифры — без имён и данных пациентов.',
+    waDone: 'Проверено: {n} пунктов, «плохо»: {b}' },
+  az: { waBtn: '🩺 Növbətçi', waTitle: '🩺 Növbətçi — proqramın problemləri', waRun: '🔎 İndi yoxla', waWeek: '🧠 Həftəlik hesabat indi', waReport: 'Həftəlik hesabat', waNoReport: 'Hesabat hələ yoxdur — bazar ertəsi səhər gələcək (və ya «Hesabat indi» basın).',
+    waNight: 'Məlumatların özünü yoxlaması', waNoNight: 'Hələ yoxlanmayıb — «İndi yoxla» basın.', waRobot: 'Robot: proqram cavab verir?', waNoRobot: 'Robot saatda bir yoxlayır — məlumat görünəcək.',
+    waRobotSum: 'Yoxlama: {n} · nasazlıq: {b} · adətən {m} san · ən pis {w} san', waSlow: 'Yavaş əməliyyatlar (3 san-dən çox)', waSlowNone: 'Yoxdur — hamısı 3 saniyədən tez.', waSlowToday: 'bu gün', waWho: '«Növbətçi»ni daha kim görür',
+    waSave: 'Saxla', waSaved: 'Saxlanıldı', waHow: 'Yeni xəta, məlumatlarda problem və «proqram cavab vermir» Telegram-a dərhal gəlir; qalanı — bazar ertəsi hesabatında. Sİ yalnız xəta kodlarını və rəqəmləri görür — ad və pasiyent məlumatı olmadan.',
+    waDone: 'Yoxlandı: {n} bənd, «pis»: {b}' }
+};
+Object.assign(I18N.ru, WA_T.ru);
+Object.assign(I18N.az, WA_T.az);
+const WA_ICON = { ok: '✅', warn: '⚠️', bad: '❌' };
+const WA_LBL_AZ = { neg: 'qalıq mənfidə', journal: 'qalıq ≠ jurnal', dupItems: 'kart dublikatları', expired: 'qalığı olan vaxtı keçmiş', formsOpen: '1 gündən çox açıq formalar', schema: 'cədvəl vərəqləri', triggers: 'triggerlər', aiKey: 'Sİ açarı', tgBot: 'Telegram botu', errors: 'gün ərzində xəta', feedback: 'cavabsız rəylər' };
+function waHtml(r) {
+  const az = S.lang === 'az';
+  const lbl = x => az && WA_LBL_AZ[x.check] ? WA_LBL_AZ[x.check] : x.label;
+  let h = '<div class="muted" style="margin-bottom:8px">' + esc(t('waHow')) + '</div>' +
+    (r.owner ? '<div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px"><button class="btn primary" data-act="waRun">' + esc(t('waRun')) + '</button><button class="btn ghost" data-act="waWeek">' + esc(t('waWeek')) + '</button></div>' : '');
+  const rep = (r.reports || [])[0];
+  h += '<div class="card"><div class="lbl">' + esc(t('waReport')) + (rep ? ' · ' + esc(fmtDate(rep.day)) : '') + '</div>' + (rep ? '<div style="white-space:pre-wrap">' + esc(rep.detail) + '</div>' : '<div class="muted">' + esc(t('waNoReport')) + '</div>') + '</div>';
+  const night = r.night || [];
+  const order = { bad: 0, warn: 1, ok: 2 };
+  h += '<div class="card"><div class="lbl">' + esc(t('waNight')) + (night[0] ? ' · ' + esc(fmtDate(night[0].day)) : '') + '</div>' + (night.length ? night.slice().sort((a, b) => order[a.status] - order[b.status]).map(x =>
+    '<div class="list-row"><div class="grow">' + (WA_ICON[x.status] || '') + ' ' + esc((x.store ? x.store + ': ' : '') + lbl(x)) + (x.value !== '' && x.value !== null && x.value !== undefined ? ' — <b>' + esc(String(x.value)) + '</b>' : '') + (x.detail ? '<div class="muted" style="font-size:12px">' + esc(String(x.detail)) + '</div>' : '') + '</div></div>').join('') : '<div class="muted">' + esc(t('waNoNight')) + '</div>') + '</div>';
+  const pr = r.probes || [];
+  if (pr.length) {
+    const ms = pr.map(x => Number(x.value) || 0).sort((a, b) => a - b);
+    const max = Math.max(1000, ...ms);
+    h += '<div class="card"><div class="lbl">' + esc(t('waRobot')) + '</div><div class="muted">' + esc(t('waRobotSum', { n: pr.length, b: pr.filter(x => x.status === 'bad').length, m: (ms[Math.floor(ms.length / 2)] / 1000).toFixed(1), w: (ms[ms.length - 1] / 1000).toFixed(1) })) + '</div>' +
+      '<div style="display:flex;align-items:flex-end;gap:2px;height:60px;margin-top:6px">' + pr.map(x => '<div title="' + esc(x.at + ' · ' + (Number(x.value) / 1000).toFixed(1) + ' с · ' + x.detail) + '" style="flex:1;min-width:2px;height:' + Math.max(4, Math.round(56 * (Number(x.value) || 0) / max)) + 'px;background:' + (x.status === 'bad' ? '#c53030' : x.status === 'warn' ? '#d69e2e' : '#2a74d4') + ';border-radius:2px"></div>').join('') + '</div></div>';
+  } else h += '<div class="card"><div class="lbl">' + esc(t('waRobot')) + '</div><div class="muted">' + esc(t('waNoRobot')) + '</div></div>';
+  const st = r.slowToday || {};
+  const slowRows = Object.keys(st).map(a => ({ a, n: st[a][0], max: st[a][1], avg: st[a][2] / st[a][0], today: true })).concat((r.slow || []).slice().reverse().map(x => ({ a: x.check, n: Number(x.value) || 0, txt: x.detail, day: x.day })));
+  h += '<div class="card"><div class="lbl">' + esc(t('waSlow')) + '</div>' + (slowRows.length ? slowRows.slice(0, 25).map(x => '<div class="list-row"><div class="grow"><b>' + esc(x.a) + '</b> × ' + x.n + ' <span class="muted">' + esc(x.today ? t('waSlowToday') + ': макс ' + (x.max / 1000).toFixed(1) + ' с, средн ' + (x.avg / 1000).toFixed(1) + ' с' : fmtDate(x.day) + ' · ' + x.txt) + '</span></div></div>').join('') : '<div class="muted">' + esc(t('waSlowNone')) + '</div>') + '</div>';
+  if (r.owner && r.users) h += '<div class="card"><div class="lbl">' + esc(t('waWho')) + '</div>' + r.users.map(u => '<label class="check"><input type="checkbox" class="wa-u" value="' + esc(u.id) + '"' + (u.on ? ' checked' : '') + '><span>' + esc(u.name) + '</span></label>').join('') + '<button class="btn ghost" style="margin-top:6px" data-act="waAllow">' + esc(t('waSave')) + '</button></div>';
+  return h;
+}
+async function waOpen() {
+  openModal('<h3>' + esc(t('waTitle')) + '</h3><div id="waBox"><div class="muted">⏳</div></div><div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+  await waLoad();
+}
+async function waLoad() {
+  const r = await rpcA('watchGet', {}).catch(() => null);
+  const box = $('#waBox'); if (!box) return;
+  if (!r) { box.innerHTML = ''; return; }
+  S.wa = r; box.innerHTML = waHtml(r);
+}
+(function () {
+  const origMenuRender = window.menuRender;
+  if (typeof origMenuRender === 'function') window.menuRender = function () {
+    const r = origMenuRender.apply(this, arguments);
+    const nav = $('nav.bottom.drawer');
+    const ex = nav && nav.querySelector('[data-act=waOpen]');
+    if (ex) ex.textContent = t('waBtn');
+    else if (nav && S.me && (S.me.owner || S.me.watch)) {
+      const anchor = nav.querySelector('[data-act=opsOpen]') || nav.querySelector('[data-act=caOpen]') || nav.querySelector('[data-act=vrOpen]') || nav.querySelector('[data-act=mgOpen]');
+      const html = '<button class="btn ghost block" style="margin:6px 0" data-act="waOpen">' + esc(t('waBtn')) + '</button>';
+      if (anchor) anchor.insertAdjacentHTML('afterend', html); else { const fb = nav.querySelector('[data-act=fbOpen]'); if (fb) fb.insertAdjacentHTML('beforebegin', html); }
+    }
+    return r;
+  };
+})();
+Object.assign(H, {
+  waOpen: () => { if (typeof menuOpen === 'function') menuOpen(false); waOpen(); },
+  waRun: async el => { const r = await busy(el, () => rpcA('watchRun', {}, { timeout: 300000 })); if (r) { toast(t('waDone', { n: r.n, b: r.bad }), r.bad ? 'bad' : ''); waLoad(); } },
+  waWeek: async el => { const r = await busy(el, () => rpcA('watchRun', { what: 'week' }, { timeout: 300000 })); if (r) waLoad(); },
+  waAllow: async el => { const ids = Array.from(document.querySelectorAll('.wa-u')).filter(x => x.checked).map(x => x.value); const r = await busy(el, () => rpcA('watchAllow', { ids })); if (r) toast(t('waSaved')); }
+});
+
 
 function init() {
   vizTipInit();
