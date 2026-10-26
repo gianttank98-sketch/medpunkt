@@ -3018,7 +3018,7 @@ const I18N_V3 = {
     kitAddLine: '＋ Строка', kitNone: 'Укладок пока нет.', kitReplaceConfirm: 'Заменить укладку места «{loc}»?', kitTarget: 'В какое место',
     kitLinesN: '{loc}: строк {n}', kitOkAll: 'Все {n} строк в норме',
     repMonthly: '🗓️ Месячный отчёт (как для аптеки)', repVisits: '🧾 Расход по обращениям', repIncidents: '⚠️ Расхождения',
-    repRevision: '🔎 Ревизия: недостача и излишки', month: 'Месяц', revisionPick: 'Какая ревизия', toPdf: '📄 PDF', pdfReady: '📄 PDF готов — открыть',
+    repRevision: '🔎 Ревизия: недостача и излишки', month: 'Месяц', revisionPick: 'Какая ревизия', toPdf: '📄 PDF', pdfReadyHtml: '📄 Отчёт готов — открыть (Печать → «Сохранить как PDF»)', pdfReady: '📄 PDF готов — открыть',
     pdfShare: '📲 Ссылку в WhatsApp', pdfMaking: 'Готовлю PDF…',
     colOpening: 'На начало', colClosing: 'На конец', colCorrections: 'Поправки', colVisit: 'Обращение', colExpected: 'По учёту', colFact: 'Факт',
     colDiff: 'Разница', colRecorded: 'Учтено врачами', colShortage: 'Недостача', colSurplus: 'Излишек', colFactual: 'Фактический расход',
@@ -3089,7 +3089,7 @@ const I18N_V3 = {
     kitAddLine: '＋ Sətir', kitNone: 'Hələ dəst yoxdur.', kitReplaceConfirm: '«{loc}» yerinin dəsti əvəz edilsin?', kitTarget: 'Hansı yerə',
     kitLinesN: '{loc}: {n} sətir', kitOkAll: 'Bütün {n} sətir normadadır',
     repMonthly: '🗓️ Aylıq hesabat (aptek üçün)', repVisits: '🧾 Müraciətlər üzrə sərfiyyat', repIncidents: '⚠️ Uyğunsuzluqlar',
-    repRevision: '🔎 Təftiş: çatışmazlıq və artıq', month: 'Ay', revisionPick: 'Hansı təftiş', toPdf: '📄 PDF', pdfReady: '📄 PDF hazırdır — aç',
+    repRevision: '🔎 Təftiş: çatışmazlıq və artıq', month: 'Ay', revisionPick: 'Hansı təftiş', toPdf: '📄 PDF', pdfReadyHtml: '📄 Hesabat hazırdır — aç (Çap → «PDF kimi saxla»)', pdfReady: '📄 PDF hazırdır — aç',
     pdfShare: '📲 Linki WhatsApp-a', pdfMaking: 'PDF hazırlanır…',
     colOpening: 'Əvvələ', colClosing: 'Sona', colCorrections: 'Düzəlişlər', colVisit: 'Müraciət', colExpected: 'Uçota görə', colFact: 'Fakt',
     colDiff: 'Fərq', colRecorded: 'Həkimlərin yazdığı', colShortage: 'Çatışmazlıq', colSurplus: 'Artıq', colFactual: 'Faktiki sərfiyyat',
@@ -5040,7 +5040,7 @@ async function repPdf(btn) {
     for (const c of m.charts) imgs.push({ title: c.title, src: await svgToPng(c.c), w: c.c.w, h: c.c.h });
     const html = pdfHtml(m, imgs);
     const r = await rpcA('makePdf', { title: m.title, html }, { timeout: 300000 });
-    $('#repLink').innerHTML = '<a class="btn primary block" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-bottom:6px" href="' + esc(r.url) + '" target="_blank" rel="noopener">' + esc(t('pdfReady')) + '</a>' +
+    $('#repLink').innerHTML = '<a class="btn primary block" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-bottom:6px" href="' + esc(r.url) + '" target="_blank" rel="noopener">' + esc(t(r.html ? 'pdfReadyHtml' : 'pdfReady')) + '</a>' +
       '<a class="btn ghost block" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="https://wa.me/?text=' + encodeURIComponent(m.title + '\n' + r.url) + '" target="_blank" rel="noopener">' + esc(t('pdfShare')) + '</a>';
   } catch (e) {
     $('#repLink').innerHTML = '';
@@ -6202,6 +6202,7 @@ function apiPinned(u) { return !window.PWA_API_SHA256 || sha256Hex(u) === window
 function apiUrlOk(u) {
   if (!apiPinned(u)) return false;
   return /^https:\/\/script\.google\.com\/(a\/[A-Za-z0-9.-]+\/)?macros\/s\/[A-Za-z0-9_-]{20,}\/exec$/.test(u) ||
+    (!!window.PWA_API_SHA256 && /^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)+\/exec$/i.test(u)) || // свой сервер — только при привязке к нему (отпечаток)
     (!!window.PWA_ALLOW_LOCAL && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/[A-Za-z0-9\/_-]*exec$/.test(u)); // локальный — только в автотестах
 }
 /** Короткий «отпечаток» сервера для экрана входа: начало и конец номера развёртывания. */
@@ -6353,6 +6354,8 @@ async function pwaApiSave(btn) {
   renderLogin();
 }
 /** Ссылка вида …/medpunkt/?api=https://script.google.com/…/exec — админ рассылает её сотрудникам один раз. */
+/** Приложение открыто со своего сервера (не GitHub Pages): сервер — тот же адрес. */
+function pwaOwnHost() { try { return location.protocol === 'https:' && !/(^|\.)github\.io$/.test(location.hostname); } catch (e) { return false; } }
 function pwaReadApiParam() {
   if (!PWA) return;
   try {
@@ -6367,7 +6370,7 @@ function pwaReadApiParam() {
 }
 function pwaShareLink() {
   const api = PWA ? pwaApi() : (S.webAppUrl || '');
-  return api ? PWA_URL + '?api=' + encodeURIComponent(api) : '';
+  return api ? (PWA && pwaOwnHost() ? location.origin + '/' : PWA_URL) + '?api=' + encodeURIComponent(api) : '';
 }
 function pwaShareModal() {
   const link = pwaShareLink();
@@ -6384,6 +6387,7 @@ function pwaInit() {
   // сохранённый ранее сервер не совпадает с привязкой этой сборки — забываем его (и вход к нему)
   if (pwaApi() && !apiPinned(pwaApi())) { LS.del('MED6_API'); saveSession('', null); kvSet('auth', null); }
   pwaReadApiParam();
+  if (!pwaApi() && pwaOwnHost()) { const u = location.origin + '/exec'; if (apiUrlOk(u)) pwaSetApi(u); }
   S.gas = !!pwaApi();
   if (S.pwaApiIgnored) setTimeout(() => toast(t('pwaApiIgnored'), 'bad', null, 9000), 600);
   if ('serviceWorker' in navigator) {
