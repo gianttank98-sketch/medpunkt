@@ -32051,7 +32051,14 @@ async function wbFind(target) {
       const words = s0 => String(s0 || '').toLowerCase().split(/[^a-zа-яёəöüğışç0-9]+/i).filter(w => w.length >= 4).map(w => skel(w).slice(0, 5));
       const a = words(r.name), b = words(it.name + ' ' + (it.substance || ''));
       const nOk = !a.length || a.some(w => b.indexOf(w) !== -1);
-      return fOk && nOk;
+      // размер: объём (мл), игла (G), дозировка (мг, %) — если и там и там указано, но разное (1 мл ≠ 5 мл, 26G ≠ 22G) — это другой товар
+      const sz = x => { const o = {}; const t0 = String(x || '').replace(/(\d),(\d)/g, '$1.$2'); let m;
+        const re = /(\d+(?:\.\d+)?)\s*(мл|ml|мг|mg|мкг|mcg|%|G\b|ед|iu|me)/gi;
+        while ((m = re.exec(t0))) { const u = ({ ml: 'мл', mg: 'мг', mcg: 'мкг', iu: 'ед', me: 'ед' })[m[2].toLowerCase()] || m[2].toLowerCase(); (o[u] = o[u] || []).push(Number(m[1])); }
+        return o; };
+      const A = sz(r.name + ' ' + r.dose), B = sz(it.name + ' ' + it.dosage);
+      const szOk = Object.keys(A).every(u => !B[u] || A[u].some(v => B[u].indexOf(v) !== -1));
+      return fOk && nOk && szOk;
     };
     if (byBc && same(byBc)) { r.pick = { kind: 'item', item: byBc }; r.name = byBc.name; r.form = byBc.form; r.dose = byBc.dosage; r.guess = false; r.mineAuto = byBc.name + ' · ' + byBc.dosage; }
     else if (byBc) r.bcClash = byBc;
