@@ -31988,13 +31988,15 @@ Object.assign(H, {
  * ===================================================================== */
 Object.assign(I18N.ru, {
   wbBtn: '🌐 Найти в интернете', wbNeed: 'Впишите название (или штрихкод) — найду в интернете.', wbBusy: '🌐 Ищу в интернете…', wbSrc: '🌐 Проверено в интернете:',
-  wbOff: 'Поиск в интернете у ключа ИИ выключен — прочитано только по фото. Включить: console.anthropic.com → Settings → Privacy / Web search.',
+  wbOff: 'Поиск в интернете у ключа ИИ выключен — прочитано только по фото. Включить: platform.claude.com/settings/capabilities → Web search.',
+  wbBcClash: '⚠️ Этот штрихкод записан у вашей карточки «{n}», но на фото другое. Оставлено как на фото. Если у той карточки штрихкод ошибочный — исправьте его в карточке (Склад → карточка → ✏️).', wbBcClashUse: 'Нет, это та карточка',
   wbMine: '🗂 Уже есть на складе — добавить к этой карточке (не создавать новую):', wbMineAuto: '🗂 Штрихкод совпал с вашей карточкой «{n}» — выбрана она.',
   wbCatBc: '📗 По штрихкоду в каталоге АР: {n}', E_RATE_BOX: 'Лимит чтения упаковок ИИ: 60 в час на человека. Через несколько минут снова будет можно; сейчас — прочитаю на телефоне.'
 });
 Object.assign(I18N.az, {
   wbBtn: '🌐 İnternetdə tap', wbNeed: 'Adı (və ya barkodu) yazın — internetdə tapacağam.', wbBusy: '🌐 İnternetdə axtarıram…', wbSrc: '🌐 İnternetdə yoxlanıldı:',
-  wbOff: 'Sİ açarında internet axtarışı söndürülüb — yalnız fotoya görə oxundu. Açmaq: console.anthropic.com → Settings → Privacy / Web search.',
+  wbOff: 'Sİ açarında internet axtarışı söndürülüb — yalnız fotoya görə oxundu. Açmaq: platform.claude.com/settings/capabilities → Web search.',
+  wbBcClash: '⚠️ Bu barkod sizin «{n}» kartınızda yazılıb, amma fotoda başqa şeydir. Fotodakı kimi saxlanıldı. O kartın barkodu səhvdirsə — kartda düzəldin.', wbBcClashUse: 'Xeyr, bu o kartdır',
   wbMine: '🗂 Anbarda artıq var — bu karta əlavə et (yenisini yaratma):', wbMineAuto: '🗂 Barkod sizin «{n}» kartınızla üst-üstə düşdü — o seçildi.',
   wbCatBc: '📗 Barkoda görə AR kataloqunda: {n}', E_RATE_BOX: 'Sİ ilə qablaşdırma oxuma limiti: saatda 60. Bir neçə dəqiqədən sonra yenə olar; indi — telefonda oxuyuram.'
 });
@@ -32041,7 +32043,18 @@ async function wbFind(target) {
     // 1) своя карточка по штрихкоду — главнее всего (это точно тот же товар)
     const bc = String(r.barcode || '').replace(/\D/g, '');
     const byBc = bc ? (S.view.items || []).find(i => i.barcode && String(i.barcode).replace(/\D/g, '') === bc) : null;
-    if (byBc) { r.pick = { kind: 'item', item: byBc }; r.name = byBc.name; r.form = byBc.form; r.dose = byBc.dosage; r.guess = false; r.mineAuto = byBc.name + ' · ' + byBc.dosage; }
+    // штрихкод совпал с карточкой — берём её, только если и на фото то же самое (вид / форма и название сходятся);
+    // иначе у карточки мог оказаться чужой штрихкод: верим фото, карточку только предлагаем
+    const same = it => {
+      if (!r.name && !r.form) return true;
+      const fOk = !r.form || r.form === it.form || (formInfo(r.form).cat === formInfo(it.form).cat && fspecOf && fspecOf(r.form) === fspecOf(it.form));
+      const words = s0 => String(s0 || '').toLowerCase().split(/[^a-zа-яёəöüğışç0-9]+/i).filter(w => w.length >= 4).map(w => skel(w).slice(0, 5));
+      const a = words(r.name), b = words(it.name + ' ' + (it.substance || ''));
+      const nOk = !a.length || a.some(w => b.indexOf(w) !== -1);
+      return fOk && nOk;
+    };
+    if (byBc && same(byBc)) { r.pick = { kind: 'item', item: byBc }; r.name = byBc.name; r.form = byBc.form; r.dose = byBc.dosage; r.guess = false; r.mineAuto = byBc.name + ' · ' + byBc.dosage; }
+    else if (byBc) r.bcClash = byBc;
     // 2) каталог АР по штрихкоду (если своей карточки нет)
     else if (bc && S.cat && S.catBc && typeof own === 'function') {
       const i = own(S.catBc, bc); const e = typeof i === 'number' ? S.cat[i] : null;
@@ -32052,6 +32065,7 @@ async function wbFind(target) {
     const h = m.querySelector('h3');
     let top = '';
     if (r.mineAuto) top += '<div class="info" style="margin-bottom:8px">' + esc(t('wbMineAuto', { n: r.mineAuto })) + '</div>';
+    if (r.bcClash) { S.wbSim = [r.bcClash]; top += '<div class="hint" style="display:block;margin-bottom:8px">' + esc(t('wbBcClash', { n: r.bcClash.name + ' · ' + r.bcClash.dosage })) + ' <button class="chip" data-act="wbPickMine" data-i="0">' + esc(t('wbBcClashUse')) + '</button></div>'; }
     if (r.catBc) top += '<div class="info" style="margin-bottom:8px">' + esc(t('wbCatBc', { n: r.catBc })) + '</div>';
     // 3) похожие свои карточки по названию — выбрать, чтобы не завести дубль
     if (!r.mineAuto && r.name) {
