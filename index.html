@@ -9640,7 +9640,7 @@ async function icdPut(v) { try { const db = await catDb(); await new Promise((re
 function icdIndex(data) {
   if (!data || !Array.isArray(data.c)) return;
   const by = {};
-  const list = data.c.map(x => { const e = { c: x[0], ru: x[1], en: x[2] || '' }; by[e.c] = e; return e; });
+  const list = data.c.map(x => { const e = { c: x[0], ru: x[1], en: x[2] || '', az: x[3] || '' }; by[e.c] = e; return e; });
   S.icd = { list, by, blocks: data.b || [], hash: data.hash || '', n: list.length };
   if (S.indHitsRefresh) S.indHitsRefresh();
 }
@@ -9659,11 +9659,12 @@ async function icdLoad(force) {
   })();
   return S.icdLoading;
 }
-function icdName(e) { return S.lang === 'az' && e.en ? e.en : e.ru; }
+/** Название по языку: AZ — официальное азербайджанское (XBT-10), если нет — английское. */
+function icdName(e) { return S.lang === 'az' ? (e.az || e.en || e.ru) : e.ru; }
 /** Ключи поиска — по требованию (первый поиск), чтобы не тормозить запуск. */
 function icdKeys() {
   if (!S.icd || S.icd.keyed) return;
-  S.icd.list.forEach(e => { e.q = qk(e.ru); e.qe = e.en ? qkeyEn(e.en) : ''; });
+  S.icd.list.forEach(e => { e.q = qk(e.ru); e.qe = e.en ? qkeyEn(e.en) : ''; e.qa = e.az ? qk(e.az) : ''; });
   S.icd.keyed = true;
 }
 /** Поиск по МКБ: код (I48, i48.0, J) или слова диагноза (рус., англ.). */
@@ -9679,7 +9680,7 @@ function icdFind(q, limit) {
   icdKeys();
   const out = [];
   for (const e of S.icd.list) {
-    const ok = toks.every(w => e.q.indexOf(w) !== -1) || (e.qe && toks.every(w => e.qe.indexOf(w) !== -1));
+    const ok = toks.every(w => e.q.indexOf(w) !== -1) || (e.qe && toks.every(w => e.qe.indexOf(w) !== -1)) || (e.qa && toks.every(w => e.qa.indexOf(w) !== -1));
     if (ok) out.push(e);
   }
   out.sort((a, b) => (a.c.length - b.c.length) || (a.ru.length - b.ru.length));
@@ -9748,7 +9749,7 @@ function icdSuggestProvider(q) {
   // уже выбранный «I48.0 — …»: искать по словам после кода
   const m = s.match(/^([A-Za-z]\d\d(?:\.\d{1,2})?)\s*[—-]\s*(.*)$/);
   const list = icdFind(m ? m[2] || m[1] : s, 25);
-  return { list: list.map(e => ({ kind: 'icd', label: e.c + ' — ' + e.ru, sub: e.en || '', icd: e })) };
+  return { list: list.map(e => ({ kind: 'icd', label: e.c + ' — ' + icdName(e), sub: S.lang === 'az' ? e.ru : (e.az || e.en || ''), icd: e })) };
 }
 function icdAttachForm() {
   ['dx1', 'dx2'].forEach(k => {
@@ -9758,7 +9759,7 @@ function icdAttachForm() {
     el.placeholder = t('icdPickHint');
     if (!S.icd) icdLoad();
     attachSuggest(el, icdSuggestProvider, o => {
-      el.value = o.icd.c + ' — ' + o.icd.ru;
+      el.value = o.icd.c + ' — ' + icdName(o.icd);
       fSet({ [k]: el.value, [k + 'c']: o.icd.c });
     });
   });
@@ -16670,11 +16671,11 @@ function dsOnInput(el, icdPick) {
   let patch;
   if (el.dataset.drow) {
     patch = { [el.dataset.drow]: { [el.dataset.drid]: { [k]: v } } };
-    if (icdPick) { const r = ((c.data[el.dataset.drow] || {})[el.dataset.drid]) || {}; if (dsEmpty(r.text)) patch[el.dataset.drow][el.dataset.drid].text = icdPick.ru; }
+    if (icdPick) { const r = ((c.data[el.dataset.drow] || {})[el.dataset.drid]) || {}; if (dsEmpty(r.text)) patch[el.dataset.drow][el.dataset.drid].text = icdName(icdPick); }
   } else {
     patch = { [k]: v };
     const pk = dsPairKey(c.type, k);
-    if (icdPick && pk && dsEmpty(c.data[pk])) patch[pk] = icdPick.ru;
+    if (icdPick && pk && dsEmpty(c.data[pk])) patch[pk] = icdName(icdPick);
   }
   if ((k === 'admAt' || k === 'disAt') && !el.dataset.drow) { const nd = Object.assign({}, c.data, patch); const bd = dsBedDays(nd); if (bd !== '') patch.bedDays = bd; }
   dsQueuePatch(patch);
@@ -21312,7 +21313,7 @@ function drIcdTool(a) {
   const q = String(a.query || '').trim();
   if (!q) return { error: 'нужно query' };
   if (!S.icd) { if (typeof icdLoad === 'function') icdLoad(); return { error: 'справочник МКБ-10 ещё загружается — повтори через несколько секунд' }; }
-  return { results: icdFind(q, 12).map(e => ({ code: e.c, ru: e.ru, en: e.en || '' })) };
+  return { results: icdFind(q, 12).map(e => ({ code: e.c, ru: e.ru, az: e.az || '', en: e.en || '' })) };
 }
 /** ИИ склада: предложить правку партии (серия, срок) или места хранения — через «Подтвердить». */
 function drProposal(text, run) {
@@ -31758,6 +31759,17 @@ function bxExp(s) {
   return typeof boxExpiry === 'function' ? boxExpiry('EXP ' + s) : '';
 }
 /** Ответ ИИ → поля окна проверки; сверка с каталогом (если такая фирма есть — подтянутся МНН, единица, упаковка). */
+/** Шприц со шкалой инсулина (U-100 / U-40 / ЕД / insulin) — это «Шприц инсулиновый» (вид sup_syrins), а не просто шприц. */
+const BX_INS_RE = /insulin|инсулин|İnsulin|insülin|u-?100|u-?40|(?:^|[^a-zа-яё])(?:iu|ед|me|ме)(?![a-zа-яё])/i;
+function bxInsulinFix(r, extra) {
+  const all = [r.name, r.dose, r.packInfo, r.notes, extra].join(' ');
+  const syr = /шприц|syring|şpris|sprit[sz]/i.test(all) || /^sup_syr/.test(r.form || '');
+  if (!syr || /шприц-ручк|pen\b|şpris-qələm|жане|janet|перфузор/i.test(all)) return r;
+  if (!BX_INS_RE.test(all)) return r;
+  r.form = 'sup_syrins';
+  if (r.name && !/инсулин|insulin|insülin/i.test(r.name)) r.name = /шприц/i.test(r.name) ? r.name.replace(/шприц/i, m => m + ' инсулиновый') : 'Шприц инсулиновый ' + r.name;
+  return r;
+}
 function bxFromAi(a) {
   const allCodes = FORMS.med.concat(FORMS.sup).map(f => f[0]);
   // объём ампулы / флакона: число из volumeMl, иначе «… 1 мл» из дозы / упаковки (но не «мг/мл»)
@@ -31772,6 +31784,7 @@ function bxFromAi(a) {
     pack: Number.isInteger(Number(a.packCount)) && Number(a.packCount) >= 1 ? String(Number(a.packCount)) : '', packInfo: String(a.packInfo || '').trim(), sub: String(a.substance || '').trim(),
     notes: String(a.notes || '').trim(), cond: ['normal', 'fridge', 'dark'].indexOf(a.storage) !== -1 ? a.storage : '', pick: null };
   if (r.barcode && !/^\d{8,14}$/.test(r.barcode)) r.barcode = '';
+  bxInsulinFix(r, [a.formText, a.packInfo, a.notes, a.name, a.dose].join(' '));
   // своя карточка или каталог: по названию + дозе (как при чтении на телефоне)
   try {
     const bb = boxBrand(r.name + ' ' + r.dose, r.name);
@@ -32100,7 +32113,7 @@ async function wbFind(target) {
     // иначе у карточки мог оказаться чужой штрихкод: верим фото, карточку только предлагаем
     const same = it => {
       if (!r.name && !r.form) return true;
-      const fOk = !r.form || r.form === it.form || (formInfo(r.form).cat === formInfo(it.form).cat && fspecOf && fspecOf(r.form) === fspecOf(it.form));
+      const fOk = !r.form || r.form === it.form || (/^sup_syr/.test(r.form) && /^sup_syr/.test(it.form || '') ? false : (formInfo(r.form).cat === formInfo(it.form).cat && fspecOf && fspecOf(r.form) === fspecOf(it.form)));
       const words = s0 => String(s0 || '').replace(/İ/g, 'I').toLowerCase().replace(/\u0307/g, '').split(/[^a-zа-яёəöüğışç0-9]+/i).filter(w => w.length >= 4).map(w => skel(w).slice(0, 5));
       const a = words(r.name), b = words(it.name + ' ' + (it.substance || ''));
       const nOk = !a.length || a.some(w => b.indexOf(w) !== -1);
@@ -32194,6 +32207,7 @@ Object.assign(H, {
     if (!m) { const re2 = /(?:№|(?:^|[^a-zа-яё])N|(?:^|[^a-zа-яё])No\.?)\s?(\d{1,4})(?!\d)/gi; let x;
       while ((x = re2.exec(s))) { const pre = s.slice(Math.max(0, x.index - 12), x.index + x[0].search(/[№Nn]/)); if (!/(lot|seri[a-zа-я]*|сери[а-яё]*|парт[а-яё]*|reg[a-z]*|рег[а-яё]*|batch|qeyd[a-zə]*)\.?\s*$/i.test(pre)) { m = x; break; } } }
     if (r.series) r.series = String(r.series).replace(/\s+/g, '');
+    if (typeof bxInsulinFix === 'function') bxInsulinFix(r, s);
     if (m && !r.pack) { const n = Number(m[1]); if (n >= 1 && n <= 1000) r.pack = String(n); }
     // ампулы / флаконы: объём в «Как записано» через запятую (так он ляжет и в поле «Объём, мл»)
     if (/^med_(amp|vial|inf|pow|powsol)$/.test(r.form || '') && r.dose && !/(?:^|[^\/\d,.])\d+(?:[.,]\d+)?\s*(?:ml|мл)(?![a-zа-яё])/i.test(' ' + r.dose)) {
