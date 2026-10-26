@@ -21972,8 +21972,8 @@ Object.assign(H, {
  *  после ответа на их месте пометка «ИИ прочитал». Вложение уходит только в тот чат, где его выбрали.
  * ===================================================================== */
 const I18N_V28A = {
-  ru: { attBtn: '📎 Фото / PDF', attNote: '📎 Вложений: {n}', attRedactTitle: '🖍 Закрасьте личные данные', attRedactHint: 'Проведите пальцем по ФИО, FİN, адресу, телефону, подписи пациента — закрасится чёрным.', attUndo: '↶ Отменить', attClear: 'Сначала', attOk: 'Готово', attPiiOk: 'Личные данные пациента закрыты (или их нет на фото)', attPiiNeed: 'Отметьте, что личные данные закрыты', attPdfPii: 'В этом PDF нет ФИО, FİN, адреса и телефона пациента', attPdfBig: 'PDF больше 1,4 МБ — сфотографируйте нужные страницы.', attPdfCase: 'В разборе PDF не принимается: личные данные в нём не закрыть. Сделайте фото или снимок экрана нужных страниц.', attNoRects: 'Вы ничего не закрасили. На фото точно нет ФИО, FİN, адреса, телефона пациента?', attPiiStock: 'На фото нет данных пациентов (накладная, коробка, акт)', attNoteN: '📎 Вложений: {n} (закрашено областей: {r})', attTooMany: 'Не больше 5 вложений за раз.', attDefault: 'Посмотри вложение.', attRemove: '✕', attStripped: '[вложение: {t} — ИИ его уже прочитал выше]', attBad: 'Не удалось открыть файл.' },
-  az: { attBtn: '📎 Foto / PDF', attNote: '📎 Əlavə: {n}', attRedactTitle: '🖍 Şəxsi məlumatları rəngləyin', attRedactHint: 'Pasiyentin ad-soyadı, FİN, ünvan, telefon, imzası üzərindən barmaqla keçin — qara rənglənəcək.', attUndo: '↶ Geri', attClear: 'Yenidən', attOk: 'Hazır', attPiiOk: 'Pasiyentin şəxsi məlumatları bağlanıb (və ya fotoda yoxdur)', attPiiNeed: 'Şəxsi məlumatların bağlandığını qeyd edin', attPdfPii: 'Bu PDF-də pasiyentin ad-soyadı, FİN, ünvanı və telefonu yoxdur', attPdfBig: 'PDF 1,4 MB-dan böyükdür — lazımi səhifələrin şəklini çəkin.', attPdfCase: 'Təhlildə PDF qəbul edilmir: içindəki şəxsi məlumatları bağlamaq olmur. Lazımi səhifələrin şəklini və ya ekran görüntüsünü çəkin.', attNoRects: 'Heç nə rəngləməmisiniz. Fotoda pasiyentin ad-soyadı, FİN, ünvanı, telefonu həqiqətən yoxdur?', attPiiStock: 'Fotoda pasiyent məlumatı yoxdur (qaimə, qutu, akt)', attNoteN: '📎 Əlavə: {n} (rənglənmiş sahə: {r})', attTooMany: 'Bir dəfəyə 5-dən çox əlavə olmaz.', attDefault: 'Əlavəyə bax.', attRemove: '✕', attStripped: '[əlavə: {t} — Sİ onu artıq yuxarıda oxuyub]', attBad: 'Faylı açmaq alınmadı.' }
+  ru: { attBtn: '📎 Фото / PDF', attNote: '📎 Вложений: {n}', attRedactTitle: '🖍 Закрасьте личные данные', attRedactHint: 'Проведите пальцем по ФИО, FİN, дате рождения, адресу, телефону, номеру истории / полиса и подписи пациента — закрасится чёрным.', attUndo: '↶ Отменить', attClear: 'Сначала', attOk: 'Готово', attPiiOk: 'Личные данные пациента закрыты: ФИО, FİN, дата рождения, адрес, телефон, номера документов (или их нет на фото)', attPiiNeed: 'Отметьте, что личные данные закрыты', attPdfPii: 'В этом PDF нет ФИО, FİN, адреса и телефона пациента', attPdfBig: 'PDF больше 1,4 МБ — сфотографируйте нужные страницы.', attPdfCase: 'В разборе PDF не принимается: личные данные в нём не закрыть. Сделайте фото или снимок экрана нужных страниц.', attNoRects: 'Вы ничего не закрасили. На фото точно нет ФИО, FİN, адреса, телефона пациента?', attPiiStock: 'На фото нет данных пациентов (накладная, коробка, акт)', attNoteN: '📎 Вложений: {n} (закрашено областей: {r})', attTooMany: 'Не больше 5 вложений за раз.', attDefault: 'Посмотри вложение.', attRemove: '✕', attStripped: '[вложение: {t} — ИИ его уже прочитал выше]', attBad: 'Не удалось открыть файл.' },
+  az: { attBtn: '📎 Foto / PDF', attNote: '📎 Əlavə: {n}', attRedactTitle: '🖍 Şəxsi məlumatları rəngləyin', attRedactHint: 'Pasiyentin ad-soyadı, FİN, doğum tarixi, ünvan, telefon, tarix / sığorta nömrəsi və imzası üzərindən barmaqla keçin — qara rənglənəcək.', attUndo: '↶ Geri', attClear: 'Yenidən', attOk: 'Hazır', attPiiOk: 'Pasiyentin şəxsi məlumatları bağlanıb: ad-soyad, FİN, doğum tarixi, ünvan, telefon, sənəd nömrələri (və ya fotoda yoxdur)', attPiiNeed: 'Şəxsi məlumatların bağlandığını qeyd edin', attPdfPii: 'Bu PDF-də pasiyentin ad-soyadı, FİN, ünvanı və telefonu yoxdur', attPdfBig: 'PDF 1,4 MB-dan böyükdür — lazımi səhifələrin şəklini çəkin.', attPdfCase: 'Təhlildə PDF qəbul edilmir: içindəki şəxsi məlumatları bağlamaq olmur. Lazımi səhifələrin şəklini və ya ekran görüntüsünü çəkin.', attNoRects: 'Heç nə rəngləməmisiniz. Fotoda pasiyentin ad-soyadı, FİN, ünvanı, telefonu həqiqətən yoxdur?', attPiiStock: 'Fotoda pasiyent məlumatı yoxdur (qaimə, qutu, akt)', attNoteN: '📎 Əlavə: {n} (rənglənmiş sahə: {r})', attTooMany: 'Bir dəfəyə 5-dən çox əlavə olmaz.', attDefault: 'Əlavəyə bax.', attRemove: '✕', attStripped: '[əlavə: {t} — Sİ onu artıq yuxarıda oxuyub]', attBad: 'Faylı açmaq alınmadı.' }
 };
 Object.assign(I18N.ru, I18N_V28A.ru);
 Object.assign(I18N.az, I18N_V28A.az);
@@ -34252,6 +34252,531 @@ const PROTO_F3 = [
     ids.add(p[0]); PROTO.push(p);
   }));
 })();
+
+/* =====================================================================
+ * v65 (9.39): 📑 Hesabat — отчёт медпункта по обращениям за период (образец Саида «Zod tibbi məntəqəsi: müraciətlər
+ *  haqqında hesabat, 01–11 oktyabr 2026»): показатели, сравнение с прошлым периодом по долям, обращения по дням,
+ *  травмы со степенью тяжести, случаи «на заметку», выводы и рекомендации, источник и правила подсчёта, Əlavə 1.
+ *  Язык отчёта — азербайджанский или русский (независимо от языка программы). Печать → PDF.
+ *  В форме обращения — блок «🏭 Для работодателя»: итог (вернулся к работе / освобождён на N часов / больница /
+ *  эвакуация), степень тяжести травмы, нужен рентген / специалист, где и как получена травма.
+ * ===================================================================== */
+const VR_T = {
+  ru: {
+    vrBtn: '📑 Отчёт по обращениям (Hesabat)', vrTitle: 'Отчёт по обращениям', vrLang: 'Язык отчёта', vrNames: 'Фамилии',
+    vrNamesNone: 'Без фамилий', vrNamesInj: 'Только в таблице травм', vrNamesAll: 'Травмы + «Əlavə 1» (полный список)', vrCmp: 'Сравнить с',
+    vrCmpAuto: 'Прошлый период той же длины', vrCmpCustom: 'Свой период', vrShow: 'Показать', vrAi: '🤖 Главный вывод (ИИ)', vrPrint: '🖨 Печать / PDF',
+    vrNamesWarn: '🔒 Фамилии и диагнозы — врачебная тайна (ст. 53). Полный список — только с согласия пациента или при производственной травме.',
+    vrEmpBlock: '🏭 Для работодателя', vrWork: 'Итог для работы', vrOffH: 'Освобождён на, часов', vrInj: 'Если травма', vrSev: 'Степень тяжести (внутренняя шкала)',
+    vrXr: 'Нужен рентген', vrSpec: 'Нужен специалист', vrInjWhere: 'Где получена (участок, на работе или нет)', vrInjHow: 'Как получена, средства защиты',
+    vrSevHint: 'Лёгкая — помощь на месте, вернулся в ту же смену. Средняя — рентген / специалист или освобождение > 1 дня. Тяжёлая — больница: перелом, голова с потерей сознания, глаз, сильное кровотечение, обширный ожог.'
+  },
+  az: {
+    vrBtn: '📑 Müraciətlər üzrə hesabat', vrTitle: 'Müraciətlər üzrə hesabat', vrLang: 'Hesabatın dili', vrNames: 'Ad-soyadlar',
+    vrNamesNone: 'Adsız', vrNamesInj: 'Yalnız xəsarətlər cədvəlində', vrNamesAll: 'Xəsarətlər + «Əlavə 1» (tam siyahı)', vrCmp: 'Müqayisə',
+    vrCmpAuto: 'Eyni uzunluqda əvvəlki dövr', vrCmpCustom: 'Öz dövrünüz', vrShow: 'Göstər', vrAi: '🤖 Əsas nəticə (Sİ)', vrPrint: '🖨 Çap / PDF',
+    vrNamesWarn: '🔒 Ad-soyad və diaqnoz həkim sirridir (53-cü maddə). Tam siyahı — yalnız pasiyentin razılığı ilə və ya istehsalat xəsarətində.',
+    vrEmpBlock: '🏭 İşəgötürən üçün', vrWork: 'İş üzrə nəticə', vrOffH: 'İşdən azad, saat', vrInj: 'Xəsarət olubsa', vrSev: 'Ağırlıq dərəcəsi (daxili şkala)',
+    vrXr: 'Rentgen tələb olunur', vrSpec: 'Mütəxəssis tələb olunur', vrInjWhere: 'Harada (sahə, işdə ya yox)', vrInjHow: 'Necə baş verib, qoruyucu vasitələr',
+    vrSevHint: 'Yüngül — yardım yerində, eyni növbədə işə qayıdır. Orta — rentgen / mütəxəssis və ya 1 gündən çox iş azadlığı. Ağır — xəstəxana: sınıq, huşun itməsi ilə baş zədəsi, göz, güclü qanaxma, geniş yanıq.'
+  }
+};
+Object.assign(I18N.ru, VR_T.ru);
+Object.assign(I18N.az, VR_T.az);
+// подписи отчёта — на языке отчёта (rl), а не программы
+const VR_L = {
+  groups: { ah: ['Arterial hipertenziya', 'Артериальная гипертензия'], cold: ['Soyuqdəymə, qrip, öskürək', 'Простуда, грипп, кашель'], head: ['Baş ağrısı', 'Головная боль'], inj: ['Xəsarətlər', 'Травмы'], gi: ['Mədə-bağırsaq', 'Желудок, кишечник'], allergy: ['Allergiya', 'Аллергия'], heart: ['Ürək (təzyiqsiz)', 'Сердце (без давления)'], tooth: ['Diş ağrısı', 'Зубная боль'], msk: ['Əzələ-oynaq ağrıları', 'Мышцы, суставы, спина'], other: ['Digər', 'Другое'] },
+  sev: { light: ['Yüngül', 'Лёгкая'], mid: ['Orta', 'Средняя'], heavy: ['Ağır', 'Тяжёлая'], unk: ['Müəyyən edilməyib', 'Не определена'], '': ['qeyd olunmayıb', 'не указана'] },
+  work: { back: ['İşə qayıtdı', 'Вернулся к работе'], off: ['İşdən azad edildi', 'Освобождён от работы'], hosp: ['Xəstəxanaya göndərildi', 'Направлен в больницу'], evac: ['Təxliyə edildi', 'Эвакуирован'] },
+  out: { home: ['Vəziyyəti yaxşılaşdı', 'Состояние улучшилось'], asm: ['Poliklinikaya yönləndirildi', 'Направлен в поликлинику'], adm: ['Xəstəxanaya yerləşdirildi', 'Госпитализирован'], transfer: ['Təxliyə edildi', 'Эвакуирован'], refuse: ['Yardımdan imtina etdi', 'Отказ от помощи'], death: ['Ölüm', 'Смерть'], left: ['İcazəsiz tərk etdi', 'Ушёл без разрешения'] },
+  mon: [['yanvar', 'января'], ['fevral', 'февраля'], ['mart', 'марта'], ['aprel', 'апреля'], ['may', 'мая'], ['iyun', 'июня'], ['iyul', 'июля'], ['avqust', 'августа'], ['sentyabr', 'сентября'], ['oktyabr', 'октября'], ['noyabr', 'ноября'], ['dekabr', 'декабря']]
+};
+function vrL(pair, rl) { return pair ? pair[rl === 'ru' ? 1 : 0] : ''; }
+function vrDM(s) { return s ? s.slice(8, 10) + '.' + s.slice(5, 7) : ''; }
+function vrPeriodText(a, b, rl) {
+  const i = rl === 'ru' ? 1 : 0, ma = +a.slice(5, 7) - 1, mb = +b.slice(5, 7) - 1;
+  if (a.slice(0, 7) === b.slice(0, 7)) return a.slice(8, 10) + '–' + b.slice(8, 10) + ' ' + VR_L.mon[mb][i] + ' ' + b.slice(0, 4);
+  return +a.slice(8, 10) + ' ' + VR_L.mon[ma][i] + ' – ' + +b.slice(8, 10) + ' ' + VR_L.mon[mb][i] + ' ' + b.slice(0, 4);
+}
+function vrNumF(n) { return String(n).replace('.', ','); }
+function vrPct(n, tot) { return tot ? Math.round(n * 100 / tot) : 0; }
+function vrOutText(x, rl) {
+  if (x.work) return vrL(VR_L.work[x.work], rl) + (x.work === 'off' && x.offH ? ' (' + x.offH + (rl === 'ru' ? ' ч' : ' saat') + ')' : '');
+  if (x.outcome && VR_L.out[x.outcome]) return vrL(VR_L.out[x.outcome], rl);
+  return rl === 'ru' ? 'исход в журнале не указан' : 'nəticə jurnalda qeyd olunmayıb';
+}
+
+/* ---------- диаграммы (SVG, печатаются как есть) ---------- */
+function vrSvgCmp(r, rl) {
+  const keys = VR_L.groups ? Object.keys(VR_L.groups) : [];
+  const cur = keys.map(k => vrPct(r.groups[k] || 0, r.total)), prv = keys.map(k => vrPct(r.prev.groups[k] || 0, r.prev.total));
+  const W = 640, lw = 190, bw = W - lw - 50, rh = 34, H = keys.length * rh + 30, mx = Math.max(1, ...cur, ...prv);
+  let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="max-width:680px" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,sans-serif" font-size="12">';
+  s += '<rect x="' + lw + '" y="4" width="12" height="10" fill="#b9d3f2"/><text x="' + (lw + 16) + '" y="13">' + esc(vrDM(r.cmpFrom) + '–' + vrDM(r.cmpTo)) + '</text><rect x="' + (lw + 110) + '" y="4" width="12" height="10" fill="#2a74d4"/><text x="' + (lw + 126) + '" y="13">' + esc(vrDM(r.from) + '–' + vrDM(r.to)) + '</text>';
+  keys.forEach((k, i) => {
+    const y = 26 + i * rh;
+    s += '<text x="' + (lw - 8) + '" y="' + (y + 16) + '" text-anchor="end">' + esc(vrL(VR_L.groups[k], rl)) + '</text>';
+    const w1 = Math.max(1, bw * prv[i] / mx), w2 = Math.max(1, bw * cur[i] / mx);
+    s += '<rect x="' + lw + '" y="' + y + '" width="' + w1.toFixed(1) + '" height="12" rx="2" fill="#b9d3f2"/><text x="' + (lw + w1 + 4) + '" y="' + (y + 10) + '" fill="#555">' + prv[i] + '%</text>';
+    s += '<rect x="' + lw + '" y="' + (y + 14) + '" width="' + w2.toFixed(1) + '" height="12" rx="2" fill="#2a74d4"/><text x="' + (lw + w2 + 4) + '" y="' + (y + 24) + '">' + cur[i] + '%</text>';
+  });
+  return s + '</svg>';
+}
+function vrSvgDays(r, rl) {
+  const days = Object.keys(r.byDay).sort();
+  if (!days.length) return '';
+  const W = 640, H = 220, pad = 24, bw = (W - pad * 2) / days.length, mx = Math.max(1, r.prev.avg, ...days.map(d => r.byDay[d]));
+  const y = v => H - 34 - (H - 70) * v / mx;
+  let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="max-width:680px" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,sans-serif" font-size="11">';
+  const step = days.length > 16 ? Math.ceil(days.length / 12) : 1;
+  days.forEach((d, i) => {
+    const n = r.byDay[d], x = pad + i * bw + bw * 0.15, w = bw * 0.7;
+    s += '<rect x="' + x.toFixed(1) + '" y="' + y(n).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + (H - 34 - y(n)).toFixed(1) + '" rx="2" fill="#2a74d4"/>';
+    if (days.length <= 31 && n > 0) s += '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (y(n) - 4).toFixed(1) + '" text-anchor="middle">' + n + '</text>';
+    if (i % step === 0) s += '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (H - 18) + '" text-anchor="middle" fill="#555">' + esc(vrDM(d)) + '</text>';
+  });
+  if (r.prev.total) {
+    const ya = y(r.prev.avg).toFixed(1);
+    s += '<line x1="' + pad + '" x2="' + (W - pad) + '" y1="' + ya + '" y2="' + ya + '" stroke="#777" stroke-dasharray="6 4"/>';
+  }
+  return s + '</svg>';
+}
+
+/* ---------- выводы и рекомендации по правилам (без ИИ) ---------- */
+function vrRecs(r, rl) {
+  const ru = rl === 'ru', out = [];
+  const sh = k => vrPct(r.groups[k], r.total), psh = k => vrPct(r.prev.groups[k], r.prev.total);
+  if (r.ah.visits) out.push([ru ? 'Высокое давление' : 'Yüksək təzyiq', (ru ? r.ah.persons + ' чел. ' + r.ah.visits + ' раз' + (r.ah.crisis ? ', из них ' + r.ah.crisis + ' — АД ≥180/110' : '') + '. Рекомендация: однократно измерить давление у всех работников; тех, у кого оно высокое, — контроль раз в неделю; без постоянного лечения — направить к терапевту или кардиологу.'
+    : r.ah.persons + ' nəfər ' + r.ah.visits + ' dəfə' + (r.ah.crisis ? ', o cümlədən ' + r.ah.crisis + ' — AT ≥180/110' : '') + '. Tövsiyə: bütün işçilərdə bir dəfəlik təzyiq ölçümü; yüksək təzyiqi olanların həftəlik nəzarəti; daimi dərmanı olmayanların terapevt və ya kardioloqa yönləndirilməsi.')]);
+  const coldShare = r.prev.total ? (ru ? 'доля ' + psh('cold') + '% → ' + sh('cold') + '%' : 'payı ' + psh('cold') + '%-dən ' + sh('cold') + '%-ə') : (ru ? 'доля ' + sh('cold') + '%' : 'payı ' + sh('cold') + '%');
+  if (r.groups.cold && (sh('cold') >= 15 || (r.prev.total >= 20 && sh('cold') - psh('cold') >= 5))) out.push([ru ? 'Простуда и кашель' : 'Soyuqdəymə və öskürək', ru ? coldShare + '. Рекомендация: тёплая рабочая одежда; отопление и проветривание общежитий; маски для кашляющих; рассмотреть прививку от гриппа. 3 и больше похожих случая за несколько дней — сразу сообщить руководству.'
+    : coldShare + '. Tövsiyə: isti iş geyimi; yataqxanaların qızdırılması və havalandırılması; öskürəyi olan işçilər üçün maska; qrip peyvəndi imkanının nəzərdən keçirilməsi. Bir neçə gün ərzində 3 və daha çox oxşar hal olarsa, məntəqə rəhbərliyə dərhal məlumat verir.']);
+  if (r.xray) out.push([ru ? 'Рентген' : 'Rentgen', ru ? 'понадобился ' + r.xray + ' чел. Рекомендация: заранее согласовать доставку в ближайшее учреждение с рентгеном (транспорт, ответственный, время).' : r.xray + ' nəfərə lazım olub. Tövsiyə: ən yaxın rentgen olan müəssisəyə daşınma qaydasını (nəqliyyat, məsul şəxs, vaxt) əvvəlcədən razılaşdırmaq.']);
+  if (r.injuries.visits) out.push([ru ? 'Травмы' : 'Xəsarətlər', ru ? r.injuries.visits + ' обращ. (' + r.injuries.persons + ' чел.)' + (r.injuries.workAcc ? ', на производстве — ' + r.injuries.workAcc : '') + '. Рекомендация: контроль средств защиты (перчатки, очки); травмированного не возвращать в тот же день на тяжёлую работу.' : r.injuries.visits + ' müraciət (' + r.injuries.persons + ' nəfər)' + (r.injuries.workAcc ? ', istehsalatda — ' + r.injuries.workAcc : '') + '. Tövsiyə: qoruyucu vasitələrin (əlcək, eynək) istifadəsinə nəzarət; xəsarət alan işçinin həmin gün ağır fiziki işə qaytarılmaması.']);
+  if (r.multi.persons) out.push([ru ? 'Повторные обращения' : 'Təkrar müraciətlər', ru ? r.multi.persons + ' чел. — ' + r.multi.visits + ' раз. Рекомендация: приходящих 3 и больше раз — направить на подробное обследование.' : r.multi.persons + ' nəfər ' + r.multi.visits + ' dəfə. Tövsiyə: 3 və daha çox dəfə gələnlərin ətraflı müayinəyə yönləndirilməsi.']);
+  const q = r.quality, miss = [];
+  if (q.noIcd) miss.push(ru ? 'код МКБ-10 — ' + q.noIcd : 'XƏT-10 kodu — ' + q.noIcd);
+  if (q.noWork) miss.push(ru ? 'итог для работы — ' + q.noWork : 'iş üzrə nəticə — ' + q.noWork);
+  if (q.noVitals) miss.push(ru ? 'показатели (АД, пульс, t°) — ' + q.noVitals : 'göstəricilər (AT, nəbz, t°) — ' + q.noVitals);
+  if (q.injNoSev) miss.push(ru ? 'степень травмы — ' + q.injNoSev : 'xəsarətin dərəcəsi — ' + q.injNoSev);
+  if (miss.length) out.push([ru ? 'Качество учёта' : 'Uçotun keyfiyyəti', (ru ? 'не заполнено: ' : 'doldurulmayıb: ') + miss.join('; ') + (ru ? '. Для руководства важнее всего, годен ли работник к работе.' : '. Rəhbərlik üçün ən vacib məlumat işçinin işə yararlı olub-olmamasıdır.')]);
+  return out;
+}
+function vrAttText(a, r, rl) {
+  const ru = rl === 'ru';
+  return (a.codes || []).map(c => {
+    const g = VR_L.groups[c.info];
+    const T = {
+      bp: ru ? 'высокое АД ' + c.info : 'yüksək təzyiq, AT ' + c.info,
+      chest: ru ? 'боль в груди / онемение / одышка / обморок' : 'döş qəfəsində ağrı / uyuşma / təngnəfəslik / huşun itməsi',
+      resp: ru ? 'дыхание: ' + c.info : 'tənəffüs: ' + c.info,
+      pneu: ru ? 'пневмония (подозрение или диагноз)' : 'pnevmoniya (şübhə və ya diaqnoz)',
+      injury: ru ? 'травма' + (c.info ? ' (' + vrL(VR_L.sev[c.info], rl).toLowerCase() + ')' : '') + ': перелом не исключён или нужен рентген / специалист' : 'xəsarət' + (c.info ? ' (' + vrL(VR_L.sev[c.info], rl).toLowerCase() + ')' : '') + ': sümük sınığı istisna edilməyib və ya rentgen / mütəxəssis tələb olunur',
+      refuse: ru ? 'отказ от помощи или ушёл сам' : 'yardımdan imtina və ya icazəsiz tərk',
+      repeat: ru ? 'один и тот же работник ' + c.info + ' раза за 7 дней' : 'eyni işçi 7 gündə ' + c.info + ' dəfə',
+      cluster: (c.info === 'gi' ? (ru ? 'диарея / рвота' : 'ishal / qusma') : c.info === 'cold' ? (ru ? 'температура с кашлем' : 'qızdırma və öskürək') : c.info === 'allergy' ? (ru ? 'сыпь' : 'səpgi') : (g ? vrL(g, rl) : '')) + (ru ? ': ' + (c.people || a.n.length) + ' чел. за 3 дня — возможна вспышка, сообщить руководству' : ': 3 gündə ' + (c.people || a.n.length) + ' nəfər — mümkün alovlanma, rəhbərliyə məlumat verilməlidir')
+    };
+    return T[c.code] || c.code;
+  }).join('; ');
+}
+
+/* ---------- сам отчёт ---------- */
+function vrHtml(r, rl) {
+  const ru = rl === 'ru', L = (az, rus) => ru ? rus : az;
+  const store = ru ? r.store.ru : r.store.az;
+  const per = vrPeriodText(r.from, r.to, rl);
+  const top2 = Object.keys(r.groups).filter(k => k !== 'other').sort((a, b) => r.groups[b] - r.groups[a]).slice(0, 2).filter(k => r.groups[k]);
+  const ratio = r.prev.avg ? r.avg / r.prev.avg : 0;
+  const ratioTxt = !r.prev.total ? '' : ratio >= 1.8 ? L('təxminən ' + Math.round(ratio) + ' dəfə çox', 'примерно в ' + Math.round(ratio) + ' раза больше') : ratio >= 1.1 ? L(Math.round((ratio - 1) * 100) + '% çox', 'на ' + Math.round((ratio - 1) * 100) + '% больше') : ratio <= 0.9 ? L(Math.round((1 - ratio) * 100) + '% az', 'на ' + Math.round((1 - ratio) * 100) + '% меньше') : L('təxminən eyni', 'примерно столько же');
+  let lead = L(per + ' tarixlərində tibbi məntəqəyə ' + r.persons + ' nəfər ' + r.total + ' dəfə müraciət edib: gündə orta hesabla ' + vrNumF(r.avg) + ' müraciət' + (ratioTxt ? ', əvvəlki dövrdəkindən (' + vrNumF(r.prev.avg) + ') ' + ratioTxt : '') + '.',
+    'За ' + per + ' в медпункт обратились ' + r.persons + ' чел. ' + r.total + ' раз: в среднем ' + vrNumF(r.avg) + ' обращения в день' + (ratioTxt ? ', ' + ratioTxt + ', чем в прошлом периоде (' + vrNumF(r.prev.avg) + ')' : '') + '.');
+  if (top2.length) lead += ' ' + L('Ən çox müraciət ', 'Чаще всего — ') + top2.map(k => vrL(VR_L.groups[k], rl).toLowerCase() + ' (' + r.groups[k] + ')').join(L(' və ', ' и ')) + L(' ilə bağlıdır.', '.');
+  const sevParts = ['light', 'mid', 'heavy'].filter(k => r.injuries.sev[k]).map(k => L(r.injuries.sev[k] + '-i ' + vrL(VR_L.sev[k], rl).toLowerCase(), vrL(VR_L.sev[k], rl).toLowerCase() + ' — ' + r.injuries.sev[k]));
+  if (r.injuries.visits) lead += ' ' + L(r.injuries.visits + ' xəsarət müraciəti' + (sevParts.length ? ': ' + sevParts.join(', ') + ' dərəcəli' : ''), 'Травм — ' + r.injuries.visits + (sevParts.length ? ' (' + sevParts.join(', ') + ')' : '')) + (r.xray ? L('; ' + r.xray + ' nəfərə rentgen müayinəsi lazım olub', '; рентген понадобился ' + r.xray + ' чел.') : '') + '.';
+  const tr = (k, v) => '<tr><td>' + esc(k) + '</td><td>' + esc(String(v)) + '</td></tr>';
+  let h = '<div class="vr-doc"><h1>' + esc(L((store ? store + ': ' : '') + 'müraciətlər haqqında hesabat, ' + per, (store ? store + ': ' : '') + 'отчёт по обращениям, ' + per)) + '</h1>' +
+    '<div class="vr-small">' + esc(fmtDate(r.made.slice(0, 10)) + (r.doctor ? ' · ' + r.doctor : '')) + '</div>' +
+    (r.ai ? '<p class="vr-lead"><b>' + esc(r.ai) + '</b></p>' : '') + '<p class="vr-lead">' + esc(lead) + '</p>';
+  // 1. показатели
+  h += '<h2>1. ' + esc(L('Əsas göstəricilər', 'Основные показатели')) + '</h2>';
+  if (r.multi.persons) h += '<p>' + esc(L('Müraciətlərin ' + (r.multi.visits * 2 > r.total ? 'yarısından çoxu (' + r.total + '-dən ' + r.multi.visits + '-i)' : r.total + '-dən ' + r.multi.visits + '-i') + ' bir neçə dəfə gələn ' + r.multi.persons + ' nəfərin payına düşür.', r.multi.visits + ' из ' + r.total + ' обращений приходится на ' + r.multi.persons + ' чел., приходивших несколько раз.')) + '</p>';
+  const w = r.work;
+  h += '<table class="vr-t"><tr><th>' + esc(L('Göstərici', 'Показатель')) + '</th><th>' + esc(L('Say', 'Число')) + '</th></tr>' +
+    tr(L('Müraciətlərin ümumi sayı', 'Всего обращений'), r.total) + tr(L('Müraciət edən şəxslər', 'Обратившихся людей'), r.persons + L(' nəfər', ' чел.')) +
+    tr(L('İlkin / təkrar müraciət', 'Первичные / повторные'), r.persons + ' / ' + r.repeat) +
+    tr(L('Bir dəfədən çox gələnlər', 'Приходили больше 1 раза'), r.multi.persons + L(' nəfər (' + r.multi.visits + ' müraciət)', ' чел. (' + r.multi.visits + ' обращ.)')) +
+    tr(L('Kişi / qadın', 'Мужчины / женщины'), r.sex.m + ' / ' + r.sex.f + (r.sex.x ? L(' (qeyd yoxdur: ', ' (не указан: ') + r.sex.x + ')' : '') + L(' müraciət', ' обращ.')) +
+    tr(L('Gündə orta', 'В среднем за день'), vrNumF(r.avg) + L(' müraciət', ' обращ.') + (r.prev.total ? ' (' + vrDM(r.cmpFrom) + '–' + vrDM(r.cmpTo) + ': ' + vrNumF(r.prev.avg) + ')' : '')) +
+    (r.top && r.top.n ? tr(L('Ən yüklü gün', 'Самый загруженный день'), fmtDate(r.top.day) + ', ' + r.top.n + L(' müraciət', ' обращ.')) : '') +
+    tr(L('Xəsarət', 'Травмы'), r.injuries.visits + L(' müraciət (' + r.injuries.persons + ' nəfər)', ' обращ. (' + r.injuries.persons + ' чел.)') + (sevParts.length ? ', ' + sevParts.join(', ') : '')) +
+    tr(L('Rentgen tələb olunan', 'Нужен рентген'), r.xray + L(' nəfər', ' чел.')) + tr(L('EKQ çəkilən', 'Снята ЭКГ'), r.ecg + L(' nəfər', ' чел.')) +
+    tr(L('İşə qayıdan', 'Вернулись к работе'), w.back) + tr(L('İşdən azad edilən', 'Освобождены от работы'), w.off + (r.offHours ? L(' (cəmi ' + r.offHours + ' saat)', ' (всего ' + r.offHours + ' ч)') : '')) +
+    tr(L('Xəstəxanaya göndərilən / təxliyə', 'В больницу / эвакуация'), (r.hosp || r.evac) ? r.hosp + ' / ' + r.evac : L('jurnalda qeyd yoxdur', 'в журнале не отмечено')) + '</table>';
+  // 2. сравнение
+  if (r.total) {
+    const up = Object.keys(r.groups).map(k => [k, vrPct(r.groups[k], r.total) - vrPct(r.prev.groups[k], r.prev.total)]).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))[0];
+    const head = up && r.prev.total ? vrL(VR_L.groups[up[0]], rl) + L(' payı ' + vrPct(r.prev.groups[up[0]], r.prev.total) + '%-dən ' + vrPct(r.groups[up[0]], r.total) + '%-ə ' + (up[1] > 0 ? 'qalxıb' : 'enib'), ': доля ' + (up[1] > 0 ? 'выросла' : 'снизилась') + ' с ' + vrPct(r.prev.groups[up[0]], r.prev.total) + '% до ' + vrPct(r.groups[up[0]], r.total) + '%') : L('Səbəblər üzrə pay', 'Причины обращений, доля');
+    h += '<h2>2. ' + esc(L('Əvvəlki dövrlə müqayisə', 'Сравнение с прошлым периодом')) + '</h2><div class="vr-cap"><b>' + esc(head) + '</b><br><span>' + esc(L('Müraciətlərin səbəblər üzrə payı: ', 'Доля причин обращений: ') + vrDM(r.cmpFrom) + '–' + vrDM(r.cmpTo) + ' — ' + r.prev.total + L(' müraciət, ', ' обращ., ') + vrDM(r.from) + '–' + vrDM(r.to) + ' — ' + r.total + L(' müraciət', ' обращ.')) + '</span></div>' + vrSvgCmp(r, rl) +
+      (r.prev.total ? (r.prev.total < 20 || r.total < 20 ? '<p class="vr-small">' + esc(L('Müraciət azdır (' + r.prev.total + ' və ' + r.total + ') — faizlər təxminidir, bir neçə müraciət payı xeyli dəyişir.', 'Обращений мало (' + r.prev.total + ' и ' + r.total + ') — проценты приблизительные: несколько обращений сильно меняют долю.')) + '</p>' : '') : '<p class="vr-small">' + esc(L('Əvvəlki dövrdə müraciət qeydə alınmayıb — müqayisə yoxdur.', 'В прошлом периоде обращений в программе нет — сравнивать не с чем.')) + '</p>');
+    // 3. по дням
+    const above = Object.keys(r.byDay).filter(d => r.byDay[d] > r.prev.avg).length;
+    h += '<h2>3. ' + esc(L('Günlər üzrə müraciətlər', 'Обращения по дням')) + '</h2><div class="vr-cap"><b>' + esc(L(r.total + ' müraciət, gündə orta ' + vrNumF(r.avg), r.total + ' обращ., в среднем ' + vrNumF(r.avg) + ' в день')) + '</b>' + (r.prev.total ? '<br><span>- - - ' + esc(vrDM(r.cmpFrom) + '–' + vrDM(r.cmpTo) + L(': gündə orta ', ': в среднем ') + vrNumF(r.prev.avg)) + '</span>' : '') + '</div>' + vrSvgDays(r, rl) +
+      (r.prev.total ? '<p>' + esc(L(r.days + ' günün ' + above + '-ində müraciət sayı əvvəlki dövrün ortasından yüksək olub.', 'В ' + above + ' днях из ' + r.days + ' обращений было больше средней прошлого периода.')) + '</p>' : '');
+  }
+  // 4. травмы
+  h += '<h2>4. ' + esc(L('Xəsarətlər və ağırlıq dərəcəsi', 'Травмы и степень тяжести')) + '</h2>';
+  if (!r.injuries.visits) h += '<p>' + esc(L('Dövr ərzində xəsarət qeydə alınmayıb.', 'За период травм не было.')) + '</p>';
+  else {
+    const nund = r.injuries.sev.none + r.injuries.sev.unk;
+    h += '<p>' + esc(L(r.injuries.visits + ' xəsarət müraciəti' + (sevParts.length ? ': ' + sevParts.join(', ') + ' dərəcəli' : '') + (nund ? '; ' + nund + '-də dərəcə müəyyən edilməyib' : '') + '.',
+      'Обращений с травмой — ' + r.injuries.visits + (sevParts.length ? ': ' + sevParts.join(', ') : '') + (nund ? '; степень не определена — ' + nund : '') + '.')) + '</p>';
+    const withNames = r.names !== 'none';
+    h += '<table class="vr-t"><tr><th>№</th><th>' + esc(L('Tarix, saat', 'Дата, время')) + '</th>' + (withNames ? '<th>' + esc(L('Pasiyent', 'Пациент')) + '</th>' : '') + '<th>' + esc(L('Xəsarət', 'Травма')) + '</th><th>' + esc(L('Ağırlıq dərəcəsi', 'Степень тяжести')) + '</th></tr>' +
+      r.injuries.list.slice().reverse().map(x => '<tr><td>' + x.n + '</td><td>' + esc(vrDM(x.at.slice(0, 10)) + ', ' + x.at.slice(11, 16)) + '</td>' + (withNames ? '<td>' + esc(x.patient) + '</td>' : '') + '<td>' + esc(x.what + (x.workAcc ? L(' (istehsalat)', ' (на производстве)') : '') + (x.where ? ' · ' + x.where : '')) + '</td><td>' + esc(vrL(VR_L.sev[x.sev || ''], rl) + (x.xr ? L(' — rentgen tələb olunur', ' — нужен рентген') : '')) + '</td></tr>').join('') + '</table>';
+    h += '<p class="vr-small">' + esc(L('Ağırlıq dərəcəsi məntəqənin daxili şkalası ilə qiymətləndirilir; bu, məhkəmə-tibbi ekspertizanın dərəcəsi deyil:', 'Степень тяжести — внутренняя шкала медпункта, не судебно-медицинская:')) + '</p><ul class="vr-small">' +
+      ['<b>' + esc(L('Yüngül', 'Лёгкая')) + '</b> — ' + esc(L('yardım yerində göstərilir, işçi həmin növbədə işə qayıdır.', 'помощь на месте, работник возвращается в ту же смену.')),
+        '<b>' + esc(L('Orta', 'Средняя')) + '</b> — ' + esc(L('rentgen və ya mütəxəssis müayinəsi lazımdır, ya da işçi 1 gündən çox işdən azad olunur; həyat üçün təhlükə yoxdur.', 'нужен рентген или специалист, либо освобождение больше 1 дня; угрозы жизни нет.')),
+        '<b>' + esc(L('Ağır', 'Тяжёлая')) + '</b> — ' + esc(L('xəstəxanaya təxliyə tələb olunur: sınıq, huşun itməsi ilə baş zədəsi, göz zədəsi, güclü qanaxma, geniş yanıq.', 'нужна эвакуация в больницу: перелом, травма головы с потерей сознания, травма глаза, сильное кровотечение, обширный ожог.'))].map(x => '<li>' + x + '</li>').join('') + '</ul>';
+  }
+  // 5. на заметку
+  h += '<h2>5. ' + esc(L('Diqqət tələb edən hallar', 'Случаи «на заметку»')) + '</h2>';
+  if (!r.attention.length) h += '<p>' + esc(L('Dövr ərzində belə hal yoxdur.', 'За период таких случаев нет.')) + '</p>';
+  else h += '<p>' + esc(L(r.attention.length + ' hal ayrıca nəzarət tələb edir' + (r.names === 'all' ? '; nömrələr «Əlavə 1» siyahısına uyğundur.' : '.'), r.attention.length + ' случаев требуют отдельного контроля' + (r.names === 'all' ? '; номера — как в «Əlavə 1».' : '.'))) + '</p><ul>' +
+    r.attention.map(a => '<li><b>№ ' + esc(a.n.join(', ')) + ', ' + esc(a.at.length > 1 ? vrDM(a.at[0].slice(0, 10)) + '–' + vrDM(a.at[a.at.length - 1].slice(0, 10)) : vrDM(a.at[0].slice(0, 10)) + ', ' + a.at[0].slice(11, 16)) + '</b> — ' + esc(vrAttText(a, r, rl)) + (!(a.codes || []).some(c => c.code === 'cluster') ? '. ' + esc(L('Nəticə: ', 'Исход: ') + vrOutText(a, rl)) : '') + '.</li>').join('') + '</ul>';
+  // 6. выводы
+  const recs = vrRecs(r, rl);
+  h += '<h2>6. ' + esc(L('Nəticələr və tövsiyələr', 'Выводы и рекомендации')) + '</h2>' + (recs.length ? '<ol>' + recs.map(x => '<li><b>' + esc(x[0]) + '</b> — ' + esc(x[1]) + '</li>').join('') + '</ol>' : '<p>—</p>');
+  // 7. источник
+  h += '<h2>7. ' + esc(L('Mənbə və hesablama qaydası', 'Источник и правила подсчёта')) + '</h2><ul class="vr-small">' + [
+    L('Bütün rəqəmlər proqramdakı müraciət formalarından götürülüb (' + fmtDate(r.from) + ' – ' + fmtDate(r.to) + ', ' + r.total + ' forma).', 'Все цифры — из форм обращений в программе (' + fmtDate(r.from) + ' – ' + fmtDate(r.to) + ', ' + r.total + ' форм).'),
+    L('Müraciət — hər gəliş ayrıca sayılır; nəfər — fərqli şəxslər (pasiyent kartı, FİN və ya ad + doğum tarixi); təkrar — eyni şəxsin dövr ərzində ikinci və sonrakı gəlişləri.', 'Обращение — каждый приход; человек — разные люди (карта пациента, FİN или ФИО + дата рождения); повторное — второй и следующие приходы того же человека за период.'),
+    L('Səbəb qrupları hər ay eynidir ki, aylar müqayisə olunsun. Müqayisə dövrü: ' + fmtDate(r.cmpFrom) + ' – ' + fmtDate(r.cmpTo) + ', ' + r.prev.total + ' müraciət.', 'Группы причин каждый месяц одни и те же, чтобы месяцы можно было сравнивать. Период сравнения: ' + fmtDate(r.cmpFrom) + ' – ' + fmtDate(r.cmpTo) + ', ' + r.prev.total + ' обращ.'),
+    L('Qrup XƏT-10 kodu üzrə, kod yoxdursa — şikayət və diaqnoz sözləri üzrə müəyyən edilir; ölçülmüş AT ≥140/90 baş ağrısını «yüksək təzyiq» qrupuna aparır; kodlu ürək xəstəliyi (I20–I25, I44–I50) — «ürək» qrupundadır; pnevmoniya (J12–J18) «soyuqdəymə» qrupuna daxildir və ayrıca «diqqət» siyahısında göstərilir.', 'Группа — по коду МКБ-10, без кода — по словам жалоб и диагноза; измеренное АД ≥140/90 относит головную боль к «давлению»; болезни сердца с кодом (I20–I25, I44–I50) — в группе «сердце»; пневмония (J12–J18) входит в группу «простуда» и отдельно показана «на заметку».'),
+    r.quality.open ? L(r.quality.open + ' forma hələ bağlanmayıb — rəqəmlər dəyişə bilər.', r.quality.open + ' форм ещё не закрыты — цифры могут измениться.') : '',
+    L('Pasiyentlərin adları və diaqnozları həkim sirridir («Əhalinin sağlamlığının qorunması haqqında» Qanun, 53-cü maddə).' + (r.names === 'all' ? ' Tam ad siyahısı ayrıca vərəqdədir — «Əlavə 1».' : r.names === 'inj' ? ' Adlar yalnız xəsarətlər cədvəlindədir.' : ' Hesabatda ad yoxdur.'),
+      'Фамилии и диагнозы пациентов — врачебная тайна (закон «Об охране здоровья населения», ст. 53).' + (r.names === 'all' ? ' Полный список с фамилиями — отдельным листом, «Əlavə 1».' : r.names === 'inj' ? ' Фамилии — только в таблице травм.' : ' В отчёте фамилий нет.'))
+  ].filter(Boolean).map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>';
+  // Əlavə 1
+  if (r.appendix && r.appendix.length) {
+    h += '<div class="vr-break"></div><h2>' + esc(L('Əlavə 1. Müraciətlərin tam siyahısı', 'Əlavə 1. Полный список обращений')) + '</h2><p class="vr-small">' + esc(L('Həkim sirri — yalnız pasiyentin razılığı ilə və ya istehsalat xəsarətində verilir.', 'Врачебная тайна — передаётся только с согласия пациента или при производственной травме.')) + '</p>' +
+      '<table class="vr-t vr-tsm"><tr><th>№</th><th>' + esc(L('Tarix', 'Дата')) + '</th><th>' + esc(L('Pasiyent', 'Пациент')) + '</th><th>' + esc(L('Yaş / cins', 'Возраст / пол')) + '</th><th>' + esc(L('Şikayət / diaqnoz', 'Жалоба / диагноз')) + '</th><th>' + esc(L('Göstərilmiş yardım', 'Помощь')) + '</th><th>' + esc(L('Nəticə', 'Исход')) + '</th></tr>' +
+      r.appendix.map(x => '<tr><td>' + x.n + (x.first ? '' : ' ↻') + '</td><td>' + esc(vrDM(x.at.slice(0, 10)) + ' ' + x.at.slice(11, 16)) + '</td><td>' + esc(x.patient) + '</td><td>' + esc((x.age !== '' ? x.age : '—') + ' / ' + (x.sex === 'm' ? L('k', 'м') : x.sex === 'f' ? L('q', 'ж') : '—')) + '</td><td>' + esc([x.compl, x.dx, x.icd].filter(Boolean).join(' · ')) + '</td><td>' + esc(x.given || '—') + '</td><td>' + esc(vrOutText(x, rl)) + '</td></tr>').join('') + '</table>' +
+      '<p class="vr-small">↻ — ' + esc(L('təkrar müraciət', 'повторное обращение')) + '</p>';
+  }
+  return h + '</div>';
+}
+const VR_CSS = '.vr-doc{font-family:Georgia,"Times New Roman",serif;color:#1d1d1d;line-height:1.45}.vr-doc h1{font-size:24px;line-height:1.2;margin:6px 0}.vr-doc h2{font-size:19px;margin:18px 0 6px}.vr-doc p,.vr-doc li{font-family:system-ui,sans-serif;font-size:14px}' +
+  '.vr-small{font-family:system-ui,sans-serif;font-size:12px;color:#555}.vr-lead{font-size:15px}.vr-cap{font-family:system-ui,sans-serif;font-size:13px;margin:4px 0}.vr-cap span{color:#666}' +
+  '.vr-t{border-collapse:collapse;font-family:system-ui,sans-serif;font-size:13px;margin:6px 0;max-width:100%}.vr-t th{background:#f2f0ea;text-align:left;font-weight:500;color:#444}.vr-t td,.vr-t th{border:1px solid #ddd;padding:5px 8px;vertical-align:top}.vr-tsm{font-size:11px}.vr-break{page-break-before:always}';
+function vrCss() { if ($('#vrCss')) return; const s = document.createElement('style'); s.id = 'vrCss'; s.textContent = VR_CSS + '#vrOut{overflow-x:auto}'; document.head.appendChild(s); }
+function vrOpen(preset) {
+  vrCss();
+  const [a, b] = mgPreset(preset || 'month');
+  const rl = S.vrLang || (S.lang === 'ru' ? 'az' : S.lang === 'az' ? 'az' : 'az');
+  const opt = (v, k, cur) => '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + esc(t(k)) + '</option>';
+  openModal('<h3>' + esc(t('vrTitle')) + '</h3><div class="chips" style="margin-bottom:6px">' + [['week', 'mgWeek'], ['month', 'mgMonth'], ['prev', 'mgPrev']].map(x => '<button class="chip' + ((preset || 'month') === x[0] ? ' on' : '') + '" data-act="vrPreset" data-p="' + x[0] + '">' + esc(t(x[1])) + '</button>').join('') + '</div>' +
+    '<div class="grid2"><div class="field"><label>' + esc(t('mgFrom')) + '</label><input type="date" id="vrFrom" value="' + a + '"></div><div class="field"><label>' + esc(t('mgTo')) + '</label><input type="date" id="vrTo" value="' + b + '"></div></div>' +
+    '<div class="field"><label>' + esc(t('vrCmp')) + '</label><select id="vrCmpMode">' + opt('auto', 'vrCmpAuto', S.vrCmpMode || 'auto') + opt('custom', 'vrCmpCustom', S.vrCmpMode) + '</select></div>' +
+    '<div class="grid2" id="vrCmpBox" style="' + (S.vrCmpMode === 'custom' ? '' : 'display:none') + '"><div class="field"><label>' + esc(t('mgFrom')) + '</label><input type="date" id="vrCFrom" value="' + esc(S.vrCFrom || '') + '"></div><div class="field"><label>' + esc(t('mgTo')) + '</label><input type="date" id="vrCTo" value="' + esc(S.vrCTo || '') + '"></div></div>' +
+    '<div class="grid2"><div class="field"><label>' + esc(t('vrLang')) + '</label><select id="vrLang"><option value="az"' + (rl === 'az' ? ' selected' : '') + '>Azərbaycanca</option><option value="ru"' + (rl === 'ru' ? ' selected' : '') + '>Русский</option></select></div>' +
+    '<div class="field"><label>' + esc(t('vrNames')) + '</label><select id="vrNames">' + opt('none', 'vrNamesNone', S.vrNames || 'inj') + opt('inj', 'vrNamesInj', S.vrNames || 'inj') + opt('all', 'vrNamesAll', S.vrNames || 'inj') + '</select></div></div>' +
+    '<div class="muted" style="margin:2px 0 6px">' + esc(t('vrNamesWarn')) + '</div>' +
+    '<div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn primary" data-act="vrShow">' + esc(t('vrShow')) + '</button>' + (canAi() ? '<button class="btn ghost" data-act="vrAi">' + esc(t('vrAi')) + '</button>' : '') + '<button class="btn ghost" data-act="vrPrint">' + esc(t('vrPrint')) + '</button></div>' +
+    '<div id="vrOut" style="margin-top:10px"></div><div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+  // поменяли период, сравнение или фамилии — старый отчёт больше не печатается и не уходит в ИИ
+  const stale = () => { S.hs = null; const o = $('#vrOut'); if (o) o.innerHTML = '<div class="muted">' + esc(t('vrShow')) + ' ↑</div>'; };
+  ['#vrFrom', '#vrTo', '#vrNames', '#vrCFrom', '#vrCTo'].forEach(sel => { const el = $(sel); if (el) el.addEventListener('change', stale); });
+  const cm = $('#vrCmpMode'); if (cm) cm.onchange = () => { S.vrCmpMode = cm.value; $('#vrCmpBox').style.display = cm.value === 'custom' ? '' : 'none'; stale(); };
+  const lg = $('#vrLang'); if (lg) lg.onchange = () => { S.vrLang = lg.value; if (S.hs) $('#vrOut').innerHTML = vrHtml(S.hs, S.vrLang); };
+  vrLoad();
+}
+async function vrLoad(btn) {
+  S.hs = null;
+  const out = $('#vrOut'); if (!out) return;
+  S.vrNames = $('#vrNames').value; S.vrLang = $('#vrLang').value;
+  const p = { from: $('#vrFrom').value, to: $('#vrTo').value, names: S.vrNames };
+  if (S.vrCmpMode === 'custom') { S.vrCFrom = $('#vrCFrom').value; S.vrCTo = $('#vrCTo').value; if (S.vrCFrom && S.vrCTo) { p.cmpFrom = S.vrCFrom; p.cmpTo = S.vrCTo; } }
+  out.innerHTML = '<div class="muted">⏳</div>';
+  const r = await busy(btn, () => rpcA('visitReport', p, { timeout: 120000 }));
+  if (!r) { out.innerHTML = ''; return; }
+  S.hs = r; out.innerHTML = vrHtml(r, S.vrLang);
+}
+/** Главный вывод от ИИ — только по обезличенным цифрам (без фамилий, дат рождения, номеров). */
+async function vrAi(btn) {
+  if (!S.hs) await vrLoad();
+  const r = S.hs; if (!r) return;
+  const rl = S.vrLang || 'az';
+  const facts = { период: r.from + ' — ' + r.to, сравнение: r.cmpFrom + ' — ' + r.cmpTo, обращений: r.total, людей: r.persons, повторных: r.repeat, вСреднемЗаДень: r.avg, прошлыйПериод: { обращений: r.prev.total, вСреднем: r.prev.avg },
+    группы: r.groups, группыПрошлого: r.prev.groups, травмы: { обращений: r.injuries.visits, людей: r.injuries.persons, степень: r.injuries.sev, наПроизводстве: r.injuries.workAcc }, рентген: r.xray, экг: r.ecg, итогДляРаботы: r.work, давление: r.ah,
+    наЗаметку: r.attention.map(a => (a.codes || []).map(c => c.code).join('+')), качество: r.quality };
+  const ask = rl === 'ru' ? 'Напиши главный вывод отчёта медпункта для руководства — 2–3 предложения с цифрами, простыми словами, без фамилий и без советов вне цифр. Только текст.'
+    : 'Tibbi məntəqənin hesabatı üçün rəhbərliyə əsas nəticəni yaz — rəqəmlərlə 2–3 cümlə, sadə azərbaycan dilində (latın), adsız. Yalnız mətn.';
+  const res = await busy(btn, () => rpcA('aiChat', { mode: 'summary', messages: [{ role: 'user', content: [{ type: 'text', text: ask + '\n' + JSON.stringify(facts) }] }] }, { timeout: 180000 }));
+  if (!res) return;
+  r.ai = (res.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+  const out = $('#vrOut'); if (out) out.innerHTML = vrHtml(r, rl);
+}
+async function vrPrint() {
+  if (!S.hs) await vrLoad();
+  if (!S.hs) return;
+  const root = $('#printRoot'); if (!root) return;
+  root.innerHTML = '<style>' + VR_CSS + '@page{margin:14mm}.vr-doc h1{font-size:20pt}</style>' + vrHtml(S.hs, S.vrLang || 'az');
+  document.body.classList.add('print-form');
+  setTimeout(() => { window.print(); setTimeout(() => { document.body.classList.remove('print-form'); root.innerHTML = ''; }, 800); }, 60);
+}
+
+/* ---------- форма обращения: блок «Для работодателя» ---------- */
+function vrFormBlock() {
+  const box = $('#formsBox'); if (!box || !S.fv) return;
+  const sec = box.querySelector('details[data-sec="outcome"] .f-body');
+  if (!sec || sec.querySelector('.vr-emp')) return;
+  const d = fData(S.fv.id) || {};
+  const chip = (k, v, lbl) => '<button type="button" class="chip' + (String(d[k] || '') === v ? ' on' : '') + '" data-act="fSetV" data-f="' + k + '" data-v="' + v + '">' + esc(lbl) + '</button>';
+  const rl = S.lang === 'ru' ? 'ru' : 'az';
+  const inp = (k, lbl, type, max) => '<div class="field"><label>' + esc(lbl) + '</label><input type="' + (type || 'text') + '" data-f="' + k + '"' + (max ? ' maxlength="' + max + '"' : '') + (type === 'number' ? ' inputmode="numeric" min="0" max="999"' : '') + ' value="' + esc(d[k] === undefined || d[k] === null ? '' : String(d[k])) + '"></div>';
+  sec.insertAdjacentHTML('beforeend', '<div class="vr-emp" style="border-top:1px solid var(--line);margin-top:10px;padding-top:8px"><div class="lbl">' + esc(t('vrEmpBlock')) + '</div>' +
+    '<div class="field"><label>' + esc(t('vrWork')) + '</label><div class="chips f-chips">' + ['back', 'off', 'hosp', 'evac'].map(k => chip('vrWork', k, vrL(VR_L.work[k], rl))).join('') + '</div></div>' +
+    (d.vrWork === 'off' ? inp('vrOffH', t('vrOffH'), 'number') : '') +
+    '<details class="vr-injd" style="margin-top:8px"' + (d.vrSev || d.vrXr || d.vrInjWhere || /(^|,\s*)[ST]\d/i.test(String(d.dx1c || '') + ',' + String(d.dx2c || '')) || isOn(d, 'flags', 'workAcc') || d.workAcc ? ' open' : '') + '><summary class="lbl">' + esc(t('vrInj')) + '</summary><div class="field"><label>' + esc(t('vrSev')) + '</label><div class="chips f-chips">' + ['light', 'mid', 'heavy', 'unk'].map(k => chip('vrSev', k, vrL(VR_L.sev[k], rl))).join('') + '</div><div class="muted" style="font-size:12px;margin-top:4px">' + esc(t('vrSevHint')) + '</div></div>' +
+    '<div class="chips f-chips">' + chip('vrXr', '1', '🩻 ' + t('vrXr')) + chip('vrSpec', '1', '👨‍⚕️ ' + t('vrSpec')) + '</div>' +
+    inp('vrInjWhere', t('vrInjWhere'), 'text', 120) + inp('vrInjHow', t('vrInjHow'), 'text', 160) + '</details></div>');
+}
+(function () {
+  if (typeof fRenderEditor === 'function') {
+    const o = fRenderEditor;
+    fRenderEditor = function () { const r = o.apply(this, arguments); try { vrFormBlock(); } catch (e) { } return r; };
+  }
+  const origMenuRender = window.menuRender;
+  if (typeof origMenuRender === 'function') window.menuRender = function () {
+    const r = origMenuRender.apply(this, arguments);
+    const nav = $('nav.bottom.drawer');
+    const ex = nav && nav.querySelector('[data-act=vrOpen]');
+    if (ex) ex.textContent = t('vrBtn'); // язык мог смениться
+    else if (nav && S.me && (isOrgAdmin() || (can('reports') && (can('forms') || can('formsEdit'))))) {
+      const mg = nav.querySelector('[data-act=mgOpen]');
+      const html = '<button class="btn ghost block" style="margin:6px 0" data-act="vrOpen">' + esc(t('vrBtn')) + '</button>';
+      if (mg) mg.insertAdjacentHTML('afterend', html); else { const fb = nav.querySelector('[data-act=fbOpen]'); if (fb) fb.insertAdjacentHTML('beforebegin', html); }
+    }
+    return r;
+  };
+})();
+Object.assign(H, {
+  vrOpen: () => { if (typeof menuOpen === 'function') menuOpen(false); vrOpen(); },
+  vrPreset: el => vrOpen(el.dataset.p),
+  vrShow: el => vrLoad(el),
+  vrAi: el => vrAi(el),
+  vrPrint: () => vrPrint()
+});
+
+/* =====================================================================
+ * v66 (9.39): 🔎 Проверка истории болезни перед комиссией (8 пунктов) — по образцу «Разбор 7 историй болезни AXM Şəmkir».
+ *  Фото листов → на телефоне закрасить ФИО / FİN / адрес / телефон (тот же редактор, что в разборе, отметка обязательна) →
+ *  ИИ пересказывает листы партиями по 4 → оценка: 8 пунктов (✓ ± ✗ ?), %, плюсы и минусы «где искать» и «чья зона»,
+ *  зона больницы, стоп-факторы, что проверить, роль и риск выбранного врача. Сводная таблица по всем проверкам, печать.
+ *  Фото не сохраняются нигде; в истории проверок — только результат без личных данных.
+ * ===================================================================== */
+const CA_T = {
+  ru: {
+    caBtn: '🔎 Проверка истории (комиссия)', caTitle: 'Проверка историй болезни', caNew: '＋ Новая проверка', caNone: 'Проверок пока нет.',
+    caLabel: 'Метка (без ФИО), например «№1, 69 лет, J18.9»', caFocus: 'Врач в фокусе (необязательно) — где он защищён и где нет', caLang: 'Язык результата',
+    caPhotos: 'Фото листов: {n}', caAdd: '📷 Добавить фото листов', caRun: '🔎 Проверить', caNeedPhotos: 'Добавьте фото листов истории',
+    caHow: 'Сфотографируйте все листы: титул (стр. 1–2), дневники, эпикриз, стр. 8, лист назначений, температурный лист, согласия, акт тяжести, анализы, ЭКГ, рентген / КТ, выписку. На каждом фото закрасьте ФИО, FİN, дату рождения, адрес, телефон, номер истории и полиса пациента.',
+    caReading: '📖 Читаю фото {a}–{b} из {n}…', caAuditing: '🧠 Оцениваю по 8 пунктам…', caDone: 'Готово', caDelAsk: 'Удалить эту проверку?', caOpen: 'Открыть', caPrint: '🖨 Печать / PDF',
+    caPrintAll: '🖨 Сводка — печать', caPoints: '8 пунктов комиссии', caPlus: 'Плюсы', caMinusDoc: 'Минусы — зона врача', caMinusHosp: 'Минусы — зона больницы', caStop: 'Стоп-факторы вне 8 пунктов',
+    caCheck: 'Проверить в оригинале', caFocusT: 'Врач в фокусе', caRisk: 'Риск', caVerdict: 'Готовность к комиссии', caRole: 'Роль', caWhat: 'Что', caWhere: 'Где искать', caWho: 'Чья зона', caMap: '📑 Где искать: карта бланков',
+    caLegal: '⚖️ Что можно и что нельзя', caIfFound: 'Если найдётся', caScore: 'Итог', caPatient: 'Пациент', caDept: 'Отделение, даты', caDx: 'Диагноз', caWhoLed: 'Кто вёл',
+    caNote: 'Оценка — по фотографиям: неразборчивое помечено «(?)». «На фото не найдено» — не значит «нет в деле». Процент — экспертная оценка по 8 пунктам, не прогноз решения комиссии.',
+    caTooMany: 'Не больше 60 фото на одну историю', E_CH_LABEL_NAME: 'В метке похоже на фамилию пациента — оставьте номер, возраст, диагноз', caAssess: 'оценено {n} из 8 (остальные — «на фото не найдено», считаются 0)', caStopped: 'Проверка прервана — фото остались, можно повторить', caBack: '← К списку'
+  },
+  az: {
+    caBtn: '🔎 Xəstəlik tarixinin yoxlanması (komissiya)', caTitle: 'Xəstəlik tarixlərinin yoxlanması', caNew: '＋ Yeni yoxlama', caNone: 'Hələ yoxlama yoxdur.',
+    caLabel: 'Nişan (adsız), məs. «№1, 69 yaş, J18.9»', caFocus: 'Diqqətdə olan həkim (məcburi deyil) — harada qorunub, harada yox', caLang: 'Nəticənin dili',
+    caPhotos: 'Vərəqlərin şəkli: {n}', caAdd: '📷 Vərəqlərin şəklini əlavə et', caRun: '🔎 Yoxla', caNeedPhotos: 'Xəstəlik tarixinin vərəqlərinin şəklini əlavə edin',
+    caHow: 'Bütün vərəqlərin şəklini çəkin: titul (səh. 1–2), gündəliklər, epikriz, səh. 8, təyinat vərəqi, hərarət vərəqi, razılıqlar, ağırlıq aktı, analizlər, EKQ, rentgen / KT, çıxarış. Hər şəkildə pasiyentin ad-soyadını, FİN-i, doğum tarixini, ünvanını, telefonunu, tarix və sığorta nömrəsini rəngləyin.',
+    caReading: '📖 {a}–{b} şəkil oxunur ({n}-dən)…', caAuditing: '🧠 8 bənd üzrə qiymətləndirilir…', caDone: 'Hazırdır', caDelAsk: 'Bu yoxlama silinsin?', caOpen: 'Aç', caPrint: '🖨 Çap / PDF',
+    caPrintAll: '🖨 Xülasə — çap', caPoints: 'Komissiyanın 8 bəndi', caPlus: 'Müsbət cəhətlər', caMinusDoc: 'Çatışmazlıqlar — həkimin zonası', caMinusHosp: 'Çatışmazlıqlar — xəstəxananın zonası', caStop: '8 bənddən kənar stop-faktorlar',
+    caCheck: 'Orijinalda yoxlamaq', caFocusT: 'Diqqətdə olan həkim', caRisk: 'Risk', caVerdict: 'Komissiyaya hazırlıq', caRole: 'Rolu', caWhat: 'Nə', caWhere: 'Harada axtarmalı', caWho: 'Kimin zonası', caMap: '📑 Harada axtarmalı: blankların xəritəsi',
+    caLegal: '⚖️ Nə olar, nə olmaz', caIfFound: 'Tapılarsa', caScore: 'Nəticə', caPatient: 'Pasiyent', caDept: 'Şöbə, tarixlər', caDx: 'Diaqnoz', caWhoLed: 'Kim aparıb',
+    caNote: 'Qiymət şəkillər üzrədir: oxunmayanlar «(?)» ilə qeyd olunub. «Şəkildə tapılmadı» — «işdə yoxdur» demək deyil. Faiz 8 bənd üzrə ekspert qiymətidir, komissiyanın qərarının proqnozu deyil.',
+    caTooMany: 'Bir tarix üçün 60 şəkildən çox olmaz', E_CH_LABEL_NAME: 'Nişanda pasiyentin soyadına oxşar söz var — nömrə, yaş, diaqnoz yazın', caAssess: '8-dən {n} bənd qiymətləndirilib (qalanları «şəkildə tapılmadı» — 0)', caStopped: 'Yoxlama dayandı — şəkillər qalıb, təkrar etmək olar', caBack: '← Siyahıya'
+  }
+};
+Object.assign(I18N.ru, CA_T.ru);
+Object.assign(I18N.az, CA_T.az);
+const CA_PTS = [['passport', 'Паспортная часть, приёмный и клинический диагнозы', 'Pasport hissəsi, qəbul və klinik diaqnozlar'], ['rxMatch', 'Назначения в дневнике = лист назначений', 'Gündəlikdəki təyinatlar = təyinat vərəqi'],
+  ['hiv', 'ВИЧ', 'HİV'], ['ecg', 'ЭКГ', 'EKQ'], ['sputum', 'Мокрота (КУБ / GeneXpert)', 'Bəlğəm (TTÇ / GeneXpert)'], ['blood', 'Анализы крови', 'Qan analizləri'], ['diary', 'Дневники каждый день', 'Hər gün gündəlik'], ['extra', 'Обследования вне протокола обоснованы', 'Protokoldan kənar müayinələr əsaslandırılıb']];
+const CA_MARK = { ok: '✓', part: '±', no: '✗', unk: '?' };
+const CA_RISK = { none: ['—', '—'], low: ['низкий', 'aşağı'], mid: ['средний', 'orta'], high: ['высокий', 'yüksək'] };
+const CA_MAP = [
+  ['Титул стр. 1 / Titul səh. 1', 'TQS №003 «Xəstəlik tarixi», стр. 1', 'дата и время поступления и выписки, отделение, перевод, койко-дни, «Dərmanların əlavə təsiri», рост и вес, форма оплаты, кто направил, способ поступления, диагнозы направившего, приёмного и клинический'],
+  ['Титул стр. 2', 'TQS №003, стр. 2', 'операции и процедуры (код XBT-9), исход «Xəstəliyin gedişi», «başqa müəssisəyə köçürülüb», «Əmək qabiliyyəti» и лист нетрудоспособности, «Ekspertizaya göndərilənlər üçün rəy», подписи лечащего врача и заведующего'],
+  ['Дневники / Gündəliklər', 'стр. 3–6 «Həkimin gündəlik müayinələri», «Müşahidə gündəliyi», «Təyinat»', 'первая запись — приёмная, далее консультанты, протоколы процедур, ежедневные и переводные записи'],
+  ['Эпикриз / Epikriz', 'стр. 7 «Epikriz»', 'итог лечения, результаты обследований, рекомендации, подписи врача и заведующего'],
+  ['Стр. 8 / Səh. 8', '«Son klinik diaqnoz»', 'основной, «Əsas xəstəliyin ağırlaşması», «Yanaşı xəstəliklər»; даты и результаты RW и ВИЧ; подписи'],
+  ['Лист назначений', 'TQS №011 «Təyinat vərəqi»', 'препараты, «Təyinat verildi» и «Təyinat kəsildi», отметки выполнения по дням, подписи'],
+  ['Температурный лист', 'TQS №004 «Hərarətə nəzarət vərəqi»', 'даты, палата, t, АД, пульс, ЧДД'],
+  ['Согласие на лечение', '«Məlumatlandırılmış razılıq müqaviləsi (Stasionar müalicə üçün)»', 'имя врача, подписи больного и врача, дата'],
+  ['Согласие на вмешательство', '«Tibbi müdaxiləyə razılıq forması» (1 nömrəli əlavə TƏBİB)', 'вмешательство и код, подписи больного, представителя и медработника'],
+  ['Акт тяжести', '«Xəstə … vəziyyətdə qəbul edildi»', 'состояние при поступлении, кто составил, расписка родственника с датой и временем'],
+  ['Вкладыши', 'распечатки лабораторий, İcbari Tibbi Sığorta, ЭКГ, рентген и КТ, «Göndəriş» на ВИЧ, Диаскинтест, GeneXpert', 'дата и время забора, дата результата, кто назначил'],
+  ['Çıxarış', 'выписка (отдельный лист)', 'диагнозы при выписке — должны совпадать со стр. 8']
+];
+function caCss() { if ($('#caCss')) return; const s = document.createElement('style'); s.id = 'caCss'; s.textContent = VR_CSS + '.ca-m{font-weight:700;text-align:center}.ca-ok{color:#1b7f3b}.ca-part{color:#b7791f}.ca-no{color:#c53030}.ca-unk{color:#777}#caBox .vr-t{width:100%}.ca-th{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.ca-th img{width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}'; document.head.appendChild(s); }
+const caL = (ru, az) => S.lang === 'az' ? az : ru;
+async function caOpen() {
+  caCss();
+  openModal('<h3>' + esc(t('caTitle')) + '</h3><div id="caBox"><div class="muted">⏳</div></div><div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+  const r = await rpcA('chartList', {}).catch(() => null);
+  S.caList = r ? r.rows : [];
+  caListRender();
+}
+function caMarkCell(m) { return '<td class="ca-m ch-' + (m || 'unk') + '">' + (CA_MARK[m] || '?') + '</td>'; }
+function caListHtml(rows, forPrint) {
+  if (!rows.length) return '<div class="muted">' + esc(t('caNone')) + '</div>';
+  const anyFocus = rows.some(x => x.focus);
+  return '<table class="vr-t"><tr><th>' + esc(caL('Метка', 'Nişan')) + '</th>' + CA_PTS.map((p, i) => '<th title="' + esc(caL(p[1], p[2])) + '">' + (i + 1) + '</th>').join('') + '<th>' + esc(t('caScore')) + '</th>' + (anyFocus ? '<th>' + esc(t('caRisk')) + '</th>' : '') + (forPrint ? '' : '<th></th>') + '</tr>' +
+    rows.map(x => '<tr><td><b>' + esc(x.label || '—') + '</b><div class="vr-small">' + esc([x.dept, x.dx].filter(Boolean).join(' · ')) + '</div></td>' + CA_PTS.map((p, i) => caMarkCell(x.points[i])).join('') + '<td><b>' + x.score + '%</b>' + (x.stop ? ' ⛔' : '') + '</td>' +
+      (anyFocus ? '<td>' + esc(x.focus ? x.focus + ': ' + (CA_RISK[x.focusRisk] ? caL(CA_RISK[x.focusRisk][0], CA_RISK[x.focusRisk][1]) : '—') : '') + '</td>' : '') +
+      (forPrint ? '' : '<td style="white-space:nowrap"><button class="btn small ghost" data-act="caView" data-id="' + esc(x.id) + '">' + esc(t('caOpen')) + '</button> <button class="btn small ghost" data-act="caDel" data-id="' + esc(x.id) + '">✕</button></td>') + '</tr>').join('') + '</table>' +
+    '<div class="vr-small">' + esc(caL('✓ — выполнено (1 балл), ± — частично (0,5), ✗ — нет (0), ? — на фото не найдено (0). ⛔ — есть стоп-фактор вне 8 пунктов.', '✓ — yerinə yetirilib (1 bal), ± — qismən (0,5), ✗ — yoxdur (0), ? — şəkildə tapılmadı (0). ⛔ — 8 bənddən kənar stop-faktor var.')) + '</div>' +
+    '<div class="vr-small">' + CA_PTS.map((p, i) => (i + 1) + ' — ' + esc(caL(p[1], p[2]))).join('; ') + '</div>';
+}
+function caListRender() {
+  const box = $('#caBox'); if (!box) return;
+  const rows = S.caList || [];
+  const avg = rows.length ? Math.round(rows.reduce((s, x) => s + x.score, 0) / rows.length) : 0;
+  box.innerHTML = '<div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px"><button class="btn primary" data-act="caNew">' + esc(t('caNew')) + '</button>' + (rows.length ? '<button class="btn ghost" data-act="caPrintAll">' + esc(t('caPrintAll')) + '</button>' : '') + '</div>' +
+    (rows.length ? '<div class="muted" style="margin-bottom:4px">' + esc(caL('Проверок: ' + rows.length + ', в среднем ' + avg + '%', 'Yoxlama: ' + rows.length + ', orta ' + avg + '%')) + '</div>' : '') + caListHtml(rows);
+}
+function caNewRender() {
+  const box = $('#caBox'); if (!box) return;
+  const st = S.caNew || (S.caNew = { photos: [], label: '', focus: '', lang: S.lang === 'az' ? 'az' : 'ru' });
+  box.innerHTML = '<button class="btn small ghost" data-act="caBackList">' + esc(t('caBack')) + '</button><div class="muted" style="margin:8px 0">' + esc(t('caHow')) + '</div>' +
+    '<div class="field"><label>' + esc(t('caLabel')) + '</label><input type="text" id="caLabelIn" maxlength="80" value="' + esc(st.label) + '"></div>' +
+    '<div class="field"><label>' + esc(t('caFocus')) + '</label><input type="text" id="caFocusIn" maxlength="60" value="' + esc(st.focus) + '" placeholder="' + esc(caL('Фамилия врача', 'Həkimin soyadı')) + '"></div>' +
+    '<div class="field"><label>' + esc(t('caLang')) + '</label><select id="caLangIn"><option value="ru"' + (st.lang === 'ru' ? ' selected' : '') + '>Русский</option><option value="az"' + (st.lang === 'az' ? ' selected' : '') + '>Azərbaycanca</option></select></div>' +
+    '<div class="lbl">' + esc(t('caPhotos', { n: st.photos.length })) + '</div><div class="ca-th">' + st.photos.map((p, i) => '<span style="position:relative"><img src="' + p.thumb + '" alt=""><button class="btn small ghost" style="position:absolute;top:-6px;right:-6px;padding:0 6px;min-height:22px" data-act="caPhotoDel" data-i="' + i + '">✕</button></span>').join('') + '</div>' +
+    '<div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn ghost" data-act="caPhotoAdd">' + esc(t('caAdd')) + '</button><button class="btn primary" data-act="caRun"' + (st.photos.length ? '' : ' disabled') + '>' + esc(t('caRun')) + '</button></div><div id="caProg" class="muted" style="margin-top:8px"></div>';
+  ['caLabelIn', 'caFocusIn', 'caLangIn'].forEach(id => { const el = $('#' + id); if (el) el.oninput = el.onchange = () => { st.label = $('#caLabelIn').value; st.focus = $('#caFocusIn').value; st.lang = $('#caLangIn').value; }; });
+}
+function caPhotoAdd() {
+  let fi = $('#caFile');
+  if (!fi) { fi = document.createElement('input'); fi.type = 'file'; fi.id = 'caFile'; fi.accept = 'image/*'; fi.multiple = true; fi.style.display = 'none'; document.body.appendChild(fi); }
+  fi.value = '';
+  fi.onchange = async () => {
+    const st = S.caNew; const files = Array.from(fi.files || []);
+    st.pages = {}; // набор фото изменился — прочитанные партии читать заново
+    const keep = $('.modal') ? $('.modal').innerHTML : '';
+    for (const f of files) {
+      if (st.photos.length >= 60) { toast(t('caTooMany'), 'bad'); break; }
+      try {
+        const img = await attLoadImg(f);
+        const out = await attRedact(img, true, f.name || 'фото'); // тот же редактор, что в разборе: закрасить и отметить «личные данные закрыты»
+        if (out) st.photos.push({ data: out.data, thumb: out.thumb });
+      } catch (e) { toast(t('attBad'), 'bad'); }
+    }
+    // редактор закрыл окно — вернуть окно проверки
+    openModal('<h3>' + esc(t('caTitle')) + '</h3><div id="caBox"></div><div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+    caNewRender();
+  };
+  fi.click();
+}
+async function caRun(btn) {
+  const st = S.caNew; if (!st || !st.photos.length) { toast(t('caNeedPhotos'), 'bad'); return; }
+  st.label = $('#caLabelIn').value.trim(); st.focus = $('#caFocusIn').value.trim(); st.lang = $('#caLangIn').value;
+  const prog = $('#caProg');
+  btn.disabled = true;
+  try {
+    const pages = []; let age = '', sex = '';
+    st.pages = st.pages || {};
+    for (let i = 0; i < st.photos.length; i += 4) {
+      const part = st.photos.slice(i, i + 4);
+      if (prog) prog.textContent = t('caReading', { a: i + 1, b: i + part.length, n: st.photos.length });
+      let r = st.pages[i]; // уже прочитанная партия (после сбоя — не читаем заново)
+      if (!r) { r = await rpcA('chartRead', { images: part.map(p => ({ data: p.data })), from: i + 1, piiCovered: true }, { timeout: 300000 }); if (!r) throw new Error('read'); st.pages[i] = r; }
+      (r.pages || []).forEach(p => pages.push(p));
+      if (r.patient) { age = age || r.patient.age || ''; sex = sex || r.patient.sex || ''; }
+    }
+    if (prog) prog.textContent = t('caAuditing');
+    const res = await rpcA('chartAudit', { pages, label: st.label, focus: st.focus, lang: st.lang, age, sex }, { timeout: 300000 });
+    if (!res) throw new Error('audit');
+    S.caNew = null; S.caCur = res;
+    caViewRender(res);
+    const l = await rpcA('chartList', {}).catch(() => null); if (l) S.caList = l.rows;
+  } catch (e) {
+    if (prog) prog.textContent = t('caStopped');
+    btn.disabled = false;
+  }
+}
+function caItems(list, withWho) {
+  if (!list || !list.length) return '<div class="muted">—</div>';
+  return '<table class="vr-t"><tr><th>' + esc(t('caWhat')) + '</th><th>' + esc(t('caWhere')) + '</th>' + (withWho ? '<th>' + esc(t('caWho')) + '</th>' : '') + '</tr>' + list.map(x => '<tr><td>' + esc(x.what || '') + '</td><td>' + esc(x.where || '') + '</td>' + (withWho ? '<td>' + esc(x.who || '') + '</td>' : '') + '</tr>').join('') + '</table>';
+}
+function caViewHtml(r) {
+  const az = r.lang === 'az', L = (ru, a) => az ? a : ru;
+  const pts = r.points || [];
+  let h = '<div class="vr-doc"><h1>' + esc((r.label || L('История', 'Tarix')) + ' — ' + r.score + '%') + '</h1>' +
+    '<p>' + esc(r.summary || '') + '</p><table class="vr-t">' +
+    [[L('Отделение, даты', 'Şöbə, tarixlər'), r.dept], [L('Диагноз', 'Diaqnoz'), r.dx], [L('Пациент', 'Pasiyent'), [r.age, r.sex].filter(Boolean).join(', ')], [L('Кто вёл', 'Kim aparıb'), r.doctors]].filter(x => x[1]).map(x => '<tr><td>' + esc(x[0]) + '</td><td>' + esc(x[1]) + '</td></tr>').join('') + '</table>' +
+    '<h2>' + esc(L('8 пунктов комиссии', 'Komissiyanın 8 bəndi')) + '</h2><table class="vr-t"><tr><th>№</th><th>' + esc(L('Пункт', 'Bənd')) + '</th><th></th><th>' + esc(L('Почему', 'Niyə')) + '</th></tr>' +
+    CA_PTS.map((p, i) => { const x = pts.find(q => q.k === p[0]) || { mark: 'unk', note: '' }; return '<tr><td>' + (i + 1) + '</td><td>' + esc(az ? p[2] : p[1]) + '</td>' + caMarkCell(x.mark) + '<td>' + esc(x.note || '') + '</td></tr>'; }).join('') + '</table>' +
+    '<p><b>' + esc(L('Итог: ', 'Nəticə: ') + r.score + '%') + '</b>' + (r.assessable !== undefined && r.assessable < 8 ? ' · ' + esc(L('оценено ' + r.assessable + ' из 8 (остальные — «на фото не найдено», считаются 0)', '8-dən ' + r.assessable + ' bənd qiymətləndirilib (qalanları «şəkildə tapılmadı» — 0)')) : '') + (r.ifFound ? ' · ' + esc(L('если найдётся: ', 'tapılarsa: ') + r.ifFound) : '') + '</p>';
+  if (r.focus && r.focusName) h += '<h2>' + esc(L('Врач в фокусе: ', 'Diqqətdə olan həkim: ') + r.focusName) + '</h2><table class="vr-t"><tr><td>' + esc(L('Роль', 'Rolu')) + '</td><td>' + esc(r.focus.role || '') + '</td></tr><tr><td>' + esc(L('Риск', 'Risk')) + '</td><td><b>' + esc(CA_RISK[r.focus.risk] ? (az ? CA_RISK[r.focus.risk][1] : CA_RISK[r.focus.risk][0]) : '—') + '</b>' + (r.focus.why ? ' — ' + esc(r.focus.why) : '') + '</td></tr><tr><td>' + esc(L('Готовность к комиссии', 'Komissiyaya hazırlıq')) + '</td><td>' + esc(r.focus.verdict || '') + '</td></tr></table>';
+  h += '<h2>' + esc(L('Плюсы', 'Müsbət cəhətlər')) + '</h2>' + caItems(r.pluses) +
+    '<h2>' + esc(L('Минусы — зона врача', 'Çatışmazlıqlar — həkimin zonası')) + '</h2>' + caItems(r.minusDoctor, true) +
+    '<h2>' + esc(L('Минусы — зона больницы', 'Çatışmazlıqlar — xəstəxananın zonası')) + '</h2>' + caItems(r.minusHosp, true);
+  if (r.stop && r.stop.length) h += '<h2>⛔ ' + esc(L('Стоп-факторы вне 8 пунктов', '8 bənddən kənar stop-faktorlar')) + '</h2><ul>' + r.stop.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>';
+  if (r.check && r.check.length) h += '<h2>' + esc(L('Проверить в оригинале', 'Orijinalda yoxlamaq')) + '</h2><ul>' + r.check.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>';
+  h += '<h2>' + esc(L('Оговорки', 'Qeydlər')) + '</h2><ul class="vr-small">' + [
+    L('Оценка сделана по фотографиям' + (r.photos ? ' (' + r.photos + ' фото)' : '') + '. Неразборчивое помечено «(?)». «На фото не найдено» означает «нет на присланных фото».', 'Qiymət şəkillər üzrədir' + (r.photos ? ' (' + r.photos + ' şəkil)' : '') + '. Oxunmayanlar «(?)» ilə qeyd olunub. «Şəkildə tapılmadı» — göndərilən şəkillərdə yoxdur.'),
+    L('Процент — экспертная оценка по 8 пунктам, а не прогноз решения. Стоп-факторы могут перевесить оценку.', 'Faiz 8 bənd üzrə ekspert qiymətidir, qərarın proqnozu deyil. Stop-faktorlar qiyməti üstələyə bilər.'),
+    L('Законно: вложить существующие, но не подшитые результаты; подпись того, кто реально делал работу, — с фактической датой подписания и пометкой о позднем внесении; явные описки — через официальную процедуру исправлений с датой и подписью.', 'Qanunidir: mövcud, lakin tikilməmiş nəticələri qoymaq; işi həqiqətən görənin imzası — faktiki imza tarixi və «gec daxil edilib» qeydi ilə; aşkar səhvlər — tarix və imza ilə rəsmi düzəliş qaydası ilə.'),
+    L('Нельзя: менять даты, дописывать дневники или отметки задним числом, вписывать непроведённые исследования. При проверке это хуже любой найденной ошибки.', 'Olmaz: tarixləri dəyişmək, gündəlikləri və qeydləri keçmiş tarixlə yazmaq, aparılmamış müayinələri yazmaq. Yoxlamada bu, istənilən səhvdən pisdir.'),
+    L('Клинические замечания ИИ — для врача; решение остаётся за врачом.', 'Sİ-nin klinik qeydləri həkim üçündür; qərarı həkim verir.')
+  ].map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>';
+  return h + '</div>';
+}
+function caMapHtml() {
+  return '<details class="card" style="margin-top:8px"><summary>' + esc(t('caMap')) + '</summary><table class="vr-t">' + CA_MAP.map(x => '<tr><td><b>' + esc(x[0]) + '</b></td><td>' + esc(x[1]) + '</td><td>' + esc(x[2]) + '</td></tr>').join('') + '</table></details>';
+}
+function caViewRender(r) {
+  const box = $('#caBox'); if (!box) return;
+  S.caCur = r;
+  box.innerHTML = '<div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:6px"><button class="btn small ghost" data-act="caBackList">' + esc(t('caBack')) + '</button><button class="btn small ghost" data-act="caPrint">' + esc(t('caPrint')) + '</button></div>' + caViewHtml(r) + caMapHtml();
+}
+function caPrintHtml(html) {
+  const root = $('#printRoot'); if (!root) return;
+  root.innerHTML = '<style>' + VR_CSS + '@page{margin:14mm}.ca-m{font-weight:700;text-align:center}.vr-t{width:100%}</style>' + html;
+  document.body.classList.add('print-form');
+  setTimeout(() => { window.print(); setTimeout(() => { document.body.classList.remove('print-form'); root.innerHTML = ''; }, 800); }, 60);
+}
+(function () {
+  const origMenuRender = window.menuRender;
+  if (typeof origMenuRender === 'function') window.menuRender = function () {
+    const r = origMenuRender.apply(this, arguments);
+    const nav = $('nav.bottom.drawer');
+    const ex = nav && nav.querySelector('[data-act=caOpen]');
+    if (ex) ex.textContent = t('caBtn');
+    else if (nav && S.me && canAi() && !(typeof isHelper === 'function' && isHelper())) {
+      const anchor = nav.querySelector('[data-act=vrOpen]') || nav.querySelector('[data-act=mgOpen]');
+      const html = '<button class="btn ghost block" style="margin:6px 0" data-act="caOpen">' + esc(t('caBtn')) + '</button>';
+      if (anchor) anchor.insertAdjacentHTML('afterend', html); else { const fb = nav.querySelector('[data-act=fbOpen]'); if (fb) fb.insertAdjacentHTML('beforebegin', html); }
+    }
+    return r;
+  };
+})();
+Object.assign(H, {
+  caOpen: () => { if (typeof menuOpen === 'function') menuOpen(false); caOpen(); },
+  caNew: () => { caNewRender(); },
+  caBackList: () => caListRender(),
+  caPhotoAdd: () => caPhotoAdd(),
+  caPhotoDel: el => { if (S.caNew) { S.caNew.photos.splice(+el.dataset.i, 1); S.caNew.pages = {}; caNewRender(); } },
+  caRun: el => caRun(el),
+  caView: async el => { const r = await busy(el, () => rpcA('chartGet', { id: el.dataset.id })); if (r) caViewRender(r); },
+  caDel: async el => { if (!confirm(t('caDelAsk'))) return; const r = await busy(el, () => rpcA('chartDel', { id: el.dataset.id })); if (r) { S.caList = (S.caList || []).filter(x => x.id !== el.dataset.id); caListRender(); } },
+  caPrint: () => { if (S.caCur) caPrintHtml(caViewHtml(S.caCur)); },
+  caPrintAll: () => caPrintHtml('<div class="vr-doc"><h1>' + esc(t('caTitle')) + '</h1>' + caListHtml(S.caList || [], true) + '</div>')
+});
 
 
 function init() {
