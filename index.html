@@ -32018,7 +32018,7 @@ bxAi = async function () {
   const gs = await gsP.catch(() => null);
   if (!r) { toast(t('bxNoAi'), 'bad'); return bxLocal(); }
   if (gs) { if (gs.series) r.series = gs.series; if (gs.expiry) r.expiry = gs.expiry; if (gs.gtin || gs.ean) r.barcode = gs.gtin || gs.ean; }
-  r.sources = res.sources || []; r.webOff = !!res.webOff;
+  r.sources = res.sources || []; r.webOff = !!res.webOff; r.webErr = res.webErr || '';
   bxReview(r, '');
 };
 /** «🌐 Найти в интернете» — по названию и / или штрихкоду, без фото. */
@@ -32033,7 +32033,7 @@ async function wbFind(target) {
   try { res = await rpcA('drugWeb', { q, barcode: bc, codes: wbCodes() }, { timeout: 240000 }); } catch (e) { closeModal(); return; }
   const r = bxFromAi(res.read || {});
   r.series = ''; r.expiry = '';
-  r.sources = res.sources || []; r.webOff = !!res.webOff;
+  r.sources = res.sources || []; r.webOff = !!res.webOff; r.webErr = res.webErr || '';
   bxReview(r, '');
 }
 /** Окно проверки: + своя карточка на складе (по штрихкоду — сразу; по названию — на выбор), + каталог по штрихкоду, + источники. */
@@ -32074,7 +32074,7 @@ async function wbFind(target) {
       if (sim.length) { S.wbSim = sim; top += '<div class="lbl" style="margin:0 0 4px">' + esc(t('wbMine')) + '</div><div class="chips" style="flex-wrap:wrap">' + sim.map((i, n) => '<button class="chip" data-act="wbPickMine" data-i="' + n + '">' + esc(i.name + ' · ' + i.dosage + ' · ' + formName(i.form)) + '</button>').join('') + '</div>'; }
     }
     if (r.sources && r.sources.length) top += '<details class="hint" style="display:block;margin-bottom:8px"><summary>' + esc(t('wbSrc')) + ' ' + r.sources.length + '</summary>' + r.sources.map(s => '<div style="font-size:12.5px;word-break:break-all">• ' + esc(s.title || '') + ' — ' + esc(s.url) + '</div>').join('') + '</details>';
-    if (r.webOff) top += '<div class="muted" style="font-size:12.5px;margin-bottom:6px">' + esc(t('wbOff')) + '</div>';
+    if (r.webOff) top += '<div class="muted" style="font-size:12.5px;margin-bottom:6px">' + esc(t('wbOff')) + (r.webErr ? ' (' + esc(r.webErr) + ')' : '') + '</div>';
     if (top && h) h.insertAdjacentHTML('afterend', top);
   };
 })();
