@@ -36243,12 +36243,15 @@ async function exRead(btn) {
   const prog = $('#exProg');
   try {
     const docs = [];
+    st.idCheck = null;
     for (let i = 0; i < st.photos.length; i += 4) {
       const part = st.photos.slice(i, i + 4);
       if (prog) prog.textContent = ext('exReading', { a: i + 1, b: i + part.length, n: st.photos.length });
       let r = st.parts[i];
-      if (!r) { r = await rpcA('extRead', { images: part.map(p => ({ data: p.data })), from: i + 1, full: true, patientId: st.pid }, { timeout: 300000 }); if (!r) throw new Error('read'); st.parts[i] = r; }
+      if (!r) { r = await rpcA('extRead', { images: part.map(p => ({ data: p.data })), from: i + 1, full: true, patientId: st.pid, prev: typeof exPrevText === 'function' ? exPrevText(docs) : '', strong: !!st.strong }, { timeout: 300000 }); if (!r) throw new Error('read'); st.parts[i] = r; }
       (r.docs || []).forEach(d => docs.push(d));
+      st.canStrong = !!r.canStrong && !st.strong; // «перечитать сильнее» — только если можно и ещё не самая сильная модель
+      if (r.idCheck) { const ic = st.idCheck || (st.idCheck = {}); Object.keys(r.idCheck).forEach(k => { if (ic[k] !== 'diff') ic[k] = r.idCheck[k]; }); }
       // данные пациента: первое непустое по каждому полю; разные значения — показать оба
       const w = st.who || (st.who = {});
       Object.keys(r.patient || {}).forEach(k => { const v = String(r.patient[k] || '').trim(); if (!v) return; if (!w[k]) w[k] = v; else if (w[k] !== v && k !== 'seen') w[k + '_alt'] = v; });
@@ -36268,7 +36271,9 @@ function exMerge(docs) {
     const same = last && last.type === d.type && (last.org || '') === (d.org || '') && (last.date || '') === (d.date || '') && (d.photos || [])[0] === Math.max(...(last.photos || [0])) + 1 && !d.title.match(/^(Флюоро|Рентген)/i);
     if (same && (last.photos || []).length && d.photos && d.photos.length) {
       last.photos = last.photos.concat(d.photos);
-      ['dx', 'tests', 'imaging'].forEach(k => { last[k] = (last[k] || []).concat(d[k] || []); });
+      ['dx', 'tests', 'imaging', 'conflicts'].forEach(k => { last[k] = (last[k] || []).concat(d[k] || []); });
+      ['to', 'author', 'onset'].forEach(k => { if (!last[k] && d[k]) last[k] = d[k]; });
+      if ((!last.id || !last.id.match) && d.id) last.id = d.id; else if (d.id && d.id.match === 'no') last.id = d.id;
       ['anamnesis', 'complaints', 'exam', 'treatment', 'recommendations', 'notes', 'unclear', 'outcome'].forEach(k => { if (d[k]) last[k] = [last[k], d[k]].filter(Boolean).join('\n'); });
     } else out.push(d);
   });
@@ -36284,16 +36289,18 @@ function exDocHtml(d, i, edit) {
   const testsTxt = (d.tests || []).map(x => x.name + ' — ' + x.result + (x.unit ? ' ' + x.unit : '') + (x.ref ? ' [' + x.ref + ']' : '') + (x.date ? ' (' + x.date + ')' : '') + Q(x)).join('\n');
   const imgTxt = (d.imaging || []).map(x => x.name + (x.date ? ' (' + x.date + ')' : '') + ': ' + x.conclusion + Q(x)).join('\n');
   if (edit) return '<div class="ex-doc"><div class="row" style="gap:6px;align-items:center"><b class="grow">' + esc(TY[d.type] || TY.other) + '</b><label class="check" style="margin:0"><input type="checkbox" data-exskip="' + i + '"' + (S.ex.skip[i] ? ' checked' : '') + '><span>' + esc(ext('exSkip')) + '</span></label></div>' +
-    inp('title', d.title) + '<div class="grid2">' + '<div>' + inp('date', d.date) + '</div><div>' + inp('org', d.org) + '</div></div>' + (d.author ? inp('author', d.author) : '') +
+    (typeof exIdBadge === 'function' ? exIdBadge(d) : '') + inp('title', d.title) + '<div class="grid2">' + '<div>' + inp('date', d.date) + '</div><div>' + inp('org', d.org) + '</div></div>' + (d.author ? inp('author', d.author) : '') +
     ta('dx', dxTxt, 2) + (d.onset ? inp('onset', d.onset) : '') + (d.complaints ? ta('complaints', d.complaints) : '') + (d.anamnesis ? ta('anamnesis', d.anamnesis, 3) : '') + (d.exam ? ta('exam', d.exam, 3) : '') +
     '<div class="ex-k">' + esc(F.tests) + ' <span class="muted">(' + esc(ext('exTestsHint')) + ')</span></div><textarea data-ex="' + i + '" data-k="testsTxt" rows="' + Math.min(10, 2 + (d.tests || []).length) + '">' + esc(testsTxt) + '</textarea>' +
     ta('imaging', imgTxt, 2) + (d.treatment ? ta('treatment', d.treatment) : '') + (d.recommendations ? ta('recommendations', d.recommendations) : '') + (d.notes ? ta('notes', d.notes) : '') +
+    (d.to ? inp('to', d.to) : '') +
     (d.unclear ? '<div class="ex-k">' + esc(F.unclear) + '</div><div class="ex-flag">' + esc(d.unclear) + '</div>' : '') +
+    (typeof exExtraHtml === 'function' ? exExtraHtml(d) : '') +
     '<div class="muted" style="font-size:12px;margin-top:4px">' + esc(ext('exPages', { n: (d.photos || []).length })) + '</div></div>';
-  return '<div class="ex-doc"><h4>' + esc(d.title || TY[d.type] || '') + '</h4><div class="muted">' + esc([d.date, d.org, d.author].filter(Boolean).join(' · ')) + '</div>' +
+  return '<div class="ex-doc"><h4>' + esc(d.title || TY[d.type] || '') + '</h4><div class="muted">' + esc([d.date || (typeof x9 === 'function' ? x9('noDate') : ''), d.org, d.author].filter(Boolean).join(' · ')) + '</div>' + (typeof exIdBadge === 'function' ? exIdBadge(d) : '') +
     ro('dx', dxTxt) + ro('onset', d.onset) + ro('complaints', d.complaints) + ro('anamnesis', d.anamnesis) + ro('exam', d.exam) +
     ((d.tests || []).length ? '<div class="ex-k">' + esc(F.tests) + '</div><table>' + d.tests.map(x => '<tr><td>' + esc(x.name) + '</td><td' + (x.flag && x.flag !== 'negative' ? ' class="ex-flag"' : '') + '>' + esc([x.result, x.unit].filter(Boolean).join(' ')) + '</td><td class="muted">' + esc([x.ref, x.date].filter(Boolean).join(' · ')) + '</td></tr>').join('') + '</table>' : '') +
-    ro('imaging', imgTxt) + ro('treatment', d.treatment) + ro('recommendations', d.recommendations) + ro('outcome', d.outcome) + ro('notes', d.notes) + (d.unclear ? '<div class="ex-k">' + esc(F.unclear) + '</div><div class="ex-flag">' + esc(d.unclear) + '</div>' : '') + '</div>';
+    ro('imaging', imgTxt) + ro('treatment', d.treatment) + ro('recommendations', d.recommendations) + ro('outcome', d.outcome) + ro('to', d.to) + ro('notes', d.notes) + (d.unclear ? '<div class="ex-k">' + esc(F.unclear) + '</div><div class="ex-flag">' + esc(d.unclear) + '</div>' : '') + (typeof exExtraHtml === 'function' ? exExtraHtml(d) : '') + '</div>';
 }
 function exWhoHtml() {
   const st = S.ex, w = st.who || {}, F = ext('exWF');
@@ -36315,9 +36322,10 @@ function exWhoHtml() {
 }
 function exReviewHtml() {
   const st = S.ex;
-  return '<div class="info" style="margin-bottom:8px">' + esc(ext('exAiNote')) + '</div>' + exWhoHtml() + '<div class="lbl">' + esc(ext('exReview')) + '</div>' +
+  return '<div class="info" style="margin-bottom:8px">' + esc(ext('exAiNote')) + '</div>' + (typeof exIdCheckHtml === 'function' ? exIdCheckHtml(st.idCheck) : '') + exWhoHtml() + '<div class="lbl">' + esc(ext('exReview')) + '</div>' +
     st.docs.map((d, i) => exDocHtml(d, i, true)).join('') +
-    '<button class="btn primary block" data-act="exSaveAll" style="margin-top:8px">' + esc(ext('exSaveAll')) + '</button>';
+    '<button class="btn primary block" data-act="exSaveAll" style="margin-top:8px">' + esc(ext('exSaveAll')) + '</button>' +
+    (typeof x9 === 'function' && st.canStrong ? '<button class="btn ghost block" data-act="exStrong" style="margin-top:6px">' + esc(x9('strong')) + '</button><div class="muted" style="font-size:12px">' + esc(x9('strongHint')) + '</div>' : '');
 }
 /** Правки врача из полей окна — обратно в разбор. */
 function exCollectOne(d, k, v) {
@@ -36337,7 +36345,9 @@ function exCollect() {
       const lines = v.split('\n').map(s => s.trim()).filter(Boolean);
       const flags = lines.map(s => U.test(s));
       const vv = lines.map(cut).join('\n');
+      const kk = k === 'testsTxt' ? 'tests' : k, old0 = (d[kk] || []).slice();
       exCollectOne(d, k, vv);
+      (d[kk] || []).forEach((o, j) => { const p0 = old0[j]; if (p0 && (p0.name || p0.text || '') === (o.name || o.text || '')) { if (p0.same) o.same = p0.same; if (p0.flag && !o.flag) o.flag = p0.flag; } });
       (d[k === 'testsTxt' ? 'tests' : k] || []).forEach((o, i) => un(o, flags[i] ? ' [?]' : ''));
       return;
     }
@@ -36660,7 +36670,7 @@ function gtHtml() {
   // документы из других учреждений
   const TY = typeof ext === 'function' ? ext('exType') : {};
   const ex = g.ext || [];
-  h += gtSec('ext', gtt('gtExt'), ex.length, ex.map(x => '<div class="gt-row cs-list-row" data-act="exView" data-id="' + esc(x.id) + '"><div class="grow"><div class="nm">' + esc(x.title || TY[x.docType] || '') + '</div><div class="fd">' + esc([x.docDate ? fmtDate(x.docDate) : '', x.org].filter(Boolean).join(' · ')) + '</div><div class="gt-src">' + esc(gtt('gtAdded', { d: fmtDt(x.createdAt), n: x.createdByName || '' })) + '</div></div></div>').join('') +
+  h += gtSec('ext', gtt('gtExt'), ex.length, ex.map(x => '<div class="gt-row cs-list-row" data-act="exView" data-id="' + esc(x.id) + '"><div class="grow"><div class="nm">' + esc(x.title || TY[x.docType] || '') + '</div><div class="fd">' + esc([x.docDate ? fmtDate(x.docDate) : (typeof x9 === 'function' ? x9('noDate') : ''), x.org].filter(Boolean).join(' · ')) + '</div><div class="gt-src">' + esc(gtt('gtAdded', { d: fmtDt(x.createdAt), n: x.createdByName || '' })) + '</div></div></div>').join('') +
     (add && ai ? '<button class="btn ghost block" style="margin-top:8px" data-act="exFromCard">' + esc(typeof ext === 'function' ? ext('exAdd') : '+') + '</button>' : ''), gtOpenState('ext', true));
   // свои разделы
   (g.sec || []).forEach(s => {
@@ -36677,7 +36687,7 @@ function gtHtml() {
   const items = (g.forms || []).map(f => ({ at: f.arrivedAt || f.createdAt, act: 'psOpenForm', id: f.id, title: t('ptFormTag') + (f.blankNo ? ' № ' + f.blankNo : ''), sub: [f.icd, f.dx, f.outcome === 'adm' ? '🏥 ' + (f.outTo || fdLabel(fdFind(FD.outcome, 'adm'))) : f.outcome === 'transfer' && f.outTo ? '🚑 ' + f.outTo : '', f.status === 'closed' ? t('dsClosed') : t('dsDraft')].filter(Boolean).join(' · ') }))
     .concat((g.docs || []).map(d => { const tp = DOC_TPL[d.type] || {}; return { at: d.updatedAt || d.createdAt, act: 'dsOpen', id: d.id, title: (tp.ic || '📄') + ' ' + (tp[S.lang === 'az' ? 'az' : 'ru'] || d.type) + (d.docNo ? ' № ' + d.docNo : ''), sub: [d.icd, d.dx, d.status === 'closed' ? t('dsClosed') : t('dsDraft')].filter(Boolean).join(' · ') }; }))
     .concat((g.cases || []).map(c => ({ at: c.updatedAt || c.createdAt, act: 'ptOpenCase', id: c.id, title: t('ptCaseTag') + ': ' + (c.title || ''), sub: [c.icd, c.dx].filter(Boolean).join(' · ') })))
-    .concat(ex.map(x => ({ at: x.docDate || x.createdAt, act: 'exView', id: x.id, title: '📄 ' + (x.title || ''), sub: x.org || '' })))
+    .concat(ex.map(x => ({ at: x.docDate || '', act: 'exView', id: x.id, title: '📄 ' + (x.title || ''), sub: [x.docDate ? '' : (typeof x9 === 'function' ? x9('noDate') : ''), x.org || ''].filter(Boolean).join(' · ') })))
     .concat(typeof window.ptExtraItems === 'function' ? window.ptExtraItems(g) : [])
     .concat([].concat(...(g.sec || []).filter(s => s.type === 'chrono').map(s => (s.items || []).filter(y => y.at).map(y => ({ at: y.at, act: 'gtSecEdit', id: s.id, title: '📌 ' + s.title, sub: String(y.text || '').slice(0, 140) })))))
     .sort((a, b) => String(b.at).localeCompare(String(a.at)));
@@ -38017,6 +38027,244 @@ Object.assign(H, {
   },
   ntOld: el => { const g = ptSt().cur; const x = g && (g.night || [])[Number(el.dataset.i)]; if (!x) return; openModal('<h3>' + esc(x.title || '') + '</h3>' + ntHtml(x) + '<div class="acts"><button class="btn primary" data-act="closeModal">' + esc(t('close')) + '</button></div>'); },
   ntOpen: el => ptOpen(el.dataset.id, true)
+});
+
+/* =====================================================================
+ * v79 (9.52): документы по фото — точнее и без дублей.
+ *  - GT/098: один анализ / снимок из двух документов — одна строка (оба источника); разные результаты — ⚠ оба.
+ *  - Раздел «🩺 Жалобы, анамнез, осмотр — из документов»; у кода МКБ — официальное название (видно, если код не тот).
+ *  - Документ без даты — «без даты» (не время загрузки); «[личное]» / «[дата]» / «[№]» — понятными словами.
+ *  - Окно разбора: сверка с картой (тот ли пациент), расхождения, «уже есть», «🔍 Перечитать сильнее».
+ * ===================================================================== */
+const X9_T = {
+  ru: {
+    noDate: 'без даты', hx: '🩺 Жалобы, анамнез, осмотр — из документов', differ: 'в документах по-разному', also: 'также', icd: 'МКБ-10', icdNone: '⚠️ такого кода нет в МКБ-10',
+    conf: 'Расхождения', same: 'Уже есть в карте или в другом документе', id_yes: '✓ Тот же пациент, что в карте', id_partial: '≈ Похоже на пациента из карты (не всё разборчиво)', id_no: '⚠️ Не совпадает с картой — тот ли это пациент?',
+    idF: { fin: 'FİN', birth: 'дата рождения', surname: 'фамилия' }, idOk: 'Сверено с картой: {f} — совпадает', idDiff: 'Не совпадает с картой: {f}. Проверьте, тот ли это пациент, прежде чем сохранять.',
+    strong: '🔍 Перечитать сильнее', strongHint: 'Более сильная модель ИИ: дольше и дороже, но лучше разбирает плохой почерк и отметки в бланках.',
+    phPers: '(ФИО/FİN пациента)', phBirth: '(дата рождения)', phNo: '…', phYear: '(год)'
+  },
+  az: {
+    noDate: 'tarixsiz', hx: '🩺 Şikayətlər, anamnez, baxış — sənədlərdən', differ: 'sənədlərdə fərqlidir', also: 'həmçinin', icd: 'XBT-10', icdNone: '⚠️ XBT-10-da belə kod yoxdur',
+    conf: 'Ziddiyyətlər', same: 'Kartda və ya digər sənəddə artıq var', id_yes: '✓ Kartdakı pasiyentdir', id_partial: '≈ Kartdakı pasiyentə oxşayır (hamısı oxunmur)', id_no: '⚠️ Kartla uyğun gəlmir — bu həmin pasiyentdir?',
+    idF: { fin: 'FİN', birth: 'doğum tarixi', surname: 'soyad' }, idOk: 'Kartla yoxlanıldı: {f} — uyğundur', idDiff: 'Kartla uyğun gəlmir: {f}. Saxlamazdan əvvəl pasiyenti yoxlayın.',
+    strong: '🔍 Daha güclü oxu', strongHint: 'Daha güclü Sİ modeli: daha uzun və baha, amma pis xətti və blank işarələrini daha yaxşı oxuyur.',
+    phPers: '(pasiyentin adı/FİN)', phBirth: '(doğum tarixi)', phNo: '…', phYear: '(il)'
+  }
+};
+function x9(k, v) { const L2 = X9_T[S.lang === 'az' ? 'az' : 'ru']; let s = L2[k] !== undefined ? L2[k] : X9_T.ru[k]; if (typeof s === 'string' && v) Object.keys(v).forEach(x => { s = s.split('{' + x + '}').join(v[x]); }); return s; }
+(function () {
+  if ($('#x9Css')) return;
+  const s = document.createElement('style'); s.id = 'x9Css';
+  s.textContent = '.gt-unsure{white-space:pre-line}.x9-diff{color:var(--red);font-weight:700}';
+  document.head.appendChild(s);
+})();
+
+/* ---------- чистка для показа (старые разборы) ---------- */
+function x9Ph(s) { return String(s === undefined || s === null ? '' : s).replace(/\[личное\]/g, x9('phPers')).replace(/\[дата\]/g, x9('phBirth')).replace(/\[№\]/g, x9('phNo')).replace(/\[год\]/g, x9('phYear')); }
+const X9_NORM = s => String(s || '').toLowerCase().replace(/[\s.,;:«»"'()!?—–-]+/g, '');
+// скобка, которая называет только источник / дату («(рентгенография от 03.08.2026)») — не часть значения (как на сервере)
+const X9_SRCPAR = /\([^)]*(?:\d{1,2}[.\/]\d{1,2}[.\/]\d{2,4}|\d{4}-\d{2}-\d{2}|выписк|бланк|027|çıxarış|рентгеногр|флюорогр|rentgenoq|flüoroq|документ|sənəd)[^)]*\)/gi;
+/** Расхождение настоящее: оба варианта есть и они разные (не одно и то же значение с разными источниками в скобках). */
+function x9ConfOk(c) {
+  if (!c || !String(c.a || '').trim() || !String(c.b || '').trim()) return false;
+  return !(X9_NORM(c.a) === X9_NORM(c.b) || X9_NORM(String(c.a).replace(X9_SRCPAR, '')) === X9_NORM(String(c.b).replace(X9_SRCPAR, '')));
+}
+/** Вопросы о личности («[дата]» — это только дата рождения; «[личное]» рядом со словами о личности) — не показывать:
+ *  за личность отвечает сверка с картой. «[личное]» без них (врач-однофамилец) — оставить. */
+const X9_ID_RE = /ФИО|фамил|имя пациент|отчеств|FİN|\bFIN\b|ФИН|рожд|doğum|təvəllüd|soyad|личност/i;
+const x9IdLine = l => /\[дата\]/.test(l) || (/\[личное\]/.test(l) && X9_ID_RE.test(l));
+function x9Unclear(s) { return String(s || '').split(/\n|\s(?=-\s+[^\d\s])/).map(l => l.trim()).filter(l => l && !x9IdLine(l)).map(x9Ph).join('\n'); }
+(function () {
+  const o = gtExtDocs;
+  gtExtDocs = function (g) {
+    return o(g).map(({ x, d }) => {
+      const d2 = Object.assign({}, d);
+      d2.conflicts = (d.conflicts || []).filter(x9ConfOk).filter(c => !x9IdLine([c.what, c.a, c.b].join(' '))).map(c => ({ what: x9Ph(c.what), a: x9Ph(c.a), b: x9Ph(c.b), why: x9Ph(c.why) }));
+      d2.unclear = x9Unclear(d.unclear);
+      d2.tests = (d.tests || []).map(t => Object.assign({}, t, { name: x9Ph(t.name), result: x9Ph(t.result), date: x9Ph(t.date) }));
+      d2.imaging = (d.imaging || []).map(t => Object.assign({}, t, { name: x9Ph(t.name), conclusion: x9Ph(t.conclusion), date: x9Ph(t.date) }));
+      d2.dx = (d.dx || []).map(t => Object.assign({}, t, { text: x9Ph(t.text) }));
+      ['org', 'title', 'anamnesis', 'complaints', 'exam', 'notes', 'treatment', 'recommendations', 'to', 'onset'].forEach(k => { if (d[k]) d2[k] = x9Ph(d[k]); });
+      return { x, d: d2 };
+    });
+  };
+})();
+
+/* ---------- один анализ / снимок из нескольких документов — одна строка ---------- */
+// виды ТБ-исследований и снимок лёгких — сводятся и при разных результатах (⚠ по-разному); остальное — только если и значение совпадает
+const X9_SPUT = /bəlğəm|balgam|мокрот|sputum/i;
+function x9Fam(name, ctx, img) {
+  const n = String(name || ''), c = n + ' ' + String(ctx || '');
+  if (img) {
+    if (/fl[üu]oro|флюоро/i.test(n) || (/rentgen|рентген|x-?ray/i.test(n) && /ağciyər|döş|грудн|лёгк|легк|(?<!\p{L})ОГК(?!\p{L})|chest|thora|торак/iu.test(c))) return 'cxr';
+    return 'n:' + X9_NORM(n);
+  }
+  if (/xpert/i.test(n)) return 'xpert';
+  if (/mg[iİı]t/i.test(n)) return 'mgit';
+  if (/levenş|levens|левенш|l[öo]wenst|(?<!\p{L})[LЛ][-–]?[JЙ](?!\p{L})/iu.test(n) || (/əkm|ekme|посев|culture/i.test(n) && X9_SPUT.test(c))) return 'culture';
+  if (/(?<!\p{L})(AFB|КУБ)(?!\p{L})|ziehl/iu.test(n) || (/mikrosk|микроскоп|мазк|мазок|yaxma|smear/i.test(n) && X9_SPUT.test(c))) return 'micro';
+  return 'n:' + X9_NORM(n);
+}
+/** Все даты в строке: [{dm:'08-03', y:'2026'|''}] — «03.08.2[?]» тоже (год неизвестен). */
+function x9Dates(s) {
+  const out = [], str = String(s || '');
+  let m; const re1 = /(\d{4})-(\d{2})-(\d{2})/g;
+  while ((m = re1.exec(str))) out.push({ dm: m[2] + '-' + m[3], y: m[1] });
+  const re2 = /(?<!\d)(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?(?!\d)/g;
+  while ((m = re2.exec(str))) { const mm = ('0' + m[2]).slice(-2), dd = ('0' + m[1]).slice(-2); if (+mm < 1 || +mm > 12 || +dd < 1 || +dd > 31) continue; out.push({ dm: mm + '-' + dd, y: m[3] ? (m[3].length === 2 ? '20' + m[3] : m[3].length === 4 ? m[3] : '') : '' }); }
+  return out;
+}
+const x9DateHit = (a, b) => a.some(x => b.some(y => x.dm === y.dm && (!x.y || !y.y || x.y === y.y)));
+/** Знак результата: neg / pos / mix / nd (не выполнялся) / '' (число и т. п.). */
+function x9Pol(v) {
+  const s = String(v || '').toLowerCase();
+  if (/не выполн|перечёрк|перечерк|edilməyib|aparılmayıb/.test(s)) return 'nd';
+  const neg = /mənfi|menfi|отриц|negativ|bitmə yox|bitme yox|роста нет|нет роста|не обнаруж|tapılmadı|\bmnf\b|\bneg\b/.test(s);
+  const pos = /müsbət|musbet|положит|positiv|\d\s*\+|bitmə var|рост мбт|mtb tapıldı/.test(s);
+  return neg && pos ? 'mix' : neg ? 'neg' : pos ? 'pos' : '';
+}
+function x9Agree(a, b) {
+  const na = X9_NORM(a), nb = X9_NORM(b);
+  if (!na || !nb || na === nb) return true;
+  const pa = x9Pol(a), pb = x9Pol(b);
+  if (pa === 'mix' || pb === 'mix') return false; // «1+ … есть также отметка у Mənfi» — не то же, что «роста нет»
+  if (pa && pb) return pa === pb;
+  const num = x => (String(x).match(/\d+(?:[.,]\d+)?/g) || []).map(v => v.replace(',', '.')).sort().join('|');
+  if (num(a) && num(b) && num(a) !== num(b)) return false; // «СОЭ 15» и «СОЭ 5» — не одно и то же
+  return na.indexOf(nb) !== -1 || nb.indexOf(na) !== -1;
+}
+/** Сгруппировать (связные группы, не «первый попавшийся»): та же «семья» (вид исследования), совпадающая дата, разные документы;
+ *  обычные анализы — только если и значения совпадают; same («уже есть») — к единственной группе той же семьи. */
+function x9Group(items, valOf, img) {
+  const n = items.length, par = items.map((_, i) => i);
+  const find = i => { while (par[i] !== i) { par[i] = par[par[i]]; i = par[i]; } return i; };
+  items.forEach(it => { it._f = x9Fam(it.name, it.ctx, img); it._ds = x9Dates(it.dateRaw || it.at); });
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+    const a = items[i], b = items[j];
+    if (a._f !== b._f || (a.docId && a.docId === b.docId) || !x9DateHit(a._ds, b._ds)) continue;
+    if (a._f.indexOf('n:') === 0 && !x9Agree(valOf(a), valOf(b))) continue;
+    par[find(i)] = find(j);
+  }
+  const by = {}; items.forEach((it, i) => { const r = find(i); (by[r] = by[r] || []).push(it); });
+  const groups = Object.keys(by).map(k => ({ f: by[k][0]._f, items: by[k] }));
+  for (let i = groups.length - 1; i >= 0; i--) {
+    const G = groups[i];
+    if (G.items.length !== 1 || !G.items[0].same || G.f.indexOf('n:') === 0) continue;
+    const oth = groups.filter(o => o !== G && o.f === G.f);
+    if (oth.length === 1) { oth[0].items.push(G.items[0]); groups.splice(i, 1); }
+  }
+  return groups;
+}
+function x9Merge(G, valOf, setVal) {
+  const its = G.items;
+  if (its.length === 1) return its[0];
+  const sure = its.filter(o => !o.unsure);
+  const vals = its.map(valOf);
+  const agree = vals.every(v => x9Agree(vals[0], v));
+  const dated = its.find(o => /^\d{4}-\d{2}-\d{2}/.test(String(o.at || ''))) || its[0];
+  const best = agree ? (sure[0] || its[0]) : its[0];
+  const srcs = [...new Set(its.map(o => o.src || o.where).filter(Boolean))];
+  const r = Object.assign({}, best, {
+    name: [...new Set(its.map(o => o.name).filter(Boolean))].join(' / '),
+    at: dated.at, where: [best.where || '', srcs.length > 1 ? x9('also') + ': ' + srcs.filter(x => x !== (best.src || best.where)).join(', ') : ''].filter(Boolean).join(' · '),
+    unsure: agree ? !sure.length : true, differ: !agree, flag: its.some(o => o.flag)
+  });
+  setVal(r, agree ? valOf(best) : '⚠ ' + x9('differ') + ': ' + [...new Set(vals)].join(' ⟷ '));
+  return r;
+}
+gtLabList = function (g) {
+  const out = [];
+  gtExtDocs(g).forEach(({ x, d }) => (d.tests || []).forEach(y => out.push({ docId: x.id, name: y.name, val: [y.result, y.unit].filter(Boolean).join(' '), ref: y.ref, at: extDateIso(y.date) || y.date || d.date || '', dateRaw: y.date || d.date || '', ctx: d.title || '', where: d.org || gtt('gtWhere').ext, src: d.title || d.org, same: y.same, flag: y.flag && y.flag !== 'negative', unsure: y.unsure })));
+  const groups = x9Group(out, o => o.val, false).map(G => x9Merge(G, o => o.val, (r, v) => { r.val = v; }));
+  (g.notes || []).forEach(n => (n.labs || []).forEach(y => groups.push({ name: y.name, val: [y.value, y.unit].filter(Boolean).join(' ') + (y.note ? ' (' + y.note + ')' : ''), ref: '', at: String(n.at || '').slice(0, 16), where: gtt('gtWhere').here })));
+  return groups.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+};
+gtImgList = function (g) {
+  const out = [];
+  gtExtDocs(g).forEach(({ x, d }) => (d.imaging || []).forEach(y => out.push({ docId: x.id, name: y.name, text: y.conclusion, at: extDateIso(y.date) || y.date || d.date || '', dateRaw: y.date || d.date || '', ctx: (d.title || '') + ' ' + (y.conclusion || ''), where: d.org || '', src: d.title || d.org, same: y.same, unsure: y.unsure })));
+  return x9Group(out, o => o.text, true).map(G => x9Merge(G, o => o.text, (r, v) => { r.text = v; })).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+};
+/** «03.08.2026», «2026-08-03» → «2026-08-03» (для сортировки); иначе ''. */
+function extDateIso(s) {
+  const v = String(s || '').trim();
+  let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0];
+  m = v.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4}|\d{2})(?!\d)/);
+  return m ? (m[3].length === 2 ? '20' + m[3] : m[3]) + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2) : '';
+}
+
+/* ---------- код МКБ из документа — рядом официальное название ---------- */
+(function () {
+  const o = gtDxList;
+  gtDxList = function (g) {
+    const out = o(g);
+    if (!S.icd) { if (S.x9IcdTry) return out; S.x9IcdTry = 1; try { if (typeof icdLoad === 'function') icdLoad().then(() => { if (S.icd && ptSt().cur === g && typeof dsRender === 'function' && S.screen === 'forms') dsRender(true); }).catch(() => { }); } catch (e) { } return out; }
+    return out.map(x => {
+      const codes = String(x.icd || '').toUpperCase().split(/[,;\s]+/).filter(c => /^[A-Z]\d\d(\.\d{1,2})?$/.test(c));
+      if (!codes.length) return x;
+      const names = codes.map(c => { const e = S.icd.by[c]; return { c, n: e ? icdName(e) : '' }; });
+      const txt = X9_NORM(x.text);
+      if (names.every(y => y.n && txt.indexOf(X9_NORM(y.n)) !== -1)) return x; // текст и так — официальное название
+      return Object.assign({}, x, { src: [x.src, x9('icd') + ': ' + names.map(y => y.c + ' — ' + (y.n || x9('icdNone'))).join('; ')].filter(Boolean).join(' · ') });
+    });
+  };
+})();
+
+/* ---------- раздел «Жалобы, анамнез, осмотр — из документов» ---------- */
+const X9_HX = ['complaints', 'onset', 'anamnesis', 'exam', 'treatment', 'recommendations', 'outcome', 'to', 'notes'];
+(function () {
+  const o = window.ptCardHtml;
+  window.ptCardHtml = function () {
+    let h = o.apply(this, arguments);
+    try {
+      const g = ptSt().cur; if (!g || !g.patient) return h;
+      const F = typeof ext === 'function' ? ext('exF') : {};
+      const rows = gtExtDocs(g).filter(({ d }) => X9_HX.some(k => String(d[k] || '').trim()));
+      if (!rows.length) return h;
+      const body = rows.map(({ x, d }) => '<div class="gt-row"><div><b>' + esc(d.title || '') + '</b></div><div class="gt-src">' + esc([x.docDate ? fmtDate(x.docDate) : x9('noDate'), d.org].filter(Boolean).join(' · ')) + '</div>' +
+        X9_HX.filter(k => String(d[k] || '').trim()).map(k => '<div style="margin-top:4px"><span class="gt-src">' + esc(F[k] || k) + ':</span> <span style="white-space:pre-wrap">' + esc(d[k]) + '</span></div>').join('') + '</div>').join('');
+      const sec = gtSec('hx', x9('hx'), rows.length, body, gtOpenState('hx', true));
+      const k = h.indexOf('<details class="gt-sec" data-gt="labs"');
+      h = k > 0 ? h.slice(0, k) + sec + h.slice(k) : h + sec;
+    } catch (e) { console.error(e); }
+    return h;
+  };
+})();
+
+/* ---------- окно разбора: сверка с картой, расхождения, «уже есть», перечитать сильнее ---------- */
+function exIdBadge(d) {
+  const m = d && d.id && d.id.match;
+  if (!m || m === 'none') return '';
+  return '<div class="' + (m === 'no' ? 'ex-flag' : 'muted') + '" style="margin:4px 0;font-size:13px">' + esc(x9('id_' + m)) + (d.id.note ? ' — ' + esc(x9Ph(d.id.note)) : '') + '</div>';
+}
+function exIdCheckHtml(ic) {
+  if (!ic) return '';
+  const L = x9('idF');
+  const diff = Object.keys(ic).filter(k => ic[k] === 'diff'), ok = Object.keys(ic).filter(k => ic[k] === 'ok');
+  if (diff.length) return '<div class="info" style="margin-bottom:8px;background:#fde2e2;color:#8a1c1c">⚠️ ' + esc(x9('idDiff', { f: diff.map(k => L[k] || k).join(', ') })) + '</div>';
+  return ok.length ? '<div class="info" style="margin-bottom:8px">' + esc(x9('idOk', { f: ok.map(k => L[k] || k).join(', ') })) + '</div>' : '';
+}
+function exExtraHtml(d) {
+  const cf = (d.conflicts || []).filter(x9ConfOk);
+  const sm = [].concat((d.tests || []).filter(t => t.same).map(t => t.name + ' → ' + t.same), (d.imaging || []).filter(t => t.same).map(t => t.name + ' → ' + t.same));
+  return (cf.length ? '<div class="ex-k">⚖️ ' + esc(x9('conf')) + '</div>' + cf.map(c => '<div style="font-size:13.5px;margin-top:2px"><b>' + esc(x9Ph(c.what)) + '</b>: A — ' + esc(x9Ph(c.a)) + '; B — ' + esc(x9Ph(c.b)) + (c.why ? ' <span class="muted">(' + esc(x9Ph(c.why)) + ')</span>' : '') + '</div>').join('') : '') +
+    (sm.length ? '<div class="ex-k">🔗 ' + esc(x9('same')) + '</div><div class="muted" style="font-size:13px">' + sm.map(s => esc(x9Ph(s))).join('<br>') + '</div>' : '');
+}
+/** Что уже прочитано в этом пакете — следующей партии фото (ИИ сверяет даты, номера, дубли). */
+function exPrevText(docs) {
+  return (docs || []).map(d => '— ' + [d.date, d.title, d.org ? '(' + d.org + ')' : ''].filter(Boolean).join(' ') + ': ' + [
+    (d.dx || []).map(y => (y.icd ? y.icd + ' ' : '') + y.text).join('; '),
+    (d.tests || []).map(t => t.name + ' ' + t.result + (t.date ? ' (' + t.date + ')' : '')).join('; '),
+    (d.imaging || []).map(m => m.name + (m.date ? ' (' + m.date + ')' : '') + ': ' + m.conclusion).join('; '),
+    d.author ? 'врач: ' + d.author : ''].filter(Boolean).join(' | ')).join('\n').slice(0, 7000);
+}
+Object.assign(H, {
+  exStrong: () => {
+    const st = S.ex; if (!st) return;
+    st.strong = true; st.parts = {}; st.docs = null; st.idCheck = null; st.who = null;
+    exRender();
+    const b = $('[data-act=exRead]'); if (b) exRead(b);
+  }
 });
 
 
