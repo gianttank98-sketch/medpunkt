@@ -36834,6 +36834,23 @@ Object.assign(H, {
  * ===================================================================== */
 Object.assign(GT_T.ru, { gtFillBtn: '📘 Взять из GT/098', gtFillDone: 'Из GT/098 вписано полей: {n}', gtFillNone: 'Пустых полей, которые можно взять из GT/098, нет', gtFillNoPt: 'Документ не привязан к пациенту (GT/098)', gtFillClosed: 'Документ закрыт' });
 Object.assign(GT_T.az, { gtFillBtn: '📘 GT/098-dən götür', gtFillDone: 'GT/098-dən yazılan sahələr: {n}', gtFillNone: 'GT/098-dən götürülə bilən boş sahə yoxdur', gtFillNoPt: 'Sənəd pasiyentə (GT/098) bağlı deyil', gtFillClosed: 'Sənəd bağlıdır' });
+function gtSecText(g, re) {
+  return (g.sec || []).filter(s => re.test(s.title)).map(s => [s.title + ':', s.text, (s.items || []).map(y => s.type === 'table' ? '- ' + y.name + ': ' + [y.value, y.unit].filter(Boolean).join(' ') + (y.date ? ' (' + y.date + ')' : '') : '- ' + (y.at ? fmtDt(y.at) + ' — ' : '') + y.text).join('\n')].filter(Boolean).join('\n')).join('\n\n');
+}
+const GT_RE_MORBI = /анамнез болезни|xəstəlik anamnezi|хронолог|xronolog|госпитализ|hospitaliz/i;
+const GT_RE_VITAE = /анамнез жизни|həyat|операц|əməliyyat|семейн|ailə|эпид|epid|вакцин|peyvənd|туберк|vərəm|работ|iş və/i;
+/** 9.49: приём из GT/098 — анамнез болезни и жизни, вредные привычки, постоянные лекарства, аллергия. */
+function gtFormPatch(g) {
+  if (!g || !g.patient) return {};
+  const p = g.patient, out = {};
+  const put = (k, v, max) => { v = String(v || '').trim(); if (v) out[k] = v.slice(0, max || 2000); };
+  put('allergy', p.allergy, 300);
+  put('amorbi', [gtSecText(g, GT_RE_MORBI), p.chronic ? (S.lang === 'az' ? 'Xroniki: ' : 'Хронические: ') + p.chronic : ''].filter(Boolean).join('\n\n'));
+  put('avitae', gtSecText(g, GT_RE_VITAE));
+  put('habits', gtSecText(g, /вредн|zərərli/i).replace(/^[^\n]*:\n/, '').replace(/\n+/g, '; '), 300);
+  put('meds', gtSecText(g, /постоянно|daimi|принимает|qəbul edir/i).replace(/^[^\n]*:\n/, ''));
+  return out;
+}
 function gtIcd(v) { const m = String(v || '').toUpperCase().match(/[A-Z]\d\d(\.\d{1,2})?/); return m ? m[0] : ''; }
 /** Что из GT/098 положить в поля документа данного вида. */
 function gtDocPatch(type, g) {
@@ -36870,7 +36887,20 @@ function gtDocPatch(type, g) {
   put('treatment', rxGiven.join('\n')); put('done', rxGiven.join('\n'));
   put('consults', consults.join('\n'));
   put('background', [p.chronic, others.length ? others.join('; ') : '', p.allergy ? (S.lang === 'az' ? 'Allergiya: ' : 'Аллергия: ') + p.allergy : '', rxGiven.slice(0, 8).join('; ')].filter(Boolean).join('\n'));
-  if (type === 'h003') { put('dept', ''); }
+  // 9.49: история болезни (TQS 003) и др.: адрес, группа крови, работа, кем направлен
+  put('regAddr', p.address); put('adr', p.address);
+  const bloodLab = gtLabList(g).find(x => /групп\S* крови|qan qrup|blood group|резус|rh-?фактор/i.test(x.name));
+  const bloodSec = secs.find(s => /групп\S* крови|qan qrup/i.test(s.title));
+  put('blood', bloodLab ? bloodLab.val : bloodSec ? (bloodSec.text || ((bloodSec.items || [])[0] || {}).value || '').trim().split('\n')[0] : '');
+  const work = secs.find(s => /работ|iş və|iş yeri|профес|peşə/i.test(s.title));
+  if (work) { const wt = String(work.text || '').trim() || (work.items || []).map(y => y.text || y.value || '').filter(Boolean).join('; '); put('workplace', wt.split('\n')[0]); }
+  const ref = (g.ext || []).filter(x => x.docType === 'referral').sort((a, b) => String(b.docDate || b.createdAt).localeCompare(String(a.docDate || a.createdAt)))[0];
+  if (ref) {
+    const rd = ref.data || {}, rdx = (rd.dx || [])[0] || {};
+    put('refBy', [ref.org, rd.author].filter(Boolean).join(', ')); put('referredBy', [ref.org, rd.author].filter(Boolean).join(', '));
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(ref.docDate || ''))) put('refDate', ref.docDate);
+    put('refIcd', gtIcd(rdx.icd)); put('refDx', rdx.text);
+  }
   return out;
 }
 // новый документ из GT/098 — сразу заполнен
@@ -36949,6 +36979,49 @@ async function gtFromVisit(btn) {
   ptOpen(pid, true);
 }
 H.gtFromVisit = el => gtFromVisit(el);
+
+/* ---------- 9.49: приём берёт данные из GT/098 ----------
+ *  - «＋ Приём» из GT/098: бланк сразу с аллергией, анамнезом болезни и жизни, вредными привычками, постоянными лекарствами.
+ *  - В открытом приёме, привязанном к GT/098: «📘 Взять из GT/098» — дописывает только пустые поля. */
+Object.assign(GT_T.ru, { gtFormFill: '📘 Взять из GT/098', gtFormFilled: 'Из GT/098 вписано полей: {n}', gtFormNone: 'Пустых полей, которые можно взять из GT/098, нет' });
+Object.assign(GT_T.az, { gtFormFill: '📘 GT/098-dən götür', gtFormFilled: 'GT/098-dən yazılan sahələr: {n}', gtFormNone: 'GT/098-dən götürülə bilən boş sahə yoxdur' });
+(function () {
+  if (typeof ptToForm !== 'function') return;
+  const o = ptToForm;
+  ptToForm = function (p) {
+    const base = o.apply(this, arguments);
+    try { const g = ptSt().cur; if (g && g.patient && p && g.patient.id === p.id) { const add = gtFormPatch(g); Object.keys(add).forEach(k => { if (!base[k]) base[k] = add[k]; }); } } catch (e) { }
+    return base;
+  };
+})();
+function gtVisitPid(id) { return (typeof PT === 'object' && PT.formLink && PT.formLink[id]) || ((fCache().full[id] || {}).patientId) || ''; }
+(function () {
+  const ore = window.fRenderEditor;
+  if (typeof ore !== 'function') return;
+  window.fRenderEditor = function () {
+    const r = ore.apply(this, arguments);
+    try {
+      if (!S.fv || !can('forms') || (typeof hpPiiOn === 'function' && hpPiiOn()) || !fCanEdit(S.fv.id) || !gtVisitPid(S.fv.id)) return r;
+      const box = $('#formsBox'); if (!box || box.querySelector('[data-act=gtFillForm]')) return r;
+      const gb = box.querySelector('[data-act=gtFromVisit]');
+      const b = '<button type="button" class="btn ghost block" style="margin-top:6px" data-act="gtFillForm">' + esc(gtt('gtFormFill')) + '</button>';
+      if (gb) gb.insertAdjacentHTML('afterend', b);
+    } catch (e) { }
+    return r;
+  };
+})();
+async function gtFillForm(btn) {
+  if (!S.fv) return;
+  const id = S.fv.id, pid = gtVisitPid(id); if (!pid || !fCanEdit(id)) return;
+  const g = await busy(btn, () => ptGet(pid, true)); if (!g || !g.patient || !S.fv || S.fv.id !== id) return;
+  const add = gtFormPatch(g), d = fData(id), patch = {};
+  Object.keys(add).forEach(k => { if (!String(d[k] || '').trim() && !(k === 'allergy' && d.allergyNone)) patch[k] = add[k]; });
+  const n = Object.keys(patch).length;
+  if (!n) return toast(gtt('gtFormNone'));
+  fSet(patch, true); fFlush();
+  toast(gtt('gtFormFilled', { n }), 'ok');
+}
+H.gtFillForm = el => gtFillForm(el);
 
 /* =====================================================================
  * v74 (9.47): «Дал лекарство» — № бланка → отделение → что дали; и «дал то, чего в отделении нет».
