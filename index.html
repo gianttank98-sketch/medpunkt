@@ -339,17 +339,16 @@
 
     <!-- ===================== СПИСАНИЕ / ПОИСК ===================== -->
     <section id="scrSpend">
-      <button class="btn ghost block" style="margin-bottom:10px" data-act="handoverOpen" data-i18n="hoBtn"></button>
-      <div class="visit-bar">
-        <input type="text" id="visitInp" autocomplete="off" maxlength="60" data-i18n-ph="visitPh">
-        <button class="btn small ghost" data-act="visitClear" data-i18n="visitClear"></button>
-      </div>
       <div class="searchbar">
         <input type="search" id="spendQ" autocomplete="off" data-i18n-ph="spendSearchPh">
         <button class="btn icon" data-act="scan" data-target="spend" data-i18n-title="scan">📷</button>
       </div>
       <div class="row" style="margin-bottom:10px">
         <select id="spendLoc" class="grow"></select>
+      </div>
+      <div class="visit-bar">
+        <input type="text" id="visitInp" autocomplete="off" maxlength="60" data-i18n-ph="visitPh">
+        <button class="btn small ghost" data-act="visitClear" data-i18n="visitClear"></button>
       </div>
       <div id="spendDidYouMean"></div>
       <div id="spendList"></div>
@@ -370,6 +369,7 @@
           <div id="reqList" style="margin-top:10px"></div>
         </div>
       </details>
+      <button class="btn ghost block" style="margin:10px 0" data-act="handoverOpen" data-i18n="hoBtn"></button>
     </section>
 
     <!-- ===================== ПРИХОД ===================== -->
@@ -544,7 +544,7 @@ const I18N = {
     brandsInStock: 'фирм в наличии: {n}', totalShort: 'всего {n}', useFirst: 'взять первой', expiredTag: 'просрочено',
     daysLeft: 'осталось {n} дн.', noExpiry: 'без срока', until: 'до {d}', seriesShort: 'серия {s}', noSeries: 'без серии',
     outOfStock: 'нет в наличии',
-    spendOther: 'Другое…', dispose: 'Утилизировать', spendTitle: 'Списание', reasonPatient: 'Пациенту', reasonDisposal: 'Утилизация / порча',
+    spendOneBtn: '−1', spendOther: 'Другое…', dispose: 'Утилизировать', spendTitle: 'Списание', reasonPatient: 'Пациенту', reasonDisposal: 'Утилизация / порча',
     qty: 'Количество', comment: 'Комментарий', commentStrictPh: 'Пациент, № обращения — обязательно', commentDisposalPh: 'Причина: разбилась, испорчена…',
     commentOptPh: 'Необязательно', strictNotice: 'Строгий учёт: не забудьте запись в журнале учёта наркотических и психотропных средств.',
     spentToast: 'Списано: {name} −{qty}. Осталось {left}.', disposedToast: 'Утилизировано: {name} −{qty}.', undo: 'Отменить', undone: 'Списание отменено.',
@@ -1662,7 +1662,7 @@ function spendGroupHtml(g) {
         ? '<span class="tag amber">' + esc(t('pending')) + '</span>'
         : st.cls === 'expired'
         ? '<button class="btn small danger" data-act="spendModal" data-lot="' + esc(l.id) + '" data-reason="DISPOSAL">' + esc(t('dispose')) + '</button>'
-        : '<button class="btn small primary" data-act="spendOne" data-lot="' + esc(l.id) + '">−1</button><button class="btn small ghost" data-act="spendModal" data-lot="' + esc(l.id) + '">' + esc(t('spendOther')) + '</button>';
+        : '<button class="btn small primary" data-act="spendOne" data-lot="' + esc(l.id) + '">' + esc(t('spendOneBtn')) + '</button><button class="btn small ghost" data-act="spendModal" data-lot="' + esc(l.id) + '">' + esc(t('spendOther')) + '</button>';
       return '<div class="lot ' + st.cls + '"><div><div class="loc">📍 ' + esc(locName(l.locationId)) + '</div><div class="meta">' + expMeta(l) +
         (l.id === firstId && usable.length > 1 ? ' <span class="tag green">' + esc(t('useFirst')) + '</span>' : '') + '</div></div>' +
         '<div class="qty"><b>' + l.qty + '</b> ' + esc(unitShort(it.unit)) + '</div><div class="btns">' + btns + '</div></div>';
@@ -5579,7 +5579,7 @@ function renderFormsList() {
       const age = ageOf(x.birthDate, x.arrivedAt || x.createdAt);
       const unsent = fPendingOps(x.id).length;
       const st = x.status === 'closed' ? '<span class="tag green">' + esc(t('formClosed')) + '</span>' : x.status === 'closing' ? '<span class="tag amber">' + esc(t('formClosing')) + '</span>' : '<span class="tag">' + esc(t('formDraft')) + '</span>';
-      return '<button class="card f-card" data-act="fOpen" data-id="' + esc(x.id) + '"><div class="row"><b class="' + (x.blankNo ? '' : 'f-noblank') + '">№ ' + esc(x.blankNo || t('formNoBlank')) + '</b> ' + (tri[x.triage] || '') +
+      return '<button class="card f-card" data-act="fOpen" data-id="' + esc(x.id) + '"><div class="row"><b class="' + (x.blankNo ? '' : 'f-noblank') + '">' + (x.blankNo ? '№ ' + esc(x.blankNo) : esc(t('formNoBlank'))) + '</b> ' + (tri[x.triage] || '') +
         '<span class="grow" style="text-align:right">' + st + '</span></div>' +
         '<div class="f-pt">' + esc(x.patient || '—') + (age !== '' ? ', ' + esc(t('fAge', { n: age })) : '') + (x.fin ? ' · ' + esc(x.fin) : '') + '</div>' +
         '<div class="muted">' + esc(fmtDt(x.arrivedAt || x.createdAt)) + (x.dx || x.compl ? ' · ' + esc(x.dx || x.compl) : '') + (x.allergy && x.allergy !== '—' ? ' · <span style="color:var(--red)">⚠️ ' + esc(x.allergy) + '</span>' : '') + (unsent ? ' · ' + esc(t('formUnsent')) : '') + '</div></button>';
@@ -5697,7 +5697,7 @@ function fRenderEditor(keepScroll) {
   const sPatient = (ro ? '' : '<button type="button" class="btn small ghost block" style="margin-bottom:10px" data-act="fScanBlank" data-kind="blank">' + esc(t('scanBlankBtn')) + '</button>') + '<div class="grid2 stack">' + inp('pName', L(['Имя, фамилия', 'Ad / Soyad']), { max: 120 }) + inp('pFather', L(['Отчество', 'Ata adı']), { max: 60 }) + '</div>' +
     '<div class="grid2"><div class="field"><label>' + esc(L(['Дата рождения', 'Doğum tarixi'])) + '<b id="fAgeLbl">' + (age !== '' ? ' · ' + esc(t('fAge', { n: age })) : '') + '</b></label><input type="date" data-f="pBirth" value="' + esc(val('pBirth')) + '"></div>' +
     '<div class="field"><label>FİN</label><div class="row" style="gap:6px"><input type="text" data-f="fin" maxlength="7" autocapitalize="characters" class="grow ' + (finOk(d.fin) ? '' : 'f-bad') + '" value="' + esc(String(val('fin')).toUpperCase()) + '">' + (ro ? '' : '<button type="button" class="btn icon ghost" data-act="fScanId" title="' + esc(t('scanIdBtn')) + '">🪪</button>') + '</div><div class="note f-finnote' + (finOk(d.fin) ? ' hidden' : '') + '" style="margin:2px 0 0;color:var(--red)">' + esc(t('fFinBad')) + '</div></div></div>' +
-    '<div class="field"><label>' + esc(L(['Пол', 'Cinsi'])) + '</label>' + seg('pSex', FD.sex) + '</div>' + inp('xqn', 'XQN №', { max: 40 }) + fDupHtml(id) +
+    '<div class="field"><label>' + esc(L(['Пол', 'Cinsi'])) + '</label>' + seg('pSex', FD.sex) + '</div>' + inp('xqn', L(['№ истории болезни (XQN)', 'Xəstəlik tarixinin № (XQN)']), { max: 40 }) + fDupHtml(id) +
     (hist.length ? '<div class="info">' + esc(t('fHistoryN', { n: hist.length })) + ': ' + hist.slice(0, 5).map(h => '<a href="#" data-act="fOpen" data-id="' + esc(h.id) + '">№' + esc(h.blankNo || '—') + ' ' + esc(fmtDate(String(h.arrivedAt || h.createdAt).slice(0, 10))) + (h.dx ? ' — ' + esc(h.dx) : '') + '</a>').join('; ') +
       (histAl.length ? '<div style="color:var(--red);font-weight:700;margin-top:4px">⚠️ ' + esc(t('fHistoryAllergy', { a: histAl.join(', ') })) + '</div>' : '') + '</div>' : '') +
     '<div class="field"><label>' + esc(t('fReceipt')) + '</label><div class="row"><input type="text" class="grow" data-f="receipt" maxlength="120" value="' + esc(val('receipt')) + '"><button type="button" class="btn icon ghost" data-act="fScanReceipt" title="' + esc(t('fReceiptScan')) + '">🔍</button><button type="button" class="btn icon ghost" data-act="fScanBlank" data-kind="receipt" title="' + esc(t('scanReceiptBtn')) + '">🔤</button><button type="button" class="btn icon ghost" data-act="fPhoto" data-kind="receipt" title="' + esc(t('fReceiptPhoto')) + '">📷</button></div></div>' +
@@ -34472,7 +34472,7 @@ function vrCss() { if ($('#vrCss')) return; const s = document.createElement('st
 function vrOpen(preset) {
   vrCss();
   const [a, b] = mgPreset(preset || 'month');
-  const rl = S.vrLang || (S.lang === 'ru' ? 'az' : S.lang === 'az' ? 'az' : 'az');
+  const rl = S.vrLang || (S.lang === 'ru' ? 'ru' : 'az'); // 9.41: язык отчёта = язык интерфейса (сменить можно здесь же)
   const opt = (v, k, cur) => '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + esc(t(k)) + '</option>';
   openModal('<h3>' + esc(t('vrTitle')) + '</h3><div class="chips" style="margin-bottom:6px">' + [['week', 'mgWeek'], ['month', 'mgMonth'], ['prev', 'mgPrev']].map(x => '<button class="chip' + ((preset || 'month') === x[0] ? ' on' : '') + '" data-act="vrPreset" data-p="' + x[0] + '">' + esc(t(x[1])) + '</button>').join('') + '</div>' +
     '<div class="grid2"><div class="field"><label>' + esc(t('mgFrom')) + '</label><input type="date" id="vrFrom" value="' + a + '"></div><div class="field"><label>' + esc(t('mgTo')) + '</label><input type="date" id="vrTo" value="' + b + '"></div></div>' +
@@ -34505,7 +34505,7 @@ async function vrLoad(btn) {
 async function vrAi(btn) {
   if (!S.hs) await vrLoad();
   const r = S.hs; if (!r) return;
-  const rl = S.vrLang || 'az';
+  const rl = S.vrLang || (S.lang === 'ru' ? 'ru' : 'az');
   const facts = { период: r.from + ' — ' + r.to, сравнение: r.cmpFrom + ' — ' + r.cmpTo, обращений: r.total, людей: r.persons, повторных: r.repeat, вСреднемЗаДень: r.avg, прошлыйПериод: { обращений: r.prev.total, вСреднем: r.prev.avg },
     группы: r.groups, группыПрошлого: r.prev.groups, травмы: { обращений: r.injuries.visits, людей: r.injuries.persons, степень: r.injuries.sev, наПроизводстве: r.injuries.workAcc }, рентген: r.xray, экг: r.ecg, итогДляРаботы: r.work, давление: r.ah,
     наЗаметку: r.attention.map(a => (a.codes || []).map(c => c.code).join('+')), качество: r.quality };
@@ -34520,7 +34520,7 @@ async function vrPrint() {
   if (!S.hs) await vrLoad();
   if (!S.hs) return;
   const root = $('#printRoot'); if (!root) return;
-  root.innerHTML = '<style>' + VR_CSS + '@page{margin:14mm}.vr-doc h1{font-size:20pt}</style>' + vrHtml(S.hs, S.vrLang || 'az');
+  root.innerHTML = '<style>' + VR_CSS + '@page{margin:14mm}.vr-doc h1{font-size:20pt}</style>' + vrHtml(S.hs, S.vrLang || (S.lang === 'ru' ? 'ru' : 'az'));
   document.body.classList.add('print-form');
   setTimeout(() => { window.print(); setTimeout(() => { document.body.classList.remove('print-form'); root.innerHTML = ''; }, 800); }, 60);
 }
@@ -34853,6 +34853,332 @@ Object.assign(H, {
   waRun: async el => { const r = await busy(el, () => rpcA('watchRun', {}, { timeout: 300000 })); if (r) { toast(t('waDone', { n: r.n, b: r.bad }), r.bad ? 'bad' : ''); waLoad(); } },
   waWeek: async el => { const r = await busy(el, () => rpcA('watchRun', { what: 'week' }, { timeout: 300000 })); if (r) waLoad(); },
   waAllow: async el => { const ids = Array.from(document.querySelectorAll('.wa-u')).filter(x => x.checked).map(x => x.value); const r = await busy(el, () => rpcA('watchAllow', { ids })); if (r) toast(t('waSaved')); }
+});
+
+/* =====================================================================
+ * v68 (9.41): переделка интерфейса, этапы 0 + 1 (Саид, 27.10: «даже врач, который вышел из пещеры в старости,
+ *  мог его использовать»; план и словарь — «Интерфейс_третий_взгляд_словарь_27-10»).
+ *  Надстройка поверх существующих экранов (ничего не переписано, сохранение и учёт — прежний код):
+ *   1) слова из жизни: «Дал лекарство», «Привезли», «Что есть», «Пересчёт», «Пациенты», «Справочник», «Помощник»…;
+ *   2) один фирменный цвет вместо семи; красное — только для ошибки, которую человек сделал сейчас;
+ *   3) шапка в одну строку: ☰ · экран · (склад, если их несколько) · 👤; «В сети» не показываем, пока связь есть;
+ *      RU / AZ — в «👤 Я» (на экране входа — как было);
+ *   4) ✕ сверху в каждом окне; кнопки и поля не меньше пальца (44 px);
+ *   5) новая форма без красной ошибки и без всплывающей подсказки; «Чтобы закрыть: …» — спокойной строкой
+ *      внизу экрана вместе с кнопкой; закрытие формы — сразу, 8 секунд можно «Отменить» (вместо «Вы уверены?»);
+ *   6) «Что есть»: «Стандарт неотложки» и «Профиль склада» — внизу, без красного;
+ *   7) ошибки по-человечески, с тем, что делать;
+ *   8) 🧭 счётчики понятности (без личных данных) — в «🩺 Дежурном».
+ * ===================================================================== */
+const SM_T = {
+  ru: {
+    tabSpend: 'Дал лекарство', tabReceive: 'Привезли лекарства', tabStock: 'Что есть', tabRevision: 'Пересчёт', tabForms: 'Пациенты', tabClinic: 'Справочник',
+    mGrpWork: 'Лекарства', mGrpMed: 'Пациенты и справочник', mGrpAdm: 'Склад и отчёты',
+    mDesc_spend: 'Дал пациенту или выбросили — отметить', mDesc_receive: 'Пришла поставка — внести', mDesc_stock: 'Остатки, сроки, чего мало', mDesc_revision: 'Пересчитать, что лежит',
+    mDesc_forms: 'Приёмы, документы, рецепты, карты', mDesc_clinic: 'По симптомам, протоколы, шкалы', mDesc_reports: 'За месяц, расход, остатки',
+    dsForms: '🩺 Приёмы', dsPatients: '👤 Карты пациентов', formNew: '＋ Пришёл пациент', formsTitle: 'Приём пациента',
+    spendOneBtn: 'Дал 1', spendOther: 'Дал больше…', reasonDisposal: 'Испортилось, выбросили', dispose: 'Выбросить',
+    visitPh: '🧾 Кому дали — № приёма или имя (необязательно)', visitClear: '✕',
+    brandsInStock: 'видов: {n}', reportUseAny: '⚠️ Дал то, чего нет в списке', requestsTitle: '📝 Заказать — чего не хватает',
+    hoBtn: '🔁 Сдать смену: пересчитать сумку', hoTitle: 'Сдать смену', shBtn: '🔁 Сдать смену: пациенты', shTitle: 'Сдать смену: пациенты',
+    indBtn: '📂 По показаниям', clSegInd: '📂 По показаниям', clSegDx: '🩺 По симптомам', clSegAiBoss: '🤖 Помощник', clSegCases: '🧑‍⚕️ Разбор с ИИ',
+    boxPhotoBtn: '📷 Сфотографировать коробку', bulkBtn: '📋 По накладной (списком)', rcvModeReceive: '📦 Привезли', rcvModeOpening: '📥 Что уже есть',
+    unitLabel: 'Единица', locationLabel: 'Где лежит *', doseResult: 'Итог (заполняется сам)',
+    fExpired: '🔴 Просрочено', fSoon: '🟡 Срок заканчивается', fDeficit: '🟠 Мало', stSoon: 'срок ≤30 дней', tileSoonN: 'Срок заканчивается',
+    auditBtn: '✅ Пересчитать', revTitle: 'Пересчёт',
+    formDraft: 'не закрыто', formNoBlank: 'без номера', formBlankNo: '№ бланка', formBlankNoPh: 'можно вписать позже', fNewToast: ' ',
+    secPatient: '🧑 Кто и как пришёл', secTriage: '🚦 Состояние и цифры', secHistory: '📝 Что беспокоит', secDx: '🧾 Диагноз', secLabs: '🧪 Анализы и снимки',
+    secRx: '💉 Что дал / назначил', secObs: '👁️ Записи врача', secOutcome: '🏁 Чем закончилось', fOutcome: 'Чем закончилось', fNeedOutcome: 'чем закончилось',
+    fCloseNeed: 'Чтобы закрыть, впишите: {what}.', shRe: 'Посмотреть ещё раз', rcTitle: '⏰ Посмотреть ещё раз через…', rcDue: '⏰ Пора посмотреть ещё раз: {n}',
+    sbBtn: '🧪 Учебный режим', admTitle: '🛡 Управление', usersAndPerms: 'Люди и доступ', storesTitle: 'Отделения', authLog: 'Кто входил', opsBtn: '🐞 Проблемы и отзывы', opsTitle: '🐞 Проблемы и отзывы',
+    offline: 'Нет связи', queuedToast: 'Нет связи — сохранил на телефоне, отправлю сам, когда появится.',
+    E_NETWORK: 'Нет связи. Записи сохраняются на телефоне и уйдут сами, когда связь появится.',
+    E_SERVER: 'Не получилось — сбой на сервере. Попробуйте ещё раз через минуту; ошибка уже записана.',
+    E_BUSY: 'Сервер занят — повторю сам через несколько секунд.', E_RATE: 'Подождите минуту и попробуйте снова.',
+    E_FORBIDDEN: 'Это вам недоступно — спросите админа.', E_NO_SESSION: 'Нужно войти заново.',
+    smLang: 'Язык', smClose: 'Закрыть', smClosedUndo: 'Форма №{n} закрыта', smClosedNow: '✓ Закрыто', smUndoneClose: 'Не закрыто — можно править дальше.',
+    smStdMore: '🎯 Что должно быть на складе (профиль и стандарт)', smUx: '🧭 Понятность (без личных данных)',
+    smUxHint: 'Сколько раз открыли экран и сколько раз ушли через 3+ секунды, ничего не сделав. Для «Что есть» и «Справочника» уйти без действия — нормально: там смотрят.',
+    smUxScr: 'Экран', smUxOpen: 'открыли', smUxIdle: 'ушли без действия', smUxForms: 'Приёмы: начато {c}, закрыто {cl}, обычно до закрытия {m} мин', smUxMenu: 'меню ☰ открывали: {n}',
+    smUxToday: 'сегодня', smUxNone: 'Данных ещё нет — появятся после первого дня работы.'
+  },
+  az: {
+    tabSpend: 'Dərman verdim', tabReceive: 'Dərman gətirdilər', tabStock: 'Nə var', tabRevision: 'Sayım', tabForms: 'Pasiyentlər', tabClinic: 'Soraqça',
+    mGrpWork: 'Dərmanlar', mGrpMed: 'Pasiyentlər və soraqça', mGrpAdm: 'Anbar və hesabatlar',
+    mDesc_spend: 'Pasiyentə verdim və ya atıldı — qeyd et', mDesc_receive: 'Gətirdilər — daxil et', mDesc_stock: 'Qalıqlar, müddətlər, nə azdır', mDesc_revision: 'Olanı say',
+    mDesc_forms: 'Qəbullar, sənədlər, reseptlər, kartlar', mDesc_clinic: 'Şikayətə görə, protokollar, şkalalar', mDesc_reports: 'Aylıq, sərfiyyat, qalıqlar',
+    dsForms: '🩺 Qəbullar', dsPatients: '👤 Pasiyent kartları', formNew: '＋ Pasiyent gəldi', formsTitle: 'Pasiyent qəbulu',
+    spendOneBtn: '1 verdim', spendOther: 'Çox verdim…', reasonDisposal: 'Xarab oldu, atıldı', dispose: 'At',
+    visitPh: '🧾 Kimə — qəbul № və ya ad (məcburi deyil)', visitClear: '✕',
+    brandsInStock: 'növ: {n}', reportUseAny: '⚠️ Siyahıda olmayanı verdim', requestsTitle: '📝 Sifariş et — nə çatışmır',
+    hoBtn: '🔁 Növbəni təhvil ver: çantanı say', hoTitle: 'Növbəni təhvil ver', shBtn: '🔁 Növbəni təhvil ver: pasiyentlər', shTitle: 'Növbəni təhvil ver: pasiyentlər',
+    indBtn: '📂 Göstərişə görə', clSegInd: '📂 Göstərişə görə', clSegDx: '🩺 Şikayətə görə', clSegAiBoss: '🤖 Köməkçi', clSegCases: '🧑‍⚕️ Sİ ilə təhlil',
+    boxPhotoBtn: '📷 Qutunun şəklini çək', bulkBtn: '📋 Qaimə ilə (siyahı)', rcvModeReceive: '📦 Gətirdilər', rcvModeOpening: '📥 Artıq olanlar',
+    unitLabel: 'Vahid', locationLabel: 'Harada durur *', doseResult: 'Nəticə (özü dolur)',
+    fExpired: '🔴 Vaxtı keçib', fSoon: '🟡 Vaxtı bitir', fDeficit: '🟠 Azdır', stSoon: 'müddət ≤30 gün', tileSoonN: 'Vaxtı bitir',
+    auditBtn: '✅ Say', revTitle: 'Sayım',
+    formDraft: 'bağlanmayıb', formNoBlank: 'nömrəsiz', formBlankNo: 'Blank №', formBlankNoPh: 'sonra yazmaq olar', fNewToast: ' ',
+    secPatient: '🧑 Kim və necə gəlib', secTriage: '🚦 Vəziyyət və göstəricilər', secHistory: '📝 Nə narahat edir', secDx: '🧾 Diaqnoz', secLabs: '🧪 Analizlər və şəkillər',
+    secRx: '💉 Nə verdim / təyin etdim', secObs: '👁️ Həkimin qeydləri', secOutcome: '🏁 Nəticə', fOutcome: 'Nəticə', fNeedOutcome: 'nəticə',
+    fCloseNeed: 'Bağlamaq üçün yazın: {what}.', shRe: 'Yenidən bax', rcTitle: '⏰ … sonra yenidən bax', rcDue: '⏰ Yenidən baxmaq vaxtıdır: {n}',
+    sbBtn: '🧪 Məşq rejimi', admTitle: '🛡 İdarəetmə', usersAndPerms: 'İşçilər və icazələr', storesTitle: 'Şöbələr', authLog: 'Kim daxil olub', opsBtn: '🐞 Problemlər və rəylər', opsTitle: '🐞 Problemlər və rəylər',
+    offline: 'Əlaqə yoxdur', queuedToast: 'Əlaqə yoxdur — telefonda saxladım, əlaqə olanda özüm göndərəcəm.',
+    E_NETWORK: 'Əlaqə yoxdur. Qeydlər telefonda saxlanır, əlaqə olanda özü gedəcək.',
+    E_SERVER: 'Alınmadı — serverdə nasazlıq. Bir dəqiqədən sonra yenidən cəhd edin; xəta artıq qeyd olunub.',
+    E_BUSY: 'Server məşğuldur — bir neçə saniyəyə özüm təkrar edəcəm.', E_RATE: 'Bir dəqiqə gözləyin və yenidən cəhd edin.',
+    E_FORBIDDEN: 'Bu sizə açıq deyil — admindən soruşun.', E_NO_SESSION: 'Yenidən daxil olmaq lazımdır.',
+    smLang: 'Dil', smClose: 'Bağla', smClosedUndo: '№{n} forma bağlandı', smClosedNow: '✓ Bağlandı', smUndoneClose: 'Bağlanmadı — düzəltməyə davam edə bilərsiniz.',
+    smStdMore: '🎯 Anbarda nə olmalıdır (profil və standart)', smUx: '🧭 Anlaşıqlıq (şəxsi məlumatsız)',
+    smUxHint: 'Ekranı neçə dəfə açıblar və neçə dəfə 3+ saniyədən sonra heç nə etmədən çıxıblar. «Nə var» və «Soraqça»da hərəkətsiz çıxmaq normaldır: orada baxırlar.',
+    smUxScr: 'Ekran', smUxOpen: 'açılıb', smUxIdle: 'hərəkətsiz çıxıb', smUxForms: 'Qəbullar: başlanıb {c}, bağlanıb {cl}, adətən bağlanana qədər {m} dəq', smUxMenu: '☰ menyu açılıb: {n}',
+    smUxToday: 'bu gün', smUxNone: 'Məlumat hələ yoxdur — ilk iş günündən sonra görünəcək.'
+  }
+};
+Object.assign(I18N.ru, SM_T.ru);
+Object.assign(I18N.az, SM_T.az);
+
+/* ---------- 1. вид: один цвет, 44 px, шапка в одну строку, ✕ сверху ---------- */
+(function () {
+  if ($('#smCss')) return;
+  const s = document.createElement('style'); s.id = 'smCss';
+  s.textContent =
+    // один фирменный цвет: раздел узнаётся по названию и картинке, а не по цвету
+    'body[data-scr]{--acc:var(--brand)!important;--acc-ink:var(--brand-ink)!important}#navTabs [data-tab]{--c:var(--brand)!important}' +
+    // палец: кнопки, переключатели, поля — не меньше 44 px
+    '.btn,.btn.small,.btn.icon,.chip,.admin-btn,nav.bottom.drawer .m-sub,.lot .btns .btn{min-height:44px}.seg button,.hdr-ctrl select{height:auto;min-height:44px}' +
+    'input[type=text],input[type=search],input[type=number],input[type=password],input[type=date],input[type=time],input[type=tel],select{min-height:44px}' +
+    'input[type=checkbox],input[type=radio]{width:22px;height:22px;flex:none}' +
+    // шапка в одну строку
+    'body:not(.logged-out) header.top .wrap{flex-wrap:nowrap}body:not(.logged-out) header.top .seg{display:none}' +
+    'header.top .app-title{min-width:0;overflow:hidden}#scrName{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;display:block}' +
+    '#netPill.ok{display:none}#menuBtn{width:44px;height:44px}' +
+    '#userBtn{width:44px;min-width:44px;height:44px;padding:0;font-size:20px;flex:none}#storeBtn{height:44px;max-width:34vw}#storeBtn.sm-one{display:none}' +
+    '.hdr-ctrl{flex:none}' +
+    // ✕ сверху в каждом окне
+    '.modal>.sm-x{position:sticky;top:-8px;float:right;margin:-8px -6px 4px 10px;width:44px;height:44px;border-radius:12px;border:0;background:var(--soft);color:var(--ink);font-size:20px;line-height:1;z-index:3;cursor:pointer}' +
+    '.modal>.sm-x:focus-visible{outline:3px solid var(--brand);outline-offset:2px}@media print{.modal>.sm-x{display:none!important}}' +
+    '.sm-sbar{flex-wrap:wrap}.sm-sbar>input{flex:1 1 100%!important;min-width:0}.sm-sbar>#spendLoc{flex:1 1 40%;min-width:0;width:auto}' +
+    // «Привезли»: «Сфотографировать коробку» — во всю ширину, «Найти в интернете» — под ней
+    '.row:has(>[data-act=boxPhoto]){flex-wrap:wrap}.row>[data-act=boxPhoto]{flex:1 1 100%;min-height:52px;font-size:16px}' +
+    '.f-noblank{color:var(--sub)!important}' +
+    // язык в «Я»
+    '.sm-lang{display:flex;align-items:center;gap:10px;margin:0 0 12px}.sm-lang .seg button{min-width:56px}' +
+    // форма: «Чтобы закрыть» — спокойной строкой внизу экрана, вместе с кнопкой
+    '.sm-closebar{position:sticky;bottom:0;z-index:5;margin-bottom:0;box-shadow:0 -6px 18px rgba(0,0,0,.12)}.sm-closebar .note{color:var(--sub)!important;margin:0 0 6px!important}' +
+    // плавающие кнопки не закрывают последние кнопки экрана
+    'main{padding-bottom:84px}' +
+    // «Что есть»: стандарт и профиль внизу, без тревоги
+    '#smStdBox{margin-top:14px}#smStdBox #stdCard .tag{background:var(--soft);color:var(--ink)}#smStdBox #stdCard div[style*="overflow:hidden"]>div{background:var(--brand)!important}#smStdBox #pfCard b[style*="color"]{color:var(--ink)!important}#smStdBox #pfCard div[style*="width:"]>div{background:var(--brand)!important}';
+  document.head.appendChild(s);
+})();
+(function () {
+  const oo = window.openModal;
+  window.openModal = function (html) {
+    const r = oo.apply(this, arguments);
+    try {
+      const m = $('#modalRoot .modal');
+      // окно обязательной смены пароля закрыть нельзя — там «Выйти»
+      if (m && !m.querySelector('.sm-x') && !/data-forced="1"/.test(String(html))) m.insertAdjacentHTML('afterbegin', '<button type="button" class="sm-x" data-act="smX" aria-label="' + esc(t('smClose')) + '">✕</button>');
+    } catch (e) { }
+    return r;
+  };
+})();
+(function () {
+  const oh = window.renderHeader;
+  window.renderHeader = function () {
+    const r = oh.apply(this, arguments);
+    try {
+      const sb = $('#storeBtn'); if (sb) { sb.classList.toggle('sm-one', myStores().length <= 1); }
+      const ub = $('#userBtn');
+      if (ub && S.me) { const nm = S.lang === 'az' ? S.me.nameAz : S.me.name; ub.textContent = S.me.owner ? '👑' : '👤'; ub.title = nm || ''; ub.setAttribute('aria-label', nm || ''); }
+    } catch (e) { }
+    return r;
+  };
+  // пустое сообщение — не показывать (например, бывшая подсказка «Новая форма…»)
+  const ot = window.toast;
+  window.toast = function (msg) { if (msg === null || msg === undefined || !String(msg).trim()) return; return ot.apply(this, arguments); };
+})();
+
+// «Дал лекарство»: поиск — во всю ширину первой строкой; место, «По показаниям», камера — второй
+(function () {
+  const sb = $('#scrSpend .searchbar'), loc = $('#spendLoc');
+  if (sb && loc) {
+    const row = loc.parentNode;
+    sb.classList.add('sm-sbar');
+    sb.insertBefore(loc, sb.querySelector('input').nextSibling);
+    if (row && row !== sb && !row.children.length) row.remove();
+  }
+  // «Что есть»: так же — поиск во всю ширину
+  const sq = $('#stockQ'); if (sq && sq.parentNode) sq.parentNode.classList.add('sm-sbar');
+})();
+
+/* ---------- 2. RU / AZ — в «👤 Я» ---------- */
+(function () {
+  const op = window.profileModal;
+  if (typeof op !== 'function') return;
+  window.profileModal = async function () {
+    const r = await op.apply(this, arguments);
+    try {
+      const m = $('#modalRoot .modal');
+      if (m && !m.querySelector('.sm-lang')) {
+        const h = m.querySelector('h3');
+        const html = '<div class="sm-lang"><span class="lbl" style="margin:0">🌐 ' + esc(t('smLang')) + '</span><div class="seg" role="group">' +
+          ['ru', 'az'].map(l => '<button type="button" data-act="smLang" data-lang="' + l + '"' + (S.lang === l ? ' class="on"' : '') + '>' + l.toUpperCase() + '</button>').join('') + '</div></div>';
+        if (h) h.insertAdjacentHTML('afterend', html); else m.insertAdjacentHTML('afterbegin', html);
+      }
+    } catch (e) { }
+    return r;
+  };
+})();
+
+/* ---------- 3. форма приёма: без красного при открытии; «Чтобы закрыть» внизу; «Отменить» вместо «Вы уверены?» ---------- */
+(function () {
+  const ore = window.fRenderEditor;
+  if (typeof ore !== 'function') return;
+  window.fRenderEditor = function () {
+    const r = ore.apply(this, arguments);
+    try {
+      document.querySelectorAll('.f-blanknote').forEach(x => x.remove());
+      const b = $('#fBlank'); if (b) b.classList.remove('f-bad');
+      const cb = $('[data-act=fClose]'); const card = cb && cb.closest('.card');
+      if (card) card.classList.add('sm-closebar');
+      const pend = S.smClose && S.fv && S.smClose.id === S.fv.id;
+      if (cb && pend) { cb.disabled = true; cb.textContent = t('smClosedNow'); }
+    } catch (e) { }
+    return r;
+  };
+})();
+function smCloseCommit() {
+  const p = S.smClose; if (!p) return;
+  clearTimeout(p.timer); S.smClose = null;
+  fQueue('formSave', { id: p.id, patch: {}, close: true }, t('formsTitle') + ' №' + p.blank);
+  if (S.screen === 'forms' && S.fv && S.fv.id === p.id) fRenderEditor(true);
+  if (!S.online) toast(t('fQueuedToast'));
+}
+function smCloseForm() {
+  if (!S.fv) return;
+  if (S.smClose) { if (S.smClose.id === S.fv.id) return; smCloseCommit(); } // другая форма ждёт — закрыть её сейчас
+  const id = S.fv.id;
+  const d = fData(id);
+  if (!d.blankNo || !d.pName || !d.outcome) return;
+  const dw = fDupWarn(id);
+  if (dw.length && !confirm(t('fDupConfirm', { w: dw.map(x => '• ' + x.text).join('\n') }))) return; // похожая форма — это настоящее предупреждение, оставляем
+  fFlush();
+  S.smClose = { id, blank: d.blankNo, timer: setTimeout(smCloseCommit, window.SM_CLOSE_MS || 8000) };
+  const cb = $('[data-act=fClose]'); if (cb) { cb.disabled = true; cb.textContent = t('smClosedNow'); }
+  toast(t('smClosedUndo', { n: d.blankNo }), '', { act: 'smUndoClose', label: t('undo') }, window.SM_CLOSE_MS || 8000);
+}
+// телефон убирают в карман или закрывают вкладку — закрытие уходит сразу, не теряется
+window.addEventListener('pagehide', () => { try { smCloseCommit(); } catch (e) { } });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') { try { smCloseCommit(); } catch (e) { } } });
+
+/* ---------- 4. «Что есть»: стандарт и профиль — внизу, спокойно ---------- */
+(function () {
+  const ors = window.renderStock;
+  if (typeof ors !== 'function') return;
+  window.renderStock = function () {
+    const r = ors.apply(this, arguments);
+    try { smStockTidy(); } catch (e) { }
+    return r;
+  };
+  const opu = window.pfCardUpdate;
+  if (typeof opu === 'function') window.pfCardUpdate = function () { const r = opu.apply(this, arguments); try { smStockTidy(); } catch (e) { } return r; };
+})();
+function smStockTidy() {
+  const scr = $('#scrStock'); if (!scr) return;
+  let box = $('#smStdBox');
+  if (!box) { box = document.createElement('div'); box.id = 'smStdBox'; }
+  if (box.parentNode !== scr || box !== scr.lastElementChild) scr.appendChild(box);
+  const pf = $('#pfCard'), sd = $('#stdCard');
+  // профиль ещё не выбран — не «ошибка»: одна спокойная кнопка
+  const noPf = pf && !pf.hasAttribute('data-act');
+  if (pf) pf.classList.toggle('hidden', !!noPf);
+  let more = $('#smStdMore');
+  if (noPf && !more) { box.insertAdjacentHTML('beforeend', '<button type="button" class="btn ghost block" id="smStdMore" data-act="pfModal"></button>'); more = $('#smStdMore'); }
+  else if (!noPf && more) { more.remove(); more = null; }
+  if (more) more.textContent = t('smStdMore');
+  [sd, pf, more].forEach(x => { if (x) box.appendChild(x); }); // порядок: стандарт, профиль, кнопка
+}
+
+/* ---------- 5. 🧭 счётчики понятности (только числа, без личных данных) ---------- */
+const UXM = { cur: null, timer: null };
+function uxAdd(g, k) {
+  if (!/^[a-z][a-zA-Z0-9_]{0,23}$/.test(String(k))) return;
+  const c = LS.get('MED_UXC', null) || { v: {}, i: {}, e: {} };
+  c[g] = c[g] || {}; c[g][k] = (c[g][k] || 0) + 1;
+  LS.set('MED_UXC', c);
+}
+function uxEnter(scr) {
+  if (UXM.cur && UXM.cur.s === scr) return;
+  uxLeave();
+  if (!scr || scr === 'login' || !S.sess) return;
+  UXM.cur = { s: scr, t: Date.now(), a: false };
+  uxAdd('v', scr);
+}
+function uxLeave() {
+  const c = UXM.cur; UXM.cur = null;
+  if (c && !c.a && Date.now() - c.t >= 3000) uxAdd('i', c.s);
+}
+function uxActed() { if (UXM.cur) UXM.cur.a = true; }
+async function uxSend() {
+  if (!S.sess || !S.online || (typeof sbIn === 'function' && sbIn())) return;
+  const c = LS.get('MED_UXC', null);
+  if (!c || !['v', 'i', 'e'].some(g => c[g] && Object.keys(c[g]).length)) return;
+  LS.set('MED_UXC', null);
+  try { const r = await rpc('uxMark', c, 20000); if (!r || (!r.ok && r.code !== 'E_RATE' && r.code !== 'E_FORBIDDEN')) throw new Error('x'); }
+  catch (e) { const now = LS.get('MED_UXC', null) || { v: {}, i: {}, e: {} }; ['v', 'i', 'e'].forEach(g => Object.keys(c[g] || {}).forEach(k => { now[g] = now[g] || {}; now[g][k] = (now[g][k] || 0) + c[g][k]; })); LS.set('MED_UXC', now); }
+}
+(function () {
+  const os = window.setScreen;
+  window.setScreen = function (scr) { const r = os.apply(this, arguments); try { uxEnter(S.screen); } catch (e) { } return r; };
+  const oe = window.enqueue;
+  if (typeof oe === 'function') window.enqueue = function () { uxActed(); return oe.apply(this, arguments); };
+  const oa = window.rpcA;
+  if (typeof oa === 'function') window.rpcA = function () { uxActed(); return oa.apply(this, arguments); };
+  const om = window.openModal;
+  window.openModal = function () { uxActed(); return om.apply(this, arguments); };
+  const omo = window.menuOpen;
+  if (typeof omo === 'function') window.menuOpen = function (on) { if (on) { try { uxAdd('e', 'menu'); } catch (e) { } } return omo.apply(this, arguments); };
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') { uxLeave(); uxSend(); } else if (S.screen) uxEnter(S.screen); });
+  setInterval(() => { uxSend(); }, 10 * 60 * 1000);
+  setTimeout(() => { uxSend(); }, 60 * 1000);
+})();
+const SM_SCR = { spend: 'tabSpend', receive: 'tabReceive', stock: 'tabStock', revision: 'tabRevision', forms: 'tabForms', clinic: 'tabClinic', reports: 'tabReports' };
+function smUxHtml(r) {
+  const rows = (r.ux || []).slice();
+  const days = {};
+  rows.forEach(x => { const d = days[x.day] = days[x.day] || {}; try { d[x.check] = JSON.parse(x.detail || '{}'); } catch (e) { } });
+  const today = r.uxToday || {};
+  const sum = { v: {}, i: {}, e: {} };
+  const add = m => ['v', 'i', 'e'].forEach(g => Object.keys((m && m[g]) || {}).forEach(k => { sum[g][k] = (sum[g][k] || 0) + m[g][k]; }));
+  const keys = Object.keys(days).sort().slice(-7);
+  keys.forEach(d => add(days[d].screens));
+  add(today);
+  const scr = Object.keys(sum.v).sort((a, b) => sum.v[b] - sum.v[a]);
+  let h = '<div class="card"><div class="lbl">' + esc(t('smUx')) + '</div><div class="muted" style="font-size:12.5px;margin-bottom:6px">' + esc(t('smUxHint')) + '</div>';
+  if (!scr.length && !keys.some(d => days[d].forms)) return h + '<div class="muted">' + esc(t('smUxNone')) + '</div></div>';
+  if (scr.length) h += '<table style="width:100%;border-collapse:collapse;font-size:14px"><tr><th style="text-align:left">' + esc(t('smUxScr')) + '</th><th style="text-align:right">' + esc(t('smUxOpen')) + '</th><th style="text-align:right">' + esc(t('smUxIdle')) + '</th></tr>' +
+    scr.map(k => { const v = sum.v[k] || 0, i = sum.i[k] || 0; return '<tr><td>' + esc(SM_SCR[k] ? t(SM_SCR[k]) : k) + '</td><td style="text-align:right">' + v + '</td><td style="text-align:right">' + i + (v ? ' <span class="muted">(' + Math.round(100 * i / v) + '%)</span>' : '') + '</td></tr>'; }).join('') + '</table>';
+  if (sum.e.menu) h += '<div class="muted" style="margin-top:4px">' + esc(t('smUxMenu', { n: sum.e.menu })) + '</div>';
+  keys.slice().reverse().forEach(d => { const f = days[d].forms; if (f && f.c) h += '<div style="margin-top:4px">' + esc(fmtDate(d)) + ': ' + esc(t('smUxForms', { c: f.c, cl: f.cl, m: f.med === null || f.med === undefined ? '—' : f.med })) + '</div>'; });
+  return h + '</div>';
+}
+(function () {
+  const ow = window.waHtml;
+  if (typeof ow !== 'function') return;
+  window.waHtml = function (r) { let h = ow.apply(this, arguments); try { h += smUxHtml(r || {}); } catch (e) { } return h; };
+})();
+
+Object.assign(H, {
+  fClose: () => smCloseForm(),
+  smX: (el, e) => H.closeModal(el, e),
+  smUndoClose: () => {
+    const p = S.smClose; if (!p) return;
+    clearTimeout(p.timer); S.smClose = null;
+    if (S.screen === 'forms' && S.fv && S.fv.id === p.id) fRenderEditor(true);
+    toast(t('smUndoneClose'));
+  },
+  smLang: el => { H.lang(el); closeModal(); profileModal(); }
 });
 
 
