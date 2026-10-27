@@ -15734,7 +15734,7 @@ async function csOpen(id) {
   if (!r) return;
   let data;
   try { data = csSanitize(JSON.parse(r.data)); } catch (e) { return toast(t('E_CASE_BAD'), 'bad'); }
-  st.cur = { id: r.row.id, ver: r.row.ver, title: r.row.title, status: r.row.status, formId: r.row.formId, data };
+  st.cur = { id: r.row.id, ver: r.row.ver, title: r.row.title, status: r.row.status, formId: r.row.formId, patientId: r.row.patientId || '', data };
   st.view = 'case';
   csRender(); window.scrollTo(0, 0);
 }
@@ -36257,6 +36257,8 @@ async function exRead(btn) {
       Object.keys(r.patient || {}).forEach(k => { const v = String(r.patient[k] || '').trim(); if (!v) return; if (!w[k]) w[k] = v; else if (w[k] !== v && k !== 'seen') w[k + '_alt'] = v; });
     }
     st.docs = exMerge(docs);
+    st.dupMode = {}; st.skip = {};
+    st.docs.forEach((d, i) => { if (d.dupOf) { st.dupMode[i] = 'skip'; st.skip[i] = true; } }); // 9.53: уже есть в GT/098 — по умолчанию не сохранять
     exRender();
   } catch (e) {
     if (prog) prog.textContent = ext('exStopped');
@@ -36288,7 +36290,7 @@ function exDocHtml(d, i, edit) {
   const dxTxt = (d.dx || []).map(x => (x.icd ? x.icd + ' ' : '') + x.text + (K[x.kind] ? ' (' + K[x.kind] + ')' : '') + Q(x)).join('\n');
   const testsTxt = (d.tests || []).map(x => x.name + ' — ' + x.result + (x.unit ? ' ' + x.unit : '') + (x.ref ? ' [' + x.ref + ']' : '') + (x.date ? ' (' + x.date + ')' : '') + Q(x)).join('\n');
   const imgTxt = (d.imaging || []).map(x => x.name + (x.date ? ' (' + x.date + ')' : '') + ': ' + x.conclusion + Q(x)).join('\n');
-  if (edit) return '<div class="ex-doc"><div class="row" style="gap:6px;align-items:center"><b class="grow">' + esc(TY[d.type] || TY.other) + '</b><label class="check" style="margin:0"><input type="checkbox" data-exskip="' + i + '"' + (S.ex.skip[i] ? ' checked' : '') + '><span>' + esc(ext('exSkip')) + '</span></label></div>' +
+  if (edit) return '<div class="ex-doc"><div class="row" style="gap:6px;align-items:center"><b class="grow">' + esc(TY[d.type] || TY.other) + '</b>' + (d.dupOf ? '' : '<label class="check" style="margin:0"><input type="checkbox" data-exskip="' + i + '"' + (S.ex.skip[i] ? ' checked' : '') + '><span>' + esc(ext('exSkip')) + '</span></label>') + '</div>' + (typeof exDupHtml === 'function' ? exDupHtml(d, i) : '') +
     (typeof exIdBadge === 'function' ? exIdBadge(d) : '') + inp('title', d.title) + '<div class="grid2">' + '<div>' + inp('date', d.date) + '</div><div>' + inp('org', d.org) + '</div></div>' + (d.author ? inp('author', d.author) : '') +
     ta('dx', dxTxt, 2) + (d.onset ? inp('onset', d.onset) : '') + (d.complaints ? ta('complaints', d.complaints) : '') + (d.anamnesis ? ta('anamnesis', d.anamnesis, 3) : '') + (d.exam ? ta('exam', d.exam, 3) : '') +
     '<div class="ex-k">' + esc(F.tests) + ' <span class="muted">(' + esc(ext('exTestsHint')) + ')</span></div><textarea data-ex="' + i + '" data-k="testsTxt" rows="' + Math.min(10, 2 + (d.tests || []).length) + '">' + esc(testsTxt) + '</textarea>' +
@@ -36357,6 +36359,7 @@ function exCollect() {
     else d[k] = v;
   });
   $$('[data-exskip]').forEach(el => { st.skip[+el.dataset.exskip] = el.checked; });
+  $$('[data-exdup]').forEach(el => { const i = +el.dataset.exdup; (st.dupMode = st.dupMode || {})[i] = el.value; st.skip[i] = el.value === 'skip'; });
 }
 async function exSaveAll(btn) {
   const st = S.ex; if (!st || !st.docs) return;
@@ -36390,7 +36393,7 @@ async function exSaveAll(btn) {
     if (st.skip[i]) continue;
     const d = st.docs[i];
     if (d._saved) { n++; continue; }
-    const r = await rpcA('extSave', { patientId: st.pid, formId: st.formId, doc: d, pages: (d.photos || []).length, id: d._id || ('X' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10)) }).catch(() => null);
+    const r = await rpcA('extSave', { patientId: st.pid, formId: st.formId, doc: d, pages: (d.photos || []).length, id: d._id || ((st.dupMode || {})[i] === 'replace' && d.dupOf && d.dupOf.id) || ('X' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10)) }).catch(() => null);
     if (!r) { btn.disabled = false; return; }
     d._saved = true; d._id = r.id; n++;
   }
@@ -38266,6 +38269,109 @@ Object.assign(H, {
     const b = $('[data-act=exRead]'); if (b) exRead(b);
   }
 });
+
+/* =====================================================================
+ * v80 (9.53): «🤖 Разборы ИИ» в GT/098 (итог разбора); разбор из «Справочника» — привязать к пациенту;
+ *  повторный документ — узнаётся (не сохранять / заменить старый разбор / сохранить отдельно).
+ * ===================================================================== */
+const X10_T = {
+  ru: {
+    sec: '🤖 Разборы ИИ', note: 'Выводы ИИ по жалобам — не диагноз. Диагноз ставит врач в приёме.', open: 'Открыть разбор', labs: 'Анализы в разборе (также в «🧪 Анализы»)', labsWhere: 'разбор ИИ',
+    toGt: '📘 Сохранить итог в GT/098 пациента', inGt: '📘 Итог — в GT/098 пациента: {n}', openGt: 'Открыть GT/098', pickTitle: 'Чей это разбор?', pickPh: 'Фамилия или FİN', pickNone: 'Не нашлось. Карта заводится из приёма или кнопкой «+ Пациент».',
+    linked: 'Итог разбора — в GT/098', dup: '📎 Этот документ уже есть в GT/098: {t}', dupOpt: { skip: 'не сохранять (уже есть)', replace: 'заменить старый разбор новым (правки в старом пропадут)', 'new': 'сохранить отдельно — это другой документ' }
+  },
+  az: {
+    sec: '🤖 Sİ təhlilləri', note: 'Şikayətlər üzrə Sİ nəticələri — diaqnoz deyil. Diaqnozu həkim qəbulda qoyur.', open: 'Təhlili aç', labs: 'Təhlildəki analizlər («🧪 Analizlər»də də var)', labsWhere: 'Sİ təhlili',
+    toGt: '📘 Nəticəni pasiyentin GT/098-nə saxla', inGt: '📘 Nəticə pasiyentin GT/098-indədir: {n}', openGt: 'GT/098-i aç', pickTitle: 'Bu kimin təhlilidir?', pickPh: 'Soyad və ya FİN', pickNone: 'Tapılmadı. Kart qəbuldan və ya «+ Pasiyent» ilə yaradılır.',
+    linked: 'Təhlilin nəticəsi GT/098-dədir', dup: '📎 Bu sənəd artıq GT/098-dədir: {t}', dupOpt: { skip: 'saxlama (artıq var)', replace: 'köhnə təhlili yenisi ilə əvəz et (köhnədəki düzəlişlər itəcək)', 'new': 'ayrıca saxla — başqa sənəddir' }
+  }
+};
+function x10(k, v) { const L2 = X10_T[S.lang === 'az' ? 'az' : 'ru']; let s = L2[k] !== undefined ? L2[k] : X10_T.ru[k]; if (typeof s === 'string' && v) Object.keys(v).forEach(x => { s = s.split('{' + x + '}').join(v[x]); }); return s; }
+
+/* ---------- GT/098: «🤖 Разборы ИИ» ---------- */
+(function () {
+  const o = window.ptCardHtml;
+  window.ptCardHtml = function () {
+    let h = o.apply(this, arguments);
+    try {
+      const g = ptSt().cur; if (!g || !g.patient || g.shared) return h;
+      const cs = g.aiCases || [];
+      if (!cs.length) return h;
+      const body = '<div class="muted" style="margin-bottom:6px">' + esc(x10('note')) + '</div>' + cs.map(c => '<details class="gt-row" style="padding:6px 0"' + (c === cs[0] ? ' open' : '') + '><summary><b>' + esc([c.icd, c.dx].filter(Boolean).join(' ') || c.title) + '</b><div class="gt-src">' + esc([fmtDt(c.at), c.by, c.title].filter(Boolean).join(' · ')) + '</div></summary>' +
+        (c.final ? '<div style="margin-top:6px">' + aiMd(c.final) + '</div>' : '') + ((c.labs || []).length ? '<div class="gt-src" style="margin-top:6px">' + esc(x10('labs')) + ': ' + esc(c.labs.map(l => (l.date ? fmtDate(l.date) + ' ' : '') + l.title + ' — ' + l.text).join('; ')) + '</div>' : '') + (c.canOpen ? '<div class="gt-rowacts"><button class="btn small ghost" data-act="ptOpenCase" data-id="' + esc(c.id) + '">' + esc(x10('open')) + '</button></div>' : '') + '</details>').join('');
+      const sec = gtSec('aicase', x10('sec'), cs.length, body, gtOpenState('aicase', true));
+      let k = h.indexOf('<details class="gt-sec" data-gt="hx"'); if (k < 0) k = h.indexOf('<details class="gt-sec" data-gt="labs"');
+      h = k > 0 ? h.slice(0, k) + sec + h.slice(k) : h + sec;
+    } catch (e) { console.error(e); }
+    return h;
+  };
+})();
+
+/* ---------- разбор: «📘 Сохранить итог в GT/098 пациента» ---------- */
+function x10CasePid(c) { if (!c) return ''; if (c.data && c.data.patientId) return c.data.patientId; if (c.patientId) return c.patientId; const r = ((csSt().list) || []).find(x => x.id === c.id); return r && r.patientId || ''; }
+(function () {
+  const o = csLogHtml; // кнопка — сразу под итогом разбора в ленте
+  csLogHtml = function (c) {
+    let h = o.apply(this, arguments);
+    try {
+      if (!c || !c.data || !c.data.final || !can('forms') || (typeof ptLocalOn === 'function' && ptLocalOn())) return h;
+      const pid = x10CasePid(c);
+      h += pid ? '<div class="row" style="gap:6px;margin-top:8px;align-items:center"><span class="muted grow">' + esc(x10('linked')) + '</span><button class="btn small" data-act="x10OpenGt" data-id="' + esc(pid) + '">' + esc(x10('openGt')) + '</button></div>'
+        : '<button class="btn block" style="margin-top:8px" data-act="x10ToGt">' + esc(x10('toGt')) + '</button>';
+    } catch (e) { }
+    return h;
+  };
+})();
+function x10PickModal() {
+  openModal('<h3>' + esc(x10('pickTitle')) + '</h3><input id="x10Q" type="search" autocomplete="off" placeholder="' + esc(x10('pickPh')) + '"><div id="x10Box" style="margin-top:8px"></div><div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+  const inp = $('#x10Q'); let tm = null;
+  inp.addEventListener('input', () => { clearTimeout(tm); tm = setTimeout(async () => {
+    const q = inp.value.trim(), box = $('#x10Box'); if (!box) return;
+    if (q.length < 2) { box.innerHTML = ''; return; }
+    const r = await rpc('patientList', { q, mode: 'all' }, 30000).catch(() => null);
+    const rows = r && r.ok ? r.rows.slice(0, 8) : [];
+    S.x10Rows = rows;
+    box.innerHTML = rows.length ? rows.map((x, i) => '<div class="cs-list-row" data-act="x10Pick" data-i="' + i + '"><div class="grow"><div class="nm">' + esc(ptLabel(x)) + '</div><div class="fd">' + esc([x.fin, x.birthDate ? fmtDate(x.birthDate) : ''].filter(Boolean).join(' · ')) + '</div></div></div>').join('') : '<div class="muted">' + esc(x10('pickNone')) + '</div>';
+  }, 300); });
+  inp.focus();
+}
+Object.assign(H, {
+  x10ToGt: () => x10PickModal(),
+  x10Pick: async el => {
+    const x = (S.x10Rows || [])[Number(el.dataset.i)]; const c = csSt().cur; if (!x || !c) return;
+    if (typeof csSave === 'function') await csSave(c, true); // итог — на сервере до привязки
+    const r = await busy(el, () => rpcA('patientLink', { kind: 'case', id: c.id, patientId: x.id, opId: newOpId() })).catch(() => null);
+    if (!r) return;
+    c.data.patientId = x.id;
+    const row = ((csSt().list) || []).find(y => y.id === c.id); if (row) row.patientId = x.id;
+    closeModal(); toast(x10('inGt', { n: ptLabel(x) }));
+    if (typeof csRender === 'function') csRender();
+    if (typeof PT === 'object' && PT.cache) delete PT.cache[x.id];
+  },
+  x10OpenGt: el => ptOpen(el.dataset.id, true)
+});
+
+/* ---------- окно разбора документов: повторный документ ---------- */
+function exDupHtml(d, i) {
+  if (!d || !d.dupOf) return '';
+  const st = S.ex, cur = (st.dupMode || {})[i] || 'skip', O = x10('dupOpt');
+  const tt = [d.dupOf.title, d.dupOf.date ? fmtDate(d.dupOf.date) : ''].filter(Boolean).join(', ');
+  return '<div class="info" style="margin:6px 0;background:#fff3c4">' + esc(x10('dup', { t: tt })) + '<select data-exdup="' + i + '" style="margin-top:6px;width:100%">' +
+    ['skip', 'replace', 'new'].map(k => '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + esc(O[k]) + '</option>').join('') + '</select></div>';
+}
+
+// анализы, внесённые врачом в разбор, — в таблицу «🧪 Анализы» GT/098 (это результаты, не выводы ИИ)
+(function () {
+  const o = gtLabList;
+  gtLabList = function (g) {
+    const out = o(g);
+    try {
+      (g.aiCases || []).forEach(c => (c.labs || []).forEach(l => out.push({ name: l.title, val: l.text, ref: '', at: l.date || String(c.at || '').slice(0, 10), where: x10('labsWhere') + (c.title ? ': ' + c.title : '') })));
+      out.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+    } catch (e) { }
+    return out;
+  };
+})();
 
 
 function init() {
