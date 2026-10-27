@@ -5105,8 +5105,8 @@ const I18N_V5 = {
     attKind_ecg: 'ЭКГ', attKind_lab: 'Анализ', attKind_img: 'Снимок', attKind_doc: 'Документ', attKind_receipt: 'Чек', attKind_other: 'Фото',
     fClose: '✓ Закрыть форму', fCloseConfirm: 'Закрыть форму №{n}? После закрытия исправить сможет только админ форм.', fCloseNeed: 'Чтобы закрыть: {what}.',
     fNeedBlank: 'номер бланка', fNeedName: 'имя пациента', fNeedOutcome: 'исход',
-    fEditClosed: '✏️ Исправить (админ)', fEditClosedOn: 'Режим исправления закрытой формы: каждое изменение записывается в журнал формы и попадает в «Спорное».',
-    fReadOnly: 'Форма закрыта. Исправить может только админ форм.', fMenu: '⋯', fPrint: '🖨️ Печать A4', fAudit: '🕵️ Журнал формы', fDelete: '🗑️ Удалить черновик',
+    fEditClosed: '✏️ Исправить', fEditClosedOn: 'Режим исправления закрытой формы: каждое изменение записывается в журнал формы и попадает в «Спорное».',
+    fReadOnly: 'Форма закрыта. Исправить может врач, который её вёл, или админ форм — каждое исправление записывается в журнал формы.', fMenu: '⋯', fPrint: '🖨️ Печать A4', fAudit: '🕵️ Журнал формы', fDelete: '🗑️ Удалить черновик',
     fDeleteConfirm: 'Удалить черновик? Причина (необязательно):', fDeletedToast: 'Черновик удалён.', fDupBlank: 'Номер бланка {n} уже есть у другой формы ({d}). Проверьте номер.',
     fAuditTitle: 'Журнал формы', fev_create: 'создана', fev_create_close: 'создана и закрыта', fev_save: 'изменена', fev_close: 'закрыта', fev_edit_closed: '✏️ исправлена после закрытия',
     fev_view: '👁️ открывал(а)', fev_view_file: '👁️ смотрел(а) фото', fev_attach: '📎 фото добавлено', fev_detach: '📎 фото убрано', fev_attach_closed: '📎 фото добавлено после закрытия',
@@ -5158,8 +5158,8 @@ const I18N_V5 = {
     attKind_ecg: 'EKQ', attKind_lab: 'Analiz', attKind_img: 'Şəkil', attKind_doc: 'Sənəd', attKind_receipt: 'Çek', attKind_other: 'Foto',
     fClose: '✓ Formanı bağla', fCloseConfirm: '№{n} forma bağlansın? Bağlandıqdan sonra yalnız forma admini düzəldə bilər.', fCloseNeed: 'Bağlamaq üçün: {what}.',
     fNeedBlank: 'blank nömrəsi', fNeedName: 'xəstənin adı', fNeedOutcome: 'nəticə',
-    fEditClosed: '✏️ Düzəlt (admin)', fEditClosedOn: 'Bağlı formanın düzəlişi rejimi: hər dəyişiklik forma jurnalına yazılır və «Mübahisəli»yə düşür.',
-    fReadOnly: 'Forma bağlanıb. Yalnız forma admini düzəldə bilər.', fMenu: '⋯', fPrint: '🖨️ A4 çap', fAudit: '🕵️ Forma jurnalı', fDelete: '🗑️ Qaralamanı sil',
+    fEditClosed: '✏️ Düzəlt', fEditClosedOn: 'Bağlı formanın düzəlişi rejimi: hər dəyişiklik forma jurnalına yazılır və «Mübahisəli»yə düşür.',
+    fReadOnly: 'Forma bağlanıb. Onu aparan həkim və ya forma admini düzəldə bilər — hər düzəliş forma jurnalına yazılır.', fMenu: '⋯', fPrint: '🖨️ A4 çap', fAudit: '🕵️ Forma jurnalı', fDelete: '🗑️ Qaralamanı sil',
     fDeleteConfirm: 'Qaralama silinsin? Səbəb (məcburi deyil):', fDeletedToast: 'Qaralama silindi.', fDupBlank: '{n} nömrəli blank artıq başqa formadadır ({d}). Nömrəni yoxlayın.',
     fAuditTitle: 'Forma jurnalı', fev_create: 'yaradılıb', fev_create_close: 'yaradılıb və bağlanıb', fev_save: 'dəyişdirilib', fev_close: 'bağlanıb', fev_edit_closed: '✏️ bağlandıqdan sonra düzəldilib',
     fev_view: '👁️ açıb', fev_view_file: '👁️ fotoya baxıb', fev_attach: '📎 foto əlavə edilib', fev_detach: '📎 foto götürülüb', fev_attach_closed: '📎 bağlandıqdan sonra foto əlavə edilib',
@@ -5655,9 +5655,16 @@ function fBack() {
 }
 
 /* ---------- редактор ---------- */
+// 9.45.1: свою закрытую форму (закрыл сам) врач исправляет сам; чужую — право «Исправлять закрытые формы» (так же проверяет сервер)
+function fCanFix(id) {
+  if (can('formsEdit')) return true;
+  if (!can('forms') || !S.me) return false;
+  const f = fCache().full[id] || {};
+  return !!(f.closedBy === S.me.id || fPendingOps(id).some(o => o.payload.close));
+}
 function fCanEdit(id) {
   const st = fStatus(id);
-  if (st === 'closed' || st === 'closing') return can('formsEdit') && S.fv && S.fv.edit;
+  if (st === 'closed' || st === 'closing') return fCanFix(id) && S.fv && S.fv.edit;
   return can('forms'); // черновик правит тот, у кого право «заполнять формы» (так же проверяет сервер)
 }
 function fRenderSaveState() {
@@ -5796,7 +5803,7 @@ function fRenderEditor(keepScroll) {
     '<div class="muted" style="margin-top:6px">' + (st === 'closed' ? '<span class="tag green">' + esc(t('formClosed')) + '</span> ' + esc(fmtDt(f.closedAt)) + ' · ' + esc(f.closedByName || '') : st === 'closing' ? '<span class="tag amber">' + esc(t('formClosing')) + '</span>' : '<span class="tag">' + esc(t('formDraft')) + '</span>') +
     (f.editsAfterClose ? ' · ' + esc(t('formEditsAfter', { n: f.editsAfterClose })) : '') + '</div>' +
     '<div id="fAllergy">' + (al ? '<div class="f-alert">' + esc(t('formAllergyBanner', { a: al })) + '</div>' : '') + '</div>' +
-    (st === 'closed' && !S.fv.edit ? '<div class="info" style="margin:8px 0 0">' + esc(t('fReadOnly')) + '</div>' + (can('formsEdit') ? '<button type="button" class="btn ghost block" style="margin-top:8px" data-act="fEditClosed">' + esc(t('fEditClosed')) + '</button>' : '') : '') +
+    (st === 'closed' && !S.fv.edit ? '<div class="info" style="margin:8px 0 0">' + esc(t('fReadOnly')) + '</div>' + (fCanFix(id) ? '<button type="button" class="btn ghost block" style="margin-top:8px" data-act="fEditClosed">' + esc(t('fEditClosed')) + '</button>' : '') : '') +
     (S.fv.edit ? '<div class="f-alert" style="background:var(--amber-soft);color:var(--amber)">' + esc(t('fEditClosedOn')) + '</div>' : '') + '</div>';
   const crit = vits.some(r => VIT_FIELDS.some(fl => vitLevel(fl, r[fl]) === 'crit'));
   box.innerHTML = head + '<fieldset class="f-fs"' + (ro ? ' disabled' : '') + '>' +
@@ -16633,7 +16640,7 @@ function dsEditorHtml() {
   const d = c.data || {};
   const ro = c.status === 'closed' && !c.reason;
   const miss = dsCheck(c.type, d);
-  const canFix = c.status === 'closed' && can('formsEdit');
+  const canFix = c.status === 'closed' && (can('formsEdit') || (can('forms') && !!S.me && [c.closedBy, c.firstClosedBy].indexOf(S.me.id) !== -1));
   let h = '<div class="ai-bar"><button class="btn small ghost" data-act="dsBack">' + esc(t('dsBack')) + '</button><span class="muted" id="dsSaveState"></span></div>' +
     '<div class="nm" style="font-size:16px">' + tpl.ic + ' ' + esc(S.lang === 'az' ? tpl.az : tpl.ru) + '</div>' +
     '<div class="muted">' + esc((c.doc && c.doc.patient) || '') + (c.doc && c.doc.docNo ? ' · № ' + esc(c.doc.docNo) : '') + ' · ' + esc(c.status === 'closed' ? t('dsClosed') : t('dsDraft')) + (c.doc && c.doc.editsAfterClose ? ' · ✏️ ' + c.doc.editsAfterClose : '') + '</div>' +
@@ -28102,7 +28109,7 @@ function scToForm(text) {
   const c = typeof fCache === 'function' ? fCache() : null;
   if (!id || !c || !c.full[id] || typeof fData !== 'function') return toast(t('scNoForm'), 'bad');
   const stt = typeof fStatus === 'function' ? fStatus(id) : '';
-  if (stt === 'deleted' || ((stt === 'closed' || stt === 'closing') && !(typeof can === 'function' && can('formsEdit')))) return toast(t('E_FORM_CLOSED'), 'bad');
+  if (stt === 'deleted' || ((stt === 'closed' || stt === 'closing') && !(typeof fCanFix === 'function' ? fCanFix(id) : typeof can === 'function' && can('formsEdit')))) return toast(t('E_FORM_CLOSED'), 'bad');
   const prev = String(fData(id).ex_note || '');
   const line = text + ' [' + (typeof fmtDt === 'function' ? fmtDt(nowLocal()) : '') + ']';
   const patch = { ex_note: (prev ? prev + '\n' : '') + line };
