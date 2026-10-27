@@ -5099,7 +5099,7 @@ const I18N_V5 = {
     fGiveSpend: 'Списать и отметить', fGiveOwn: 'Не со склада (свой препарат пациента, из другого места)', fGiveNoPerm: 'У вас нет права списывать — отметьте, что введено; списание сделает тот, у кого есть право (иначе это попадёт в «Спорное»).',
     fGiveMark: 'Отметить введённым без списания',
     fObsNote: 'Наблюдение врача (запись)', fConsN: 'Консультация {n}', fConsAdd: '＋ Консультация', fConsDept: 'Отделение / врач / учреждение', fConsReq: 'Вызван', fConsArr: 'Пришёл', fConsNote: 'Заключение', fConsDoc: 'Консультант (Ф.И.О.)',
-    fOutcome: 'Исход', fOutTo: 'Куда эвакуирован', fOutDeathAt: 'Время смерти',
+    fOutcome: 'Исход', fOutTo: 'Куда эвакуирован', fOutToHosp: '🏥 В какое отделение госпитализирован', fOutToHospPh: 'или впишите отделение', fOutDeathAt: 'Время смерти',
     fAttEcg: '＋ ЭКГ', fAttLab: '＋ Анализ', fAttImg: '＋ Снимок', fAttDoc: '＋ Документ', fAttCaption: 'Подпись к фото (необязательно)', fAttWait: 'ждёт отправки', fAttOpen: 'Открыть',
     fAttRemove: 'Убрать фото из формы? (файл останется на Диске для проверки)', fAttRemoved: 'убрано {t}', fAttLoading: 'Загружаю фото…', fAttNoNet: 'Фото откроется, когда будет связь.',
     attKind_ecg: 'ЭКГ', attKind_lab: 'Анализ', attKind_img: 'Снимок', attKind_doc: 'Документ', attKind_receipt: 'Чек', attKind_other: 'Фото',
@@ -5108,7 +5108,7 @@ const I18N_V5 = {
     fEditClosed: '✏️ Исправить', fEditClosedOn: 'Режим исправления закрытой формы: каждое изменение записывается в журнал формы и попадает в «Спорное».',
     fReadOnly: 'Форма закрыта. Исправить может врач, который её вёл, или админ форм — каждое исправление записывается в журнал формы.', fMenu: '⋯', fPrint: '🖨️ Печать A4', fAudit: '🕵️ Журнал формы', fDelete: '🗑️ Удалить черновик',
     fDeleteConfirm: 'Удалить черновик? Причина (необязательно):', fDeletedToast: 'Черновик удалён.', fDupBlank: 'Номер бланка {n} уже есть у другой формы ({d}). Проверьте номер.',
-    fAuditTitle: 'Журнал формы', fev_create: 'создана', fev_create_close: 'создана и закрыта', fev_save: 'изменена', fev_close: 'закрыта', fev_edit_closed: '✏️ исправлена после закрытия',
+    fAuditTitle: 'Журнал формы', fev_create: 'создана', fev_create_close: 'создана и закрыта', fev_save: 'изменена', fev_close: 'закрыта', fev_edit_closed: '✏️ исправлена после закрытия', fev_edit_own: '✏️ дописана автором (72 ч)', fev_attach_own: '📎 фото добавлено автором (72 ч)', fev_detach_own: '📎 фото убрано автором (72 ч)', fOwnEdit: '✏️ Форма закрыта, но вы её закрыли — 72 часа можно дописывать и исправлять свободно (до {d}). Всё видно в журнале формы.',
     fev_view: '👁️ открывал(а)', fev_view_file: '👁️ смотрел(а) фото', fev_attach: '📎 фото добавлено', fev_detach: '📎 фото убрано', fev_attach_closed: '📎 фото добавлено после закрытия',
     fev_detach_closed: '📎 фото убрано после закрытия', fev_delete: '🗑️ удалена',
     fNewToast: 'Новая форма. Номер бумажного бланка можно вписать сразу или позже.', fClosedToast: 'Форма закрыта.', fQueuedToast: 'Сохранено на телефоне — отправится само, когда будет связь.',
@@ -5152,7 +5152,7 @@ const I18N_V5 = {
     fGiveSpend: 'Sil və qeyd et', fGiveOwn: 'Anbardan deyil (xəstənin öz dərmanı, başqa yerdən)', fGiveNoPerm: 'Silmək hüququnuz yoxdur — tətbiqi qeyd edin; silməni hüququ olan edəcək (əks halda «Mübahisəli»yə düşəcək).',
     fGiveMark: 'Silmədən tətbiq edildi kimi qeyd et',
     fObsNote: 'Həkim müşahidə qeydi', fConsN: '{n}. Konsultasiya', fConsAdd: '＋ Konsultasiya', fConsDept: 'İstənilən şöbə / həkim / tibb müəssisəsi', fConsReq: 'İstəmə', fConsArr: 'Gəlmə', fConsNote: 'Qeyd', fConsDoc: 'Konsultant həkim (A.S.A.)',
-    fOutcome: 'Nəticə', fOutTo: 'Hansı müəssisəyə təxliyə', fOutDeathAt: 'Ölüm saatı',
+    fOutcome: 'Nəticə', fOutTo: 'Hansı müəssisəyə təxliyə', fOutToHosp: '🏥 Hansı şöbəyə hospitalizasiya edilib', fOutToHospPh: 'və ya şöbəni yazın', fOutDeathAt: 'Ölüm saatı',
     fAttEcg: '＋ EKQ', fAttLab: '＋ Analiz', fAttImg: '＋ Şəkil', fAttDoc: '＋ Sənəd', fAttCaption: 'Foto üçün qeyd (məcburi deyil)', fAttWait: 'göndərilməyi gözləyir', fAttOpen: 'Aç',
     fAttRemove: 'Foto formadan götürülsün? (fayl yoxlama üçün Diskdə qalacaq)', fAttRemoved: 'götürülüb {t}', fAttLoading: 'Foto yüklənir…', fAttNoNet: 'Foto əlaqə olanda açılacaq.',
     attKind_ecg: 'EKQ', attKind_lab: 'Analiz', attKind_img: 'Şəkil', attKind_doc: 'Sənəd', attKind_receipt: 'Çek', attKind_other: 'Foto',
@@ -5161,7 +5161,7 @@ const I18N_V5 = {
     fEditClosed: '✏️ Düzəlt', fEditClosedOn: 'Bağlı formanın düzəlişi rejimi: hər dəyişiklik forma jurnalına yazılır və «Mübahisəli»yə düşür.',
     fReadOnly: 'Forma bağlanıb. Onu aparan həkim və ya forma admini düzəldə bilər — hər düzəliş forma jurnalına yazılır.', fMenu: '⋯', fPrint: '🖨️ A4 çap', fAudit: '🕵️ Forma jurnalı', fDelete: '🗑️ Qaralamanı sil',
     fDeleteConfirm: 'Qaralama silinsin? Səbəb (məcburi deyil):', fDeletedToast: 'Qaralama silindi.', fDupBlank: '{n} nömrəli blank artıq başqa formadadır ({d}). Nömrəni yoxlayın.',
-    fAuditTitle: 'Forma jurnalı', fev_create: 'yaradılıb', fev_create_close: 'yaradılıb və bağlanıb', fev_save: 'dəyişdirilib', fev_close: 'bağlanıb', fev_edit_closed: '✏️ bağlandıqdan sonra düzəldilib',
+    fAuditTitle: 'Forma jurnalı', fev_create: 'yaradılıb', fev_create_close: 'yaradılıb və bağlanıb', fev_save: 'dəyişdirilib', fev_close: 'bağlanıb', fev_edit_closed: '✏️ bağlandıqdan sonra düzəldilib', fev_edit_own: '✏️ müəllif tamamladı (72 saat)', fev_attach_own: '📎 müəllif foto əlavə etdi (72 saat)', fev_detach_own: '📎 müəllif foto götürdü (72 saat)', fOwnEdit: '✏️ Forma bağlanıb, amma onu siz bağlamısınız — 72 saat ərzində sərbəst tamamlaya və düzəldə bilərsiniz ({d}-dək). Hamısı forma jurnalında görünür.',
     fev_view: '👁️ açıb', fev_view_file: '👁️ fotoya baxıb', fev_attach: '📎 foto əlavə edilib', fev_detach: '📎 foto götürülüb', fev_attach_closed: '📎 bağlandıqdan sonra foto əlavə edilib',
     fev_detach_closed: '📎 bağlandıqdan sonra foto götürülüb', fev_delete: '🗑️ silinib',
     fNewToast: 'Yeni forma. Kağız blankın nömrəsini indi və ya sonra yaza bilərsiniz.', fClosedToast: 'Forma bağlandı.', fQueuedToast: 'Telefonda saxlanıb — əlaqə olanda özü göndəriləcək.',
@@ -5662,9 +5662,30 @@ function fCanFix(id) {
   const f = fCache().full[id] || {};
   return !!(f.closedBy === S.me.id || fPendingOps(id).some(o => o.payload.close));
 }
+// 9.46: 72 часа после закрытия врач, который закрыл форму, дописывает её без «Исправить» (сервер пишет «дописана автором», не в «Спорное»)
+const F_OWN_H = 72;
+function fOwnUntil(id) {
+  if (!S.me || !can('forms')) return '';
+  const f = fCache().full[id] || {};
+  if (fPendingOps(id).some(o => o.payload.close)) return 'pending';
+  if (f.status !== 'closed' || f.closedBy !== S.me.id || !f.closedAt) return '';
+  const d = new Date(String(f.closedAt).replace(' ', 'T'));
+  if (isNaN(d)) return '';
+  const until = new Date(d.getTime() + F_OWN_H * 3600 * 1000 - 5 * 60 * 1000); // 5 минут запаса на расхождение часов
+  const z = n => String(n).padStart(2, '0');
+  return until > new Date() ? until.getFullYear() + '-' + z(until.getMonth() + 1) + '-' + z(until.getDate()) + ' ' + z(until.getHours()) + ':' + z(until.getMinutes()) : '';
+}
+// 9.46: «Госпитализирован» — в какое отделение (Саид, 27.10)
+const F_HOSP_DEPTS = [['Терапия', 'Terapiya'], ['Хирургия', 'Cərrahiyyə'], ['Реанимация (ОРИТ)', 'Reanimasiya (RİTŞ)'], ['Кардиология', 'Kardiologiya'], ['Неврология', 'Nevrologiya'], ['Пульмонология', 'Pulmonologiya'], ['Фтизиатрия', 'Ftiziatriya'], ['Инфекционное', 'İnfeksion'], ['Травматология', 'Travmatologiya'], ['Гинекология', 'Ginekologiya'], ['Педиатрия', 'Pediatriya']];
+function fHospDeptHtml(cur) {
+  const az = S.lang === 'az';
+  return '<div class="field"><label>' + esc(t('fOutToHosp')) + '</label><div class="chips f-chips" style="margin-bottom:6px">' +
+    F_HOSP_DEPTS.map(x => { const v = az ? x[1] : x[0]; return '<button type="button" class="chip' + (cur === v || cur === x[0] || cur === x[1] ? ' on' : '') + '" data-act="fHospDept" data-v="' + esc(v) + '">' + esc(v) + '</button>'; }).join('') + '</div>' +
+    '<input type="text" data-f="outTo" maxlength="200" value="' + esc(cur || '') + '" placeholder="' + esc(t('fOutToHospPh')) + '" autocomplete="off"></div>';
+}
 function fCanEdit(id) {
   const st = fStatus(id);
-  if (st === 'closed' || st === 'closing') return fCanFix(id) && S.fv && S.fv.edit;
+  if (st === 'closed' || st === 'closing') return !!fOwnUntil(id) || (fCanFix(id) && S.fv && S.fv.edit);
   return can('forms'); // черновик правит тот, у кого право «заполнять формы» (так же проверяет сервер)
 }
 function fRenderSaveState() {
@@ -5780,7 +5801,7 @@ function fRenderEditor(keepScroll) {
 
   // 10. исход
   const sOut = '<div class="f-out">' + FD.outcome.map(x => '<button type="button" class="f-outb' + (d.outcome === x[0] ? ' on' : '') + '" data-act="fSetV" data-f="outcome" data-v="' + x[0] + '">' + esc(fdLabel(x)) + '</button>').join('') + '</div>' +
-    (d.outcome === 'transfer' ? inp('outTo', t('fOutTo'), { max: 200 }) : '') + (d.outcome === 'death' ? '<div class="field"><label>' + esc(t('fOutDeathAt')) + '</label><input type="time" data-f="outDeathAt" value="' + esc(val('outDeathAt')) + '"></div>' : '') +
+    (d.outcome === 'transfer' ? inp('outTo', t('fOutTo'), { max: 200 }) : '') + (d.outcome === 'adm' ? fHospDeptHtml(val('outTo')) : '') + (d.outcome === 'death' ? '<div class="field"><label>' + esc(t('fOutDeathAt')) + '</label><input type="time" data-f="outDeathAt" value="' + esc(val('outDeathAt')) + '"></div>' : '') +
     '<div class="grid2 stack"><div class="field"><label>' + esc(t('fDoctor')) + '</label><div class="row"><input type="text" class="grow" data-f="outDoc" maxlength="80" value="' + esc(val('outDoc')) + '">' + (ro ? '' : '<button type="button" class="btn small ghost" data-act="fMe" data-f="outDoc" data-at="outAt">' + esc(t('fMe')) + '</button>') + '</div></div>' +
     '<div class="field"><label>' + esc(t('fWhen')) + '</label><input type="datetime-local" data-f="outAt" value="' + esc(String(val('outAt')).replace(' ', 'T')) + '"></div></div>';
 
@@ -5803,7 +5824,8 @@ function fRenderEditor(keepScroll) {
     '<div class="muted" style="margin-top:6px">' + (st === 'closed' ? '<span class="tag green">' + esc(t('formClosed')) + '</span> ' + esc(fmtDt(f.closedAt)) + ' · ' + esc(f.closedByName || '') : st === 'closing' ? '<span class="tag amber">' + esc(t('formClosing')) + '</span>' : '<span class="tag">' + esc(t('formDraft')) + '</span>') +
     (f.editsAfterClose ? ' · ' + esc(t('formEditsAfter', { n: f.editsAfterClose })) : '') + '</div>' +
     '<div id="fAllergy">' + (al ? '<div class="f-alert">' + esc(t('formAllergyBanner', { a: al })) + '</div>' : '') + '</div>' +
-    (st === 'closed' && !S.fv.edit ? '<div class="info" style="margin:8px 0 0">' + esc(t('fReadOnly')) + '</div>' + (fCanFix(id) ? '<button type="button" class="btn ghost block" style="margin-top:8px" data-act="fEditClosed">' + esc(t('fEditClosed')) + '</button>' : '') : '') +
+    (st === 'closed' && !S.fv.edit && fOwnUntil(id) ? '<div class="info" style="margin:8px 0 0">' + esc(t('fOwnEdit', { d: fOwnUntil(id) === 'pending' ? '' : fmtDt(fOwnUntil(id)) })) + '</div>' : '') +
+    (st === 'closed' && !S.fv.edit && !fOwnUntil(id) ? '<div class="info" style="margin:8px 0 0">' + esc(t('fReadOnly')) + '</div>' + (fCanFix(id) ? '<button type="button" class="btn ghost block" style="margin-top:8px" data-act="fEditClosed">' + esc(t('fEditClosed')) + '</button>' : '') : '') +
     (S.fv.edit ? '<div class="f-alert" style="background:var(--amber-soft);color:var(--amber)">' + esc(t('fEditClosedOn')) + '</div>' : '') + '</div>';
   const crit = vits.some(r => VIT_FIELDS.some(fl => vitLevel(fl, r[fl]) === 'crit'));
   box.innerHTML = head + '<fieldset class="f-fs"' + (ro ? ' disabled' : '') + '>' +
@@ -6006,7 +6028,7 @@ function fPrint(d, meta) {
   const p3 = '<div class="pf-page"><div class="pf-sub">TİBB BACISI MÜŞAHİDƏ FORMASI' + (blank ? ' — № ' + blank : '') + '</div>' +
     '<table class="pf c"><tr><th>Saat</th><th>Təzyiq SAĞ</th><th>Təzyiq SOL</th><th>Nəbz</th><th>SpO₂</th><th>Tənəffüs sayı</th><th>Temperatur</th><th>Qan şəkəri</th><th>Tibb bacısı (A.S.İmza)</th></tr>' + obsRows + '</table>' +
     '<table class="pf"><tr><td style="height:120px"><b>HƏKİM MÜŞAHİDƏ QEYD:</b><br>' + v('obsNote') + '</td></tr><tr><td>Həkim (A.S.A): ' + v('obsDoc') + ' &nbsp; Tarix/Saat: ' + (d && d.obsAt ? esc(fmtDt(d.obsAt)) : '') + ' &nbsp; İmza: ____________</td></tr></table>' +
-    '<table class="pf"><tr><th>NƏTİCƏ</th></tr>' + FD.outcome.map(x => '<tr><td>' + box(d && d.outcome === x[0]) + ' ' + (x[0] === 'transfer' && d && d.outTo ? 'Xəstə ' + v('outTo') + ' tibb müəssisəsinə təxliyyə etdi.' : x[0] === 'death' && d && d.outDeathAt ? 'Xəstə saatı ' + v('outDeathAt') + ' EX oldu.' : AZ(x)) + '</td></tr>').join('') +
+    '<table class="pf"><tr><th>NƏTİCƏ</th></tr>' + FD.outcome.map(x => '<tr><td>' + box(d && d.outcome === x[0]) + ' ' + (x[0] === 'transfer' && d && d.outTo ? 'Xəstə ' + v('outTo') + ' tibb müəssisəsinə təxliyyə etdi.' : x[0] === 'adm' && d && d.outTo ? 'Xəstə ' + v('outTo') + ' şöbəsinə hospitalizasiya edildi.' : x[0] === 'death' && d && d.outDeathAt ? 'Xəstə saatı ' + v('outDeathAt') + ' EX oldu.' : AZ(x)) + '</td></tr>').join('') +
     '<tr><td>Həkim (A.S.A): ' + v('outDoc') + ' &nbsp; Tarix/Saat: ' + (d && d.outAt ? esc(fmtDt(d.outAt)) : '') + ' &nbsp; İmza: ____________</td></tr></table></div>';
   const cons = d ? rowsOf(d, 'cons') : [];
   const consBlock = (i) => { const c = cons[i] || {}; const roman = ['I', 'II', 'III'][i]; return '<table class="pf"><tr><th colspan="3">' + roman + '. KONSULTASİYA</th></tr><tr><td rowspan="2" style="width:46%">İstənilən şöbə / həkim' + (i === 2 ? ' / tibb müəssisəsi' : '') + ':<br><b>' + esc(c.dept || '') + '</b></td><td>İstəmə: ' + esc(fmtDt(c.req)) + '</td><td>Gəlmə: ' + esc(fmtDt(c.arr)) + '</td></tr><tr><td colspan="2"></td></tr>' +
@@ -6134,6 +6156,7 @@ Object.assign(H, {
   fAudit: () => { if (!S.fv) return closeModal(); fAudit(); },
   fDelete: () => { if (!S.fv) return closeModal(); fDelete(); },
   fClose: () => fClose(),
+  fHospDept: el => { if (!S.fv || !fCanEdit(S.fv.id)) return; fSet({ outTo: el.dataset.v }, true); fFlush(); },
   fEditClosed: () => { S.fv.edit = true; fRenderEditor(true); }
 });
 $('#fileForm').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) fAddPhoto(f, S.fPhotoKind || 'other'); });
@@ -15465,7 +15488,7 @@ async function csRun(c) {
     for (let round = 0; round < 12; round++) {
       csTrim(c.data.msgs);
       let r;
-      try { r = await rpcA('aiChat', { mode: 'case', messages: c.data.msgs }, { timeout: 180000 }); }
+      try { r = await rpcA('aiChat', { mode: 'case', messages: c.data.msgs, patientId: (typeof gtCasePid === 'function' && gtCasePid(c)) || '' }, { timeout: 180000 }); } // 9.46: ИИ видит GT/098 пациента
       catch (e) { c.data.view.push({ k: 'e', text: '⚠️ ' + (e && e.res ? errText(e.res) : t('E_NETWORK')) }); break; }
       c.data.msgs.push({ role: 'assistant', content: r.content });
       const txt = r.content.filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
@@ -16640,7 +16663,7 @@ function dsEditorHtml() {
   const d = c.data || {};
   const ro = c.status === 'closed' && !c.reason;
   const miss = dsCheck(c.type, d);
-  const canFix = c.status === 'closed' && (can('formsEdit') || (can('forms') && !!S.me && [c.closedBy, c.firstClosedBy].indexOf(S.me.id) !== -1));
+  const canFix = c.status === 'closed' && (can('formsEdit') || (can('forms') && !!S.me && c.closedBy === S.me.id));
   let h = '<div class="ai-bar"><button class="btn small ghost" data-act="dsBack">' + esc(t('dsBack')) + '</button><span class="muted" id="dsSaveState"></span></div>' +
     '<div class="nm" style="font-size:16px">' + tpl.ic + ' ' + esc(S.lang === 'az' ? tpl.az : tpl.ru) + '</div>' +
     '<div class="muted">' + esc((c.doc && c.doc.patient) || '') + (c.doc && c.doc.docNo ? ' · № ' + esc(c.doc.docNo) : '') + ' · ' + esc(c.status === 'closed' ? t('dsClosed') : t('dsDraft')) + (c.doc && c.doc.editsAfterClose ? ' · ✏️ ' + c.doc.editsAfterClose : '') + '</div>' +
@@ -17485,7 +17508,7 @@ async function dsAiAssist() {
     const now = nowLocal().replace('T', ' ');
     const at = String((d.data || {}).admAt || (d.data || {}).departAt || now).replace('T', ' ').slice(0, 16);
     const title = t('csPaperTitle', { n: DOC_TPL[d.type].ru + (d.doc && d.doc.docNo ? ' № ' + d.doc.docNo : '') });
-    c = { id: csNewId(), ver: 0, title, status: 'open', formId: '', data: { v: 1, at, enteredAt: now, patient: { sex: (d.data || {}).sex || '' }, vitals: {}, cc: title, msgs: [], view: [], diff: null, pending: null, final: '', docs: { [d.type]: d.id } } };
+    c = { id: csNewId(), ver: 0, title, status: 'open', formId: '', data: { v: 1, at, enteredAt: now, patient: { sex: (d.data || {}).sex || '' }, vitals: {}, cc: title, msgs: [], view: [], diff: null, pending: null, final: '', docs: { [d.type]: d.id }, patientId: (d.doc && d.doc.patientId) || '' } };
     // привязать документ к новому разбору (черновик — без причины; закрытый — только по кнопке «Исправить»)
     const link = await rpcA('docSave', { id: d.id, caseId: c.id, storeId: S.storeId, patch: {}, opId: newOpId(), reason: d.reason || undefined }).catch(() => null);
     if (!link) return;
@@ -35603,6 +35626,7 @@ function qvHtml() {
     '<div class="card qv-s qv-end"><div class="lbl">5. ' + esc(t('qvEnd')) + '</div><div class="chips f-chips">' +
     QV_END.map(e => '<button type="button" class="chip' + (end === e[0] ? ' on' : '') + '" data-act="qvEnd" data-k="' + e[0] + '">' + esc(t(e[1])) + '</button>').join('') +
     '<button type="button" class="chip" data-act="qvFull" data-sec="outcome">' + esc(t('qvOtherEnd')) + '</button></div>' +
+    (end === 'hosp' && typeof fHospDeptHtml === 'function' ? '<div style="margin-top:8px">' + fHospDeptHtml(val('outTo')) + '</div>' : '') + // 9.46: в какое отделение
     (end === 'off' ? '<div class="field" style="margin-top:8px"><label>' + esc(t('qvOffH')) + '</label><input type="number" data-f="vrOffH" inputmode="numeric" min="0" max="999" value="' + esc(val('vrOffH')) + '"></div>' : '') +
     (outRow ? '<div class="qv-note">' + esc(t('qvInForm', { t: fdLabel(outRow) })) + '</div>' : '') + '</div>' +
     // «Готово»
@@ -36129,7 +36153,7 @@ const EX_T = {
     exF: { title: 'Что это', org: 'Учреждение', date: 'Дата', author: 'Врач', dx: 'Диагнозы', onset: 'Начало болезни', anamnesis: 'Анамнез', complaints: 'Жалобы', exam: 'Осмотр', tests: 'Исследования', imaging: 'Снимки', treatment: 'Лечение', recommendations: 'Рекомендации', outcome: 'Исход', notes: 'Важно', unclear: 'Не разобрать', to: 'Куда направлен' },
     exDxKind: { main: 'основной', complication: 'осложнение', comorbid: 'сопутствующий', other: '' },
     exTestsHint: 'по строке: название — результат единицы (дата)', exDel: '🗑 Удалить', exDelAsk: 'Удалить этот документ из карты?', exNone: 'Документов пока нет.', exPages: 'фото: {n}',
-    exAiNote: 'Прочитал ИИ — проверьте с оригиналом (особенно ФИО и FİN). Неразборчивое помечено «[не разобрать]».'
+    exAiNote: 'Прочитал ИИ — проверьте с оригиналом (особенно ФИО и FİN). Неразборчивое помечено «[не разобрать]», неуверенное — «[?]» в конце строки: оно сохранится жёлтым в разделе «❓ Уточнить». Проверили — сотрите «[?]».'
   },
   az: {
     exBtn: '📄 Digər müəssisələrin sənədləri', exAdd: '＋ Sənəd əlavə et (foto)', exVisitBtn: '📄 Pasiyentin sənədlərini əlavə et (Sİ hamısını oxuyacaq)', exWho: '👤 Sənədlərdəki pasiyent', exWhoApply: 'qəbula', exWhoAlt: 'başqa sənəddə: {v}', exWhoSeen: 'Diqqət: {v}', exWF: { surname: 'Soyad', name: 'Ad', patronymic: 'Ata adı', birthDate: 'Doğum tarixi', sex: 'Cins', fin: 'FİN', phone: 'Telefon', address: 'Ünvan' },
@@ -36142,7 +36166,7 @@ const EX_T = {
     exF: { title: 'Nədir', org: 'Müəssisə', date: 'Tarix', author: 'Həkim', dx: 'Diaqnozlar', onset: 'Xəstəliyin başlanması', anamnesis: 'Anamnez', complaints: 'Şikayətlər', exam: 'Baxış', tests: 'Müayinələr', imaging: 'Şəkillər', treatment: 'Müalicə', recommendations: 'Tövsiyələr', outcome: 'Nəticə', notes: 'Vacib', unclear: 'Oxunmadı', to: 'Hara göndərilib' },
     exDxKind: { main: 'əsas', complication: 'ağırlaşma', comorbid: 'yanaşı', other: '' },
     exTestsHint: 'sətir-sətir: ad — nəticə vahid (tarix)', exDel: '🗑 Sil', exDelAsk: 'Bu sənəd kartdan silinsin?', exNone: 'Hələ sənəd yoxdur.', exPages: 'foto: {n}',
-    exAiNote: 'Sİ oxuyub — əsli ilə yoxlayın. Oxunmayan «[не разобрать]» ilə qeyd olunub.'
+    exAiNote: 'Sİ oxuyub — əsli ilə yoxlayın. Oxunmayan «[не разобрать]», əmin olmadığı — sətrin sonunda «[?]»: «❓ Dəqiqləşdir» bölməsində sarı qalacaq. Yoxladınızsa — «[?]»-ni silin.'
   }
 };
 Object.assign(I18N.ru, { exBtn: EX_T.ru.exBtn });
@@ -36251,9 +36275,10 @@ function exDocHtml(d, i, edit) {
   const ro = (k, v) => v ? '<div class="ex-k">' + esc(F[k]) + '</div><div style="white-space:pre-wrap">' + esc(v) + '</div>' : '';
   const ta = (k, v, rows) => '<div class="ex-k">' + esc(F[k]) + '</div><textarea data-ex="' + i + '" data-k="' + k + '" rows="' + (rows || 2) + '">' + esc(v || '') + '</textarea>';
   const inp = (k, v) => '<div class="ex-k">' + esc(F[k]) + '</div><input type="text" data-ex="' + i + '" data-k="' + k + '" value="' + esc(v || '') + '">';
-  const dxTxt = (d.dx || []).map(x => (x.icd ? x.icd + ' ' : '') + x.text + (K[x.kind] ? ' (' + K[x.kind] + ')' : '')).join('\n');
-  const testsTxt = (d.tests || []).map(x => x.name + ' — ' + x.result + (x.unit ? ' ' + x.unit : '') + (x.ref ? ' [' + x.ref + ']' : '') + (x.date ? ' (' + x.date + ')' : '')).join('\n');
-  const imgTxt = (d.imaging || []).map(x => x.name + (x.date ? ' (' + x.date + ')' : '') + ': ' + x.conclusion).join('\n');
+  const Q = x => x.unsure ? ' [?]' : ''; // 9.46: неуверенное ИИ — «[?]» в конце строки; врач стирает «[?]» — значит проверено
+  const dxTxt = (d.dx || []).map(x => (x.icd ? x.icd + ' ' : '') + x.text + (K[x.kind] ? ' (' + K[x.kind] + ')' : '') + Q(x)).join('\n');
+  const testsTxt = (d.tests || []).map(x => x.name + ' — ' + x.result + (x.unit ? ' ' + x.unit : '') + (x.ref ? ' [' + x.ref + ']' : '') + (x.date ? ' (' + x.date + ')' : '') + Q(x)).join('\n');
+  const imgTxt = (d.imaging || []).map(x => x.name + (x.date ? ' (' + x.date + ')' : '') + ': ' + x.conclusion + Q(x)).join('\n');
   if (edit) return '<div class="ex-doc"><div class="row" style="gap:6px;align-items:center"><b class="grow">' + esc(TY[d.type] || TY.other) + '</b><label class="check" style="margin:0"><input type="checkbox" data-exskip="' + i + '"' + (S.ex.skip[i] ? ' checked' : '') + '><span>' + esc(ext('exSkip')) + '</span></label></div>' +
     inp('title', d.title) + '<div class="grid2">' + '<div>' + inp('date', d.date) + '</div><div>' + inp('org', d.org) + '</div></div>' + (d.author ? inp('author', d.author) : '') +
     ta('dx', dxTxt, 2) + (d.onset ? inp('onset', d.onset) : '') + (d.complaints ? ta('complaints', d.complaints) : '') + (d.anamnesis ? ta('anamnesis', d.anamnesis, 3) : '') + (d.exam ? ta('exam', d.exam, 3) : '') +
@@ -36291,11 +36316,27 @@ function exReviewHtml() {
     '<button class="btn primary block" data-act="exSaveAll" style="margin-top:8px">' + esc(ext('exSaveAll')) + '</button>';
 }
 /** Правки врача из полей окна — обратно в разбор. */
+function exCollectOne(d, k, v) {
+  if (k === 'dx') d.dx = v.split('\n').map(s => s.trim()).filter(Boolean).map(s => { const m = s.match(/^([A-ZА-Я]\d{2}(?:\.\d{1,2})?)\s+(.*)$/i); return { icd: m ? m[1].toUpperCase() : '', text: (m ? m[2] : s).replace(/\s*\((основной|осложнение|сопутствующий|əsas|ağırlaşma|yanaşı)\)\s*$/i, ''), kind: /(основной|əsas)\)\s*$/i.test(s) ? 'main' : /(осложнение|ağırlaşma)\)\s*$/i.test(s) ? 'complication' : /(сопутствующий|yanaşı)\)\s*$/i.test(s) ? 'comorbid' : 'other' }; });
+  else if (k === 'testsTxt') d.tests = v.split('\n').map(s => s.trim()).filter(Boolean).map(s => { const m = s.match(/^(.*?)\s+—\s+(.*?)(?:\s+\[(.*?)\])?(?:\s+\(([^)]*)\))?$/); return m ? { name: m[1], result: m[2], unit: '', ref: m[3] || '', date: m[4] || '', flag: '' } : { name: s, result: '', unit: '', ref: '', date: '', flag: '' }; });
+  else if (k === 'imaging') d.imaging = v.split('\n').map(s => s.trim()).filter(Boolean).map(s => { const m = s.match(/^(.*?)(?:\s+\(([^)]*)\))?:\s*(.*)$/); return m ? { name: m[1], date: m[2] || '', conclusion: m[3] } : { name: '', date: '', conclusion: s }; });
+}
 function exCollect() {
   const st = S.ex;
   $$('[data-ex]').forEach(el => {
     const d = st.docs[+el.dataset.ex]; if (!d) return;
     const k = el.dataset.k, v = el.value.trim();
+    const U = /\s*\[\?\]\s*$/; // «[?]» в конце строки — ИИ не уверен (останется жёлтым в GT/098)
+    const un = (o, s) => Object.assign(o, { unsure: U.test(s) });
+    const cut = s => s.replace(U, '');
+    if (k === 'dx' || k === 'testsTxt' || k === 'imaging') {
+      const lines = v.split('\n').map(s => s.trim()).filter(Boolean);
+      const flags = lines.map(s => U.test(s));
+      const vv = lines.map(cut).join('\n');
+      exCollectOne(d, k, vv);
+      (d[k === 'testsTxt' ? 'tests' : k] || []).forEach((o, i) => un(o, flags[i] ? ' [?]' : ''));
+      return;
+    }
     if (k === 'dx') d.dx = v.split('\n').map(s => s.trim()).filter(Boolean).map(s => { const m = s.match(/^([A-ZА-Я]\d{2}(?:\.\d{1,2})?)\s+(.*)$/i); return { icd: m ? m[1].toUpperCase() : '', text: (m ? m[2] : s).replace(/\s*\((основной|осложнение|сопутствующий|əsas|ağırlaşma|yanaşı)\)\s*$/i, ''), kind: /(основной|əsas)\)\s*$/i.test(s) ? 'main' : /(осложнение|ağırlaşma)\)\s*$/i.test(s) ? 'complication' : /(сопутствующий|yanaşı)\)\s*$/i.test(s) ? 'comorbid' : 'other' }; });
     else if (k === 'testsTxt') d.tests = v.split('\n').map(s => s.trim()).filter(Boolean).map(s => { const m = s.match(/^(.*?)\s+—\s+(.*?)(?:\s+\[(.*?)\])?(?:\s+\(([^)]*)\))?$/); return m ? { name: m[1], result: m[2], unit: '', ref: m[3] || '', date: m[4] || '', flag: '' } : { name: s, result: '', unit: '', ref: '', date: '', flag: '' }; });
     else if (k === 'imaging') d.imaging = v.split('\n').map(s => s.trim()).filter(Boolean).map(s => { const m = s.match(/^(.*?)(?:\s+\(([^)]*)\))?:\s*(.*)$/); return m ? { name: m[1], date: m[2] || '', conclusion: m[3] } : { name: '', date: '', conclusion: s }; });
@@ -36409,6 +36450,855 @@ Object.assign(H, {
     closeModal();
     const g = ptSt().cur; if (g) ptOpen(g.patient.id, true);
   }
+});
+
+/* =====================================================================
+ * v73 (9.46): 📘 GT/098 — один большой документ пациента (Саид, 27.10: «как только создаётся приём пациента — появляется
+ *  один большой документ, куда в будущем пишется вся информация о пациенте и что с ним делали… должен иметь разделы,
+ *  расширяться… сделай интуитивно понятным, рассчитай всё, что можно сделать с пациентом»).
+ *  Карта пациента (v57) показывается как GT/098:
+ *   - шапка: кто это (ФИО, FİN, возраст, пол), аллергия красным, хронические, кто ведёт;
+ *   - «Что сделать»: крупные кнопки — приём, документы и анализы (ИИ), запись наблюдения, новый документ (перевод, эпикриз…),
+ *     свой раздел, разбор с ИИ, данные пациента, журнал, закончить наблюдение;
+ *   - разделы (сворачиваются): ❓ Уточнить (жёлтое от ИИ), 🩺 Диагнозы, 🧪 Анализы, 🩻 Снимки и исследования, 💊 Лечение,
+ *     📄 Документы из других учреждений, свои разделы врача, 🕘 Лента (всё по датам).
+ *  «❓ Уточнить»: что ИИ прочитал неуверенно — «✓ Верно» одним нажатием или «✏️ Исправить».
+ * ===================================================================== */
+const GT_T = {
+  ru: {
+    gtTag: 'GT/098', gtSub: 'Один документ пациента — всё о нём и что с ним делали', gtDo: 'Что сделать',
+    gtVisit: '＋ Приём', gtDocs: '📄 Документы, анализы (фото → ИИ)', gtNote: '📝 Запись наблюдения', gtNewDoc: '🧾 Документ: перевод, эпикриз…', gtSecNew: '＋ Свой раздел',
+    gtAi: '🤖 Разбор с ИИ', gtAudit: '🔍 Проверить документы', gtEdit: '✏️ Данные пациента', gtLog: '🕓 Журнал', gtClose: '✔ Закончить наблюдение', gtReopen: '🩺 Снова лечится',
+    gtUnsure: '❓ Уточнить', gtUnsureHint: 'ИИ прочитал это неуверенно. Проверьте по документу: «✓ Верно» или «✏️ Исправить».', gtOk: '✓ Верно', gtFix: '✏️ Исправить',
+    gtDx: '🩺 Диагнозы', gtLabs: '🧪 Анализы', gtImg: '🩻 Снимки и исследования', gtRx: '💊 Лечение', gtExt: '📄 Документы из других учреждений', gtFeed: '🕘 Лента — всё по датам',
+    gtEmpty: 'Пока пусто', gtGiven: 'дано', gtNotGiven: 'назначено', gtChronic: 'хроническое', gtFromVisit: 'приём', gtNotes: 'запись',
+    gtSecTitle: 'Название раздела', gtSecText: 'Текст', gtSecTitlePh: 'например: Вакцинация, Беременность, Диспансерный учёт', gtSecSave: 'Сохранить раздел', gtSecDel: '🗑️ Удалить раздел', gtSecDelAsk: 'Удалить этот раздел?',
+    gtSaveBtn: '💾 Сохранить', gtSecEdit: '✏️ Изменить', gtNeedTitle: 'Впишите название раздела', gtSaved: 'Сохранено в GT/098', gtFixTitle: '✏️ Исправить разбор', gtUnclearDoc: 'Уточнить',
+    gtWhere: { here: 'наше отделение', ext: 'другое учреждение' },
+    gtLeadLbl: 'Ведёт', gtLeadNone: 'никто — может взять любой врач', gtSince: 'с {d}', gtTake: '🙋 Вести этого пациента', gtPass: '🔁 Передать ведение', gtGrantBtn: '🔑 Разрешить править',
+    gtLocked: '🔒 GT/098 ведёт {n} — писать и править может только он(а). Вы можете добавить документы и анализы по фото.', gtMyGrant: '🔑 Админ разрешил вам править до {d}.', gtLeadMe: '✍️ Вы ведёте этого пациента — GT/098 пишете вы.',
+    gtPassTitle: '🔁 Передать ведение GT/098', gtPassHint: 'Всё, что вы написали, после передачи сможет исправить только админ.', gtPassTo: 'Кому передать', gtPassNone: '🚪 Больше не веду (пациента перевели / выписали)', gtReason: 'Причина (необязательно)', gtReasonPh: 'например: переведён в терапию', gtPassGo: 'Передать',
+    gtGrantTitle: '🔑 Разрешить править GT/098', gtGrantHint: 'Только тем, кто работал с этим пациентом. Разрешение само закончится.', gtGrantWho: 'Кому', gtGrantH: 'На сколько', gtGrantGo: 'Разрешить', gtGrantNow: 'Сейчас разрешено', gtGrantOff: 'забрать', gtHours: '{n} ч',
+    gtConf: '⚖️ Расхождения', gtConfHint: 'Одно и то же записано по-разному. Сохранены оба варианта — выберите верный (или оставьте как есть).', gtConfA: 'Было в GT/098', gtConfB: 'Пришло', gtConfKeepA: '✓ Верно, как было', gtConfTakeB: '✓ Верно новое', gtConfWhy: 'Почему', gtConfDone: 'решено: {v} ({by}, {d})', gtConfDoc: 'в документе «{t}»',
+    gtAdded: 'добавлено {d} · {n}', gtHist: 'Кто вёл',
+    gtType: 'Вид раздела', gtTypes: { text: '📝 Текст', chrono: '🕘 Хронология (по датам)', table: '📊 Таблица (показатель — значение)' }, gtTplHint: 'Быстро — выберите готовый раздел или впишите своё название:',
+    gtRowAdd: '＋ Строка', gtEntryAdd: '＋ Запись', gtRowWhen: 'Дата и время', gtRowWhat: 'Что было', gtColName: 'Показатель', gtColVal: 'Значение', gtColUnit: 'Ед.', gtColDate: 'Дата', gtSecNote: 'Текст раздела (необязательно)',
+    gtTpl: [['Хронология болезни', 'chrono'], ['Анамнез болезни', 'text'], ['Анамнез жизни', 'text'], ['Перенесённые болезни и операции', 'chrono'], ['Госпитализации', 'chrono'], ['Постоянно принимает', 'table'], ['Вакцинация', 'table'], ['Аллергологический анамнез', 'text'],
+      ['Вредные привычки', 'text'], ['Семейный анамнез', 'text'], ['Эпиданамнез', 'text'], ['Туберкулёз: контакты, лечение', 'chrono'], ['Показатели в динамике', 'table'], ['Беременность и роды', 'text'], ['Диспансерный учёт', 'table'], ['Инвалидность', 'text'],
+      ['Работа и условия труда', 'text'], ['Родственники и контакты', 'text'], ['Что обсудили с пациентом', 'chrono'], ['Другое', 'text']]
+  },
+  az: {
+    gtTag: 'GT/098', gtSub: 'Pasiyentin vahid sənədi — onun haqqında hər şey və nə edilib', gtDo: 'Nə etmək',
+    gtVisit: '＋ Qəbul', gtDocs: '📄 Sənədlər, analizlər (foto → Sİ)', gtNote: '📝 Müşahidə qeydi', gtNewDoc: '🧾 Sənəd: köçürmə, epikriz…', gtSecNew: '＋ Öz bölmən',
+    gtAi: '🤖 Sİ ilə təhlil', gtAudit: '🔍 Sənədləri yoxla', gtEdit: '✏️ Pasiyentin məlumatları', gtLog: '🕓 Jurnal', gtClose: '✔ Müşahidəni bitir', gtReopen: '🩺 Yenə müalicədə',
+    gtUnsure: '❓ Dəqiqləşdir', gtUnsureHint: 'Sİ bunu əmin olmadan oxuyub. Sənədə baxın: «✓ Düzdür» və ya «✏️ Düzəlt».', gtOk: '✓ Düzdür', gtFix: '✏️ Düzəlt',
+    gtDx: '🩺 Diaqnozlar', gtLabs: '🧪 Analizlər', gtImg: '🩻 Şəkillər və müayinələr', gtRx: '💊 Müalicə', gtExt: '📄 Başqa müəssisələrin sənədləri', gtFeed: '🕘 Lent — tarixlərlə hər şey',
+    gtEmpty: 'Hələ boşdur', gtGiven: 'verilib', gtNotGiven: 'təyin edilib', gtChronic: 'xroniki', gtFromVisit: 'qəbul', gtNotes: 'qeyd',
+    gtSecTitle: 'Bölmənin adı', gtSecText: 'Mətn', gtSecTitlePh: 'məs.: Peyvənd, Hamiləlik, Dispanser qeydiyyatı', gtSecSave: 'Bölməni saxla', gtSecDel: '🗑️ Bölməni sil', gtSecDelAsk: 'Bu bölmə silinsin?',
+    gtSaveBtn: '💾 Yadda saxla', gtSecEdit: '✏️ Dəyiş', gtNeedTitle: 'Bölmənin adını yazın', gtSaved: 'GT/098-də saxlanıldı', gtFixTitle: '✏️ Təhlili düzəlt', gtUnclearDoc: 'Dəqiqləşdir',
+    gtWhere: { here: 'bizim şöbə', ext: 'başqa müəssisə' },
+    gtLeadLbl: 'Aparır', gtLeadNone: 'heç kim — istənilən həkim götürə bilər', gtSince: '{d}-dən', gtTake: '🙋 Bu pasiyenti aparım', gtPass: '🔁 Aparmanı ötür', gtGrantBtn: '🔑 Düzəlişə icazə ver',
+    gtLocked: '🔒 GT/098-i {n} aparır — yalnız o yaza və düzəldə bilər. Siz foto ilə sənəd və analiz əlavə edə bilərsiniz.', gtMyGrant: '🔑 Admin {d}-dək düzəlişə icazə verib.', gtLeadMe: '✍️ Bu pasiyenti siz aparırsınız — GT/098-i siz yazırsınız.',
+    gtPassTitle: '🔁 GT/098 aparmasını ötür', gtPassHint: 'Ötürəndən sonra yazdıqlarınızı yalnız admin düzəldə bilər.', gtPassTo: 'Kimə', gtPassNone: '🚪 Artıq aparmıram (köçürülüb / yazılıb)', gtReason: 'Səbəb (məcburi deyil)', gtReasonPh: 'məs.: terapiyaya köçürülüb', gtPassGo: 'Ötür',
+    gtGrantTitle: '🔑 GT/098-də düzəlişə icazə', gtGrantHint: 'Yalnız bu pasiyentlə işləyənlərə. İcazə özü bitəcək.', gtGrantWho: 'Kimə', gtGrantH: 'Nə qədər', gtGrantGo: 'İcazə ver', gtGrantNow: 'İndi icazəlidir', gtGrantOff: 'götür', gtHours: '{n} saat',
+    gtConf: '⚖️ Uyğunsuzluqlar', gtConfHint: 'Eyni şey fərqli yazılıb. Hər iki variant saxlanılıb — düzünü seçin.', gtConfA: 'GT/098-də idi', gtConfB: 'Gələn', gtConfKeepA: '✓ Əvvəlki düzdür', gtConfTakeB: '✓ Yeni düzdür', gtConfWhy: 'Niyə', gtConfDone: 'həll edilib: {v} ({by}, {d})', gtConfDoc: '«{t}» sənədində',
+    gtAdded: 'əlavə edilib {d} · {n}', gtHist: 'Kim aparıb',
+    gtType: 'Bölmənin növü', gtTypes: { text: '📝 Mətn', chrono: '🕘 Xronologiya (tarixlərlə)', table: '📊 Cədvəl (göstərici — dəyər)' }, gtTplHint: 'Tez — hazır bölməni seçin və ya öz adınızı yazın:',
+    gtRowAdd: '＋ Sətir', gtEntryAdd: '＋ Qeyd', gtRowWhen: 'Tarix və saat', gtRowWhat: 'Nə olub', gtColName: 'Göstərici', gtColVal: 'Dəyər', gtColUnit: 'Vahid', gtColDate: 'Tarix', gtSecNote: 'Bölmənin mətni (məcburi deyil)',
+    gtTpl: [['Xəstəliyin xronologiyası', 'chrono'], ['Xəstəlik anamnezi', 'text'], ['Həyat anamnezi', 'text'], ['Keçirilmiş xəstəliklər və əməliyyatlar', 'chrono'], ['Hospitalizasiyalar', 'chrono'], ['Daimi qəbul edir', 'table'], ['Peyvəndlər', 'table'], ['Allerqoloji anamnez', 'text'],
+      ['Zərərli vərdişlər', 'text'], ['Ailə anamnezi', 'text'], ['Epidanamnez', 'text'], ['Vərəm: təmaslar, müalicə', 'chrono'], ['Göstəricilər dinamikada', 'table'], ['Hamiləlik və doğuş', 'text'], ['Dispanser qeydiyyatı', 'table'], ['Əlillik', 'text'],
+      ['İş və əmək şəraiti', 'text'], ['Qohumlar və əlaqə', 'text'], ['Pasiyentlə nə müzakirə edildi', 'chrono'], ['Digər', 'text']]
+  }
+};
+Object.assign(I18N.ru, { E_GT_BIG: 'Раздел слишком большой — разделите на два.', E_GT_LOCKED: 'GT/098 ведёт другой врач — править может он или админ (или тот, кому админ разрешил).', E_GT_TITLE: 'Впишите название раздела.', E_GT_NO_USER: 'Этого сотрудника нельзя выбрать.' });
+Object.assign(I18N.az, { E_GT_BIG: 'Bölmə çox böyükdür — ikiyə bölün.', E_GT_LOCKED: 'GT/098-i başqa həkim aparır — o və ya admin düzəldə bilər (və ya adminin icazə verdiyi).', E_GT_TITLE: 'Bölmənin adını yazın.', E_GT_NO_USER: 'Bu əməkdaşı seçmək olmaz.' });
+/** Разбор / дооформление документа: какой GT/098 показать ИИ. */
+function gtCasePid(c) {
+  if (!c || !c.data) return '';
+  if (c.data.patientId) return c.data.patientId;
+  if (c.formId && typeof PT === 'object' && PT.formLink && PT.formLink[c.formId]) return PT.formLink[c.formId];
+  const cur = typeof dsSt === 'function' ? dsSt().cur : null;
+  if (cur && cur.doc && cur.doc.patientId && c.data.docs && Object.values(c.data.docs).indexOf(cur.id) !== -1) return cur.doc.patientId;
+  return '';
+}
+// с GT/098 ИИ идёт через сервер приложения (Worker не знает GT/098)
+(function () {
+  if (typeof rpcA !== 'function' || typeof rpcAV27 !== 'function') return;
+  const r0 = rpcA;
+  rpcA = function (action, payload) { if (action === 'aiChat' && payload && payload.patientId) return rpcAV27.apply(this, arguments); return r0.apply(this, arguments); };
+})();
+function gtt(k, v) { const L2 = GT_T[S.lang === 'az' ? 'az' : 'ru']; let s = L2[k] !== undefined ? L2[k] : GT_T.ru[k]; if (typeof s === 'string' && v) Object.keys(v).forEach(x => { s = s.split('{' + x + '}').join(v[x]); }); return s; }
+
+(function () {
+  const css = document.createElement('style');
+  css.textContent = '.gt-head{border-left:4px solid var(--brand,#2f5bb7)}.gt-tag{display:inline-block;font-weight:800;font-size:12px;letter-spacing:.5px;padding:2px 8px;border-radius:6px;background:var(--brand,#2f5bb7);color:#fff;margin-right:6px}' +
+    '.gt-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}.gt-acts .btn{min-height:52px;white-space:normal;line-height:1.2;text-align:left;justify-content:flex-start}.gt-acts .btn.primary{grid-column:1/-1;font-size:17px;justify-content:center}' +
+    'details.gt-sec{margin:8px 0;border-radius:14px;background:var(--card,#fff);border:1px solid var(--line,#e2e6ee);overflow:hidden}details.gt-sec>summary{list-style:none;cursor:pointer;padding:12px 14px;font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px}' +
+    'details.gt-sec>summary::-webkit-details-marker{display:none}details.gt-sec>summary::after{content:"▾";margin-left:auto;opacity:.5}details.gt-sec:not([open])>summary::after{content:"▸"}.gt-n{font-weight:600;font-size:13px;padding:1px 8px;border-radius:10px;background:var(--bg,#f1f3f7)}' +
+    '.gt-body{padding:0 14px 12px}.gt-row{padding:8px 0;border-top:1px solid var(--line,#eef0f4)}.gt-row:first-child{border-top:0}.gt-src{font-size:12.5px;opacity:.7}' +
+    'details.gt-sec.gt-warn{background:#fff8e1;border-color:#f2c94c}.gt-unsure{background:#fff3c4;border-radius:6px;padding:0 4px}.gt-tbl{width:100%;border-collapse:collapse;font-size:14px}.gt-tbl td{padding:5px 4px;border-top:1px solid var(--line,#eef0f4);vertical-align:top}' +
+    '.gt-flag{color:var(--red,#c0392b);font-weight:700}.gt-rowacts{display:flex;gap:6px;margin-top:4px}';
+  document.head.appendChild(css);
+})();
+
+/* ---------- данные разделов ---------- */
+function gtExtDocs(g) { return (g.ext || []).map(x => ({ x, d: Object.assign({ title: x.title, date: x.docDate || (x.data || {}).date, org: x.org }, x.data || {}) })); }
+function gtUnsureItems(g) {
+  const out = [];
+  gtExtDocs(g).forEach(({ x, d }) => {
+    (d.dx || []).forEach((y, i) => { if (y.unsure) out.push({ id: x.id, path: 'dx.' + i, text: (y.icd ? y.icd + ' ' : '') + y.text, src: d.title }); });
+    (d.tests || []).forEach((y, i) => { if (y.unsure) out.push({ id: x.id, path: 'tests.' + i, text: y.name + ' — ' + [y.result, y.unit].filter(Boolean).join(' ') + (y.date ? ' (' + y.date + ')' : ''), src: d.title }); });
+    (d.imaging || []).forEach((y, i) => { if (y.unsure) out.push({ id: x.id, path: 'imaging.' + i, text: y.name + ': ' + y.conclusion, src: d.title }); });
+    if (String(d.unclear || '').trim()) out.push({ id: x.id, path: 'unclear', text: d.unclear, src: d.title });
+  });
+  return out;
+}
+function gtDxList(g) {
+  const out = [], seen = {};
+  const add = (icd, text, at, src, unsure) => { const k = (String(icd || '').toUpperCase() + '|' + String(text || '').toLowerCase().trim()); if (!text && !icd) return; if (seen[k]) return; seen[k] = 1; out.push({ icd: icd || '', text: text || '', at: at || '', src, unsure }); };
+  if (g.patient.chronic) add('', g.patient.chronic, '', gtt('gtChronic'));
+  (g.forms || []).forEach(f => { if (f.icd || f.dx) add(f.icd, f.dx, f.arrivedAt || f.createdAt, gtt('gtFromVisit') + (f.blankNo ? ' № ' + f.blankNo : '')); });
+  (g.docs || []).forEach(d => { if (d.icd || d.dx) add(d.icd, d.dx, d.updatedAt || d.createdAt, (DOC_TPL[d.type] || {})[S.lang === 'az' ? 'az' : 'ru'] || d.type); });
+  gtExtDocs(g).forEach(({ d }) => (d.dx || []).forEach(y => add(y.icd, y.text, d.date, d.title, y.unsure)));
+  return out.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+}
+function gtLabList(g) {
+  const out = [];
+  gtExtDocs(g).forEach(({ d }) => (d.tests || []).forEach(y => out.push({ name: y.name, val: [y.result, y.unit].filter(Boolean).join(' '), ref: y.ref, at: y.date || d.date || '', where: d.org || gtt('gtWhere').ext, flag: y.flag && y.flag !== 'negative', unsure: y.unsure })));
+  (g.notes || []).forEach(n => (n.labs || []).forEach(y => out.push({ name: y.name, val: [y.value, y.unit].filter(Boolean).join(' ') + (y.note ? ' (' + y.note + ')' : ''), ref: '', at: String(n.at || '').slice(0, 16), where: gtt('gtWhere').here })));
+  return out.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+}
+function gtImgList(g) {
+  const out = [];
+  gtExtDocs(g).forEach(({ d }) => (d.imaging || []).forEach(y => out.push({ name: y.name, text: y.conclusion, at: y.date || d.date || '', where: d.org || '', unsure: y.unsure })));
+  return out.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+}
+
+/* ---------- вид ---------- */
+function gtSec(key, title, n, body, open, cls) {
+  return '<details class="gt-sec' + (cls ? ' ' + cls : '') + '" data-gt="' + key + '"' + (open ? ' open' : '') + '><summary>' + esc(title) + ' <span class="gt-n">' + n + '</span></summary><div class="gt-body">' + (body || '<div class="muted">' + esc(gtt('gtEmpty')) + '</div>') + '</div></details>';
+}
+function gtOpenState(key, def) { const o = LS.get('MED_GT_OPEN', {}) || {}; return o[key] === undefined ? def : !!o[key]; }
+function gtHtml() {
+  const pt = ptSt(), g = pt.cur, p = g.patient;
+  const age = dsAge(p.birthDate);
+  const A = g.access || { canWrite: can('forms'), canAddPhotos: can('forms') };
+  const edit = can('forms') && A.canWrite !== false, add = can('forms'), ai = canAi() && !(typeof hpPiiOn === 'function' && hpPiiOn());
+  // шапка
+  let h = '<button class="btn small ghost" data-act="ptBack">' + esc(t('ptBack')) + '</button>' +
+    '<div class="card gt-head" style="margin-top:8px"><div class="row" style="align-items:flex-start;gap:8px"><div class="grow"><div><span class="gt-tag">' + esc(gtt('gtTag')) + '</span><span class="muted" style="font-size:12.5px">' + esc(gtt('gtSub')) + '</span></div>' +
+    '<div class="nm" style="font-size:19px;margin-top:6px">👤 ' + esc(ptLabel(p)) + '</div>' +
+    (p.fin ? '<div style="margin-top:2px"><b>FİN:</b> <span style="font-weight:700;letter-spacing:.5px">' + esc(p.fin) + '</span></div>' : '') +
+    '<div class="muted">' + esc([p.birthDate ? fmtDate(p.birthDate) : '', age !== '' ? t('ptAge', { n: age }) : '', p.sex === 'm' ? '♂ ' + t('ptMale') : p.sex === 'f' ? '♀ ' + t('ptFemale') : '', p.phone].filter(Boolean).join(' · ')) + '</div></div>' +
+    '<span class="tag ' + (p.status === 'closed' ? 'brand' : 'green') + '">' + esc(p.status === 'closed' ? t('ptStatusC') : t('ptStatusA')) + '</span></div>' +
+    '<div style="margin-top:6px"><b>' + esc(t('ptAllergy')) + ':</b> ' + (p.allergy ? '<span style="color:var(--red);font-weight:700">⚠️ ' + esc(p.allergy) + '</span>' : '—') + '</div>' +
+    (p.chronic ? '<div style="margin-top:4px"><b>' + esc(t('ptChronic')) + ':</b> ' + esc(p.chronic) + '</div>' : '') +
+    '<div style="margin-top:4px"><b>' + esc(gtt('gtLeadLbl')) + ':</b> ' + (A.leadName ? esc(A.leadName) + (A.leadSince ? ' <span class="muted">' + esc(gtt('gtSince', { d: fmtDt(A.leadSince) })) + '</span>' : '') : '<span class="muted">' + esc(p.leadName || gtt('gtLeadNone')) + '</span>') + '</div>' +
+    ((A.hist || []).length > 1 ? '<div class="gt-src" style="margin-top:2px">' + esc(gtt('gtHist')) + ': ' + esc(A.hist.map(h => h.name + ' (' + fmtDt(h.from) + (h.to ? '–' + fmtDt(h.to) : '') + ')').join(' → ')) + '</div>' : '') +
+    (p.note ? '<div class="muted" style="margin-top:4px">' + esc(p.note) + '</div>' : '') +
+    (A.isLead ? '<div class="info" style="margin-top:8px">' + esc(gtt('gtLeadMe')) + '</div>' : !A.canWrite ? '<div class="info" style="margin-top:8px;background:#fff3c4">' + esc(gtt('gtLocked', { n: A.leadName || '—' })) + '</div>' : '') +
+    (A.myGrant ? '<div class="info" style="margin-top:8px">' + esc(gtt('gtMyGrant', { d: fmtDt(((A.grants || []).find(x => S.me && x.id === S.me.id) || {}).until || '') })) + '</div>' : '') +
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">' +
+      (!A.leadId && can('forms') ? '<button class="btn small" data-act="gtTake">' + esc(gtt('gtTake')) + '</button>' : '') +
+      ((A.isLead || A.isAdmin) && A.leadId ? '<button class="btn small ghost" data-act="gtPassOpen">' + esc(gtt('gtPass')) + '</button>' : '') +
+      (A.isAdmin ? '<button class="btn small ghost" data-act="gtGrantOpen">' + esc(gtt('gtGrantBtn')) + '</button>' : '') + '</div></div>';
+  // что сделать
+  if (add) {
+    const docBtns = Object.keys(DOC_TPL).filter(k => !DOC_TPL[k].noPatient && !DOC_TPL[k].quick).map(k => '<button class="chip" data-act="ptNewDoc" data-type="' + k + '">' + DOC_TPL[k].ic + ' ' + esc(S.lang === 'az' ? DOC_TPL[k].az : DOC_TPL[k].ru) + '</button>').join('');
+    h += '<div class="card"><div class="lbl" style="margin-top:0">' + esc(gtt('gtDo')) + '</div><div class="gt-acts">' +
+      '<button class="btn primary" data-act="ptNewForm">' + esc(gtt('gtVisit')) + '</button>' +
+      (ai ? '<button class="btn" data-act="exFromCard">' + esc(gtt('gtDocs')) + '</button>' : '') +
+      (edit ? '<button class="btn" data-act="pnNew" data-id="' + esc(p.id) + '">' + esc(gtt('gtNote')) + '</button>' : '') +
+      (edit ? '<button class="btn" data-act="gtDocMenu">' + esc(gtt('gtNewDoc')) + '</button>' : '') +
+      (edit ? '<button class="btn" data-act="gtSecNew">' + esc(gtt('gtSecNew')) + '</button>' : '') +
+      (ai ? '<button class="btn" data-act="pnAi">' + esc(gtt('gtAi')) + '</button>' : '') +
+      (ai ? '<button class="btn" data-act="ptAudit">' + esc(gtt('gtAudit')) + '</button>' : '') +
+      (edit ? '<button class="btn ghost" data-act="ptEdit">' + esc(gtt('gtEdit')) + '</button>' : '') +
+      '<button class="btn ghost" data-act="ptLogOpen">' + esc(gtt('gtLog')) + '</button>' +
+      (edit ? '<button class="btn ghost" data-act="ptStatus" data-v="' + (p.status === 'closed' ? 'active' : 'closed') + '">' + esc(p.status === 'closed' ? gtt('gtReopen') : gtt('gtClose')) + '</button>' : '') +
+      '</div><div id="gtDocMenu" style="display:none;margin-top:8px"><div class="dx-row">' + docBtns + '</div></div>' +
+      (ai ? '<div id="psAuditBox">' + (typeof psAuditHtml === 'function' ? psAuditHtml() : '') + '</div>' : '') + '</div>';
+  } else h += '<button class="btn ghost block" data-act="ptLogOpen">' + esc(gtt('gtLog')) + '</button>';
+  // ❓ уточнить
+  const extCan = {}; (g.ext || []).forEach(x => { extCan[x.id] = x.canEdit !== false; });
+  // ⚖️ расхождения: оба варианта, откуда, когда, почему
+  const confOpen = (g.conf || []).filter(c => c.status === 'active');
+  const confDocs = [];
+  gtExtDocs(g).forEach(({ x, d }) => (d.conflicts || []).forEach(c => confDocs.push({ x, d, c })));
+  const confDone = (g.conf || []).filter(c => c.status !== 'active');
+  const vbox = (lbl, o) => '<div class="gt-row" style="padding:6px 8px;border-radius:8px;background:var(--bg,#f1f3f7);margin-top:4px"><div class="gt-src">' + esc(lbl) + '</div><div><b>' + esc(o.v || '') + '</b></div><div class="gt-src">' + esc([o.src, o.by, o.at ? fmtDt(o.at) : ''].filter(Boolean).join(' · ')) + '</div></div>';
+  if (confOpen.length || confDocs.length) h += gtSec('conf', gtt('gtConf'), confOpen.length + confDocs.length, '<div class="muted" style="margin-bottom:6px">' + esc(gtt('gtConfHint')) + '</div>' +
+    confOpen.map(c => { const m = c.meta || {}; return '<div class="gt-row"><b>' + esc(c.title) + '</b>' + vbox(gtt('gtConfA'), m.a || {}) + vbox(gtt('gtConfB'), m.b || {}) +
+      (m.why ? '<div class="gt-src" style="margin-top:4px"><b>' + esc(gtt('gtConfWhy')) + ':</b> ' + esc(m.why) + '</div>' : '') +
+      (edit ? '<div class="gt-rowacts"><button class="btn small" data-act="gtConfPick" data-id="' + esc(c.id) + '" data-pick="a">' + esc(gtt('gtConfKeepA')) + '</button><button class="btn small" data-act="gtConfPick" data-id="' + esc(c.id) + '" data-pick="b">' + esc(gtt('gtConfTakeB')) + '</button></div>' : '') + '</div>'; }).join('') +
+    confDocs.map(({ x, d, c }) => '<div class="gt-row"><b>' + esc(c.what || '') + '</b> <span class="gt-src">' + esc(gtt('gtConfDoc', { t: d.title || '' })) + '</span>' + vbox('A', { v: c.a }) + vbox('B', { v: c.b }) +
+      (c.why ? '<div class="gt-src" style="margin-top:4px"><b>' + esc(gtt('gtConfWhy')) + ':</b> ' + esc(c.why) + '</div>' : '') + '<div class="gt-src">' + esc(gtt('gtAdded', { d: fmtDt(x.createdAt), n: x.createdByName || '' })) + '</div></div>').join('') +
+    (confDone.length ? '<div class="gt-src" style="margin-top:8px">' + confDone.map(c => esc(c.title + ': ' + gtt('gtConfDone', { v: (c.meta && c.meta.picked === 'b' ? (c.meta.b || {}).v : (c.meta.a || {}).v) || '', by: (c.meta && c.meta.pickedBy) || '', d: fmtDt((c.meta && c.meta.pickedAt) || '') }))).join('<br>') + '</div>' : ''), true, 'gt-warn');
+  const uns = gtUnsureItems(g);
+  if (uns.length) h += gtSec('unsure', gtt('gtUnsure'), uns.length, '<div class="muted" style="margin-bottom:6px">' + esc(gtt('gtUnsureHint')) + '</div>' + uns.map(u => '<div class="gt-row"><div class="gt-unsure">' + esc(u.text) + '</div><div class="gt-src">' + esc(u.src || '') + '</div>' +
+    (add && ai && extCan[u.id] ? '<div class="gt-rowacts"><button class="btn small" data-act="gtOk" data-id="' + esc(u.id) + '" data-path="' + esc(u.path) + '">' + esc(gtt('gtOk')) + '</button><button class="btn small ghost" data-act="gtFixDoc" data-id="' + esc(u.id) + '">' + esc(gtt('gtFix')) + '</button></div>' : '') + '</div>').join(''), true, 'gt-warn');
+  // диагнозы
+  const dx = gtDxList(g);
+  h += gtSec('dx', gtt('gtDx'), dx.length, dx.map(x => '<div class="gt-row"><div' + (x.unsure ? ' class="gt-unsure"' : '') + '><b>' + esc(x.icd) + '</b> ' + esc(x.text) + '</div><div class="gt-src">' + esc([x.at ? fmtDt(String(x.at)) : '', x.src].filter(Boolean).join(' · ')) + '</div></div>').join(''), gtOpenState('dx', true));
+  // анализы
+  const labs = gtLabList(g);
+  h += gtSec('labs', gtt('gtLabs'), labs.length, labs.length ? '<table class="gt-tbl">' + labs.map(x => '<tr' + (x.unsure ? ' class="gt-unsure"' : '') + '><td>' + esc(x.name) + '</td><td' + (x.flag ? ' class="gt-flag"' : '') + '>' + esc(x.val) + (x.ref ? '<div class="gt-src">' + esc(x.ref) + '</div>' : '') + '</td><td class="gt-src">' + esc([x.at, x.where].filter(Boolean).join(' · ')) + '</td></tr>').join('') + '</table>' : '', gtOpenState('labs', true));
+  // снимки
+  const img = gtImgList(g);
+  h += gtSec('img', gtt('gtImg'), img.length, img.map(x => '<div class="gt-row"><div' + (x.unsure ? ' class="gt-unsure"' : '') + '><b>' + esc(x.name) + '</b>: ' + esc(x.text) + '</div><div class="gt-src">' + esc([x.at, x.where].filter(Boolean).join(' · ')) + '</div></div>').join(''), gtOpenState('img', false));
+  // лечение
+  const rx = g.rx || [];
+  h += gtSec('rx', gtt('gtRx'), rx.length, rx.map(x => '<div class="gt-row" data-act="psOpenForm" data-id="' + esc(x.formId) + '"><div><b>' + esc(x.drug) + '</b> ' + esc([x.dose, x.route].filter(Boolean).join(', ')) + ' — ' + (x.given ? '✅ ' + esc(gtt('gtGiven')) : esc(gtt('gtNotGiven'))) + (x.noStock ? ' ⚠️' : '') + '</div><div class="gt-src">' + esc([x.at ? fmtDt(String(x.at)) : '', x.blankNo ? '№ ' + x.blankNo : '', x.by].filter(Boolean).join(' · ')) + '</div></div>').join(''), gtOpenState('rx', false));
+  // документы из других учреждений
+  const TY = typeof ext === 'function' ? ext('exType') : {};
+  const ex = g.ext || [];
+  h += gtSec('ext', gtt('gtExt'), ex.length, ex.map(x => '<div class="gt-row cs-list-row" data-act="exView" data-id="' + esc(x.id) + '"><div class="grow"><div class="nm">' + esc(x.title || TY[x.docType] || '') + '</div><div class="fd">' + esc([x.docDate ? fmtDate(x.docDate) : '', x.org].filter(Boolean).join(' · ')) + '</div><div class="gt-src">' + esc(gtt('gtAdded', { d: fmtDt(x.createdAt), n: x.createdByName || '' })) + '</div></div></div>').join('') +
+    (add && ai ? '<button class="btn ghost block" style="margin-top:8px" data-act="exFromCard">' + esc(typeof ext === 'function' ? ext('exAdd') : '+') + '</button>' : ''), gtOpenState('ext', true));
+  // свои разделы
+  (g.sec || []).forEach(s => {
+    const it = s.items || [];
+    const who = y => '<div class="gt-src">' + esc(gtt('gtAdded', { d: fmtDt(y.added || ''), n: y.byName || '' })) + (y.edited ? ' · ✏️ ' + esc(fmtDt(y.edited) + ' ' + (y.editedBy || '')) : '') + '</div>';
+    const body = (s.text ? '<div style="white-space:pre-wrap">' + esc(s.text) + '</div>' : '') +
+      (s.type === 'chrono' && it.length ? it.map(y => '<div class="gt-row"><b>' + esc(y.at ? fmtDt(y.at) : '—') + '</b> — <span style="white-space:pre-wrap">' + esc(y.text) + '</span>' + who(y) + '</div>').join('') : '') +
+      (s.type === 'table' && it.length ? '<table class="gt-tbl">' + it.map(y => '<tr><td>' + esc(y.name) + '</td><td><b>' + esc([y.value, y.unit].filter(Boolean).join(' ')) + '</b></td><td class="gt-src">' + esc(y.date || '') + '</td></tr>').join('') + '</table>' : '') +
+      '<div class="gt-src" style="margin-top:6px">' + esc([fmtDt(s.updatedAt || s.createdAt), s.updatedByName || s.createdByName].filter(Boolean).join(' · ')) + '</div>';
+    h += gtSec('s_' + s.id, '📌 ' + s.title, it.length || '', body +
+      (edit ? '<div class="gt-rowacts">' + (s.type !== 'text' ? '<button class="btn small" data-act="gtSecEdit" data-id="' + esc(s.id) + '" data-row="1">' + esc(gtt('gtEntryAdd')) + '</button>' : '') + '<button class="btn small ghost" data-act="gtSecEdit" data-id="' + esc(s.id) + '">' + esc(gtt('gtSecEdit')) + '</button></div>' : ''), gtOpenState('s_' + s.id, true));
+  });
+  // лента
+  const items = (g.forms || []).map(f => ({ at: f.arrivedAt || f.createdAt, act: 'psOpenForm', id: f.id, title: t('ptFormTag') + (f.blankNo ? ' № ' + f.blankNo : ''), sub: [f.icd, f.dx, f.outcome === 'adm' ? '🏥 ' + (f.outTo || fdLabel(fdFind(FD.outcome, 'adm'))) : f.outcome === 'transfer' && f.outTo ? '🚑 ' + f.outTo : '', f.status === 'closed' ? t('dsClosed') : t('dsDraft')].filter(Boolean).join(' · ') }))
+    .concat((g.docs || []).map(d => { const tp = DOC_TPL[d.type] || {}; return { at: d.updatedAt || d.createdAt, act: 'dsOpen', id: d.id, title: (tp.ic || '📄') + ' ' + (tp[S.lang === 'az' ? 'az' : 'ru'] || d.type) + (d.docNo ? ' № ' + d.docNo : ''), sub: [d.icd, d.dx, d.status === 'closed' ? t('dsClosed') : t('dsDraft')].filter(Boolean).join(' · ') }; }))
+    .concat((g.cases || []).map(c => ({ at: c.updatedAt || c.createdAt, act: 'ptOpenCase', id: c.id, title: t('ptCaseTag') + ': ' + (c.title || ''), sub: [c.icd, c.dx].filter(Boolean).join(' · ') })))
+    .concat(ex.map(x => ({ at: x.docDate || x.createdAt, act: 'exView', id: x.id, title: '📄 ' + (x.title || ''), sub: x.org || '' })))
+    .concat(typeof window.ptExtraItems === 'function' ? window.ptExtraItems(g) : [])
+    .concat([].concat(...(g.sec || []).filter(s => s.type === 'chrono').map(s => (s.items || []).filter(y => y.at).map(y => ({ at: y.at, act: 'gtSecEdit', id: s.id, title: '📌 ' + s.title, sub: String(y.text || '').slice(0, 140) })))))
+    .sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  h += gtSec('feed', gtt('gtFeed'), items.length, items.map(x => '<div class="gt-row cs-list-row" data-act="' + x.act + '" data-id="' + esc(x.id) + '"><div class="grow"><div class="nm">' + esc(x.title) + '</div><div class="fd">' + esc(fmtDt(String(x.at || ''))) + (x.sub ? ' · ' + esc(x.sub) : '') + '</div></div></div>').join(''), gtOpenState('feed', true));
+  return h;
+}
+window.ptCardHtml = function () { try { return gtHtml(); } catch (e) { console.error(e); return '<div class="info">GT/098: ' + esc(String(e && e.message || e)) + '</div>'; } };
+// раскрыт / свёрнут раздел — запомнить на телефоне
+document.addEventListener('toggle', e => {
+  const d = e.target; if (!d || !d.classList || !d.classList.contains('gt-sec') || !d.dataset.gt) return;
+  try { const o = LS.get('MED_GT_OPEN', {}) || {}; o[d.dataset.gt] = d.open; LS.set('MED_GT_OPEN', o); } catch (er) { }
+}, true);
+
+/* ---------- свои разделы ---------- */
+const GTS = { type: 'text' };
+function gtRowHtml(type, y) {
+  y = y || {};
+  const id = ' data-rid="' + esc(y.id || '') + '"';
+  if (type === 'table') return '<div class="row gt-erow" style="gap:4px;margin-bottom:4px"' + id + '><input class="gt-n" style="flex:2;min-width:0" maxlength="160" placeholder="' + esc(gtt('gtColName')) + '" value="' + esc(y.name || '') + '"><input class="gt-v" style="flex:1.3;min-width:0" maxlength="400" placeholder="' + esc(gtt('gtColVal')) + '" value="' + esc(y.value || '') + '"><input class="gt-u" style="flex:.8;min-width:0" maxlength="40" placeholder="' + esc(gtt('gtColUnit')) + '" value="' + esc(y.unit || '') + '"><input class="gt-d" style="flex:1.2;min-width:0" maxlength="20" placeholder="' + esc(gtt('gtColDate')) + '" value="' + esc(y.date || '') + '"><button type="button" class="btn small ghost" data-act="gtRowDel">✕</button></div>';
+  return '<div class="gt-erow" style="margin-bottom:8px;padding:6px;border-radius:8px;background:var(--bg,#f1f3f7)"' + id + '><div class="row" style="gap:6px"><input type="datetime-local" class="gt-at grow" value="' + esc(String(y.at || '').replace(' ', 'T').slice(0, 16)) + '"><button type="button" class="btn small ghost" data-act="gtRowDel">✕</button></div><textarea class="gt-tx" rows="2" maxlength="3000" placeholder="' + esc(gtt('gtRowWhat')) + '" style="margin-top:4px">' + esc(y.text || '') + '</textarea></div>';
+}
+function gtSecModal(s, addRow) {
+  s = s || {};
+  GTS.type = s.type || 'text'; GTS.id = s.id || '';
+  const types = gtt('gtTypes');
+  const rows = (s.items || []).map(y => gtRowHtml(GTS.type, y)).join('') + (addRow || (!s.id && GTS.type !== 'text') ? gtRowHtml(GTS.type, GTS.type === 'chrono' ? { at: nowLocal().slice(0, 16) } : {}) : '');
+  openModal('<h3>' + esc(s.id ? '📌 ' + s.title : gtt('gtSecNew')) + '</h3>' +
+    (s.id ? '' : '<div class="muted" style="margin-bottom:6px">' + esc(gtt('gtTplHint')) + '</div><div class="dx-row" style="margin-bottom:8px">' + gtt('gtTpl').map((x, i) => '<button type="button" class="chip" data-act="gtTpl" data-i="' + i + '">' + esc(x[0]) + '</button>').join('') + '</div>') +
+    '<div class="field"><label>' + esc(gtt('gtSecTitle')) + '</label><input type="text" id="gtSecT" maxlength="80" value="' + esc(s.title || '') + '" placeholder="' + esc(gtt('gtSecTitlePh')) + '"></div>' +
+    (s.id ? '' : '<div class="field"><label>' + esc(gtt('gtType')) + '</label><div class="seg" id="gtTypeSeg">' + Object.keys(types).map(k => '<button type="button" data-act="gtType" data-t="' + k + '"' + (k === GTS.type ? ' class="on"' : '') + '>' + esc(types[k]) + '</button>').join('') + '</div></div>') +
+    '<div id="gtRows">' + rows + '</div>' +
+    '<div id="gtRowAddBox"' + (GTS.type === 'text' ? ' style="display:none"' : '') + '><button type="button" class="btn small ghost" data-act="gtRowAdd">' + esc(gtt('gtRowAdd')) + '</button></div>' +
+    '<div class="field" style="margin-top:8px"><label>' + esc(GTS.type === 'text' ? gtt('gtSecText') : gtt('gtSecNote')) + '</label><textarea id="gtSecX" rows="' + (GTS.type === 'text' ? 8 : 3) + '" maxlength="20000">' + esc(s.text || '') + '</textarea></div>' +
+    '<div class="acts">' + (s.id && s.canEdit !== false ? '<button class="btn ghost" data-act="gtSecDel" data-id="' + esc(s.id) + '">' + esc(gtt('gtSecDel')) + '</button>' : '<button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button>') +
+    '<button class="btn primary" data-act="gtSecSave" data-id="' + esc(s.id || '') + '">' + esc(gtt('gtSecSave')) + '</button></div>');
+  if (addRow) { const last = $$('#gtRows .gt-erow'); const el = last.length && last[last.length - 1].querySelector('textarea, .gt-n'); if (el) el.focus(); }
+}
+function gtCollectRows() {
+  return $$('#gtRows .gt-erow').map(el => GTS.type === 'table'
+    ? { id: el.dataset.rid || '', name: el.querySelector('.gt-n').value.trim(), value: el.querySelector('.gt-v').value.trim(), unit: el.querySelector('.gt-u').value.trim(), date: el.querySelector('.gt-d').value.trim() }
+    : { id: el.dataset.rid || '', at: el.querySelector('.gt-at').value.replace('T', ' '), text: el.querySelector('.gt-tx').value.trim() })
+    .filter(x => GTS.type === 'table' ? (x.name || x.value) : (x.text || x.at && false) || x.text);
+}
+/* ---------- ❓ уточнить: «✓ Верно» / «✏️ Исправить» ---------- */
+async function gtSaveExt(x, d, btn) {
+  const doc = Object.assign({}, d); delete doc.title_;
+  const r = await busy(btn, () => rpcA('extSave', { patientId: ptSt().cur.patient.id, id: x.id, formId: x.formId || '', doc, pages: x.pages || (d.photos || []).length }));
+  if (!r || !r.ok) return false;
+  toast(gtt('gtSaved'), 'ok');
+  ptOpen(ptSt().cur.patient.id, true);
+  return true;
+}
+function gtFindExt(id) { const g = ptSt().cur; return g && (g.ext || []).find(y => y.id === id); }
+function gtLeadModal() {
+  const g = ptSt().cur; if (!g) return;
+  const A = g.access || {};
+  const staff = (A.staff || []).filter(u => u.id !== A.leadId);
+  openModal('<h3>' + esc(gtt('gtPassTitle')) + '</h3><div class="muted" style="margin-bottom:8px">' + esc(gtt('gtPassHint')) + '</div>' +
+    '<div class="lbl">' + esc(gtt('gtPassTo')) + '</div>' + staff.map(u => '<label class="check" style="display:flex;margin:6px 0"><input type="radio" name="gtTo" value="' + esc(u.id) + '"><span>👤 ' + esc(u.name) + '</span></label>').join('') +
+    '<label class="check" style="display:flex;margin:6px 0"><input type="radio" name="gtTo" value=""><span>' + esc(gtt('gtPassNone')) + '</span></label>' +
+    '<div class="field"><label>' + esc(gtt('gtReason')) + '</label><input type="text" id="gtWhy" maxlength="200" placeholder="' + esc(gtt('gtReasonPh')) + '"></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="gtPassGo">' + esc(gtt('gtPassGo')) + '</button></div>');
+}
+function gtGrantModal() {
+  const g = ptSt().cur; if (!g) return;
+  const A = g.access || {};
+  openModal('<h3>' + esc(gtt('gtGrantTitle')) + '</h3><div class="muted" style="margin-bottom:8px">' + esc(gtt('gtGrantHint')) + '</div>' +
+    ((A.grants || []).length ? '<div class="lbl">' + esc(gtt('gtGrantNow')) + '</div>' + A.grants.map(x => '<div class="row" style="gap:6px;align-items:center;margin:4px 0"><span class="grow">🔑 ' + esc(x.name) + ' — ' + esc(fmtDt(x.until)) + '</span><button class="btn small ghost" data-act="gtGrantGo" data-u="' + esc(x.id) + '" data-h="0">' + esc(gtt('gtGrantOff')) + '</button></div>').join('') : '') +
+    '<div class="lbl">' + esc(gtt('gtGrantWho')) + '</div><select id="gtGrU">' + (A.used || []).map(u => '<option value="' + esc(u.id) + '">' + esc(u.name) + (u.id === A.leadId ? ' (' + esc(gtt('gtLeadLbl')) + ')' : '') + '</option>').join('') + '</select>' +
+    '<div class="lbl" style="margin-top:8px">' + esc(gtt('gtGrantH')) + '</div><div class="dx-row">' + [2, 8, 24, 72].map(h => '<button class="chip" data-act="gtGrantGo" data-h="' + h + '">' + esc(gtt('gtHours', { n: h })) + '</button>').join('') + '</div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+}
+Object.assign(H, {
+  gtTake: async el => { const g = ptSt().cur; if (!g || !S.me) return; const r = await busy(el, () => rpcA('gtLead', { patientId: g.patient.id, toUserId: S.me.id })); if (r && r.ok) ptOpen(g.patient.id, true); },
+  gtPassOpen: () => gtLeadModal(),
+  gtPassGo: async el => {
+    const g = ptSt().cur; if (!g) return;
+    const sel = document.querySelector('input[name=gtTo]:checked'); if (!sel) return toast(gtt('gtPassTo'), 'bad');
+    const r = await busy(el, () => rpcA('gtLead', { patientId: g.patient.id, toUserId: sel.value, reason: String(($('#gtWhy') || {}).value || '') }));
+    if (r && r.ok) { closeModal(); ptOpen(g.patient.id, true); }
+  },
+  gtGrantOpen: () => gtGrantModal(),
+  gtGrantGo: async el => {
+    const g = ptSt().cur; if (!g) return;
+    const uid = el.dataset.u || String(($('#gtGrU') || {}).value || ''); if (!uid) return;
+    const r = await busy(el, () => rpcA('gtGrant', { patientId: g.patient.id, userId: uid, hours: Number(el.dataset.h) || 0 }));
+    if (r && r.ok) { closeModal(); toast(gtt('gtSaved'), 'ok'); ptOpen(g.patient.id, true); }
+  },
+  gtConfPick: async el => {
+    const g = ptSt().cur; if (!g) return;
+    const r = await busy(el, () => rpcA('gtConfResolve', { id: el.dataset.id, pick: el.dataset.pick }));
+    if (r && r.ok) { toast(gtt('gtSaved'), 'ok'); ptOpen(g.patient.id, true); }
+  },
+  exView: el => {
+    const g = ptSt().cur; const x = g && (g.ext || []).find(y => y.id === el.dataset.id); if (!x) return;
+    openModal('<h3>📄 ' + esc(x.title || '') + '</h3>' + exDocHtml(Object.assign({ title: x.title, date: x.docDate || (x.data || {}).date, org: x.org }, x.data || {}), 0, false) +
+      '<div class="muted" style="font-size:12px">' + esc(gtt('gtAdded', { d: fmtDt(x.createdAt), n: x.createdByName || '' })) + (x.updatedAt && x.updatedAt !== x.createdAt ? ' · ✏️ ' + esc(fmtDt(x.updatedAt) + ' ' + (x.updatedByName || '')) : '') + '</div>' +
+      '<div class="acts">' + (x.canEdit !== false && can('forms') && canAi() ? '<button class="btn ghost" data-act="gtFixDoc" data-id="' + esc(x.id) + '">' + esc(gtt('gtFix')) + '</button><button class="btn ghost" data-act="exDel" data-id="' + esc(x.id) + '">' + esc(ext('exDel')) + '</button>' : '') + '<button class="btn primary" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+  },
+  gtDocMenu: () => { const m = $('#gtDocMenu'); if (m) m.style.display = m.style.display === 'none' ? '' : 'none'; },
+  gtSecNew: () => gtSecModal(null),
+  gtSecEdit: el => { const g = ptSt().cur; const s = g && (g.sec || []).find(y => y.id === el.dataset.id); if (s) gtSecModal(s, el.dataset.row === '1' || (el.closest && el.closest('details[data-gt=feed]') ? false : false)); },
+  gtTpl: el => { const x = gtt('gtTpl')[+el.dataset.i]; if (!x) return; const ti = $('#gtSecT'); if (ti) ti.value = x[0] === 'Другое' || x[0] === 'Digər' ? '' : x[0]; H.gtType({ dataset: { t: x[1] } }); if (ti && !ti.value) ti.focus(); },
+  gtType: el => {
+    const k = el.dataset.t; if (!k || k === GTS.type) { $$('#gtTypeSeg button').forEach(b => b.classList.toggle('on', b.dataset.t === GTS.type)); return; }
+    GTS.type = k;
+    $$('#gtTypeSeg button').forEach(b => b.classList.toggle('on', b.dataset.t === k));
+    const box = $('#gtRows'); if (box) box.innerHTML = k === 'text' ? '' : gtRowHtml(k, k === 'chrono' ? { at: nowLocal().slice(0, 16) } : {});
+    const ab = $('#gtRowAddBox'); if (ab) ab.style.display = k === 'text' ? 'none' : '';
+    const x = $('#gtSecX'); if (x) { x.rows = k === 'text' ? 8 : 3; const lb = x.closest('.field') && x.closest('.field').querySelector('label'); if (lb) lb.textContent = k === 'text' ? gtt('gtSecText') : gtt('gtSecNote'); }
+  },
+  gtRowAdd: () => { const box = $('#gtRows'); if (!box) return; box.insertAdjacentHTML('beforeend', gtRowHtml(GTS.type, GTS.type === 'chrono' ? { at: nowLocal().slice(0, 16) } : {})); const l = $$('#gtRows .gt-erow'); const f = l[l.length - 1].querySelector('textarea, .gt-n'); if (f) f.focus(); },
+  gtRowDel: el => { const r = el.closest('.gt-erow'); if (r) r.remove(); },
+  gtSecSave: async el => {
+    const title = String(($('#gtSecT') || {}).value || '').trim(), text = String(($('#gtSecX') || {}).value || '');
+    if (!title) return toast(gtt('gtNeedTitle'), 'bad');
+    const g = ptSt().cur; if (!g) return;
+    const items = GTS.type === 'text' ? [] : gtCollectRows();
+    const r = await busy(el, () => rpcA('gtSecSave', { patientId: g.patient.id, id: el.dataset.id || '', title, text, type: GTS.type, items, opId: 'gs' + Date.now().toString(36) }));
+    if (!r || !r.ok) return;
+    closeModal(); toast(gtt('gtSaved'), 'ok'); ptOpen(g.patient.id, true);
+  },
+  gtSecDel: async el => {
+    if (!confirm(gtt('gtSecDelAsk'))) return;
+    const r = await busy(el, () => rpcA('gtSecDelete', { id: el.dataset.id }));
+    if (!r || !r.ok) return;
+    closeModal(); ptOpen(ptSt().cur.patient.id, true);
+  },
+  gtOk: async el => {
+    const x = gtFindExt(el.dataset.id); if (!x) return;
+    const d = JSON.parse(JSON.stringify(Object.assign({ title: x.title, date: x.docDate || (x.data || {}).date, org: x.org }, x.data || {})));
+    const path = String(el.dataset.path || '');
+    if (path === 'unclear') d.unclear = '';
+    else { const [k, i] = path.split('.'); if (d[k] && d[k][+i]) d[k][+i].unsure = false; }
+    await gtSaveExt(x, d, el);
+  },
+  gtFixDoc: el => {
+    const x = gtFindExt(el.dataset.id); if (!x) return;
+    const d = JSON.parse(JSON.stringify(Object.assign({ title: x.title, date: x.docDate || (x.data || {}).date, org: x.org }, x.data || {})));
+    S.ex = { pid: ptSt().cur.patient.id, docs: [d], skip: {}, photos: [], parts: [], fixId: x.id };
+    openModal('<h3>' + esc(gtt('gtFixTitle')) + '</h3>' + exDocHtml(d, 0, true) + '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="gtFixSave" data-id="' + esc(x.id) + '">' + esc(gtt('gtSaveBtn')) + '</button></div>');
+  },
+  gtFixSave: async el => {
+    const x = gtFindExt(el.dataset.id); if (!x || !S.ex) return;
+    exCollect();
+    const d = S.ex.docs[0];
+    if (await gtSaveExt(x, d, el)) { S.ex = null; closeModal(); }
+  }
+});
+
+/* =====================================================================
+ * v74 (9.47): «Дал лекарство» — № бланка → отделение → что дали; и «дал то, чего в отделении нет».
+ *  Саид, 27.10: «в разделе „Дал лекарство“ пишешь № бланка, потом отделение, потом что именно дал. И если того, что дал,
+ *  нет в наличии — это должно выделяться в отчёте по складу и в самом складе: использован препарат, которого в отделении нет».
+ *  1) Экран «Дал лекарство»: по шагам «1. № бланка» (поле «Кому» + кнопки открытых приёмов из v70) → «2. Отделение»
+ *     (по умолчанию — это отделение; можно выбрать другое или вписать) → «3. Что дали» (поиск, как раньше).
+ *     Отделение не своё — уходит в комментарий списания («отделение: …»).
+ *  2) Ничего не нашлось / «нет в наличии» → «⚠️ Дал, а в отделении этого нет»: название, сколько, единица — запись
+ *     «Использовано без остатка» (nsAdd). Остатки не меняются (ни минуса, ни выдуманной партии). Через очередь, с номером
+ *     операции: повтор не создаст вторую запись. «Отменить» — как у списания (пока 15 минут).
+ *     Прежнее «лежит здесь, но не внесено в учёт → сообщить админу» — ссылкой внизу этого окна.
+ *  3) Приём (бланк) указан — сервер сам дописывает в него строку «Дано» с пометкой «нет в отделении» (видно в приёме,
+ *     в GT/098, в отчёте по обращениям). Из приёма («＋ Дал лекарство» / «Дано») — та же кнопка.
+ *  4) «Что есть»: красная плашка «⚠️ Использовано, чего нет в отделении: N» → список (что, сколько, № бланка, отделение,
+ *     кто, когда) и «✓ Учтено» (кто привозит или админ). Отчёты «Остатки», «Дефицит», «Движение за месяц», «Расход» —
+ *     отдельный раздел «Использовано без остатка» (на экране, в PDF, в Google Таблице, в WhatsApp).
+ * ===================================================================== */
+const NS_T = {
+  ru: {
+    nsStep1: '1. № бланка', nsStep2: '2. Отделение', nsStep3: '3. Что дали', nsBlankPh: '🧾 № бланка (если есть) или имя',
+    nsDeptPh: 'Где дали', nsDeptOther: 'отделение: {d}',
+    nsBtnAny: '⚠️ Дал, а в отделении этого нет — записать', nsBtnItem: '⚠️ Дал, а этого нет — записать', nsFromVisit: '⚠️ Этого нет в отделении — записать отдельно',
+    nsTitle: 'Дал, а в отделении этого нет', nsHint: 'Остаток не изменится. Запись будет видна в «Что есть» и в отчётах, пока её не отметят «Учтено».',
+    nsBlank: '№ бланка', nsDept: 'Отделение', nsDrug: 'Что дали (название, дозировка)', nsQty: 'Сколько', nsUnit: 'Единица', nsNote: 'Комментарий (необязательно)',
+    nsSave: 'Записать ✓', nsSaved: 'Записано: {d} × {q}. В отделении этого нет — остаток не изменён.', nsUndone: 'Запись отменена.',
+    nsOld: 'Лекарство лежит здесь, но не внесено в учёт? — сообщить админу',
+    nsBanner: '⚠️ Использовано, чего нет в отделении: {n}', nsOpen: 'Открыть', nsListTitle: '⚠️ Использовано, чего нет в отделении',
+    nsListHint: 'Остатки этим не менялись. Когда разобрались (привезли, списали в другом отделении, внесли в учёт) — «✓ Учтено».',
+    nsResolve: '✓ Учтено', nsResolved: 'Отмечено: учтено.', nsPending: '⏳ ещё не отправлено', nsEmpty: 'Нет записей.',
+    nsTag: '⚠️ без остатка: {n}', nsRx: '⚠️ нет в отделении — не со склада', nsBy: '{who}, {when}',
+    nsRepTitle: 'ИСПОЛЬЗОВАНО БЕЗ ОСТАТКА ({n})', nsRepNote: '⚠️ Использовано то, чего в отделении нет: {n} (не учтено: {o}) — список в конце отчёта.',
+    nsTile: 'Без остатка', nsColDrug: 'Что дали', nsColBlank: '№ бланка', nsColDept: 'Отделение',
+    nsSt_open: 'не учтено', nsSt_resolved: 'учтено', nsRepH: '⚠️ Использовано без остатка',
+    susp_noStock: 'Дано без остатка (в отделении не было)',
+    E_NS_NOT_FOUND: 'Запись не найдена — обновите экран.', E_NS_UNDONE: 'Эту запись уже отменили.'
+  },
+  az: {
+    nsStep1: '1. Blank №', nsStep2: '2. Şöbə', nsStep3: '3. Nə verdiniz', nsBlankPh: '🧾 Blank № (varsa) və ya ad',
+    nsDeptPh: 'Harada verildi', nsDeptOther: 'şöbə: {d}',
+    nsBtnAny: '⚠️ Verdim, amma şöbədə bu yoxdur — qeyd et', nsBtnItem: '⚠️ Verdim, amma bu yoxdur — qeyd et', nsFromVisit: '⚠️ Bu şöbədə yoxdur — ayrıca qeyd et',
+    nsTitle: 'Verdim, amma şöbədə bu yoxdur', nsHint: 'Qalıq dəyişməyəcək. Qeyd «Nə var» bölməsində və hesabatlarda «Nəzərə alındı» qeyd olunana qədər görünəcək.',
+    nsBlank: 'Blank №', nsDept: 'Şöbə', nsDrug: 'Nə verildi (ad, doza)', nsQty: 'Nə qədər', nsUnit: 'Vahid', nsNote: 'Şərh (məcburi deyil)',
+    nsSave: 'Qeyd et ✓', nsSaved: 'Qeyd edildi: {d} × {q}. Şöbədə bu yoxdur — qalıq dəyişmədi.', nsUndone: 'Qeyd ləğv edildi.',
+    nsOld: 'Dərman buradadır, amma uçota salınmayıb? — adminə xəbər ver',
+    nsBanner: '⚠️ Şöbədə olmayan istifadə edilib: {n}', nsOpen: 'Aç', nsListTitle: '⚠️ Şöbədə olmayan istifadə edilib',
+    nsListHint: 'Qalıqlar bununla dəyişməyib. Aydınlaşdırdıqdan sonra (gətirildi, başqa şöbədə silindi, uçota salındı) — «✓ Nəzərə alındı».',
+    nsResolve: '✓ Nəzərə alındı', nsResolved: 'Qeyd olundu: nəzərə alındı.', nsPending: '⏳ hələ göndərilməyib', nsEmpty: 'Qeyd yoxdur.',
+    nsTag: '⚠️ qalıqsız: {n}', nsRx: '⚠️ şöbədə yoxdur — anbardan deyil', nsBy: '{who}, {when}',
+    nsRepTitle: 'QALIQSIZ İSTİFADƏ EDİLİB ({n})', nsRepNote: '⚠️ Şöbədə olmayan istifadə edilib: {n} (nəzərə alınmayıb: {o}) — siyahı hesabatın sonunda.',
+    nsTile: 'Qalıqsız', nsColDrug: 'Nə verildi', nsColBlank: 'Blank №', nsColDept: 'Şöbə',
+    nsSt_open: 'nəzərə alınmayıb', nsSt_resolved: 'nəzərə alınıb', nsRepH: '⚠️ Qalıqsız istifadə edilib',
+    susp_noStock: 'Qalıqsız verilib (şöbədə yox idi)',
+    E_NS_NOT_FOUND: 'Qeyd tapılmadı — ekranı yeniləyin.', E_NS_UNDONE: 'Bu qeyd artıq ləğv edilib.'
+  }
+};
+Object.assign(I18N.ru, NS_T.ru);
+Object.assign(I18N.az, NS_T.az);
+try {
+  OPS.NOSTOCK = ['⚠️ Дано без остатка', '⚠️ Qalıqsız verildi'];
+  OPS.NOSTOCK_OK = ['☑️ Без остатка — учтено', '☑️ Qalıqsız — nəzərə alındı'];
+  OPS.NOSTOCK_UNDO = ['↩️ Без остатка — отменено', '↩️ Qalıqsız — ləğv edildi'];
+  ['NOSTOCK', 'NOSTOCK_OK', 'NOSTOCK_UNDO'].forEach(k => { if (USER_COMMENT_OPS.indexOf(k) === -1) USER_COMMENT_OPS.push(k); });
+} catch (e) { }
+const NS_UNITS = ['amp', 'tab', 'vial', 'cap', 'neb', 'tube', 'pcs', 'pack', 'bottle', 'sachet', 'ml'];
+function nsUnitShort(u) { return u === 'ml' ? L(['мл', 'ml']) : unitShort(u); }
+function nsUnitLong(u) { return u === 'ml' ? L(['мл (миллилитры)', 'ml (millilitr)']) : unitLong(u); }
+
+(function () {
+  if ($('#nsCss')) return;
+  const s = document.createElement('style'); s.id = 'nsCss';
+  s.textContent =
+    '.ns-step{font-size:14.5px;font-weight:800;color:var(--ink);margin:4px 0 6px}' +
+    '#nsDeptWrap{margin:0 0 10px}#nsDeptWrap input{width:100%}' +
+    '.ns-btn{border-color:var(--red)!important;color:var(--red)!important;background:var(--red-soft)!important;font-weight:700}' +
+    '.ns-banner{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;width:100%;margin:0 0 10px;padding:12px 14px;border-radius:14px;background:var(--red-soft);color:var(--red);border:2px solid var(--red);font-weight:700;font-size:15px;line-height:1.25}' +
+    '.ns-banner .grow{flex:1}.ns-banner u{font-weight:800}' +
+    '.ns-row{padding:10px 0;border-bottom:1px solid var(--line)}.ns-row:last-child{border-bottom:0}.ns-row .t{font-weight:700}.ns-row .s{font-size:12.5px;color:var(--sub);margin-top:2px}' +
+    '.ns-row .acts2{display:flex;gap:8px;margin-top:6px}.ns-rx{color:var(--red);font-weight:700}' +
+    '.ns-rep{margin-top:14px;border:2px solid var(--red);border-radius:12px;padding:10px 12px;background:var(--red-soft)}.ns-rep h3{margin:0 0 6px;color:var(--red);font-size:15px}' +
+    '.ns-rep .rep-row{border-color:rgba(0,0,0,.08)}';
+  document.head.appendChild(s);
+})();
+
+/* ---------- отделение ---------- */
+function nsStoreNames() { const st = S.base && S.base.store; return st ? [st.nameRu, st.nameAz].filter(Boolean) : []; }
+function nsDeptDefault() { const st = S.base && S.base.store; return st ? (S.lang === 'az' ? (st.nameAz || st.nameRu) : st.nameRu) || '' : ''; }
+function nsDeptCur() { return S.nsDept && S.nsDept.store === S.storeId && S.nsDept.v ? S.nsDept.v : nsDeptDefault(); }
+function nsDeptIsOwn(v) { const n = normText(v); return !n || nsStoreNames().some(x => normText(x) === n); }
+function nsDeptOptions() {
+  const out = [];
+  const add = v => { v = String(v || '').trim(); if (v && out.every(x => normText(x) !== normText(v))) out.push(v); };
+  add(nsDeptDefault());
+  ((S.base && S.base.stores) || []).forEach(s => add(storeName(s)));
+  (LS.get('MED_NSDEPT', []) || []).forEach(add);
+  return out.slice(0, 20);
+}
+function nsDeptRemember(v) {
+  if (!v || nsDeptIsOwn(v)) return;
+  const l = (LS.get('MED_NSDEPT', []) || []).filter(x => normText(x) !== normText(v));
+  l.unshift(v); LS.set('MED_NSDEPT', l.slice(0, 10));
+}
+function nsDeptSet(v) { S.nsDept = { store: S.storeId, v: String(v || '').trim().slice(0, 80) }; }
+
+/* ---------- экран «Дал лекарство»: № бланка → отделение → что дали ---------- */
+(function () {
+  const scr = $('#scrSpend'); if (!scr) return;
+  const sb = scr.querySelector('.searchbar'), vb = scr.querySelector('.visit-bar');
+  if (!sb || !vb) return;
+  const s1 = document.createElement('div'); s1.className = 'ns-step'; s1.id = 'nsStep1';
+  const s2 = document.createElement('div'); s2.className = 'ns-step'; s2.id = 'nsStep2';
+  const dw = document.createElement('div'); dw.id = 'nsDeptWrap';
+  dw.innerHTML = '<input type="text" id="nsDept" autocomplete="off" maxlength="80" list="nsDeptList"><datalist id="nsDeptList"></datalist>';
+  const s3 = document.createElement('div'); s3.className = 'ns-step'; s3.id = 'nsStep3';
+  scr.insertBefore(s1, sb);
+  scr.insertBefore(vb, sb);
+  scr.insertBefore(s2, sb);
+  scr.insertBefore(dw, sb);
+  scr.insertBefore(s3, sb);
+  const inp = $('#nsDept');
+  inp.addEventListener('input', () => nsDeptSet(inp.value));
+  inp.addEventListener('change', () => { nsDeptSet(inp.value); nsDeptRemember(inp.value.trim()); });
+  inp.addEventListener('focus', () => { try { inp.select(); } catch (e) { } });
+})();
+function nsSpendRender() {
+  const scr = $('#scrSpend'); if (!scr) return;
+  const st = (id, k) => { const el = $('#' + id); if (el) el.textContent = t(k); };
+  st('nsStep1', 'nsStep1'); st('nsStep2', 'nsStep2'); st('nsStep3', 'nsStep3');
+  const vi = $('#visitInp'); if (vi) vi.placeholder = t('nsBlankPh');
+  const di = $('#nsDept');
+  if (di) {
+    di.placeholder = t('nsDeptPh');
+    if (document.activeElement !== di) di.value = nsDeptCur();
+    di.classList.toggle('ns-other', !nsDeptIsOwn(di.value));
+    const dl = $('#nsDeptList'); if (dl) dl.innerHTML = nsDeptOptions().map(v => '<option value="' + esc(v) + '"></option>').join('');
+  }
+  if (!can('spend')) return;
+  // «нет в учёте / нет в наличии» → запись «без остатка» (в простом виде — вместо прежней кнопки, в подробном — рядом)
+  const simple = typeof tdActive === 'function' && tdActive();
+  $$('#spendList [data-act=reportUseModal]').forEach(b => {
+    const item = b.dataset.item || '', name = b.dataset.name || '';
+    if (simple) {
+      b.dataset.act = 'nsOpen';
+      b.textContent = t(item ? 'nsBtnItem' : 'nsBtnAny');
+      b.classList.add('ns-btn');
+    } else if (!b.previousElementSibling || !b.previousElementSibling.classList.contains('ns-btn')) {
+      b.insertAdjacentHTML('beforebegin', '<button type="button" class="btn ' + (item ? 'small ' : 'block ') + 'ghost ns-btn" data-act="nsOpen" data-item="' + esc(item) + '" data-name="' + esc(name) + '"' + (item ? '' : ' style="margin-bottom:6px"') + '>' + esc(t(item ? 'nsBtnItem' : 'nsBtnAny')) + '</button>');
+    }
+  });
+}
+(function () {
+  const ors = window.renderSpend;
+  if (typeof ors === 'function') window.renderSpend = function () { const r = ors.apply(this, arguments); try { nsSpendRender(); } catch (e) { console.error(e); } return r; };
+  // отделение не своё — в комментарий списания (у строгого учёта комментарий — не замена № бланка)
+  const ods = window.doSpend;
+  if (typeof ods === 'function') window.doSpend = function (lot, it, qty, reason, comment, visit, usedAt, witnessId) {
+    try {
+      const d = S.screen === 'spend' ? nsDeptCur() : '';
+      if (reason === 'PATIENT' && d && !nsDeptIsOwn(d) && (!(it && it.strict) || comment || String(visit || '').trim())) {
+        comment = ((comment ? comment + '; ' : '') + 'отделение: ' + d).slice(0, 300);
+        nsDeptRemember(d);
+      }
+    } catch (e) { }
+    return ods.call(this, lot, it, qty, reason, comment, visit, usedAt, witnessId);
+  };
+  const osw = window.switchStore;
+  if (typeof osw === 'function') window.switchStore = function () { S.nsDept = null; return osw.apply(this, arguments); };
+})();
+
+/* ---------- окно «Дал, а в отделении этого нет» ---------- */
+function nsModal(o) {
+  if (!needDoctor()) return;
+  o = o || {};
+  const it = o.itemId ? itemById(o.itemId) : null;
+  const drug = o.name || (it ? (it.name + ' ' + (it.dosage || '')).trim() : '');
+  const unit = it && NS_UNITS.indexOf(it.unit) !== -1 ? it.unit : (o.unit || 'pcs');
+  const blank = o.blankNo !== undefined ? o.blankNo : (S.visit || '');
+  S.nsCtx = { itemId: it ? it.id : '', formId: o.formId || '', rxId: o.rxId || '', fromForm: !!o.fromForm };
+  openModal('<h3>⚠️ ' + esc(t('nsTitle')) + '</h3><div class="info">' + esc(t('nsHint')) + '</div>' +
+    '<div class="field"><label>' + esc(t('nsBlank')) + '</label><input type="text" id="nsBlankM" maxlength="60" autocomplete="off" value="' + esc(blank) + '"' + (o.fromForm ? ' readonly' : '') + '></div>' +
+    '<div class="field"><label>' + esc(t('nsDept')) + '</label><input type="text" id="nsDeptM" maxlength="80" autocomplete="off" list="nsDeptListM" value="' + esc(o.dept || nsDeptCur()) + '"><datalist id="nsDeptListM">' + nsDeptOptions().map(v => '<option value="' + esc(v) + '"></option>').join('') + '</datalist></div>' +
+    '<div class="field"><label>' + esc(t('nsDrug')) + '</label><input type="text" id="nsDrugM" maxlength="200" autocomplete="off" value="' + esc(drug) + '"></div>' +
+    '<div class="grid2"><div class="field"><label>' + esc(t('nsQty')) + '</label><input type="number" id="nsQtyM" min="0" step="any" inputmode="decimal" value="1"></div>' +
+    '<div class="field"><label>' + esc(t('nsUnit')) + '</label><select id="nsUnitM">' + NS_UNITS.map(u => '<option value="' + u + '"' + (u === unit ? ' selected' : '') + '>' + esc(nsUnitLong(u)) + '</option>').join('') + '</select></div></div>' +
+    '<div class="field"><label>' + esc(t('nsNote')) + '</label><input type="text" id="nsNoteM" maxlength="300" autocomplete="off"></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="nsSend">' + esc(t('nsSave')) + '</button></div>' +
+    (o.fromForm ? '' : '<button type="button" class="btn small ghost block" style="margin-top:10px" data-act="nsOld" data-item="' + esc(it ? it.id : '') + '" data-name="' + esc(o.name || '') + '">' + esc(t('nsOld')) + '</button>'));
+  setTimeout(() => { const el = drug ? $('#nsQtyM') : $('#nsDrugM'); if (el) { el.focus(); try { el.select(); } catch (e) { } } }, 60);
+}
+function nsRid(opId) { return 'ns' + String(opId).replace(/[^A-Za-z0-9]/g, '').slice(-20); }
+function nsSend() {
+  const c = S.nsCtx || {};
+  const drug = ($('#nsDrugM').value || '').trim().slice(0, 200);
+  if (!drug) { $('#nsDrugM').focus(); return toast(t('E_NAME_REQUIRED'), 'bad'); }
+  const qty = Math.round(Number(String($('#nsQtyM').value || '').replace(',', '.')) * 100) / 100;
+  if (!isFinite(qty) || qty <= 0 || qty > 100000) { $('#nsQtyM').focus(); return toast(t('E_BAD_QTY', { min: 1, max: 100000 }), 'bad'); }
+  const unit = $('#nsUnitM').value;
+  const blankNo = ($('#nsBlankM').value || '').trim().slice(0, 60);
+  const dept = ($('#nsDeptM').value || '').trim().slice(0, 80);
+  const note = ($('#nsNoteM').value || '').trim().slice(0, 300);
+  // приём: из самого приёма — он; из «Дал лекарство» — выбранный в «Кому» (номер тот же); иначе сервер поищет открытый приём с этим № бланка
+  let formId = c.formId || '';
+  if (!formId && S.qvLink && S.qvLink.store === S.storeId && S.qvLink.visit === blankNo) formId = S.qvLink.id;
+  if (formId && typeof fData === 'function' && typeof fAllergyHit === 'function') {
+    const hit = fAllergyHit(fData(formId), drug);
+    if (hit && !confirm(t('fRxAllergy', { a: hit }))) return;
+  }
+  if (c.fromForm && typeof fFlush === 'function') fFlush(); // приём — раньше записи (новый приём сначала создаётся на сервере)
+  if (!c.fromForm) {
+    if (blankNo !== S.visit) { setVisit(blankNo); const vi = $('#visitInp'); if (vi) vi.value = blankNo; }
+    if (S.screen === 'spend') nsDeptSet(dept);
+  }
+  nsDeptRemember(dept);
+  closeModal();
+  const op = enqueue('nsAdd', { doctorId: S.docId, blankNo, formId, rxId: c.rxId || '', dept, drug, itemId: c.itemId || '', qty, unit, note }, { label: drug });
+  S.mine.push({ opId: op.opId, action: 'nsAdd', type: 'NOSTOCK', doctorId: S.docId, lotId: '', itemId: '', locationId: '', name: drug, qty, spent: 0, delta: -qty, ts: Date.now(), status: 'pending', visit: blankNo });
+  saveMine();
+  if (S.screen === 'spend') renderMine();
+  // в открытом приёме строка видна сразу (сервер запишет ту же строку)
+  if (formId && c.fromForm) nsMirrorRow(formId, c.rxId || nsRid(op.opId), { drug, ord: String(Date.now()), byName: S.me.name, given: true, givenAt: nowLocal().replace('T', ' '), givenBy: S.me.id, givenByName: S.me.name, qty, unit, noStock: true, nsOp: op.opId, dept }, true);
+  toast(t('nsSaved', { d: drug, q: qty + ' ' + nsUnitShort(unit) }) + (!S.online ? ' ' + t('queuedToast') : ''), '', { label: t('undo'), act: 'undo', op: op.opId }, 9000);
+  if (S.screen === 'stock') renderStock();
+}
+/** Строка «Дано» в памяти телефона (копия с сервера) — без ожидания перечитывания приёма. */
+function nsMirrorRow(formId, rid, row, merge) {
+  const c = typeof fCache === 'function' ? fCache() : null; if (!c) return;
+  const f = c.full && c.full[formId]; if (!f) return;
+  f.data = f.data || {}; f.data.rx = f.data.rx || {};
+  f.data.rx[rid] = merge && f.data.rx[rid] ? Object.assign({}, f.data.rx[rid], row) : Object.assign({}, row);
+  fSaveCache();
+  if (S.screen === 'forms' && S.fv && S.fv.id === formId) fRenderEditor(true);
+}
+/** Убрать / снять «дано» у строки этой записи в памяти телефона. */
+function nsMirrorUndo(opId, remove) {
+  const c = typeof fCache === 'function' ? fCache() : null; if (!c) return;
+  let ch = false, open = '';
+  Object.keys(c.full || {}).forEach(id => {
+    const rx = c.full[id] && c.full[id].data && c.full[id].data.rx; if (!rx) return;
+    Object.keys(rx).forEach(k => {
+      const x = rx[k]; if (!x || x.nsOp !== opId) return;
+      if (remove) { if (x.noStock && !x.spendOp) { if (k.indexOf('ns') === 0) delete rx[k]; else { x.given = false; delete x.noStock; delete x.nsOp; delete x.qty; } } }
+      else if (x.given) { x.given = false; x.nsUndone = nowLocal().replace('T', ' '); x.qtyUndone = x.qty; delete x.qty; }
+      ch = true; open = id;
+    });
+  });
+  if (ch) { fSaveCache(); if (S.screen === 'forms' && S.fv && S.fv.id === open) fRenderEditor(true); }
+}
+DONE.nsAdd = function (op, r) {
+  const x = r && r.result;
+  const p = op.payload || {};
+  if (x && x.form && x.form.id) nsMirrorRow(x.form.id, x.form.rid, x.form.row, false);
+  else if (p.formId) nsMirrorUndo(op.opId, true); // сервер в приём не дописал (закрыт, нет прав) — запись есть, строки нет
+};
+FAIL.nsAdd = function (op) { try { nsMirrorUndo(op.opId, true); } catch (e) { } };
+DONE.nsResolve = function () { toast(t('nsResolved')); };
+
+/* ---------- «Отменить» записи «без остатка»: та же кнопка, та же операция undo ---------- */
+(function () {
+  const ou = window.undoOpInner;
+  if (typeof ou === 'function') window.undoOpInner = function (opId) {
+    const m = S.mine.find(x => x.opId === opId);
+    if (!m || m.action !== 'nsAdd') return ou.apply(this, arguments);
+    if (m.undone || m.undoPending) return;
+    const qi = S.queue.findIndex(q => q.opId === opId);
+    const q = qi !== -1 ? S.queue[qi] : null;
+    // точно не уходило на сервер — убираем с телефона; иначе отмена идёт на сервер следом за записью
+    if (q && !q.sent && !q.attempts && S.inFlight !== opId && !isDone(opId)) {
+      m.undone = true; saveMine();
+      S.queue.splice(qi, 1); markDone(opId); saveQueue();
+      nsMirrorUndo(opId, true);
+      recompute(); renderAll();
+      toast(t('nsUndone'));
+      return;
+    }
+    m.undoPending = true; saveMine();
+    enqueue('undo', { storeId: m.storeId || S.storeId, targetOpId: opId }, { label: m.name });
+  };
+  const od = DONE.undo;
+  DONE.undo = function (op) {
+    const tid = op && op.payload && op.payload.targetOpId;
+    const m = S.mine.find(x => x.opId === tid);
+    if (!m || m.action !== 'nsAdd') return od.apply(this, arguments);
+    m.undone = true; m.undoPending = false; saveMine();
+    nsMirrorUndo(tid, false);
+    toast(t('nsUndone'));
+  };
+  // «Мои последние действия»: у записи «без остатка» — тоже «Отменить» (15 минут)
+  const orm = window.renderMine;
+  if (typeof orm === 'function') window.renderMine = function () {
+    const r = orm.apply(this, arguments);
+    try {
+      const list = S.mine.filter(m => m.doctorId === S.docId && (!m.storeId || m.storeId === S.storeId)).slice(-8).reverse();
+      const rows = $$('#mineList .list-row');
+      list.forEach((m, i) => {
+        const row = rows[i];
+        if (!row || m.action !== 'nsAdd' || m.undone || m.undoPending || m.status === 'rejected' || Date.now() - m.ts >= UNDO_MS || row.querySelector('[data-act=undo]')) return;
+        row.insertAdjacentHTML('beforeend', '<button class="btn small ghost" data-act="undo" data-op="' + esc(m.opId) + '">' + esc(t('undo')) + '</button>');
+      });
+    } catch (e) { }
+    return r;
+  };
+})();
+
+/* ---------- из приёма: «＋ Дал лекарство» и «Дано» — та же кнопка ---------- */
+(function () {
+  const add = () => {
+    if (!can('spend')) return;
+    const m = $('#modalRoot .modal'); if (!m || m.querySelector('[data-act=nsFromVisit]')) return;
+    const acts = m.querySelector('.acts');
+    const html = '<button type="button" class="btn ghost block ns-btn" style="margin:4px 0 10px" data-act="nsFromVisit">' + esc(t('nsFromVisit')) + '</button>';
+    if (acts) acts.insertAdjacentHTML('beforebegin', html); else m.insertAdjacentHTML('beforeend', html);
+  };
+  ['qvGiveModal', 'fGiveModal'].forEach(n => {
+    const o = window[n];
+    if (typeof o === 'function') window[n] = function () { const r = o.apply(this, arguments); try { add(); } catch (e) { } return r; };
+  });
+})();
+function nsFromVisit() {
+  if (!S.fv) return;
+  const id = S.fv.id;
+  const d = fData(id);
+  const rid = S.fGive && S.fGive.rid ? S.fGive.rid : '';
+  const row = rid && d.rx ? d.rx[rid] : null;
+  const q = (($('#fgQ') || {}).value || '').trim();
+  closeModal();
+  nsModal({ name: (row && row.drug) || q, formId: id, rxId: row && !row.given ? rid : '', blankNo: d.blankNo || '', fromForm: true });
+}
+// строка «Дано» без остатка — в приёме подписана, а не красным «не списано»
+(function () {
+  const ore = window.fRenderEditor;
+  if (typeof ore !== 'function') return;
+  window.fRenderEditor = function () {
+    const r = ore.apply(this, arguments);
+    try { nsMarkRx(); } catch (e) { }
+    return r;
+  };
+})();
+function nsMarkRx() {
+  if (!S.fv) return;
+  const rows = rowsOf(fData(S.fv.id), 'rx');
+  const lbl = r => '<span class="ns-rx">' + esc(t('nsRx')) + '</span>' + (r.qty ? ' · ' + esc(String(r.qty) + ' ' + nsUnitShort(r.unit || 'pcs')) : '') + (r.dept && !nsDeptIsOwn(r.dept) ? ' · ' + esc(t('nsDeptOther', { d: r.dept })) : '');
+  const qv = $$('#formsBox .qv .qv-rx');
+  if (qv.length === rows.length) rows.forEach((r, i) => { if (r.noStock && r.given && !r.spendOp) { const m = qv[i].querySelector('.muted'); if (m) m.innerHTML = lbl(r); } });
+  $$('#formsBox .f-rx').forEach(el => {
+    const inp = el.querySelector('[data-rid]'); if (!inp) return;
+    const r = rows.find(x => x._id === inp.dataset.rid);
+    if (!r || !r.noStock || !r.given || r.spendOp) return;
+    const red = el.querySelector('.note span[style*="--red"]');
+    if (red) red.outerHTML = lbl(r);
+  });
+}
+
+/* ---------- «Что есть»: плашка и список ---------- */
+function nsCanResolve() { return can(['receive', 'edit']) || isOwner(); }
+function nsOpenList() {
+  const st = S.base && S.base.store && S.base.store.id === S.storeId ? S.base : null;
+  const list = ((st && st.nostock) || []).map(x => Object.assign({}, x));
+  const have = {}, gone = {}, resolving = {};
+  list.forEach(x => { have[x.opId] = 1; });
+  S.mine.forEach(m => { if (m.action === 'nsAdd' && (m.undone || m.undoPending)) gone[m.opId] = 1; });
+  S.queue.forEach(op => {
+    if (op.action === 'undo' && op.payload) gone[op.payload.targetOpId] = 1;
+    if (op.action === 'nsResolve' && op.payload) resolving[op.payload.id] = 1;
+  });
+  S.queue.filter(op => op.action === 'nsAdd' && op.payload && op.payload.storeId === S.storeId && !have[op.opId]).forEach(op => {
+    const p = op.payload;
+    list.unshift({ id: '', opId: op.opId, time: new Date(op.ts + 4 * 3600e3).toISOString().slice(0, 16).replace('T', ' '), blankNo: p.blankNo, dept: p.dept, drug: p.drug, itemId: p.itemId, qty: p.qty, unit: p.unit, note: p.note, byName: S.me ? S.me.name : '', status: 'open', pending: true });
+  });
+  return list.filter(x => !gone[x.opId] && !resolving[x.id]);
+}
+function nsStockRender() {
+  const scr = $('#scrStock'); if (!scr) return;
+  const list = nsOpenList();
+  let b = $('#nsBanner');
+  if (!list.length) { if (b) b.remove(); return; }
+  if (!b) {
+    const tiles = $('#tyTiles');
+    const html = '<button type="button" class="ns-banner" id="nsBanner" data-act="nsList"></button>';
+    if (tiles) tiles.insertAdjacentHTML('afterend', html); else scr.insertAdjacentHTML('afterbegin', html);
+    b = $('#nsBanner');
+  }
+  b.innerHTML = '<span class="grow">' + esc(t('nsBanner', { n: list.length })) + '</span><u>' + esc(t('nsOpen')) + ' ›</u>';
+  // у карточки препарата (если выбрали её) — та же пометка
+  const by = {};
+  list.forEach(x => { if (x.itemId) by[x.itemId] = (by[x.itemId] || 0) + (Number(x.qty) || 0); });
+  Object.keys(by).forEach(id => {
+    const btn = $('#stockList .more-btn[data-id="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
+    const row = btn && btn.closest('.brand-row');
+    const tags = row && row.querySelector('.row.wrap');
+    if (tags && !tags.querySelector('.ns-tag')) tags.insertAdjacentHTML('beforeend', '<span class="tag red ns-tag">' + esc(t('nsTag', { n: by[id] })) + '</span>');
+  });
+}
+(function () {
+  const ors = window.renderStock;
+  if (typeof ors === 'function') window.renderStock = function () { const r = ors.apply(this, arguments); try { nsStockRender(); } catch (e) { console.error(e); } return r; };
+})();
+function nsRowHtml(x, withBtn) {
+  const meta = [x.blankNo ? '🧾 №' + x.blankNo : '', x.dept ? '🏥 ' + x.dept : '', t('nsBy', { who: x.byName || '—', when: fmtDt(x.time) })].filter(Boolean).join(' · ');
+  return '<div class="ns-row"><div class="t">💊 ' + esc(x.drug) + ' × ' + esc(String(x.qty)) + ' ' + esc(nsUnitShort(x.unit)) + (x.pending ? ' <span class="tag amber">' + esc(t('nsPending')) + '</span>' : '') + '</div>' +
+    '<div class="s">' + esc(meta) + '</div>' + (x.note ? '<div class="s">📝 ' + esc(x.note) + '</div>' : '') +
+    (withBtn && x.id && !x.pending ? '<div class="acts2"><button type="button" class="btn small primary" data-act="nsResolve" data-id="' + esc(x.id) + '">' + esc(t('nsResolve')) + '</button></div>' : '') + '</div>';
+}
+function nsListModal() {
+  const list = nsOpenList();
+  if (!list.length) { closeModal(); return; }
+  const can2 = nsCanResolve();
+  openModal('<h3>' + esc(t('nsListTitle')) + '</h3><div class="info">' + esc(t('nsListHint')) + '</div>' +
+    '<div id="nsListBox">' + list.map(x => nsRowHtml(x, can2)).join('') + '</div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+}
+function nsResolve(el) {
+  if (!nsCanResolve()) return;
+  const id = el.dataset.id;
+  const x = nsOpenList().find(r => r.id === id); if (!x) return;
+  enqueue('nsResolve', { id }, { label: x.drug });
+  if ($('#nsListBox')) { if (nsOpenList().length) nsListModal(); else closeModal(); }
+}
+
+/* ---------- отчёты: отдельный раздел «Использовано без остатка» ---------- */
+function nsRepList(r) { return r && Array.isArray(r.noStock) ? r.noStock : []; }
+(function () {
+  const ot = window.reportTable;
+  if (typeof ot === 'function') window.reportTable = function (r) {
+    const tb = ot.apply(this, arguments);
+    try {
+      const ns = nsRepList(r);
+      if (!ns.length || !tb) return tb;
+      const n = Math.max(8, (tb.header || []).length);
+      const pad = a => a.concat(new Array(Math.max(0, n - a.length)).fill(''));
+      const open = ns.filter(x => x.status === 'open').length;
+      tb.rows = (tb.rows || []).concat([pad([''])], [pad(['⚠️ ' + t('nsRepTitle', { n: ns.length })])],
+        [pad([t('nsColDrug'), t('colQty'), t('colUnit'), t('nsColBlank'), t('nsColDept'), t('colDoctor'), t('colTime'), t('colStatus')])],
+        ns.map(x => pad([x.drug, x.qty, nsUnitShort(x.unit), x.blankNo || '', x.dept || '', x.byName || '', fmtDt(x.time), t('nsSt_' + x.status) + (x.status === 'resolved' && x.resolvedBy ? ' (' + x.resolvedBy + ')' : '')])));
+      tb.notes = (tb.notes || []).concat([t('nsRepNote', { n: ns.length, o: open })]);
+    } catch (e) { console.error(e); }
+    return tb;
+  };
+  const om = window.reportModel;
+  if (typeof om === 'function') window.reportModel = function (r) {
+    const m = om.apply(this, arguments);
+    try {
+      const ns = nsRepList(r);
+      if (ns.length && m) {
+        const open = ns.filter(x => x.status === 'open').length;
+        if (typeof tileHtml === 'function') m.tiles.push(tileHtml(ns.length, t('nsTile'), open ? 'crit' : 'warn'));
+        m.body = (m.body || '') + nsRepHtml(r);
+      }
+    } catch (e) { console.error(e); }
+    return m;
+  };
+  const orr = window.renderReport;
+  if (typeof orr === 'function') window.renderReport = function () {
+    const res = orr.apply(this, arguments);
+    try {
+      const r = S.report, box = $('#repOut');
+      if (r && box && nsRepList(r).length && !box.querySelector('.ns-rep')) box.insertAdjacentHTML('beforeend', nsRepHtml(r));
+    } catch (e) { }
+    return res;
+  };
+  const os = window.suspText;
+  if (typeof os === 'function') window.suspText = function (x) {
+    if (x && x.kind === 'noStock') return t('suspRx', { d: x.drug || '', b: x.blank || '—' });
+    return os.apply(this, arguments);
+  };
+})();
+function nsRepHtml(r) {
+  const ns = nsRepList(r);
+  return '<div class="ns-rep"><h3>' + esc(t('nsRepH')) + ' (' + ns.length + ')</h3>' +
+    ns.map(x => '<div class="rep-row"><div class="t">' + esc(x.drug) + ' × ' + esc(String(x.qty)) + ' ' + esc(nsUnitShort(x.unit)) +
+      ' <span class="tag ' + (x.status === 'open' ? 'red' : 'green') + '">' + esc(t('nsSt_' + x.status)) + '</span></div>' +
+      '<div class="s">' + esc([x.blankNo ? '№' + x.blankNo : '', x.dept, x.byName, fmtDt(x.time), x.status === 'resolved' && x.resolvedBy ? '✓ ' + x.resolvedBy : ''].filter(Boolean).join(' · ')) + '</div></div>').join('') + '</div>';
+}
+
+Object.assign(H, {
+  nsOpen: el => nsModal({ itemId: el.dataset.item || '', name: el.dataset.name || (S.spend && S.spend.q ? S.spend.q.trim() : '') }),
+  nsSend: () => nsSend(),
+  nsOld: el => { closeModal(); reportUseModal({ itemId: el.dataset.item || '', name: el.dataset.name || '' }); },
+  nsFromVisit: () => nsFromVisit(),
+  nsList: () => nsListModal(),
+  nsResolve: el => nsResolve(el)
 });
 
 
