@@ -35051,7 +35051,7 @@ Object.assign(I18N.az, SM_T.az);
 function smCloseCommit() {
   const p = S.smClose; if (!p) return;
   clearTimeout(p.timer); S.smClose = null;
-  fQueue('formSave', { id: p.id, patch: {}, close: true }, t('formsTitle') + ' №' + p.blank);
+  fQueue('formSave', Object.assign({ id: p.id, patch: {}, close: true }, p.storeId ? { storeId: p.storeId } : {}), t('formsTitle') + ' №' + p.blank);
   if (S.screen === 'forms' && S.fv && S.fv.id === p.id) fRenderEditor(true);
   if (!S.online) toast(t('fQueuedToast'));
 }
@@ -35064,7 +35064,7 @@ function smCloseForm() {
   const dw = fDupWarn(id);
   if (dw.length && !confirm(t('fDupConfirm', { w: dw.map(x => '• ' + x.text).join('\n') }))) return; // похожая форма — это настоящее предупреждение, оставляем
   fFlush();
-  S.smClose = { id, blank: d.blankNo, timer: setTimeout(smCloseCommit, window.SM_CLOSE_MS || 8000) };
+  S.smClose = { id, blank: d.blankNo, storeId: S.fv.storeId || S.storeId, timer: setTimeout(smCloseCommit, window.SM_CLOSE_MS || 8000) };
   const cb = $('[data-act=fClose]'); if (cb) { cb.disabled = true; cb.textContent = t('smClosedNow'); }
   toast(t('smClosedUndo', { n: d.blankNo }), '', { act: 'smUndoClose', label: t('undo') }, window.SM_CLOSE_MS || 8000);
 }
@@ -35440,6 +35440,455 @@ Object.assign(H, {
     profileModal();
   }
 });
+
+/* =====================================================================
+ * v70 (9.43): переделка интерфейса, этап 3 — ⚡ быстрый приём (план «Интерфейс_третий_взгляд_словарь_27-10»).
+ *  90 % обращений медпункта простые (кашель, давление, порез, живот), а бланк TƏBİB — 11 разделов. Поэтому в простом виде
+ *  открытый приём показывается одним коротким экраном: кто → что беспокоит (кнопки) → цифры (цифровая клавиатура) →
+ *  что дал → чем закончилось → «Готово ✓». Полный бланк — одной кнопкой, данные те же (это одна и та же форма).
+ *  Учёт — прежним путём, без нового кода списания:
+ *   - «＋ Дал лекарство» в приёме = назначение + «Дано» (fGiveGo): сначала сохраняется форма, потом одна операция списания
+ *     с номером операции (повтор не спишет дважды), партия — выбранная, просроченные и временные не предлагаются;
+ *   - «Дал лекарство» (экран склада) → «Кому» — кнопки открытых приёмов: в журнал уходит номер бланка (без ФИО), а в сам
+ *     приём дописывается строка «Дано» с той же операцией списания (видно в приёме и в отчёте по обращениям).
+ *  Закрыть приём — как раньше: нужен № бланка, имя и исход. После «Готово» — экран «что дальше» и 8 с «Отменить».
+ *  «Норму» цифрами не подставляем: в документ попадает только то, что измерили.
+ * ===================================================================== */
+const QV_T = {
+  ru: {
+    qvTitle: '⚡ Быстрый приём', qvFull: '📄 Полный бланк (TƏBİB)', qvQuick: '⚡ Быстрый приём', qvBlankPh: 'можно вписать позже',
+    qvWho: 'Кто', qvName: 'Имя, фамилия', qvMore: 'Дата рождения, FİN', qvAllergy: 'Аллергия', qvAllergyNone: 'Аллергии нет',
+    qvWhat: 'Что беспокоит', qvComplPh: 'своими словами — или нажмите кнопку выше',
+    qvNums: 'Цифры', qvBp: 'Давление', qvPulse: 'Пульс', qvTemp: 't°', qvSpo2: 'SpO₂', qvGlu: 'Сахар',
+    qvGave: 'Что дал', qvGiveBtn: '＋ Дал лекарство', qvNoGave: 'Пока ничего.', qvFromStock: 'со склада', qvOwnMark: 'своё у пациента / не со склада', qvNotSpent: 'не списано',
+    qvDx: 'Диагноз (необязательно)', qvEnd: 'Чем закончилось', qvInForm: 'В бланке: «{t}»', qvOffH: 'Освобождён на, часов', qvOtherEnd: 'Другое… (полный бланк)',
+    qvEndBack: 'Вернулся к работе', qvEndOff: 'Освобождён от работы', qvEndAsm: 'В поликлинику (ASM)', qvEndHosp: 'Госпитализирован', qvEndEvac: 'Эвакуирован',
+    qvDone: 'Готово ✓', qvDoneTitle: '✓ Приём №{n} закрыт', qvDoneSub: '8 секунд можно отменить.', qvNext: '＋ Следующий пациент', qvHome: '🏠 На главный', qvOpenAgain: 'Открыть этот приём',
+    qvHist: 'Был раньше: {n}', qvHistAl: '⚠️ Аллергия в прошлых приёмах: {a}',
+    qvGiveTitle: 'Что дали?', qvGiveSearch: 'Название или МНН', qvGiveFreq: 'Часто даю:', qvGiveOk: 'Дал ✓', qvWhenOther: 'Другое время',
+    qvTo: 'Кому:', qvToNone: 'без приёма', qvLinked: '→ в приём №{n}',
+    qc_head: 'Головная боль', qc_bp: 'Давление', qc_cold: 'Простуда, кашель', qc_fever: 'Температура', qc_belly: 'Боль в животе', qc_inj: 'Травма', qc_allergy: 'Аллергия', qc_back: 'Боль в спине'
+  },
+  az: {
+    qvTitle: '⚡ Sürətli qəbul', qvFull: '📄 Tam blank (TƏBİB)', qvQuick: '⚡ Sürətli qəbul', qvBlankPh: 'sonra yazmaq olar',
+    qvWho: 'Kim', qvName: 'Ad, soyad', qvMore: 'Doğum tarixi, FİN', qvAllergy: 'Allergiya', qvAllergyNone: 'Allergiya yoxdur',
+    qvWhat: 'Nə narahat edir', qvComplPh: 'öz sözlərinizlə — və ya yuxarıdakı düyməni basın',
+    qvNums: 'Göstəricilər', qvBp: 'Təzyiq', qvPulse: 'Nəbz', qvTemp: 't°', qvSpo2: 'SpO₂', qvGlu: 'Şəkər',
+    qvGave: 'Nə verdim', qvGiveBtn: '＋ Dərman verdim', qvNoGave: 'Hələ heç nə.', qvFromStock: 'anbardan', qvOwnMark: 'pasiyentin özününkü / anbardan deyil', qvNotSpent: 'silinməyib',
+    qvDx: 'Diaqnoz (məcburi deyil)', qvEnd: 'Nəticə', qvInForm: 'Blankda: «{t}»', qvOffH: 'İşdən azad, saat', qvOtherEnd: 'Digər… (tam blank)',
+    qvEndBack: 'İşə qayıtdı', qvEndOff: 'İşdən azad edildi', qvEndAsm: 'Poliklinikaya (ASM)', qvEndHosp: 'Xəstəxanaya yerləşdirildi', qvEndEvac: 'Təxliyə edildi',
+    qvDone: 'Hazırdır ✓', qvDoneTitle: '✓ №{n} qəbul bağlandı', qvDoneSub: '8 saniyə ərzində geri almaq olar.', qvNext: '＋ Növbəti pasiyent', qvHome: '🏠 Əsas ekrana', qvOpenAgain: 'Bu qəbulu aç',
+    qvHist: 'Əvvəl olub: {n}', qvHistAl: '⚠️ Əvvəlki qəbullarda allergiya: {a}',
+    qvGiveTitle: 'Nə verdiniz?', qvGiveSearch: 'Ad və ya təsiredici maddə', qvGiveFreq: 'Tez-tez verirəm:', qvGiveOk: 'Verdim ✓', qvWhenOther: 'Başqa vaxt',
+    qvTo: 'Kimə:', qvToNone: 'qəbulsuz', qvLinked: '→ №{n} qəbula',
+    qc_head: 'Baş ağrısı', qc_bp: 'Təzyiq', qc_cold: 'Soyuqdəymə, öskürək', qc_fever: 'Hərarət', qc_belly: 'Qarın ağrısı', qc_inj: 'Travma', qc_allergy: 'Allergiya', qc_back: 'Bel ağrısı'
+  }
+};
+Object.assign(I18N.ru, QV_T.ru);
+Object.assign(I18N.az, QV_T.az);
+const QV_COMPL = ['head', 'bp', 'cold', 'fever', 'belly', 'inj', 'allergy', 'back'];
+/** Исход в два слова → официальный исход бланка + итог для работодателя (как в блоке «Для работодателя»). */
+const QV_END = [
+  ['back', 'qvEndBack', { outcome: 'home', vrWork: 'back' }],
+  ['off', 'qvEndOff', { outcome: 'home', vrWork: 'off' }],
+  ['asm', 'qvEndAsm', { outcome: 'asm' }],
+  ['hosp', 'qvEndHosp', { outcome: 'adm', vrWork: 'hosp' }],
+  ['evac', 'qvEndEvac', { outcome: 'transfer', vrWork: 'evac' }]
+];
+function qvEndOf(d) {
+  const o = String(d.outcome || ''), w = String(d.vrWork || '');
+  if (o === 'home' && w === 'back') return 'back';
+  if (o === 'home' && w === 'off') return 'off';
+  if (o === 'asm' && !w) return 'asm';
+  if (o === 'adm' && w === 'hosp') return 'hosp';
+  if (o === 'transfer' && w === 'evac') return 'evac';
+  return ''; // выбрано в полном бланке иначе — кнопки не подсвечиваем, ниже видно «В бланке: …»
+}
+
+/* ---------- когда показывать быстрый приём ---------- */
+function qvFullIds() { return LS.get('MED_QVFULL', []) || []; }
+function qvIsFull(id) { return qvFullIds().indexOf(id) !== -1; }
+function qvSetFull(id, on) {
+  let a = qvFullIds().filter(x => x !== id);
+  if (on) a.push(id);
+  LS.set('MED_QVFULL', a.slice(-100));
+}
+function qvOn() {
+  if (!S.fv || typeof tdActive !== 'function' || !tdActive()) return false;
+  const st = fStatus(S.fv.id);
+  if (st === 'closed' || st === 'closing') return !!(S.qvDone && S.qvDone === S.fv.id);
+  return !qvIsFull(S.fv.id) && fCanEdit(S.fv.id);
+}
+
+/* ---------- вид ---------- */
+(function () {
+  if ($('#qvCss')) return;
+  const s = document.createElement('style'); s.id = 'qvCss';
+  s.textContent =
+    '.qv .qv-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.qv .qv-t{font-size:18px;font-weight:800;margin:10px 0 2px}' +
+    '.qv .qv-s{margin-top:12px}.qv .qv-s>.lbl{font-size:15px;font-weight:700;color:var(--ink);margin:0 0 6px}' +
+    '.qv .qv-nums{display:grid;grid-template-columns:1fr 1fr;gap:8px}.qv .qv-nums .field{margin:0}.qv .qv-bp{display:flex;align-items:center;gap:4px}.qv .qv-bp input{min-width:0;text-align:center}' +
+    '.qv input[type=number]{font-size:18px}.qv .qv-rx{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}.qv .qv-rx:last-child{border-bottom:0}' +
+    '.qv .qv-end .chip{min-height:48px}.qv .qv-note{font-size:12.5px;color:var(--sub);margin-top:4px}' +
+    '.qv-bar{position:sticky;bottom:0;z-index:5;margin-bottom:0;box-shadow:0 -6px 18px rgba(0,0,0,.12)}.qv-bar .note{color:var(--sub);margin:0 0 6px}' +
+    'body.td-on:not(.kb) .qv-bar{bottom:var(--tdh)}' +
+    '.qv-done{text-align:center;padding:26px 14px}.qv-done .big{font-size:52px;line-height:1}.qv-done h3{margin:10px 0 4px;font-size:20px}.qv-done .btn{margin-top:10px}' +
+    '.qv-to{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-2px 0 10px}.qv-to .lbl{margin:0}' +
+    '.qv-freq{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}';
+  document.head.appendChild(s);
+})();
+
+function qvVitRid(d) {
+  const rows = d.vit && typeof d.vit === 'object' ? Object.keys(d.vit).filter(k => d.vit[k]) : [];
+  rows.sort((a, b) => String((d.vit[a] || {}).ord || a).localeCompare(String((d.vit[b] || {}).ord || b)));
+  return rows[0] || 'v1';
+}
+function qvHtml() {
+  const id = S.fv.id;
+  const d = fData(id);
+  const val = k => d[k] === undefined || d[k] === null ? '' : d[k];
+  const rid = qvVitRid(d);
+  const v = (d.vit && d.vit[rid]) || {};
+  const vv = k => v[k] === undefined || v[k] === null ? '' : v[k];
+  const num = (f, lbl, o) => '<div class="field"><label>' + esc(lbl) + '</label><input type="number" data-row="vit" data-rid="' + esc(rid) + '" data-rf="' + f + '" inputmode="' + (o && o.dec ? 'decimal' : 'numeric') + '"' + (o && o.dec ? ' step="0.1"' : '') + ' value="' + esc(vv(f)) + '"></div>';
+  const hist = S.fHist && S.fHist.id === id ? S.fHist.rows : [];
+  const histAl = hist.map(h => h.allergy).filter(a => a && a !== '—').filter((a, i, arr) => arr.indexOf(a) === i);
+  const rx = rowsOf(d, 'rx');
+  const end = qvEndOf(d);
+  const outRow = (FD.outcome || []).find(x => x[0] === d.outcome);
+  const need = [];
+  if (!d.blankNo) need.push(t('fNeedBlank'));
+  if (!d.pName) need.push(t('fNeedName'));
+  if (!d.outcome) need.push(t('fNeedOutcome'));
+  const sex = (FD.sex || []).map(x => '<button type="button" class="chip' + (val('pSex') === x[0] ? ' on' : '') + '" data-act="fSetV" data-f="pSex" data-v="' + x[0] + '">' + esc(fdLabel(x)) + '</button>').join('');
+  return '<div class="qv">' +
+    '<div class="card"><div class="qv-h"><button type="button" class="btn small ghost" data-act="fBack">' + esc(t('formBack')) + '</button><span class="grow"></span><span id="fSaveState" class="tag"></span>' +
+    '<button type="button" class="btn small ghost" data-act="qvFull">' + esc(t('qvFull')) + '</button></div>' +
+    '<div class="qv-t">' + esc(t('qvTitle')) + ' <span class="tag">' + esc(t('formDraft')) + '</span></div>' +
+    '<div class="row" style="margin-top:8px"><label class="lbl" style="margin:0;white-space:nowrap">' + esc(t('formBlankNo')) + '</label><input type="text" id="fBlank" data-f="blankNo" maxlength="40" inputmode="numeric" class="grow" value="' + esc(val('blankNo')) + '" placeholder="' + esc(t('qvBlankPh')) + '"></div></div>' +
+    // 1. кто
+    '<div class="card qv-s"><div class="lbl">1. ' + esc(t('qvWho')) + '</div>' +
+    '<div class="field"><input type="text" data-f="pName" maxlength="120" autocomplete="off" value="' + esc(val('pName')) + '" placeholder="' + esc(t('qvName')) + '"></div>' +
+    '<div class="chips f-chips">' + sex + '</div>' +
+    (hist.length ? '<div class="info" style="margin-top:8px">' + esc(t('qvHist', { n: hist.length })) + (histAl.length ? '<div style="color:var(--red);font-weight:700">' + esc(t('qvHistAl', { a: histAl.join('; ') })) + '</div>' : '') + '</div>' : '') +
+    '<div class="field" style="margin-top:8px"><label>' + esc(t('qvAllergy')) + '</label><input type="text" data-f="allergy" maxlength="300" value="' + esc(val('allergy')) + '"' + (d.allergyNone ? ' disabled' : '') + '></div>' +
+    '<label class="check"><input type="checkbox" data-f="allergyNone"' + (d.allergyNone ? ' checked' : '') + '><span>' + esc(t('qvAllergyNone')) + '</span></label><div id="fAllergy"></div>' +
+    '<details style="margin-top:6px"><summary class="lbl" style="cursor:pointer">' + esc(t('qvMore')) + '</summary><div class="grid2" style="margin-top:6px">' +
+    '<div class="field"><label>' + esc(L(['Дата рождения', 'Doğum tarixi'])) + '</label><input type="date" data-f="pBirth" value="' + esc(val('pBirth')) + '"></div>' +
+    '<div class="field"><label>FİN</label><input type="text" data-f="fin" maxlength="7" autocomplete="off" value="' + esc(val('fin')) + '"></div></div></details></div>' +
+    // 2. что беспокоит
+    '<div class="card qv-s"><div class="lbl">2. ' + esc(t('qvWhat')) + '</div><div class="chips f-chips" style="margin-bottom:8px">' +
+    QV_COMPL.map(k => '<button type="button" class="chip" data-act="qvCompl" data-k="' + k + '">' + esc(t('qc_' + k)) + '</button>').join('') + '</div>' +
+    '<div class="field" style="margin:0"><textarea data-f="compl" maxlength="3000" rows="2" placeholder="' + esc(t('qvComplPh')) + '">' + esc(val('compl')) + '</textarea></div></div>' +
+    // 3. цифры
+    '<div class="card qv-s"><div class="lbl">3. ' + esc(t('qvNums')) + '</div><div class="qv-nums">' +
+    '<div class="field" style="grid-column:1/-1"><label>' + esc(t('qvBp')) + '</label><div class="qv-bp"><input type="number" data-row="vit" data-rid="' + esc(rid) + '" data-rf="bpRs" inputmode="numeric" value="' + esc(vv('bpRs')) + '"><b>/</b><input type="number" data-row="vit" data-rid="' + esc(rid) + '" data-rf="bpRd" inputmode="numeric" value="' + esc(vv('bpRd')) + '"></div></div>' +
+    num('pulse', t('qvPulse')) + num('temp', t('qvTemp'), { dec: 1 }) + num('spo2', t('qvSpo2')) + num('glu', t('qvGlu'), { dec: 1 }) + '</div></div>' +
+    // 4. что дал
+    '<div class="card qv-s"><div class="lbl">4. ' + esc(t('qvGave')) + '</div>' +
+    (rx.length ? rx.map(r => '<div class="qv-rx"><span class="grow">💊 <b>' + esc(r.drug || '') + '</b>' + (r.qty ? ' × ' + esc(String(r.qty)) : '') +
+      '<div class="muted" style="font-size:12.5px">' + (r.given ? (r.spendOp ? '✓ ' + esc(t('qvFromStock')) : r.own ? esc(t('qvOwnMark')) : '<span style="color:var(--red)">' + esc(t('qvNotSpent')) + '</span>') : esc(t('fRxGiven')) + '?') + '</div></span>' +
+      (!r.given ? '<button type="button" class="btn small primary" data-act="fGive" data-rid="' + esc(r._id) + '">' + esc(t('fRxGiven')) + '</button>' : '') + '</div>').join('') : '<div class="muted">' + esc(t('qvNoGave')) + '</div>') +
+    '<button type="button" class="btn ghost block" style="margin-top:8px" data-act="qvGive">' + esc(t('qvGiveBtn')) + '</button></div>' +
+    // 5. диагноз
+    '<div class="card qv-s"><div class="field" style="margin:0"><label>' + esc(t('qvDx')) + '</label><input type="text" data-f="dx1" maxlength="300" value="' + esc(val('dx1')) + '"></div></div>' +
+    // 6. чем закончилось
+    '<div class="card qv-s qv-end"><div class="lbl">5. ' + esc(t('qvEnd')) + '</div><div class="chips f-chips">' +
+    QV_END.map(e => '<button type="button" class="chip' + (end === e[0] ? ' on' : '') + '" data-act="qvEnd" data-k="' + e[0] + '">' + esc(t(e[1])) + '</button>').join('') +
+    '<button type="button" class="chip" data-act="qvFull" data-sec="outcome">' + esc(t('qvOtherEnd')) + '</button></div>' +
+    (end === 'off' ? '<div class="field" style="margin-top:8px"><label>' + esc(t('qvOffH')) + '</label><input type="number" data-f="vrOffH" inputmode="numeric" min="0" max="999" value="' + esc(val('vrOffH')) + '"></div>' : '') +
+    (outRow ? '<div class="qv-note">' + esc(t('qvInForm', { t: fdLabel(outRow) })) + '</div>' : '') + '</div>' +
+    // «Готово»
+    '<div class="card qv-bar">' + (need.length ? '<div class="note">' + esc(t('fCloseNeed', { what: need.join(', ') })) + '</div>' : '') +
+    '<button type="button" class="btn primary block" data-act="qvDone"' + (need.length || (S.smClose && S.smClose.id === id) ? ' disabled' : '') + '>' + esc(S.smClose && S.smClose.id === id ? t('smClosedNow') : t('qvDone')) + '</button></div>' +
+    '</div>';
+}
+function qvDoneHtml() {
+  const d = fData(S.fv.id);
+  return '<div class="card qv-done"><div class="big">✅</div><h3>' + esc(t('qvDoneTitle', { n: d.blankNo || '—' })) + '</h3>' +
+    (S.smClose && S.smClose.id === S.fv.id ? '<div class="muted">' + esc(t('qvDoneSub')) + '</div><button type="button" class="btn ghost" data-act="smUndoClose">' + esc(t('undo')) + '</button>' : '') +
+    '<button type="button" class="btn primary block" data-act="qvNext">' + esc(t('qvNext')) + '</button>' +
+    '<button type="button" class="btn ghost block" data-act="qvHome">' + esc(t('qvHome')) + '</button></div>';
+}
+(function () {
+  const ore = window.fRenderEditor;
+  if (typeof ore !== 'function') return;
+  window.fRenderEditor = function (keepScroll) {
+    try {
+      if (qvOn()) {
+        const box = $('#formsBox');
+        if (!box) return;
+        const y = window.scrollY;
+        const done = S.qvDone && S.qvDone === S.fv.id;
+        box.innerHTML = done ? qvDoneHtml() : qvHtml();
+        if (typeof fRenderSaveState === 'function') fRenderSaveState();
+        if (keepScroll && !done) window.scrollTo(0, y); else window.scrollTo(0, 0);
+        return;
+      }
+    } catch (e) { console.error(e); }
+    const r = ore.apply(this, arguments);
+    // в полном бланке открытого приёма (простой вид) — кнопка обратно к быстрому
+    try {
+      if (S.fv && typeof tdActive === 'function' && tdActive() && fCanEdit(S.fv.id) && ['closed', 'closing'].indexOf(fStatus(S.fv.id)) === -1) {
+        const h = $('#formsBox .f-head .row');
+        if (h && !h.querySelector('[data-act=qvQuick]')) { const m = h.querySelector('[data-act=fMenu]'); const b = '<button type="button" class="btn small ghost" data-act="qvQuick">' + esc(t('qvQuick')) + '</button>'; if (m) m.insertAdjacentHTML('beforebegin', b); else h.insertAdjacentHTML('beforeend', b); }
+      }
+    } catch (e) { }
+    return r;
+  };
+})();
+// цифры: первое измерение без времени — время ставится само (как в полном бланке)
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (!S.fv || !el || !el.closest || !el.closest('.qv') || el.dataset.row !== 'vit') return;
+  const d = fData(S.fv.id); const r = (d.vit || {})[el.dataset.rid] || {};
+  if (!r.t) fSet({ vit: { [el.dataset.rid]: { t: nowLocal().slice(11), ord: r.ord || '1', byName: r.byName || (S.me && S.me.name) || '' } } });
+});
+
+/* ---------- «＋ Дал лекарство» в приёме: тот же путь, что «Назначения → Дано» ---------- */
+function qvFreqItems() {
+  const cnt = {};
+  (S.mine || []).filter(m => m.type === 'SPEND' && m.itemId).forEach(m => { cnt[m.itemId] = (cnt[m.itemId] || 0) + 1; });
+  return Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]).map(itemById).filter(it => it && S.view.lots.some(l => l.itemId === it.id && l.qty > 0 && lotStatus(l).cls !== 'expired')).slice(0, 6);
+}
+function qvGiveModal() {
+  if (!S.fv) return;
+  const d = fData(S.fv.id);
+  S.fGive = { rid: '', lotId: '' };
+  const freq = can('spend') ? qvFreqItems() : [];
+  openModal('<h3>💊 ' + esc(t('qvGiveTitle')) + '</h3>' +
+    (can('spend') ? (freq.length ? '<div class="lbl">' + esc(t('qvGiveFreq')) + '</div><div class="qv-freq">' + freq.map(it => '<button type="button" class="chip" data-act="qvFreq" data-q="' + esc(it.name) + '">' + esc(it.name + ' ' + (it.dosage || '')) + '</button>').join('') + '</div>' : '') +
+      '<div class="field"><label>' + esc(t('qvGiveSearch')) + '</label><input type="search" id="fgQ" autocomplete="off"></div><div id="fgLots"></div>' +
+      '<div class="field"><label>' + esc(t('qty')) + '</label><input type="number" id="fgQty" min="1" value="1" inputmode="numeric"></div>' : '<div class="info">' + esc(t('fGiveNoPerm')) + '</div><div class="field"><label>' + esc(t('qvGiveSearch')) + '</label><input type="search" id="fgQ" autocomplete="off"></div>') +
+    '<label class="check"><input type="checkbox" id="fgOwn"' + (can('spend') ? '' : ' checked') + '><span>' + esc(t('fGiveOwn')) + '</span></label>' +
+    '<details><summary class="lbl" style="cursor:pointer">' + esc(t('qvWhenOther')) + '</summary><div class="field"><label>' + esc(t('fGiveWhen')) + '</label><input type="datetime-local" id="fgWhen" value="' + esc(fGiveDefaultWhen(d)) + '" max="' + esc(nowLocal()) + '"></div></details>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="qvGiveGo">' + esc(t('qvGiveOk')) + '</button></div>');
+  if (!can('spend')) return;
+  const draw = () => {
+    const q = $('#fgQ').value.trim();
+    const m = q ? matchItems(q) : null;
+    const lots = m ? S.view.lots.filter(l => m.items[l.itemId] && l.qty > 0 && lotStatus(l).cls !== 'expired' && l.id.indexOf('tmp_') !== 0) : [];
+    lots.sort((a, b) => String(a.expiry || '9').localeCompare(String(b.expiry || '9')));
+    if (!lots.some(l => l.id === S.fGive.lotId)) S.fGive.lotId = lots[0] ? lots[0].id : '';
+    $('#fgLots').innerHTML = !q ? '' : lots.length ? '<div class="lbl">' + esc(t('fGivePick')) + '</div>' + lots.slice(0, 12).map(l => { const it = itemById(l.itemId); return '<label class="f-lot' + (l.id === S.fGive.lotId ? ' on' : '') + '"><input type="radio" name="fgLot" value="' + esc(l.id) + '"' + (l.id === S.fGive.lotId ? ' checked' : '') + '><span><b>' + esc(it.name) + '</b> ' + esc(it.dosage) + (it.strict ? ' 🔒' : '') + '<br><span class="muted">📍 ' + esc(locName(l.locationId)) + ' · ' + expMeta(l) + ' · ' + l.qty + ' ' + esc(unitShort(it.unit)) + '</span></span></label>'; }).join('') : '<div class="muted" style="margin-bottom:10px">' + esc(t('fGiveNone')) + '</div>';
+    $$('input[name=fgLot]').forEach(x => x.addEventListener('change', () => { S.fGive.lotId = x.value; draw(); }));
+  };
+  S.qvDraw = draw;
+  let tm = null;
+  $('#fgQ').addEventListener('input', () => { clearTimeout(tm); tm = setTimeout(draw, 200); });
+  setTimeout(() => { const q = $('#fgQ'); if (q) q.focus(); }, 60);
+}
+function qvGiveGo() {
+  if (!S.fv || !S.fGive) return closeModal();
+  const id = S.fv.id;
+  const d = fData(id);
+  const own = $('#fgOwn').checked;
+  let drug = '';
+  if (!own) {
+    if (!can('spend')) return toast(t('fGiveNoPerm'), 'bad');
+    const lot = S.fGive.lotId && lotById(S.fGive.lotId), it = lot && itemById(lot.itemId);
+    if (!lot || !it) return toast(t('fGiveNone'), 'bad');
+    const qty = Number($('#fgQty').value);
+    if (!Number.isInteger(qty) || qty < 1) return toast(t('E_BAD_QTY', { min: 1, max: 100000 }), 'bad'); // до создания строки — пустых назначений не остаётся
+    drug = (it.name + ' ' + (it.dosage || '')).trim();
+  } else {
+    drug = String($('#fgQ').value || '').trim().slice(0, 200);
+    if (!drug) return toast(t('qvGiveSearch'), 'bad');
+  }
+  const nowL = nowLocal(), w = ($('#fgWhen') && $('#fgWhen').value) || nowL;
+  if ((w > nowL ? nowL : w).slice(0, 10) < addDaysStr(nowL.slice(0, 10), -30)) return toast(t('fGiveTooOld'), 'bad'); // до создания строки — пустых назначений не остаётся
+  const hit = fAllergyHit(d, drug);
+  if (hit && !confirm(t('fRxAllergy', { a: hit }))) return;
+  const rid = 'r' + Date.now().toString(36);
+  fSet({ rx: { [rid]: { drug, ord: String(Date.now()), byName: S.me.name } } });
+  S.fGive.rid = rid;
+  fGiveGo(); // форма — раньше списания; одна операция списания с номером; строка «Дано» с этой операцией
+}
+
+/* ---------- «Дал лекарство» (склад) → «Кому»: открытые приёмы ---------- */
+function qvOpenVisits() {
+  if (!can('forms') || typeof fCache !== 'function') return [];
+  const c = fCache();
+  const seen = {}, out = [];
+  const add = (id, blankNo, at, name, status) => { if (!id || seen[id] || status === 'closed' || status === 'closing' || status === 'deleted' || (S.smClose && S.smClose.id === id)) return; seen[id] = 1; out.push({ id, blankNo: blankNo || '', at: String(at || ''), name: name || '' }); };
+  // закрыт по последним сведениям (в списке с сервера, в памяти телефона или закрывается сейчас) — не предлагаем
+  const stOf = (id, st) => { const f = c.full[id]; const fs = fStatus(id); return st === 'closed' || st === 'deleted' || (f && (f.status === 'closed' || f.status === 'deleted')) ? 'closed' : fs; };
+  Object.keys(c.full || {}).forEach(id => { const f = c.full[id]; if (f && f.local) { const d = fData(id); add(id, d.blankNo, d.arrivedAt || f.createdAt, d.pName, stOf(id, f.status)); } });
+  (c.list || []).forEach(r => { const d = fData(r.id); add(r.id, d.blankNo || r.blankNo, d.arrivedAt || r.arrivedAt, d.pName || r.patient, stOf(r.id, r.status)); });
+  const day = nowLocal().slice(0, 10);
+  return out.filter(x => !x.at || x.at.slice(0, 10) >= addDaysStr(day, -1)).sort((a, b) => b.at.localeCompare(a.at)).slice(0, 6);
+}
+function qvVisitOf(x) { return String(x.blankNo || x.id).slice(0, 60); }
+function qvToRender() {
+  const scr = $('#scrSpend'); const bar = scr && scr.querySelector('.visit-bar');
+  if (!bar) return;
+  let box = $('#qvTo');
+  const list = typeof tdActive === 'function' && tdActive() ? qvOpenVisits() : [];
+  if (!list.length) { if (box) box.remove(); return; }
+  if (!box) { bar.insertAdjacentHTML('afterend', '<div class="qv-to" id="qvTo"></div>'); box = $('#qvTo'); }
+  const cur = S.qvLink && S.qvLink.visit === S.visit ? S.qvLink.id : '';
+  box.innerHTML = '<span class="lbl">' + esc(t('qvTo')) + '</span>' + list.map(x => '<button type="button" class="chip' + (cur === x.id ? ' on' : '') + '" data-act="qvTo" data-id="' + esc(x.id) + '">' + esc((x.blankNo ? '№' + x.blankNo + ' · ' : '') + (x.name || '—') + (x.at ? ' · ' + x.at.slice(11, 16) : '')) + '</button>').join('') +
+    (S.visit ? '<button type="button" class="chip" data-act="qvToNone">' + esc(t('qvToNone')) + '</button>' : '');
+}
+(function () {
+  const ors = window.renderSpend;
+  if (typeof ors === 'function') window.renderSpend = function () { const r = ors.apply(this, arguments); try { qvToRender(); } catch (e) { } return r; };
+  const os = window.setScreen;
+  window.setScreen = function () {
+    const r = os.apply(this, arguments);
+    try { if (S.screen === 'spend' && can('forms') && typeof tdActive === 'function' && tdActive() && typeof fLoadList === 'function' && Date.now() - (S.qvListAt || 0) > 60000) { S.qvListAt = Date.now(); Promise.resolve(fLoadList()).then(() => { if (S.screen === 'spend') qvToRender(); }); } } catch (e) { }
+    return r;
+  };
+  // списание пациенту из «Дал лекарство» с выбранным приёмом → в этот приём строка «Дано» с той же операцией
+  const ods = window.doSpend;
+  if (typeof ods === 'function') window.doSpend = function (lot, it, qty, reason, comment, visit) {
+    S.qvInSpend = true;
+    try { return ods.apply(this, arguments); } finally { S.qvInSpend = false; }
+  };
+  const oe = window.enqueue;
+  window.enqueue = function (action, payload) {
+    const op = oe.apply(this, arguments);
+    try {
+      const L = S.qvLink;
+      if (op && action === 'spend' && S.qvInSpend && L && payload && payload.reason === 'PATIENT' && L.store === S.storeId && String(payload.visit || '') === L.visit && can('forms') && qvOpenVisits().some(v => v.id === L.id)) {
+        const lot = lotById(payload.lotId), it = lot && itemById(lot.itemId);
+        const now = nowLocal().replace('T', ' ');
+        const rid = 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+        const row = { drug: it ? (it.name + ' ' + (it.dosage || '')).trim() : '', ord: String(Date.now()), byName: S.me.name, given: true, givenAt: payload.usedAt ? payload.usedAt + ' 12:00' : now, givenBy: S.me.id, givenByName: S.me.name, itemId: it ? it.id : '', lotId: payload.lotId, qty: payload.qty, spendOp: op.opId };
+        fQueue('formSave', { id: L.id, storeId: L.store, patch: { rx: { [rid]: row } } }, t('formsTitle') + (L.blankNo ? ' №' + L.blankNo : ''));
+      }
+    } catch (e) { }
+    return op;
+  };
+})();
+
+Object.assign(H, {
+  qvFull: el => {
+    if (!S.fv) return;
+    fFlush();
+    qvSetFull(S.fv.id, true);
+    if (el && el.dataset && el.dataset.sec) S.fOpen = Object.assign(S.fOpen || {}, { [el.dataset.sec]: 1 });
+    fRenderEditor();
+  },
+  qvQuick: () => { if (!S.fv) return; fFlush(); qvSetFull(S.fv.id, false); fRenderEditor(); },
+  qvCompl: el => {
+    if (!S.fv) return;
+    const w = t('qc_' + el.dataset.k);
+    const cur = String(fData(S.fv.id).compl || '').trim();
+    if (cur.toLowerCase().indexOf(w.toLowerCase()) !== -1) return;
+    fSet({ compl: cur ? cur + ', ' + w.toLowerCase() : w }, true);
+  },
+  qvEnd: el => {
+    if (!S.fv) return;
+    const e = QV_END.find(x => x[0] === el.dataset.k); if (!e) return;
+    const patch = Object.assign({ vrWork: null }, e[2]);
+    if (e[0] !== 'off') patch.vrOffH = null;
+    fSet(patch, true); fFlush();
+  },
+  qvGive: () => qvGiveModal(),
+  qvFreq: el => { const q = $('#fgQ'); if (q) { q.value = el.dataset.q; if (S.qvDraw) S.qvDraw(); } },
+  qvGiveGo: () => qvGiveGo(),
+  qvDone: () => {
+    if (!S.fv) return;
+    const id = S.fv.id;
+    H.fClose();
+    if (S.smClose && S.smClose.id === id) { S.qvDone = id; try { navigator.vibrate && navigator.vibrate(30); } catch (e) { } fRenderEditor(); }
+  },
+  qvNext: () => { S.qvDone = null; if (S.fv) fBack(); if (H.fNew) H.fNew(); },
+  qvHome: () => { S.qvDone = null; if (S.fv) fBack(); setScreen(typeof tdActive === 'function' && tdActive() ? 'today' : firstScreen()); },
+  qvTo: el => {
+    const x = qvOpenVisits().find(v => v.id === el.dataset.id); if (!x) return;
+    const v = qvVisitOf(x);
+    setVisit(v); const vi = $('#visitInp'); if (vi) vi.value = v;
+    S.qvLink = { id: x.id, visit: v, blankNo: x.blankNo, store: S.storeId };
+    qvToRender();
+  },
+  qvToNone: () => { setVisit(''); const vi = $('#visitInp'); if (vi) vi.value = ''; S.qvLink = null; qvToRender(); }
+});
+// поле «Кому» изменили руками или очистили — связь с приёмом снимается
+document.addEventListener('input', e => { if (e.target && e.target.id === 'visitInp' && S.qvLink && e.target.value.trim() !== S.qvLink.visit) { S.qvLink = null; qvToRender(); } });
+(function () {
+  const ovc = H.visitClear;
+  if (typeof ovc === 'function') H.visitClear = function () { S.qvLink = null; const r = ovc.apply(this, arguments); try { qvToRender(); } catch (e) { } return r; };
+  // смена склада — связь с приёмом другого склада не нужна
+  const osw = window.switchStore;
+  if (typeof osw === 'function') window.switchStore = function () { S.qvLink = null; return osw.apply(this, arguments); };
+})();
+/* ---------- отменили списание — строка «Дано» в приёме тоже снимается ---------- */
+/** Попытки отправить операцию: была ли сеть на телефоне. Без сети запрос выйти не мог — значит, сервер его не видел. */
+const QV_TRY = {};
+(function () {
+  const or = window.rpc;
+  if (typeof or !== 'function') return;
+  window.rpc = function (action, payload) {
+    const id = payload && payload.opId;
+    if (id) { const off = typeof navigator !== 'undefined' && navigator.onLine === false; const x = QV_TRY[id] || { offline: true }; x.offline = x.offline && off; QV_TRY[id] = x; }
+    return or.apply(this, arguments);
+  };
+})();
+/** Ещё не ушло на сервер: из неотправленных записей форм убрать строки «Дано» с этим списанием. */
+function qvScrubRx(spendOpId) {
+  const strip = patch => {
+    const rx = patch && patch.rx; if (!rx || typeof rx !== 'object') return false;
+    let hit = false;
+    Object.keys(rx).forEach(k => { const x = rx[k]; if (x && typeof x === 'object' && x.spendOp === spendOpId) { delete rx[k]; hit = true; } });
+    if (hit && !Object.keys(rx).length) delete patch.rx;
+    return hit;
+  };
+  let changed = false;
+  S.queue.slice().forEach(op => {
+    if (op.action !== 'formSave' || op.sent || op.opId === S.inFlight) return;
+    if (!strip(op.payload.patch)) return;
+    changed = true;
+    if (!Object.keys(op.payload.patch || {}).length && !op.payload.close) { const i = S.queue.indexOf(op); if (i !== -1) { S.queue.splice(i, 1); markDone(op.opId); } }
+  });
+  if (S.fd) changed = strip(S.fd) || changed;
+  if (changed) { saveQueue(); if (S.screen === 'forms' && S.fv) fRenderEditor(true); }
+  return changed;
+}
+/** Сервер отменил списание (и сам снял «Дано» в приёме) — то же в памяти телефона, не дожидаясь перечитывания. */
+function qvMirrorUndone(spendOpId) {
+  const c = typeof fCache === 'function' ? fCache() : null; if (!c) return;
+  let changed = false;
+  Object.keys(c.full || {}).forEach(id => {
+    const f = c.full[id]; const rx = f && f.data && f.data.rx; if (!rx) return;
+    Object.keys(rx).forEach(k => { const x = rx[k]; if (x && x.spendOp === spendOpId && x.given) { x.given = false; x.spendUndone = nowLocal().replace('T', ' '); x.spendOpUndone = spendOpId; delete x.spendOp; x.qtyUndone = x.qty; delete x.qty; changed = true; } });
+  });
+  if (changed) { fSaveCache(); if (S.screen === 'forms' && S.fv) fRenderEditor(true); }
+}
+(function () {
+  const ou0 = window.undoOpInner;
+  if (typeof ou0 === 'function') window.undoOpInner = function (opId) {
+    const q = S.queue.find(x => x.opId === opId);
+    const m = S.mine.find(x => x.opId === opId);
+    // списание уже уходило на сервер (ответ мог потеряться) или его отправила другая вкладка / фоновый помощник:
+    // убрать его только с телефона нельзя — остаётся в очереди (повтор не спишет дважды), за ним — отмена на сервере
+    // «точно не ушло»: все попытки были без сети на телефоне (запрос не мог выйти) — тогда отмена на месте, как раньше
+    const surelyLocal = q && !q.attempts && !isDone(opId) && (!q.sent || (QV_TRY[opId] && QV_TRY[opId].offline));
+    if (q && m && !m.undone && !m.undoPending && S.inFlight !== opId && !surelyLocal) {
+      m.undoPending = true;
+      saveMine();
+      enqueue('undo', { storeId: m.storeId || S.storeId, targetOpId: opId }, { label: m.name });
+      return;
+    }
+    const local = !!q && S.inFlight !== opId;
+    const r = ou0.apply(this, arguments);
+    try { const m2 = S.mine.find(x => x.opId === opId); if (local && m2 && m2.undone) qvScrubRx(opId); } catch (e) { }
+    return r;
+  };
+  // списание окончательно не принято (месяц закрыт, партии нет, срок истёк…) — «Дано со склада» в приём не уходит
+  const of0 = FAIL.spend;
+  FAIL.spend = function (op) { try { if (of0) of0.apply(this, arguments); } catch (e) { } try { qvScrubRx(op.opId); } catch (e) { } };
+  const od = DONE.undo;
+  DONE.undo = function (op) { const r = od.apply(this, arguments); try { qvMirrorUndone(op.payload.targetOpId); } catch (e) { } return r; };
+})();
+(function () {
+  const ou = H.smUndoClose;
+  H.smUndoClose = function () { S.qvDone = null; return ou.apply(this, arguments); };
+  // ушли со «Готово» (назад к списку) — экран «что дальше» больше не нужен
+  const ob = window.fBack;
+  if (typeof ob === 'function') window.fBack = function () { S.qvDone = null; return ob.apply(this, arguments); };
+})();
 
 
 function init() {
