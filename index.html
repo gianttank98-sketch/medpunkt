@@ -36911,6 +36911,45 @@ async function gtFillDoc(btn) {
 }
 H.gtFillDoc = el => gtFillDoc(el);
 
+/* ---------- 9.48.1: GT/098 видно из приёма (Саид, 27.10: «GT файла не вижу») ----------
+ *  В открытом приёме (быстром и полном) наверху — «📘 GT/098 пациента»: открыть; карты ещё нет — завести по ФИО / FİN приёма.
+ *  Вкладка «Карты пациентов» называется «📘 GT/098». */
+Object.assign(GT_T.ru, { gtVisitBtn: '📘 GT/098 пациента', gtVisitNeed: 'Впишите имя или FİN пациента — GT/098 заведётся сам' });
+Object.assign(GT_T.az, { gtVisitBtn: '📘 Pasiyentin GT/098-i', gtVisitNeed: 'Pasiyentin adını və ya FİN-ni yazın — GT/098 özü açılacaq' });
+I18N.ru.dsPatients = '📘 GT/098'; I18N.az.dsPatients = '📘 GT/098';
+if (typeof SM_T === 'object') { try { SM_T.ru.dsPatients = '📘 GT/098'; SM_T.az.dsPatients = '📘 GT/098'; } catch (e) { } }
+(function () {
+  const ore = window.fRenderEditor;
+  if (typeof ore !== 'function') return;
+  window.fRenderEditor = function () {
+    const r = ore.apply(this, arguments);
+    try {
+      if (!S.fv || !can('forms') || (typeof hpPiiOn === 'function' && hpPiiOn())) return r;
+      const box = $('#formsBox'); if (!box || box.querySelector('[data-act=gtFromVisit]')) return r;
+      const b = '<button type="button" class="btn block" style="margin-top:8px" data-act="gtFromVisit">' + esc(gtt('gtVisitBtn')) + '</button>';
+      const head = box.querySelector('.qv > .card') || box.querySelector('.f-head');
+      if (head) head.insertAdjacentHTML('beforeend', b);
+    } catch (e) { }
+    return r;
+  };
+})();
+async function gtFromVisit(btn) {
+  if (!S.fv) return;
+  const id = S.fv.id;
+  try { fFlush(); } catch (e) { }
+  let pid = (typeof PT === 'object' && PT.formLink && PT.formLink[id]) || ((fCache().full[id] || {}).patientId) || '';
+  if (!pid) {
+    const d = fData(id);
+    if (!String(d.pName || '').trim() && !String(d.fin || '').trim()) return toast(gtt('gtVisitNeed'), 'bad');
+    const pt = await busy(btn, () => ptEnsure(ptPiiFromForm(d), [{ kind: 'form', id }])).catch(() => null);
+    if (!pt || !pt.id) return;
+    pid = pt.id;
+    if (typeof ptFormLink === 'function') ptFormLink(id, pid);
+  }
+  ptOpen(pid, true);
+}
+H.gtFromVisit = el => gtFromVisit(el);
+
 /* =====================================================================
  * v74 (9.47): «Дал лекарство» — № бланка → отделение → что дали; и «дал то, чего в отделении нет».
  *  Саид, 27.10: «в разделе „Дал лекарство“ пишешь № бланка, потом отделение, потом что именно дал. И если того, что дал,
