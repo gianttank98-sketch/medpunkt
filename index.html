@@ -31381,6 +31381,7 @@ const PN_LAB_QUICK = [['Hb', 'г/л'], ['Лейкоциты', '×10⁹/л'], ['�
   ['K⁺', 'ммоль/л'], ['Na⁺', 'ммоль/л'], ['СРБ', 'мг/л'], ['Тропонин', 'нг/л'], ['D-димер', 'мкг/мл'], ['АЛТ', 'Ед/л'], ['АСТ', 'Ед/л'], ['Билирубин', 'мкмоль/л'], ['Лактат', 'ммоль/л'],
   ['pH', ''], ['pCO₂', 'мм рт. ст.'], ['pO₂', 'мм рт. ст.'], ['МНО', ''], ['ОАМ', '']];
 const PN = { draft: null, photos: [] };
+const PN_PARTS = [['complaints', 'Жалобы', 'Şikayətlər'], ['status', 'Объективно (состояние, осмотр)', 'Obyektiv (vəziyyət, müayinə)'], ['done', 'Что сделано / лечение', 'Nə edilib / müalicə'], ['plan', 'План', 'Plan']];
 function pnNewId() { return 'N' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10).replace(/[^a-z0-9]/g, 'x'); }
 function pnVitText(v) { return CS_VITALS.filter(x => v && v[x[0]] !== undefined && v[x[0]] !== '').map(x => t(x[1]) + ' ' + v[x[0]]).join(', '); }
 function pnLabsText(a) { return (a || []).map(x => x.name + ' ' + [x.value, x.unit].filter(Boolean).join(' ') + (x.note ? ' (' + x.note + ')' : '')).join('; '); }
@@ -31395,7 +31396,7 @@ window.ptExtraItems = function (g) {
 };
 function pnItem(n, pending) {
   const photo = n.kind === 'photo';
-  const head = photo ? t('pnPhotoTag') + (n.caption ? ': ' + n.caption : '') : t('pnNoteTag') + ' ' + (String(n.text || '').split('\n')[0].slice(0, 90) || pnVitText(n.vitals) || pnLabsText(n.labs).slice(0, 90));
+  const head = photo ? t('pnPhotoTag') + (n.caption ? ': ' + n.caption : '') : t('pnNoteTag') + ' ' + (String(n.text || '').split('\n')[0].slice(0, 90) || String((n.parts || {}).status || (n.parts || {}).complaints || (n.parts || {}).done || '').split('\n')[0].slice(0, 90) || pnVitText(n.vitals) || pnLabsText(n.labs).slice(0, 90));
   const sub = [photo ? '' : (n.text ? pnVitText(n.vitals) : ''), photo || !(n.labs || []).length ? '' : t('pnLabs') + ': ' + (n.labs || []).length, n.createdByName ? t('pnBy') + ' ' + n.createdByName : '', pending ? t('pnPending') : '', n.edits ? t('pnEdited', { n: n.edits }) : ''].filter(Boolean).join(' · ');
   return { at: String(n.at || '').replace('T', ' '), act: pending ? 'pnNoop' : 'pnView', id: n.id, title: head, sub };
 }
@@ -31429,7 +31430,9 @@ async function pnEdit(pid, note) {
     (p.allergy ? '<div class="hint" style="display:block;margin-bottom:6px;color:var(--red)">⚠️ ' + esc(t('ptAllergy')) + ': ' + esc(p.allergy) + '</div>' : '') +
     (ptLocalOn() ? '<div class="muted" style="font-size:12.5px;margin-bottom:6px">' + esc(t('pnLocalHint')) + '</div>' : '') +
     '<div class="field"><label>' + esc(t('pnAt')) + '</label><input type="datetime-local" id="pnAt" value="' + esc((n.at ? String(n.at).replace(' ', 'T') : nowL).slice(0, 16)) + '" max="' + esc(nowL) + '"></div>' +
-    '<div class="field"><label>' + esc(t('pnText')) + '</label><textarea id="pnText" rows="6" maxlength="6000" placeholder="' + esc(t('pnTextPh')) + '">' + esc(n.text || '') + '</textarea></div>' +
+    // 9.50: дневник по графам — каждая графа ложится в свою графу GT/098 и документов (TQS 003, эпикриз)
+    PN_PARTS.map(x => '<div class="field"><label>' + esc(S.lang === 'az' ? x[2] : x[1]) + '</label><textarea class="pn-part" data-k="' + x[0] + '" rows="' + (x[0] === 'status' ? 3 : 2) + '" maxlength="3000">' + esc((n.parts || {})[x[0]] || '') + '</textarea></div>').join('') +
+    '<div class="field"><label>' + esc(t('pnText')) + '</label><textarea id="pnText" rows="3" maxlength="6000" placeholder="' + esc(t('pnTextPh')) + '">' + esc(n.text || '') + '</textarea></div>' +
     '<div class="lbl">' + esc(t('pnVitals')) + '</div><div class="cs-vit" style="margin-bottom:8px">' + CS_VITALS.map(x => '<div><label>' + esc(t(x[1])) + '</label><input class="pn-v" data-k="' + x[0] + '" type="number" step="any" inputmode="decimal" value="' + esc(v[x[0]] === undefined ? '' : String(v[x[0]])) + '"></div>').join('') + '</div>' +
     '<div class="lbl">' + esc(t('pnLabs')) + '</div><div id="pnLabs">' + (n.labs || []).map(pnLabRow).join('') + '</div>' +
     '<div class="muted" style="font-size:12.5px;margin:4px 0 2px">' + esc(t('pnLabPick')) + '</div><div class="dx-row">' + PN_LAB_QUICK.map((q, i) => '<button type="button" class="chip" data-act="pnLabQ" data-i="' + i + '">' + esc(q[0]) + '</button>').join('') +
@@ -31466,6 +31469,7 @@ function pnClean(text, p) {
 async function pnSaveGo(el) {
   const d = PN.draft; if (!d || PN.saving) return;
   const text = pnClean((($('#pnText') || {}).value || '').trim(), d.p);
+  const parts = {}; $$('.pn-part').forEach(x => { const v = pnClean(String(x.value || '').trim(), d.p); if (v) parts[x.dataset.k] = v; });
   const vitals = {}; let bad = null;
   $$('.pn-v').forEach(i => {
     i.style.borderColor = '';
@@ -31479,14 +31483,14 @@ async function pnSaveGo(el) {
   const labs = $$('.pn-lab').map(r => ({ name: pnClean($('.pn-ln', r).value.trim(), d.p), value: pnClean($('.pn-lv', r).value.trim(), d.p), unit: $('.pn-lu', r).value.trim() })).filter(x => x.name && x.value);
   let at = (($('#pnAt') || {}).value || nowLocal()); if (at > nowLocal()) at = nowLocal();
   at = at.replace('T', ' ').slice(0, 16);
-  const hasNote = !!(text || Object.keys(vitals).length || labs.length);
+  const hasNote = !!(text || Object.keys(vitals).length || labs.length || Object.keys(parts).length);
   if (!hasNote && !PN.photos.length) return toast(t('pnEmpty'), 'bad');
   // «Помощник врача»: на распечатках анализов и ЭКГ часто видно ФИО — фото уйдёт на сервер как есть
   if (PN.photos.length && ptLocalOn() && !confirm(t('pnPhotoPii'))) return;
   try { if (typeof micStop === 'function' && MIC && MIC.on) micStop(); } catch (e) { }
   if (d.id) {
     // исправление — сразу на сервер (прежний текст сохранится в истории)
-    const r = await busy(el, () => rpcA('pnoteSave', { id: d.id, patientId: d.pid, at, text, vitals, labs, opId: newOpId() }));
+    const r = await busy(el, () => rpcA('pnoteSave', { id: d.id, patientId: d.pid, at, text, vitals, labs, parts, opId: newOpId() }));
     if (!r) return;
     closeModal(); toast(t('pnSaved'));
     return ptAfterNote(d.pid);
@@ -31496,7 +31500,7 @@ async function pnSaveGo(el) {
   if (el) el.disabled = true;
   const label = t('pnTitle') + ' — ' + ptLabel(d.p);
   try {
-  if (hasNote) fQueue('pnoteSave', { id: pnNewId(), patientId: d.pid, at, text, vitals, labs }, label);
+  if (hasNote) fQueue('pnoteSave', { id: pnNewId(), patientId: d.pid, at, text, vitals, labs, parts }, label);
   for (const ph of photos) {
     const key = 'p' + newOpId();
     try { await idbPut(key, ph.b64); } catch (e) { S.photoMem = S.photoMem || {}; S.photoMem[key] = ph.b64; }
@@ -37706,6 +37710,313 @@ Object.assign(H, {
   shView: el => gtOpenShare(el.dataset.id),
   gtPrint: () => gtPrint(),
   gtNoop: () => { }
+});
+
+/* =====================================================================
+ * v77 (9.50): 🏥 стационар и 📓 дневник в GT/098; документы (TQS 003, эпикриз) — из дневника; 🤖 «Заполнить с ИИ» любой документ.
+ * ===================================================================== */
+const HS_T = {
+  ru: {
+    hsOn: '🏥 В стационаре: {d} · с {at} · день {n}', hsOff: 'Сейчас не в стационаре', hsPast: 'Был(а) в стационаре: {list}', hsStart: '🏥 Госпитализирован', hsEnd: '🏁 Выписан / переведён / умер', hsEdit: '✏️ Отделение, дата',
+    hsTitleStart: '🏥 Госпитализация', hsDept: 'Отделение', hsDeptPh: 'или впишите отделение', hsAt: 'Дата и время поступления', hsGo: 'Сохранить',
+    hsTitleEnd: '🏁 Конец госпитализации', hsKind: 'Исход', hsKinds: { home: 'Выписан', transfer: 'Переведён', death: 'Умер', left: 'Ушёл сам' }, hsEndAt: 'Дата и время', hsWhy: 'Подробно (куда переведён, причина…)', hsEndAsk: 'Закончить госпитализацию? Ночной разбор ИИ для пациента остановится.',
+    hsDiary: '📓 Дневник стационара', hsDiaryBtn: '📓 Дневник (сегодня)', hsP: { complaints: 'Жалобы', status: 'Объективно', done: 'Сделано / лечение', plan: 'План' }, hsVit: 'Показатели', hsLabs: 'Анализы', hsOther: 'Другое',
+    hsEnded: { home: 'выписан', transfer: 'переведён', death: 'умер', left: 'ушёл' },
+    aiFillBtn: '🤖 Заполнить с ИИ', aiFillWait: 'ИИ заполняет документ по GT/098…', aiFillDone: 'ИИ вписал полей: {n}', aiFillMiss: 'Чего нет в GT/098 — впишите сами:', aiFillNone: 'ИИ не нашёл, что ещё вписать из GT/098.', aiFillNoPt: 'Документ не привязан к пациенту (GT/098)',
+    aiFillTitle: '🤖 Заполнено с ИИ', aiFillCheck: 'Проверьте всё, что вписал ИИ, — особенно цифры, даты и диагнозы.',
+    E_HOSP_NONE: 'Пациент сейчас не в стационаре.', E_HOSP_DATE: 'Дата конца раньше даты поступления.'
+  },
+  az: {
+    hsOn: '🏥 Stasionarda: {d} · {at}-dən · {n}-ci gün', hsOff: 'Hazırda stasionarda deyil', hsPast: 'Stasionarda olub: {list}', hsStart: '🏥 Hospitalizasiya edildi', hsEnd: '🏁 Yazıldı / köçürüldü / öldü', hsEdit: '✏️ Şöbə, tarix',
+    hsTitleStart: '🏥 Hospitalizasiya', hsDept: 'Şöbə', hsDeptPh: 'və ya şöbəni yazın', hsAt: 'Daxil olma tarixi və saatı', hsGo: 'Yadda saxla',
+    hsTitleEnd: '🏁 Hospitalizasiyanın sonu', hsKind: 'Nəticə', hsKinds: { home: 'Yazıldı', transfer: 'Köçürüldü', death: 'Öldü', left: 'Özü getdi' }, hsEndAt: 'Tarix və saat', hsWhy: 'Ətraflı (hara köçürülüb, səbəb…)', hsEndAsk: 'Hospitalizasiya bitsin? Pasiyent üçün gecə Sİ təhlili dayanacaq.',
+    hsDiary: '📓 Stasionar gündəliyi', hsDiaryBtn: '📓 Gündəlik (bu gün)', hsP: { complaints: 'Şikayətlər', status: 'Obyektiv', done: 'Edilib / müalicə', plan: 'Plan' }, hsVit: 'Göstəricilər', hsLabs: 'Analizlər', hsOther: 'Digər',
+    hsEnded: { home: 'yazılıb', transfer: 'köçürülüb', death: 'ölüb', left: 'gedib' },
+    aiFillBtn: '🤖 Sİ ilə doldur', aiFillWait: 'Sİ sənədi GT/098 üzrə doldurur…', aiFillDone: 'Sİ yazdığı sahələr: {n}', aiFillMiss: 'GT/098-də olmayanlar — özünüz yazın:', aiFillNone: 'Sİ GT/098-dən yazılacaq başqa şey tapmadı.', aiFillNoPt: 'Sənəd pasiyentə (GT/098) bağlı deyil',
+    aiFillTitle: '🤖 Sİ ilə dolduruldu', aiFillCheck: 'Sİ-nin yazdıqlarını yoxlayın — xüsusilə rəqəmləri, tarixləri və diaqnozları.',
+    E_HOSP_NONE: 'Pasiyent hazırda stasionarda deyil.', E_HOSP_DATE: 'Bitmə tarixi daxil olma tarixindən əvvəldir.'
+  }
+};
+function hst(k, v) { const L2 = HS_T[S.lang === 'az' ? 'az' : 'ru']; let s = L2[k] !== undefined ? L2[k] : HS_T.ru[k]; if (typeof s === 'string' && v) Object.keys(v).forEach(x => { s = s.split('{' + x + '}').join(v[x]); }); return s; }
+Object.assign(I18N.ru, { E_HOSP_NONE: HS_T.ru.E_HOSP_NONE, E_HOSP_DATE: HS_T.ru.E_HOSP_DATE }); Object.assign(I18N.az, { E_HOSP_NONE: HS_T.az.E_HOSP_NONE, E_HOSP_DATE: HS_T.az.E_HOSP_DATE });
+function hsDayN(at, end) {
+  const a = new Date(String(at).slice(0, 10) + 'T00:00:00'), b = new Date(String(end || nowLocal()).slice(0, 10) + 'T00:00:00');
+  return Math.max(1, Math.round((b - a) / 86400000) + (end ? 0 : 1));
+}
+function hsBedDays(at, end) { const a = new Date(String(at).slice(0, 10) + 'T00:00:00'), b = new Date(String(end || nowLocal()).slice(0, 10) + 'T00:00:00'); return Math.max(1, Math.round((b - a) / 86400000)); }
+/** Дневник: записи наблюдения по порядку (старые → новые). */
+function hsDiary(g, from) {
+  return (g.notes || []).filter(n => n.kind !== 'photo' && (!from || String(n.at) >= String(from).slice(0, 16))).slice().sort((a, b) => String(a.at).localeCompare(String(b.at)));
+}
+function hsNoteText(n, withDate) {
+  const P = hst('hsP'), p = n.parts || {};
+  const lines = [];
+  ['complaints', 'status'].forEach(k => { if (p[k]) lines.push(P[k] + ': ' + p[k]); });
+  const vit = typeof pnVitText === 'function' ? pnVitText(n.vitals) : '';
+  if (vit) lines.push(hst('hsVit') + ': ' + vit);
+  if ((n.labs || []).length) lines.push(hst('hsLabs') + ': ' + (typeof pnLabsText === 'function' ? pnLabsText(n.labs) : ''));
+  ['done', 'plan'].forEach(k => { if (p[k]) lines.push(P[k] + ': ' + p[k]); });
+  if (n.text && !Object.keys(p).length) lines.unshift(n.text); else if (n.text && Object.values(p).join('\n') !== n.text) lines.push(hst('hsOther') + ': ' + n.text);
+  return (withDate ? fmtDt(n.at) + '\n' : '') + lines.join('\n');
+}
+/* ---------- вид: стационар и дневник в GT/098 ---------- */
+(function () {
+  const o = window.ptCardHtml;
+  window.ptCardHtml = function () {
+    let h = o.apply(this, arguments);
+    try {
+      const g = ptSt().cur; if (!g || !g.patient) return h;
+      const hs = g.hosp || {};
+      const A = g.access || {};
+      const edit = !g.shared && can('forms') && A.canWrite !== false;
+      const past = (hs.hist || []).concat(hs.end ? [{ at: hs.at, dept: hs.dept, end: hs.end, kind: hs.kind }] : []);
+      const card = '<div class="card" style="border-left:4px solid ' + (hs.on ? '#c0392b' : '#999') + '">' +
+        '<div class="nm" style="font-size:16px">' + esc(hs.on ? hst('hsOn', { d: hs.dept || '—', at: fmtDt(hs.at), n: hsDayN(hs.at) }) : hst('hsOff')) + '</div>' +
+        (past.length ? '<div class="gt-src" style="margin-top:4px">' + esc(hst('hsPast', { list: past.map(x => (x.dept || '—') + ' ' + fmtDate(String(x.at).slice(0, 10)) + '–' + fmtDate(String(x.end).slice(0, 10)) + ' (' + (hst('hsEnded')[x.kind] || '') + ')').join('; ') })) + '</div>' : '') +
+        (edit ? '<div class="gt-rowacts" style="margin-top:8px;flex-wrap:wrap">' + (hs.on ? '<button class="btn small primary" data-act="pnNew" data-id="' + esc(g.patient.id) + '">' + esc(hst('hsDiaryBtn')) + '</button><button class="btn small" data-act="hsEndOpen">' + esc(hst('hsEnd')) + '</button><button class="btn small ghost" data-act="hsStartOpen">' + esc(hst('hsEdit')) + '</button>' : '<button class="btn small" data-act="hsStartOpen">' + esc(hst('hsStart')) + '</button>') + '</div>' : '') + '</div>';
+      const i = h.indexOf('class="card gt-head"');
+      const j = i >= 0 ? h.indexOf('<div class="card"', i + 10) : -1;
+      h = j > 0 ? h.slice(0, j) + card + h.slice(j) : h + card;
+      // дневник — отдельный раздел (последняя госпитализация; новые сверху)
+      const diary = hsDiary(g, hs.on ? hs.at : '').reverse();
+      if (diary.length || hs.on) {
+        const body = diary.map(n => '<div class="gt-row"><b>' + esc(fmtDt(n.at)) + '</b> <span class="gt-src">' + esc(n.createdByName || '') + '</span><div style="white-space:pre-wrap">' + esc(hsNoteText(n, false)) + '</div></div>').join('');
+        const sec = gtSec('diary', hst('hsDiary'), diary.length, body, hs.on || gtOpenState('diary', false));
+        const k = h.indexOf('<details class="gt-sec" data-gt="dx"');
+        h = k > 0 ? h.slice(0, k) + sec + h.slice(k) : h + sec;
+      }
+    } catch (e) { console.error(e); }
+    return h;
+  };
+})();
+/* ---------- документы из дневника и стационара ---------- */
+(function () {
+  if (typeof gtDocPatch !== 'function') return;
+  const o = gtDocPatch;
+  gtDocPatch = function (type, g) {
+    const out = o.apply(this, arguments);
+    try {
+      const keys = {}; dsFields(type).forEach(f => { keys[f.k] = f; });
+      const put = (k, v) => { if (keys[k] && v !== undefined && v !== null && String(v).trim() && !out[k]) out[k] = keys[k].o && keys[k].o.max ? String(v).slice(0, keys[k].o.max) : String(v); };
+      const hs = g.hosp || {};
+      const last = hs.on ? hs : (hs.end ? hs : null);
+      if (last && last.at) {
+        put('admAt', String(last.at).slice(0, 16)); put('dept', last.dept);
+        if (last.end) { put('disAt', String(last.end).slice(0, 16)); put('bedDays', String(hsBedDays(last.at, last.end))); }
+        const kindOut = { home: 'home', transfer: 'transfer', death: 'death' }[last.kind];
+        if (kindOut && keys.outcome && keys.outcome.o && (keys.outcome.o.o || []).some(x => x[0] === kindOut)) put('outcome', kindOut);
+        if (last.kind === 'transfer') put('transferTo', last.why);
+      }
+      const diary = hsDiary(g, last ? last.at : '');
+      if (diary.length) {
+        // TQS 003: ежедневные осмотры — строками
+        if (keys.daily && keys.daily.type === 'rows') { const rows = {}; diary.forEach(n => { rows['d' + String(n.id).slice(-10)] = { at: String(n.at).slice(0, 16), text: hsNoteText(n, false).slice(0, 3000), by: n.createdByName || '' }; }); out.daily = rows; }
+        const P = n => n.parts || {};
+        put('course', diary.map(n => fmtDate(String(n.at).slice(0, 10)) + ': ' + ([P(n).status, P(n).done].filter(Boolean).join('; ') || n.text || '')).join('\n'));
+        const lastSt = diary.slice().reverse().find(n => P(n).status);
+        if (lastSt) { put('statusDis', P(lastSt).status); put('statusNow', P(lastSt).status); put('status', P(lastSt).status); }
+        const firstC = diary.find(n => P(n).complaints); if (firstC) put('complaints', P(firstC).complaints);
+        const done = diary.filter(n => P(n).done).map(n => fmtDate(String(n.at).slice(0, 10)) + ': ' + P(n).done);
+        if (done.length) { put('tayinat', done.join('\n')); if (!out.treatment) put('treatment', done.join('\n')); }
+      }
+    } catch (e) { console.error(e); }
+    return out;
+  };
+})();
+// «📘 Взять из GT/098»: строки (осмотры) — тоже, если в документе их ещё нет
+(function () {
+  const o = H.gtFillDoc;
+  H.gtFillDoc = async el => {
+    const c = dsSt().cur;
+    if (c && c.data && c.data.daily && typeof c.data.daily === 'object' && !Object.keys(c.data.daily).length) delete c.data.daily;
+    return o(el);
+  };
+})();
+/* ---------- кнопки стационара ---------- */
+function hsStartModal() {
+  const g = ptSt().cur; if (!g) return;
+  const hs = g.hosp || {};
+  const az = S.lang === 'az';
+  openModal('<h3>' + esc(hst('hsTitleStart')) + '</h3><div class="field"><label>' + esc(hst('hsDept')) + '</label><div class="chips f-chips" style="margin-bottom:6px">' +
+    (typeof F_HOSP_DEPTS !== 'undefined' ? F_HOSP_DEPTS : []).map(x => '<button type="button" class="chip" data-act="hsDeptPick" data-v="' + esc(az ? x[1] : x[0]) + '">' + esc(az ? x[1] : x[0]) + '</button>').join('') + '</div>' +
+    '<input type="text" id="hsDept" maxlength="120" value="' + esc(hs.on ? hs.dept || '' : '') + '" placeholder="' + esc(hst('hsDeptPh')) + '"></div>' +
+    '<div class="field"><label>' + esc(hst('hsAt')) + '</label><input type="datetime-local" id="hsAt" value="' + esc((hs.on ? String(hs.at).replace(' ', 'T') : nowLocal()).slice(0, 16)) + '" max="' + esc(nowLocal()) + '"></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="hsStartGo">' + esc(hst('hsGo')) + '</button></div>');
+}
+function hsEndModal() {
+  const K = hst('hsKinds');
+  openModal('<h3>' + esc(hst('hsTitleEnd')) + '</h3><div class="field"><label>' + esc(hst('hsKind')) + '</label><div class="seg" id="hsKindSeg">' + Object.keys(K).map((k, i) => '<button type="button" data-act="hsKind" data-k="' + k + '"' + (i === 0 ? ' class="on"' : '') + '>' + esc(K[k]) + '</button>').join('') + '</div></div>' +
+    '<div class="field"><label>' + esc(hst('hsEndAt')) + '</label><input type="datetime-local" id="hsEndAt" value="' + esc(nowLocal().slice(0, 16)) + '" max="' + esc(nowLocal()) + '"></div>' +
+    '<div class="field"><label>' + esc(hst('hsWhy')) + '</label><input type="text" id="hsWhy" maxlength="300"></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="hsEndGo">' + esc(hst('hsGo')) + '</button></div>');
+}
+const HSS = { kind: 'home' };
+/* ---------- 🤖 «Заполнить с ИИ»: весь документ за один раз из GT/098 ---------- */
+(function () {
+  if (typeof dsEditorHtml !== 'function') return;
+  const o = dsEditorHtml;
+  dsEditorHtml = function () {
+    const h = o.apply(this, arguments);
+    try {
+      const c = dsSt().cur;
+      if (!c || c.status === 'closed' || !can('forms') || !canAi() || !(c.doc && c.doc.patientId)) return h;
+      const btn = '<button class="btn small" data-act="aiFillDoc">' + esc(hst('aiFillBtn')) + '</button>';
+      return h.replace('<span class="muted" id="dsSaveState">', btn + '<span class="muted" id="dsSaveState">');
+    } catch (e) { return h; }
+  };
+})();
+function aiDocEmpty(v) { return v === undefined || v === null || (typeof v === 'object' ? !Object.keys(v).length : String(v).trim() === ''); }
+async function aiFillDoc(btn) {
+  const c = dsSt().cur; if (!c) return;
+  const pid = c.doc && c.doc.patientId; if (!pid) return toast(hst('aiFillNoPt'), 'bad');
+  const fields = dsFields(c.type).map(f => ({ k: f.k, label: f.ru + (f.secRu ? ' [' + f.secRu + ']' : ''), type: f.type, max: (f.o && f.o.max) || 0, opts: f.type === 'sel' ? (f.o.o || []).map(x => x[0] + '=' + x[1]) : undefined, sub: f.type === 'rows' ? (f.o.sub || []).map(s => ({ k: s[0], label: s[2], type: s[1] })) : undefined, filled: !aiDocEmpty((c.data || {})[f.k]) }));
+  toast(hst('aiFillWait'));
+  const r = await busy(btn, () => rpcA('gtDocAi', { patientId: pid, type: c.type, title: (DOC_TPL[c.type] || {}).ru || c.type, fields }, { timeout: 180000 })).catch(() => null);
+  if (!r || !r.ok) return;
+  const d = c.data || {}, patch = {};
+  const F = {}; dsFields(c.type).forEach(f => { F[f.k] = f; });
+  Object.keys(r.fields || {}).forEach(k => {
+    const f = F[k], v = r.fields[k]; if (!f || !aiDocEmpty(d[k])) return;
+    if (f.type === 'rows') {
+      if (!Array.isArray(v) || !v.length) return;
+      const subs = (f.o.sub || []).map(s => s[0]); const rows = {};
+      v.slice(0, f.o.max || 50).forEach((x, i) => { const row = {}; subs.forEach(s => { if (x && x[s] !== undefined && String(x[s]).trim()) row[s] = String(x[s]); }); if (Object.keys(row).length) rows['ai' + i] = row; });
+      if (Object.keys(rows).length) patch[k] = rows;
+      return;
+    }
+    let s = String(v === null || v === undefined ? '' : v).trim(); if (!s) return;
+    if (f.type === 'icd') { s = gtIcd(s); if (!s) return; }
+    if (f.type === 'sel' && !(f.o.o || []).some(x => x[0] === s)) return;
+    if (f.type === 'd' && !/^\d{4}-\d{2}-\d{2}$/.test(s)) return;
+    if (f.type === 'dt') { s = s.replace('T', ' ').slice(0, 16); if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(s)) return; }
+    if (f.type === 'n' && !isFinite(Number(s.replace(',', '.')))) return;
+    if (f.type === 'chk') { if (!/^(true|1|да|yes)$/i.test(s)) return; patch[k] = true; return; }
+    patch[k] = f.o && f.o.max ? s.slice(0, f.o.max) : s;
+  });
+  const n = Object.keys(patch).length;
+  if (n) { dsQueuePatch(patch); dsRender(true); }
+  const miss = (r.missing || []).slice(0, 30);
+  openModal('<h3>' + esc(hst('aiFillTitle')) + '</h3><div class="info" style="margin-bottom:8px">' + esc(n ? hst('aiFillDone', { n }) : hst('aiFillNone')) + '</div>' +
+    (n ? '<div class="f-alert" style="margin-bottom:8px">' + esc(hst('aiFillCheck')) + '</div>' : '') +
+    (miss.length ? '<div class="lbl">' + esc(hst('aiFillMiss')) + '</div><ul style="margin:4px 0 8px 18px">' + miss.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '') +
+    '<div class="acts"><button class="btn primary" data-act="closeModal">OK</button></div>');
+}
+Object.assign(H, {
+  hsStartOpen: () => hsStartModal(),
+  hsEndOpen: () => { HSS.kind = 'home'; hsEndModal(); },
+  hsDeptPick: el => { const i = $('#hsDept'); if (i) i.value = el.dataset.v; },
+  hsKind: el => { HSS.kind = el.dataset.k; $$('#hsKindSeg button').forEach(b => b.classList.toggle('on', b === el)); },
+  hsStartGo: async el => {
+    const g = ptSt().cur; if (!g) return;
+    const r = await busy(el, () => rpcA('gtHosp', { patientId: g.patient.id, action: 'start', dept: String(($('#hsDept') || {}).value || '').trim(), at: String(($('#hsAt') || {}).value || '') }));
+    if (r && r.ok) { closeModal(); ptOpen(g.patient.id, true); }
+  },
+  hsEndGo: async el => {
+    const g = ptSt().cur; if (!g) return;
+    if (!confirm(hst('hsEndAsk'))) return;
+    const r = await busy(el, () => rpcA('gtHosp', { patientId: g.patient.id, action: 'end', kind: HSS.kind, at: String(($('#hsEndAt') || {}).value || ''), why: String(($('#hsWhy') || {}).value || '') }));
+    if (r && r.ok) { closeModal(); ptOpen(g.patient.id, true); }
+  },
+  aiFillDoc: el => aiFillDoc(el)
+});
+
+/* =====================================================================
+ * v78 (9.51): 🤖 ночной разбор ИИ — в GT/098 и на «Сегодня»; «🤖 Разобрать сейчас».
+ * ===================================================================== */
+const NT_T = {
+  ru: {
+    ntSec: '🤖 Ночной разбор ИИ', ntNow: '🤖 Разобрать сейчас', ntWait: 'ИИ изучает GT/098 и протоколы… (до 2–3 минут)', ntNone: 'Разбора ещё не было. Он появится ночью (22:00–05:00), пока пациент в стационаре, — или нажмите «Разобрать сейчас».',
+    ntRisk: { low: '🟢 Риск низкий', mid: '🟡 Риск средний', high: '🔴 Риск высокий' }, ntDay: 'день {n}', ntWeb: '🌐 с протоколами из интернета', ntFlags: '⚠️ Тревожные признаки', ntTests: '🧪 Анализы', ntExams: '🩻 Обследования',
+    ntDrugs: '💊 Препараты / группы', ntAvoid: '⛔ Не назначать / отменить', ntQ: '❓ Уточнить', ntDocs: '📄 Документы', ntSrc: '🔗 Источники', ntWhen: { now: 'срочно', today: 'сегодня', plan: 'планово' },
+    ntNote: 'Подсказка ИИ по GT/098 и протоколам — решение принимает врач. Проверьте дозы и противопоказания.', ntOld: 'Прошлые разборы', ntToday: '🤖 Ночной разбор — мои пациенты в стационаре', ntNoRev: 'разбора ещё нет', ntCounts: 'анализы {t} · обследования {e} · препараты {d}'
+  },
+  az: {
+    ntSec: '🤖 Gecə Sİ təhlili', ntNow: '🤖 İndi təhlil et', ntWait: 'Sİ GT/098-i və protokolları öyrənir… (2–3 dəqiqəyədək)', ntNone: 'Hələ təhlil olmayıb. Pasiyent stasionarda olduqca gecə (22:00–05:00) görünəcək — və ya «İndi təhlil et».',
+    ntRisk: { low: '🟢 Risk aşağı', mid: '🟡 Risk orta', high: '🔴 Risk yüksək' }, ntDay: '{n}-ci gün', ntWeb: '🌐 internetdəki protokollarla', ntFlags: '⚠️ Təhlükə əlamətləri', ntTests: '🧪 Analizlər', ntExams: '🩻 Müayinələr',
+    ntDrugs: '💊 Dərmanlar / qruplar', ntAvoid: '⛔ Təyin etməmək / ləğv', ntQ: '❓ Dəqiqləşdir', ntDocs: '📄 Sənədlər', ntSrc: '🔗 Mənbələr', ntWhen: { now: 'təcili', today: 'bu gün', plan: 'planlı' },
+    ntNote: 'GT/098 və protokollar üzrə Sİ məsləhəti — qərarı həkim verir. Dozaları və əks-göstərişləri yoxlayın.', ntOld: 'Əvvəlki təhlillər', ntToday: '🤖 Gecə təhlili — stasionardakı pasiyentlərim', ntNoRev: 'hələ təhlil yoxdur', ntCounts: 'analizlər {t} · müayinələr {e} · dərmanlar {d}'
+  }
+};
+function ntt(k, v) { const L2 = NT_T[S.lang === 'az' ? 'az' : 'ru']; let s = L2[k] !== undefined ? L2[k] : NT_T.ru[k]; if (typeof s === 'string' && v) Object.keys(v).forEach(x => { s = s.split('{' + x + '}').join(v[x]); }); return s; }
+function ntHtml(r) {
+  if (!r) return '';
+  const W = ntt('ntWhen'), e = esc;
+  const list = (title, arr, f) => arr && arr.length ? '<div class="lbl" style="margin-top:8px">' + e(title) + '</div><ul style="margin:2px 0 0 18px;padding:0">' + arr.map(x => '<li style="margin:3px 0">' + f(x) + '</li>').join('') + '</ul>' : '';
+  const wi = x => '<b>' + e(x.what) + '</b>' + (x.when ? ' <span class="tag' + (x.when === 'now' ? ' red' : x.when === 'today' ? ' amber' : '') + '">' + e(W[x.when] || x.when) + '</span>' : '') + (x.why ? '<div class="gt-src">' + e(x.why) + '</div>' : '');
+  return '<div style="font-weight:700">' + e((ntt('ntRisk') || {})[r.risk] || r.risk) + '</div><div class="gt-src">' + e([fmtDt(r.at || r.createdAt || ''), r.day ? ntt('ntDay', { n: r.day }) : '', r.web ? ntt('ntWeb') : ''].filter(Boolean).join(' · ')) + '</div>' +
+    (r.summary ? '<div style="margin-top:6px;white-space:pre-wrap">' + e(r.summary) + '</div>' : '') +
+    list(ntt('ntFlags'), r.redFlags, x => '<span class="gt-flag">' + e(x) + '</span>') +
+    list(ntt('ntTests'), r.tests, wi) + list(ntt('ntExams'), r.exams, wi) +
+    list(ntt('ntDrugs'), r.drugs, x => '<b>' + e(x.what) + '</b>' + (x.why ? '<div class="gt-src">' + e(x.why) + '</div>' : '') + (x.caution ? '<div style="color:var(--amber)">⚠ ' + e(x.caution) + '</div>' : '') + (x.source ? '<div class="gt-src">📖 ' + e(x.source) + '</div>' : '')) +
+    list(ntt('ntAvoid'), r.avoid, x => '<b>' + e(x.what) + '</b>' + (x.why ? '<div class="gt-src">' + e(x.why) + '</div>' : '')) +
+    list(ntt('ntQ'), r.questions, x => e(x)) + list(ntt('ntDocs'), r.docs, x => e(x)) +
+    list(ntt('ntSrc'), (r.sources || []).filter(x => x.url || x.title), x => x.url ? '<a href="' + e(x.url) + '" target="_blank" rel="noopener noreferrer">' + e(x.title || x.url) + '</a>' : e(x.title)) +
+    '<div class="f-alert" style="margin-top:10px">' + e(ntt('ntNote')) + '</div>';
+}
+// GT/098: раздел ночного разбора — сразу после карточки стационара
+(function () {
+  const o = window.ptCardHtml;
+  window.ptCardHtml = function () {
+    let h = o.apply(this, arguments);
+    try {
+      const g = ptSt().cur; if (!g || !g.patient || g.shared) return h;
+      const hs = g.hosp || {}, nl = g.night || [];
+      if (!hs.on && !nl.length) return h;
+      const A = g.access || {};
+      const can0 = can('forms') && canAi() && A.canWrite !== false && hs.on;
+      const body = (nl.length ? ntHtml(nl[0]) : '<div class="muted">' + esc(ntt('ntNone')) + '</div>') +
+        (can0 ? '<button class="btn block" style="margin-top:10px" data-act="ntNow">' + esc(ntt('ntNow')) + '</button>' : '') +
+        (nl.length > 1 ? '<div class="lbl" style="margin-top:10px">' + esc(ntt('ntOld')) + '</div>' + nl.slice(1).map((x, i) => '<div class="cs-list-row" data-act="ntOld" data-i="' + (i + 1) + '"><div class="grow"><div class="nm">' + esc(x.title || '') + '</div><div class="fd">' + esc(((ntt('ntRisk') || {})[x.risk] || '') + ' · ' + fmtDt(x.at || x.createdAt || '')) + '</div></div></div>').join('') : '');
+      const sec = gtSec('night', ntt('ntSec'), nl.length || '', body, true, nl.length && nl[0].risk === 'high' ? 'gt-warn' : '');
+      const k = h.indexOf('<details class="gt-sec" data-gt="diary"');
+      const k2 = k > 0 ? k : h.indexOf('<details class="gt-sec" data-gt="dx"');
+      h = k2 > 0 ? h.slice(0, k2) + sec + h.slice(k2) : h + sec;
+    } catch (e) { console.error(e); }
+    return h;
+  };
+})();
+// «Сегодня»: мои пациенты в стационаре — риск и сколько советов
+const NT = { at: 0, rows: null, busy: false };
+async function ntTodayFill(force) {
+  const box = $('#gtNightToday'); if (!box) return;
+  if (!force && NT.rows && Date.now() - NT.at < 300000) { box.innerHTML = ntTodayHtml(NT.rows); return; }
+  if (NT.busy) return; NT.busy = true;
+  const r = await rpc('gtNightMine', {}, 30000).catch(() => null);
+  NT.busy = false;
+  NT.rows = r && r.ok ? r.rows : []; NT.at = Date.now();
+  const b2 = $('#gtNightToday'); if (b2) b2.innerHTML = ntTodayHtml(NT.rows);
+}
+function ntTodayHtml(rows) {
+  if (!rows || !rows.length) return '';
+  const R = ntt('ntRisk');
+  return '<div class="card" style="border-left:4px solid #2f5bb7"><div class="lbl" style="margin-top:0">' + esc(ntt('ntToday')) + '</div>' + rows.map(x => '<div class="cs-list-row" data-act="ntOpen" data-id="' + esc(x.id) + '"><span>🏥</span><div class="grow"><div class="nm">' + esc(x.label) + ' · ' + esc(x.dept || '') + '</div><div class="fd">' +
+    esc(x.review ? (R[x.review.risk] || '') + ' · ' + ntt('ntCounts', { t: x.review.tests, e: x.review.exams, d: x.review.drugs }) + (x.review.flags ? ' · ⚠️ ' + x.review.flags : '') : ntt('ntNoRev')) + '</div></div></div>').join('') + '</div>';
+}
+(function () {
+  const o = window.renderToday;
+  if (typeof o !== 'function') return;
+  window.renderToday = function () {
+    const r = o.apply(this, arguments);
+    try {
+      if (!S.me || typeof can !== 'function' || !can('forms') || (typeof hpPiiOn === 'function' && hpPiiOn())) return r;
+      const scr = $('#scrToday'); if (!scr || scr.querySelector('#gtNightToday')) return r;
+      const first = scr.querySelector('.card');
+      const html = '<div id="gtNightToday"></div>';
+      if (first) first.insertAdjacentHTML('afterend', html); else scr.insertAdjacentHTML('beforeend', html);
+      ntTodayFill(false);
+    } catch (e) { }
+    return r;
+  };
+})();
+Object.assign(H, {
+  ntNow: async el => {
+    const g = ptSt().cur; if (!g) return;
+    toast(ntt('ntWait'));
+    const r = await busy(el, () => rpcA('gtNightNow', { patientId: g.patient.id }, { timeout: 300000 })).catch(() => null);
+    if (r && r.ok) { NT.at = 0; ptOpen(g.patient.id, true); }
+  },
+  ntOld: el => { const g = ptSt().cur; const x = g && (g.night || [])[Number(el.dataset.i)]; if (!x) return; openModal('<h3>' + esc(x.title || '') + '</h3>' + ntHtml(x) + '<div class="acts"><button class="btn primary" data-act="closeModal">' + esc(t('close')) + '</button></div>'); },
+  ntOpen: el => ptOpen(el.dataset.id, true)
 });
 
 
