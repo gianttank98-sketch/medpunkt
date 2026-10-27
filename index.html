@@ -16963,7 +16963,7 @@ async function psAudit() {
   const msg = 'Проверь документы пациента (обезличены). Обязательные поля по видам: ' + JSON.stringify(req) + '\nДокументы:\n' + aiCut(docs, 120000);
   const msgs = [{ role: 'user', content: [{ type: 'text', text: msg }] }];
   let r;
-  try { r = await rpcA('aiChat', { mode: 'audit', messages: msgs }, { timeout: 180000 }); }
+  try { r = await rpcA('aiChat', { mode: 'audit', messages: msgs, patientId: (st.prof && st.prof.pid) || undefined }, { timeout: 180000 }); } // 9.54: итог — в журнал ИИ этого пациента (сервер)
   catch (e) { st.audit = { error: e && e.res ? errText(e.res) : t('E_NETWORK'), items: [] }; const b2 = $('#psAuditBox'); if (b2) b2.innerHTML = psAuditHtml(); return; }
   const call = (r.content || []).find(b => b.type === 'tool_use' && b.name === 'report_findings');
   const txt = (r.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
@@ -31208,7 +31208,7 @@ async function ptOpen(id, force) {
   if (!g || seq !== PT.openSeq) return; // пришёл ответ на старое открытие — новее уже в пути
   const pt = ptSt(); pt.cur = g;
   // проверка качества документов — как в прежнем профиле (без ФИО к ИИ)
-  const st = dsSt(); st.prof = { head: { patient: ptFull(g.patient), fin: g.patient.fin, birthDate: g.patient.birthDate, sex: g.patient.sex }, forms: g.forms || [], docs: g.docs || [] }; st.audit = null;
+  const st = dsSt(); st.prof = { pid: g.patient.id, head: { patient: ptFull(g.patient), fin: g.patient.fin, birthDate: g.patient.birthDate, sex: g.patient.sex }, forms: g.forms || [], docs: g.docs || [] }; st.audit = null;
   if (S.screen !== 'forms') setScreen('forms');
   try { fFlush(); } catch (e) { } // последние буквы открытой формы — в очередь
   st.seg = 'patients'; st.cur = null; S.fv = null;
@@ -36257,6 +36257,7 @@ async function exRead(btn) {
       Object.keys(r.patient || {}).forEach(k => { const v = String(r.patient[k] || '').trim(); if (!v) return; if (!w[k]) w[k] = v; else if (w[k] !== v && k !== 'seen') w[k + '_alt'] = v; });
     }
     st.docs = exMerge(docs);
+    st.orig = JSON.parse(JSON.stringify(st.docs)); // 9.54: как прочитал ИИ — для учёбы на правках врача
     st.dupMode = {}; st.skip = {};
     st.docs.forEach((d, i) => { if (d.dupOf) { st.dupMode[i] = 'skip'; st.skip[i] = true; } }); // 9.53: уже есть в GT/098 — по умолчанию не сохранять
     exRender();
@@ -36393,7 +36394,7 @@ async function exSaveAll(btn) {
     if (st.skip[i]) continue;
     const d = st.docs[i];
     if (d._saved) { n++; continue; }
-    const r = await rpcA('extSave', { patientId: st.pid, formId: st.formId, doc: d, pages: (d.photos || []).length, id: d._id || ((st.dupMode || {})[i] === 'replace' && d.dupOf && d.dupOf.id) || ('X' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10)) }).catch(() => null);
+    const r = await rpcA('extSave', { patientId: st.pid, formId: st.formId, doc: d, orig: (st.orig || [])[i] || undefined, pages: (d.photos || []).length, id: d._id || ((st.dupMode || {})[i] === 'replace' && d.dupOf && d.dupOf.id) || ('X' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10)) }).catch(() => null);
     if (!r) { btn.disabled = false; return; }
     d._saved = true; d._id = r.id; n++;
   }
@@ -38295,11 +38296,11 @@ function x10(k, v) { const L2 = X10_T[S.lang === 'az' ? 'az' : 'ru']; let s = L2
     let h = o.apply(this, arguments);
     try {
       const g = ptSt().cur; if (!g || !g.patient || g.shared) return h;
-      const cs = g.aiCases || [];
-      if (!cs.length) return h;
-      const body = '<div class="muted" style="margin-bottom:6px">' + esc(x10('note')) + '</div>' + cs.map(c => '<details class="gt-row" style="padding:6px 0"' + (c === cs[0] ? ' open' : '') + '><summary><b>' + esc([c.icd, c.dx].filter(Boolean).join(' ') || c.title) + '</b><div class="gt-src">' + esc([fmtDt(c.at), c.by, c.title].filter(Boolean).join(' · ')) + '</div></summary>' +
+      const cs = g.aiCases || [], lg = g.aiLog || [];
+      if (!cs.length && !lg.length) return h;
+      const body = typeof x11Body === 'function' ? x11Body(g) : '<div class="muted" style="margin-bottom:6px">' + esc(x10('note')) + '</div>' + cs.map(c => '<details class="gt-row" style="padding:6px 0"' + (c === cs[0] ? ' open' : '') + '><summary><b>' + esc([c.icd, c.dx].filter(Boolean).join(' ') || c.title) + '</b><div class="gt-src">' + esc([fmtDt(c.at), c.by, c.title].filter(Boolean).join(' · ')) + '</div></summary>' +
         (c.final ? '<div style="margin-top:6px">' + aiMd(c.final) + '</div>' : '') + ((c.labs || []).length ? '<div class="gt-src" style="margin-top:6px">' + esc(x10('labs')) + ': ' + esc(c.labs.map(l => (l.date ? fmtDate(l.date) + ' ' : '') + l.title + ' — ' + l.text).join('; ')) + '</div>' : '') + (c.canOpen ? '<div class="gt-rowacts"><button class="btn small ghost" data-act="ptOpenCase" data-id="' + esc(c.id) + '">' + esc(x10('open')) + '</button></div>' : '') + '</details>').join('');
-      const sec = gtSec('aicase', x10('sec'), cs.length, body, gtOpenState('aicase', true));
+      const sec = gtSec('aicase', x10('sec'), cs.length + lg.length, body, gtOpenState('aicase', true));
       let k = h.indexOf('<details class="gt-sec" data-gt="hx"'); if (k < 0) k = h.indexOf('<details class="gt-sec" data-gt="labs"');
       h = k > 0 ? h.slice(0, k) + sec + h.slice(k) : h + sec;
     } catch (e) { console.error(e); }
@@ -38372,6 +38373,774 @@ function exDupHtml(d, i) {
     return out;
   };
 })();
+
+/* =====================================================================
+ * v81 (9.54): «🤖 Разборы ИИ» в GT/098 — всё: итог, ряд диагнозов с %, «сейчас», вопросы ИИ и ответы врача,
+ *  сообщения врача и ответы ИИ, анализы; незаконченные — тоже; журнал ответов ИИ (проверка документов, «Заполнить с ИИ»).
+ * ===================================================================== */
+const X11_T = {
+  ru: { open: 'не закончен', diff: 'Ряд диагнозов ИИ', urgent: '⚡ Сейчас', scores: 'Шкалы', qa: '💬 Вопросы и ответы ({n})', dr: '👨‍⚕️ Врач', ai: '🤖 ИИ', q: '🤖 Вопрос', noAns: 'без ответа', fill: '📝 Предложил заполнить', more: 'Полный ход — в самом разборе', log: '📋', audit: '🔍 Проверка документов', overall: 'общая оценка {p}%' },
+  az: { open: 'bitməyib', diff: 'Sİ diaqnoz sırası', urgent: '⚡ İndi', scores: 'Şkalalar', qa: '💬 Suallar və cavablar ({n})', dr: '👨‍⚕️ Həkim', ai: '🤖 Sİ', q: '🤖 Sual', noAns: 'cavabsız', fill: '📝 Doldurmağı təklif etdi', more: 'Tam gedişat — təhlilin özündə', log: '📋', audit: '🔍 Sənədlərin yoxlanışı', overall: 'ümumi qiymət {p}%' }
+};
+function x11(k, v) { const L2 = X11_T[S.lang === 'az' ? 'az' : 'ru']; let s = L2[k] !== undefined ? L2[k] : X11_T.ru[k]; if (typeof s === 'string' && v) Object.keys(v).forEach(x => { s = s.split('{' + x + '}').join(v[x]); }); return s; }
+(function () {
+  if ($('#x11Css')) return;
+  const s = document.createElement('style'); s.id = 'x11Css';
+  s.textContent = '.x11-qa{margin:4px 0;padding:6px 8px;border-radius:8px;background:var(--bg,#f1f3f7)}.x11-qa .who{font-size:12px;color:var(--sub)}.x11-dx{margin:2px 0}.x11-bar{display:inline-block;height:6px;border-radius:3px;background:#2f5bb7;vertical-align:middle;margin-left:6px}';
+  document.head.appendChild(s);
+})();
+function x11CaseHtml(c, first) {
+  const L = { r: '🔴', y: '🟡', g: '🟢' };
+  const df = c.diff || null, qa = c.qa || [];
+  const diffH = df && (df.it || []).length ? '<div class="lbl" style="margin-top:8px">' + esc(x11('diff')) + '</div>' + df.it.map(y => '<div class="x11-dx">' + (L[y.l] || '•') + ' <b>' + esc(y.n) + '</b>' + (y.i ? ' <span class="gt-src">' + esc(y.i) + '</span>' : '') + ' — ' + y.c + '%<span class="x11-bar" style="width:' + Math.round(y.c * 0.6) + 'px"></span>' + (y.w ? '<div class="gt-src">' + esc(y.w) + '</div>' : '') + '</div>').join('') : '';
+  const urg = df && df.u ? '<div class="f-alert" style="margin-top:6px"><b>' + esc(x11('urgent')) + ':</b> ' + esc(df.u) + '</div>' : '';
+  const sc = df && df.s ? '<div class="gt-src">' + esc(x11('scores')) + ': ' + esc(df.s) + '</div>' : '';
+  const qaH = qa.length ? '<details style="margin-top:8px"><summary><b>' + esc(x11('qa', { n: qa.length })) + '</b></summary>' + qa.map(x => {
+    if (x.k === 'u') return '<div class="x11-qa"><div class="who">' + esc(x11('dr')) + '</div><div style="white-space:pre-wrap">' + esc(x.t) + '</div></div>';
+    if (x.k === 'q') return '<div class="x11-qa"><div class="who">' + esc(x11('q')) + '</div><div><b>' + esc(x.t) + '</b></div>' + (x.w ? '<div class="gt-src">' + esc(x.w) + '</div>' : '') + '<div>→ ' + (x.a ? esc(x.a) : '<span class="muted">' + esc(x11('noAns')) + '</span>') + '</div></div>';
+    if (x.k === 'a') return '<div class="x11-qa"><div class="who">' + esc(x11('ai')) + '</div>' + aiMd(x.t) + '</div>';
+    if (x.k === 'f') return '<div class="x11-qa"><div class="who">' + esc(x11('fill')) + '</div>' + esc([x.t, x.a].filter(Boolean).join(': ')) + '</div>';
+    return '<div class="muted">…</div>';
+  }).join('') + '</details>' : (c.qaN ? '<div class="gt-src">' + esc(x11('more')) + '</div>' : '');
+  const labs = (c.labs || []).length ? '<div class="gt-src" style="margin-top:6px">' + esc(x10('labs')) + ': ' + esc(c.labs.map(l => (l.date ? fmtDate(l.date) + ' ' : '') + l.title + ' — ' + l.text).join('; ')) + '</div>' : '';
+  return '<details class="gt-row" style="padding:6px 0"' + (first ? ' open' : '') + '><summary><b>' + esc([c.icd, c.dx].filter(Boolean).join(' ') || c.title) + '</b>' + (c.open && !c.final ? ' <span class="tag amber">' + esc(x11('open')) + '</span>' : '') +
+    '<div class="gt-src">' + esc([fmtDt(c.at), c.by, c.title].filter(Boolean).join(' · ')) + '</div></summary>' +
+    (c.final ? '<div style="margin-top:6px">' + aiMd(c.final) + '</div>' : '') + urg + diffH + sc + labs + qaH +
+    (c.canOpen ? '<div class="gt-rowacts"><button class="btn small ghost" data-act="ptOpenCase" data-id="' + esc(c.id) + '">' + esc(x10('open')) + '</button></div>' : '') + '</details>';
+}
+function x11LogHtml(x) {
+  return '<details class="gt-row" style="padding:6px 0"><summary><b>' + esc(x.title) + '</b><div class="gt-src">' + esc([fmtDt(x.at), x.by].filter(Boolean).join(' · ')) + '</div></summary><div style="margin-top:6px">' + aiMd(x.text) + '</div></details>';
+}
+/** Тело раздела «🤖 Разборы ИИ»: разборы и журнал ответов ИИ — вместе, новые сверху. */
+function x11Body(g) {
+  const items = (g.aiCases || []).map(c => ({ at: String(c.at || ''), c })).concat((g.aiLog || []).map(x => ({ at: String(x.at || ''), x })))
+    .sort((a, b) => b.at.localeCompare(a.at));
+  let firstCase = true;
+  return '<div class="muted" style="margin-bottom:6px">' + esc(x10('note')) + '</div>' + items.map(it => { if (it.c) { const h = x11CaseHtml(it.c, firstCase); firstCase = false; return h; } return x11LogHtml(it.x); }).join('');
+}
+// «🔍 Проверить документы»: итог в журнал пишет сервер (из ответа ИИ) — сюда только id проверяемого пациента (v21-docs: psAudit → aiChat)
+(function () {
+  const o = psAudit;
+  psAudit = async function () {
+    const r = await o.apply(this, arguments);
+    try { const pid = (dsSt().prof || {}).pid; if (pid && typeof PT === 'object' && PT.cache) delete PT.cache[pid]; } catch (e) { }
+    return r;
+  };
+})();
+
+/* =====================================================================
+ * v82 (9.54): окно разбора — итог второго независимого чтения («совпало / разошлось»).
+ * ===================================================================== */
+const X12_T = {
+  ru: { ok: '🔁 Второе независимое чтение: всё совпало ({n})', bad: '🔁 Второе независимое чтение: совпало {n}, разошлось {m} — они отмечены «❓» и в расхождениях, сверьте с оригиналом' },
+  az: { ok: '🔁 İkinci müstəqil oxu: hamısı uyğundur ({n})', bad: '🔁 İkinci müstəqil oxu: uyğun {n}, fərqli {m} — «❓» ilə və ziddiyyətlərdə qeyd olunub, orijinalla yoxlayın' }
+};
+function x12(k, v) { const L2 = X12_T[S.lang === 'az' ? 'az' : 'ru']; let s = L2[k] !== undefined ? L2[k] : X12_T.ru[k]; if (typeof s === 'string' && v) Object.keys(v).forEach(x => { s = s.split('{' + x + '}').join(v[x]); }); return s; }
+(function () {
+  const o = exExtraHtml;
+  exExtraHtml = function (d) {
+    let h = o.apply(this, arguments);
+    try {
+      const v = d && d.verify;
+      if (v && (v.ok || v.bad)) h = '<div class="' + (v.bad ? 'ex-flag' : 'muted') + '" style="font-size:13px;margin-top:6px;font-weight:' + (v.bad ? 700 : 400) + '">' + esc(v.bad ? x12('bad', { n: v.ok, m: v.bad }) : x12('ok', { n: v.ok })) + '</div>' + h;
+    } catch (e) { }
+    return h;
+  };
+})();
+
+/* =====================================================================
+ * v83: 🦠 ТБ-панель в GT/098 (центр лёгочных болезней / туберкулёза).
+ *  - Все бактериологические исследования (микроскопия мокроты, посев Л–Й, Xpert MTB/RIF, MGIT) и снимки лёгких
+ *    одной таблицей по датам (новые сверху): дата | исследование | результат | источник.
+ *  - Цвет по знаку: положительно — красный, отрицательно — зелёный, неясно / по-разному / «❓» — жёлтый, не выполнялся — серый.
+ *  - Xpert: устойчивость к рифампицину (davamlı / resistant / устойчив / RR) — красным; чувствителен — отдельно.
+ *  - Строка состояния: бактериовыделение есть / нет / неизвестно (по последним результатам), конверсия, последний положительный.
+ *  - Осторожно: неуверенное и спорное никогда не считается отрицательным — «❓ требует проверки».
+ *  Только показ: данные документов не меняются.
+ * ===================================================================== */
+const X83_T = {
+  ru: {
+    title: '🦠 ТБ-панель', bact: 'Бактериовыделение', st: { yes: 'есть', no: 'нет', unk: 'неизвестно' }, check: '❓ требует проверки', noBact: 'бактериологических исследований нет',
+    conv: '✅ конверсия: после положительного — отрицательные ({n})', lastPos: 'последний положительный: {d} ({w})', unsureN: '❓ неуверенных или спорных результатов: {n}',
+    rifR: 'устойчивость к рифампицину', rifS: 'чувствителен к рифампицину', rifI: 'рифампицин: неясно', newT: 'добавлено за последние 7 дней',
+    cols: ['Дата', 'Исследование', 'Результат', 'Источник'], noDate: 'без даты',
+    fam: { micro: 'Микроскопия мокроты', culture: 'Посев (Л–Й)', xpert: 'Xpert MTB/RIF', mgit: 'MGIT', cxr: 'Снимок лёгких' },
+    note: 'Сводка из документов — сверяйте с оригиналом. Неуверенное (❓) не считается отрицательным.'
+  },
+  az: {
+    title: '🦠 Vərəm paneli', bact: 'Bakteriya ifrazı', st: { yes: 'var', no: 'yoxdur', unk: 'məlum deyil' }, check: '❓ yoxlanmalıdır', noBact: 'bakterioloji müayinə yoxdur',
+    conv: '✅ konversiya: müsbətdən sonra — mənfi ({n})', lastPos: 'son müsbət: {d} ({w})', unsureN: '❓ əmin olunmayan və ya ziddiyyətli nəticələr: {n}',
+    rifR: 'rifampisinə davamlılıq', rifS: 'rifampisinə həssas', rifI: 'rifampisin: aydın deyil', newT: 'son 7 gündə əlavə edilib',
+    cols: ['Tarix', 'Müayinə', 'Nəticə', 'Mənbə'], noDate: 'tarixsiz',
+    fam: { micro: 'Bəlğəm mikroskopiyası', culture: 'Əkmə (L–Y)', xpert: 'Xpert MTB/RIF', mgit: 'MGIT', cxr: 'Ağciyər şəkli' },
+    note: 'Sənədlər üzrə xülasə — orijinalla yoxlayın. Əmin olunmayan (❓) mənfi sayılmır.'
+  }
+};
+function x83(k, v) { const L2 = X83_T[S.lang === 'az' ? 'az' : 'ru']; let s = L2[k] !== undefined ? L2[k] : X83_T.ru[k]; if (typeof s === 'string' && v) Object.keys(v).forEach(x => { s = s.split('{' + x + '}').join(v[x]); }); return s; }
+(function () {
+  if ($('#x83Css')) return;
+  const s = document.createElement('style'); s.id = 'x83Css';
+  s.textContent = '.x83-tbl{font-size:13.5px;table-layout:fixed;width:100%}.x83-tbl th{text-align:left;font-size:12px;font-weight:600;color:var(--sub);padding:4px;border-bottom:1px solid var(--line)}' +
+    '.x83-tbl td{padding:6px 4px;overflow-wrap:anywhere;word-break:break-word}.x83-tbl th:nth-child(1){width:19%}.x83-tbl th:nth-child(2){width:27%}.x83-tbl th:nth-child(3){width:31%}.x83-tbl th:nth-child(4){width:23%}' +
+    '.x83-srcm,.x83-dtm{display:none}@media (max-width:560px){.x83-tbl th:nth-child(1),.x83-tbl td:nth-child(1),.x83-tbl th:nth-child(4),.x83-tbl td:nth-child(4){display:none}.x83-tbl th:nth-child(2){width:54%}.x83-tbl th:nth-child(3){width:46%}.x83-srcm{display:block;margin-top:2px}.x83-dtm{display:block;font-weight:600;font-size:12.5px;color:var(--sub)}}' +
+    '.x83-r{display:inline-block;max-width:100%;border-radius:6px;padding:1px 6px;line-height:1.4}' +
+    '.x83-pos{color:var(--red);background:rgba(178,59,52,.12);font-weight:700}.x83-neg{color:var(--green);background:rgba(45,117,72,.12)}.x83-unk{color:#5c4300;background:#fff3c4}.x83-nd{color:var(--sub);background:rgba(128,128,128,.14)}' +
+    '.x83-st{padding:8px 10px;border-radius:10px;background:var(--soft,#edf1f1);margin-bottom:8px;font-size:14px;line-height:1.45}.x83-st b{font-weight:700}.x83-sub{font-size:13px;margin-top:3px}' +
+    '.x83-chip{font-size:12.5px;font-weight:700;padding:1px 8px;border-radius:10px}.x83-rr{display:inline-block;margin-top:3px;font-size:12.5px;font-weight:700;border-radius:6px;padding:1px 6px}' +
+    '.x83-rr.R{color:#fff;background:var(--red)}.x83-rr.S{color:var(--green);background:rgba(45,117,72,.12)}.x83-rr.I{color:#5c4300;background:#fff3c4}.x83-new{font-size:12px;margin-left:4px}';
+  document.head.appendChild(s);
+})();
+
+/* ---------- знак результата ---------- */
+const X83_BACT = { micro: 1, culture: 1, xpert: 1, mgit: 1 };
+/** Вид исследования (как в 9.52 — x9Fam) + Xpert, записанный иначе («Gen-Ekspert», «MTB/RIF»). */
+function x83Fam(name, ctx) {
+  const f = typeof x9Fam === 'function' ? x9Fam(name, ctx) : '';
+  if (X83_BACT[f]) return f;
+  if (/mtb\s*\/\s*rif|ген[\s-]*экспер|gen[\s-]*eksper|джин[\s-]*экспер/i.test(String(name || ''))) return 'xpert';
+  return f;
+}
+// слово «рифампицин» / RR / МЛУ — часть результата про устойчивость, а не про наличие МБТ
+const X83_RIFTOK = /rifamp|рифамп|(?<!\p{L})(?:rif|rr|мл[уy]|mdr|xdr|pre-?xdr|шлу|пре-?шлу)(?!\p{L})/iu;
+const X83_RIF_I = /indetermin|неопредел|qeyri-?\s*müəyyən|müəyyən\s+edilmə|invalid|error|ошибк/iu;
+const X83_RIF_S = /not\s+detected|не\s+обнаруж|не\s+выявл|aşkar\s+(?:edil|olun)m|yoxdur|отсутств|(?<!\p{L})(?:нет|no|s)(?!\p{L})|həssas|sensitiv|susceptib|чувствит|negativ|mənfi|отрицат/iu;
+const X83_RIF_R = /resist|устойч|davaml|detected|обнаруж|выявл|aşkar\s+(?:edil|olun)(?:di|ib|du|ub)|müsbət|positiv|положит|\+|(?<!\p{L})(?:r|rr|мл[уy]|mdr|xdr|pre-?xdr|шлу|пре-?шлу)(?!\p{L})/iu;
+const X83_RIFPRE = /^(?:к|to|of|on|resist\S*|устойч\S*|чувств\S*|sensitiv\S*|susceptib\S*|davaml\S*|həssas\S*|лекарств\S*|dərman\S*)$/iu;
+/** Разделить результат: про МБТ (main) и про рифампицин (rif: R — устойчив, S — чувствителен, I — неясно / по-разному). */
+function x83Split(v) {
+  const s = String(v || '').toLowerCase().replace(/mtb\s*\/\s*rif(?:\s*ultra)?/g, 'mtb').replace(/мбт\s*\/\s*риф\S*/g, 'мбт');
+  const main = [], rif = [];
+  s.split(/[;\n⟷]|[.,](?=\s|$)/).forEach(c => {
+    const i = c.search(X83_RIFTOK);
+    if (i < 0) { main.push(c); return; }
+    const pre = c.slice(0, i).trim().split(/\s+/).filter(Boolean);
+    let k = pre.length;
+    while (k > 0 && pre.length - k < 3 && X83_RIFPRE.test(pre[k - 1])) k--;
+    main.push(pre.slice(0, k).join(' '));
+    rif.push(pre.slice(k).join(' ') + ' ' + c.slice(i));
+  });
+  const cls = rif.map(r => X83_RIF_I.test(r) ? 'I' : X83_RIF_S.test(r) ? 'S' : X83_RIF_R.test(r) ? 'R' : '').filter(Boolean);
+  const res = cls.indexOf('R') !== -1 && cls.indexOf('S') !== -1 ? 'I' : cls.indexOf('R') !== -1 ? 'R' : cls.indexOf('I') !== -1 ? 'I' : cls.indexOf('S') !== -1 ? 'S' : '';
+  return { main: main.join('; '), rif: res };
+}
+const X83_NEG = /рост\S*\s+(?:мбт\s+|mtb\s+|микобакт\S*\s+)?не\s+(?:обнаруж|выявл|получ)\S*|роста\s+(?:мбт\s+|mtb\s+|микобакт\S*\s+)?нет|not\s+detected|undetected|mənfi|menfi|отрицат\S*|negativ\S*|(?<!\p{L})(?:neg|mnf|abs)(?!\p{L})|не\s+обнаруж\S*|не\s+выявл\S*|не\s+найден\S*|роста\s+нет|нет\s+роста|bitmə\s+yox\S*|bitmə\s+(?:müşahidə\s+)?(?:olunma|edilmə)\S*|aşkar\s+(?:edil|olun)m\S*|tapılma\S*|(?<!\d)0\s*колон\S*|рост\S*\s+0(?![\d.,])|\(\s*-\s*\)|^\s*[-–—]\s*$/giu;
+const X83_POS = /müsbət|musbet|положит\S*|positiv\S*|(?<!\p{L})pos(?!\p{L})|detected|обнаружен\S*|выявлен\S*|найден\S*|рост\s*(?:мбт|mtb|\d|колон|\+)|bitmə\s+var|bitmə\s+(?:müşahidə\s+)?(?:olundu|olunub|edildi|edilib)|aşkar\s+(?:edil|olun)(?:di|ib|du|ub)|tapıl(?:dı|ıb)|\d\s*\+|(?<![\p{L}\d+])\+{1,4}(?![\p{L}\d+])|scanty|скудн\S*|(?:мбт|mtb|kub|куб|afb|кум)\s*\+/iu;
+const X83_ND = /не\s+выполн|перечёрк|перечерк|(?<!aşkar\s)edilməyib|aparılmayıb|aparılmadı|not\s+done|не\s+провод|kontamin|контамин|загрязн|contamin/iu;
+const X83_UNK = /❓|\?|не\s+разобрать|oxunmur|oxunmadı|вероятно|возможно|ehtimal|probabl|possibl|сомнит|şübhə|подозр/iu;
+/** pos / neg / mix (и то и другое) / unk (❓, «вероятно», «не разобрать») / nd (не выполнялся) / '' (не понять). */
+function x83Pol(v) {
+  const s = String(v || '').toLowerCase();
+  if (!s.trim()) return '';
+  let neg = false;
+  const rest = s.replace(X83_NEG, () => { neg = true; return ' '; });
+  const pos = X83_POS.test(rest);
+  let p = neg && pos ? 'mix' : pos ? 'pos' : neg ? 'neg' : X83_ND.test(s) ? 'nd' : '';
+  // сомнение вне скобок («(… — ehtimal ki, analiz nömrəsi)» — про номер, не про результат)
+  if (p !== 'nd' && X83_UNK.test(s.replace(/\([^)]*\)/g, ' '))) p = 'unk';
+  return p;
+}
+
+/* ---------- строки панели ---------- */
+function x83Iso(at) { const s = String(at || ''); return (typeof extDateIso === 'function' && extDateIso(s)) || (/^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : ''); }
+function x83Rows(g) {
+  const ext = {}; (g.ext || []).forEach(x => { ext[x.id] = x; });
+  const lim = new Date(Date.now() + 4 * 3600e3 - 7 * 86400e3).toISOString().slice(0, 16).replace('T', ' '); // 7 дней назад, время Баку
+  const out = [];
+  (typeof gtLabList === 'function' ? gtLabList(g) : []).forEach(r => {
+    const fam = r._f && X83_BACT[r._f] ? r._f : x83Fam(r.name, r.ctx || '');
+    if (!X83_BACT[fam]) return;
+    const sp = x83Split(r.val);
+    const pol = r.differ ? 'mix' : x83Pol(sp.main);
+    const added = r.docId && ext[r.docId] ? String(ext[r.docId].createdAt || '') : String(r.at || '');
+    out.push({ kind: 'lab', fam, iso: x83Iso(r.at), at: r.at, name: r.name, val: r.val, pol, rif: sp.rif, unsure: !!(r.unsure || r.differ), where: r.where || '', src: r.src || '', isNew: added >= lim && (pol === 'pos' || sp.rif === 'R') });
+  });
+  (typeof gtImgList === 'function' ? gtImgList(g) : []).forEach(r => {
+    const f = r._f || (typeof x9Fam === 'function' ? x9Fam(r.name, (r.ctx || '') + ' ' + (r.text || ''), true) : '');
+    if (f !== 'cxr') return;
+    out.push({ kind: 'img', fam: 'cxr', iso: x83Iso(r.at), at: r.at, name: r.name, val: r.text, pol: '', rif: '', unsure: !!(r.unsure || r.differ), where: r.where || '', src: r.src || '', isNew: false });
+  });
+  return out.sort((a, b) => (b.iso || '').localeCompare(a.iso || '') || String(b.at || '').localeCompare(String(a.at || '')));
+}
+/** Бактериовыделение по последним результатам. Неуверенное / спорное / непонятное — никогда не «нет». */
+function x83Status(rows) {
+  const bact = rows.filter(r => r.kind === 'lab' && r.pol !== 'nd');
+  const sure = r => !r.unsure && (r.pol === 'pos' || r.pol === 'neg');
+  const o = { st: 'unk', check: false, conv: 0, lastPos: null, rif: null, nUnsure: bact.filter(r => !sure(r)).length, none: !bact.length };
+  rows.forEach(r => { if (r.kind === 'lab' && r.rif === 'R' && (!o.rif || (r.iso || '') > (o.rif.iso || ''))) o.rif = r; });
+  if (!bact.length) return o;
+  const dated = bact.filter(r => r.iso), undated = bact.filter(r => !r.iso);
+  const latest = dated.length ? dated[0].iso : ''; // строки уже по датам, новые сверху
+  const grp = latest ? dated.filter(r => r.iso === latest) : undated;
+  const posSure = bact.filter(r => sure(r) && r.pol === 'pos');
+  o.lastPos = posSure.filter(r => r.iso)[0] || posSure[0] || null;
+  if (grp.some(r => sure(r) && r.pol === 'pos')) o.st = 'yes';
+  else if (grp.every(r => sure(r) && r.pol === 'neg') && !undated.some(r => latest && !(sure(r) && r.pol === 'neg'))) o.st = 'no';
+  else o.check = true;
+  // конверсия: был положительный (с датой), после него — только уверенные отрицательные
+  const lp = posSure.filter(r => r.iso)[0];
+  if (o.st === 'no' && lp) {
+    const after = dated.filter(r => r.iso > lp.iso);
+    if (after.length && after.every(r => sure(r) && r.pol === 'neg')) o.conv = after.length;
+  }
+  return o;
+}
+function x83Html(g) {
+  const rows = x83Rows(g);
+  if (!rows.length) return '';
+  const S2 = x83Status(rows), F = x83('fam'), C = x83('cols');
+  const cls = { pos: 'x83-pos', neg: 'x83-neg', mix: 'x83-unk', unk: 'x83-unk', nd: 'x83-nd' };
+  const dt = r => r.iso ? fmtDate(r.iso) : (String(r.at || '').trim() || x83('noDate'));
+  const stCls = S2.st === 'yes' ? 'x83-pos' : S2.st === 'no' ? 'x83-neg' : S2.check ? 'x83-unk' : 'x83-nd';
+  const head = '<div class="x83-st"><div><b>' + esc(x83('bact')) + ':</b> <span class="x83-r ' + stCls + '">' + esc(x83('st')[S2.st]) + '</span>' +
+      (S2.check ? ' <span class="x83-r x83-unk">' + esc(x83('check')) + '</span>' : '') + (S2.none ? ' <span class="muted">— ' + esc(x83('noBact')) + '</span>' : '') + '</div>' +
+    (S2.conv ? '<div class="x83-sub" style="color:var(--green)">' + esc(x83('conv', { n: S2.conv })) + '</div>' : '') +
+    (S2.lastPos ? '<div class="x83-sub">' + esc(x83('lastPos', { d: dt(S2.lastPos), w: F[S2.lastPos.fam] || S2.lastPos.name })) + '</div>' : '') +
+    (S2.rif ? '<div class="x83-sub"><span class="x83-rr R">⚠️ ' + esc(x83('rifR')) + '</span> <span class="muted">' + esc([F[S2.rif.fam] || S2.rif.name, dt(S2.rif)].join(', ')) + '</span></div>' : '') +
+    (S2.nUnsure ? '<div class="x83-sub" style="color:#8a6100">' + esc(x83('unsureN', { n: S2.nUnsure })) + '</div>' : '') + '</div>';
+  const srcOf = r => [r.where, r.src && r.src !== r.where ? r.src : ''].filter(Boolean).join(' · ');
+  const tr = r => {
+    const amber = r.unsure || r.pol === 'mix' || r.pol === 'unk';
+    const c = amber ? 'x83-unk' : (cls[r.pol] || '');
+    const rif = r.rif ? '<div><span class="x83-rr ' + r.rif + '">' + esc(r.rif === 'R' ? '⚠️ ' + x83('rifR') : r.rif === 'S' ? x83('rifS') : '❓ ' + x83('rifI')) + '</span></div>' : '';
+    return '<tr data-pol="' + esc(amber ? 'unk' : r.pol || '-') + '" data-fam="' + esc(r.fam) + '"' + (r.rif ? ' data-rif="' + r.rif + '"' : '') + '><td>' + esc(dt(r)) + '</td>' +
+      '<td><div class="x83-dtm">' + esc(dt(r)) + '</div><b>' + esc(F[r.fam] || '') + '</b>' + (X9_NORM(r.name) !== X9_NORM(F[r.fam]) ? '<div class="gt-src">' + esc(r.name || '') + '</div>' : '') + (srcOf(r) ? '<div class="gt-src x83-srcm">📄 ' + esc(srcOf(r)) + '</div>' : '') + '</td>' +
+      '<td><span class="x83-r ' + c + '">' + (amber && r.kind === 'lab' && !/^\s*❓/.test(r.val || '') ? '❓ ' : '') + esc(r.val || '—') + '</span>' + (r.isNew ? '<span class="x83-new" title="' + esc(x83('newT')) + '">🆕</span>' : '') + rif +
+        (amber && r.kind === 'lab' ? '<div class="gt-src" style="color:#8a6100">' + esc(x83('check')) + '</div>' : '') + '</td>' +
+      '<td class="gt-src">' + esc(srcOf(r)) + '</td></tr>';
+  };
+  const body = head + '<table class="gt-tbl x83-tbl"><thead><tr>' + C.map(x => '<th>' + esc(x) + '</th>').join('') + '</tr></thead><tbody>' + rows.map(tr).join('') + '</tbody></table>' +
+    '<div class="gt-src" style="margin-top:6px">' + esc(x83('note')) + '</div>';
+  let sec = gtSec('tb', x83('title'), rows.length, body, gtOpenState('tb', true), 'x83-sec');
+  // состояние — и в заголовке (видно, когда раздел свёрнут)
+  const chip = '<span class="x83-chip x83-r ' + stCls + '" data-x83st="' + S2.st + '">' + esc(x83('st')[S2.st]) + (S2.check ? ' ❓' : '') + '</span>' + (S2.rif ? ' <span class="x83-chip x83-rr R">RR</span>' : '') + ' ';
+  const k = sec.indexOf('<span class="gt-n">');
+  if (k > 0) sec = sec.slice(0, k) + chip + sec.slice(k);
+  return sec;
+}
+(function () {
+  const o = window.ptCardHtml;
+  window.ptCardHtml = function () {
+    let h = o.apply(this, arguments);
+    try {
+      const g = ptSt().cur; if (!g || !g.patient) return h;
+      const sec = x83Html(g);
+      if (!sec) return h;
+      const k = h.indexOf('<details class="gt-sec" data-gt="dx"');
+      h = k > 0 ? h.slice(0, k) + sec + h.slice(k) : h + sec;
+    } catch (e) { console.error(e); }
+    return h;
+  };
+})();
+
+/* =====================================================================
+ * v84: 🔎 проверка значений анализов — только показ (сохранённые данные не меняются).
+ *  - Частые показатели (Hb, эритроциты, лейкоциты, тромбоциты, СОЭ, глюкоза, креатинин, мочевина, АЛТ, АСТ, общий билирубин,
+ *    K, Na, СРБ, SpO₂, температура, ЧСС, систолическое АД) — названия по-русски, по-азербайджански, по-английски, сокращения.
+ *  - Норма из самого документа — в первую очередь; иначе своя (взрослые; у детей < 16 лет — только «невозможное значение»).
+ *  - Невозможное значение (ошибка чтения, не те единицы: Hb 12,5 «г/л») — жёлтым «❓ невозможное значение — проверьте»;
+ *    вне нормы — ↑ / ↓ с нормой.
+ *  - Только когда уверенно понятны и показатель, и число (не кровь — моча, мокрота, ликвор — не трогаем; «mənfi», «2–3 в п/зр» — тоже).
+ *  Где: «🧪 Анализы» в GT/098 (gtLabList) и окно разбора документа (exExtraHtml).
+ * ===================================================================== */
+const V84_T = {
+  ru: { imp: '❓ невозможное значение — проверьте', norm: 'норма', title: '🔎 Проверка значений', likeGdl: 'похоже на г/дл', fast: 'натощак', m: 'муж.', f: 'жен.', sys: 'систолическое' },
+  az: { imp: '❓ mümkün olmayan qiymət — yoxlayın', norm: 'norma', title: '🔎 Qiymətlərin yoxlanması', likeGdl: 'q/dl-ə oxşayır', fast: 'acqarına', m: 'kişi', f: 'qadın', sys: 'sistolik' }
+};
+function x84(k) { const L2 = V84_T[S.lang === 'az' ? 'az' : 'ru']; return L2[k] !== undefined ? L2[k] : V84_T.ru[k]; }
+(function () {
+  if ($('#v84Css')) return;
+  const s = document.createElement('style'); s.id = 'v84Css';
+  s.textContent = '.v84-w{font-size:13.5px;margin-top:3px;line-height:1.4}.v84-hl{color:var(--red);font-weight:600}.v84-imp{color:#5c4300;background:#fff3c4;border-radius:6px;padding:1px 6px}';
+  document.head.appendChild(s);
+})();
+
+/* ---------- единицы ---------- */
+const V84_U = {
+  gl: { re: /(?<!\p{L})(?:g|г|q)\s*\/\s*(?:l|л)(?!\p{L})/iu, ru: 'г/л', az: 'q/l' },
+  gdl: { re: /(?<!\p{L})(?:g|г|q)\s*\/\s*(?:dl|дл)(?!\p{L})/iu, ru: 'г/дл', az: 'q/dl' },
+  t12: { re: /10\s*(?:\^|\*{1,2}|e)?\s*(?:12|¹²|6|⁶)(?!\d)|(?<!\p{L})(?:млн|mln|milyon)(?!\p{L})/iu, ru: '×10¹²/л', az: '×10¹²/l' },
+  t9: { re: /10\s*(?:\^|\*{1,2}|e)?\s*(?:9|⁹|3|³)(?!\d)|(?<!\p{L})(?:тыс|min)(?!\p{L})/iu, ru: '×10⁹/л', az: '×10⁹/l' },
+  ul: { re: /(?<!\p{L})(?:мкл|µl|μl|mkl|ul|мм3|mm3|мм³|mm³)(?!\p{L})/iu, ru: '/мкл', az: '/mkl' },
+  mmh: { re: /(?:mm|мм)\s*\/\s*(?:h|hr|ч|час|saat|st|s)(?!\p{L})/iu, ru: 'мм/ч', az: 'mm/saat' },
+  mmol: { re: /(?<!\p{L})(?:m|м)(?:mol|моль)\s*\/\s*(?:l|л)(?!\p{L})|(?<!\p{L})m?eq\s*\/\s*l|мэкв\s*\/\s*л/iu, ru: 'ммоль/л', az: 'mmol/l' },
+  umol: { re: /(?<!\p{L})(?:µ|μ|mk|мк|u)(?:mol|моль)\s*\/\s*(?:l|л)(?!\p{L})/iu, ru: 'мкмоль/л', az: 'mkmol/l' },
+  mgdl: { re: /(?<!\p{L})(?:mg|мг|mq)\s*(?:\/\s*(?:dl|дл)(?!\p{L})|%)/iu, ru: 'мг/дл', az: 'mq/dl' },
+  mgl: { re: /(?<!\p{L})(?:mg|мг|mq)\s*\/\s*(?:l|л)(?!\p{L})/iu, ru: 'мг/л', az: 'mq/l' },
+  ue: { re: /(?<!\p{L})(?:i?u|ед|ме|vahid|vah|bv|v|un)\s*\/\s*(?:l|л)(?!\p{L})/iu, ru: 'Ед/л', az: 'V/l' },
+  pct: { re: /%/, ru: '%', az: '%' },
+  degc: { re: /°|(?<!\p{L})[cс](?!\p{L})/iu, ru: '°C', az: '°C' },
+  bpm: { re: /(?<!\p{L})(?:уд|удар\S*|bpm|vurğu|vur|döyüntü)(?!\p{L})|\/\s*(?:мин|min|dəq|deq)/iu, ru: 'уд/мин', az: 'vurğu/dəq' },
+  mmhg: { re: /(?:mm|мм)\s*(?:hg|рт|c\.?\s*s|c[uü]t)/iu, ru: 'мм рт. ст.', az: 'mm c.s.' }
+};
+// всё, что может стоять после числа: единицы, «H/L», стрелки, «норма», «натощак» — остальное (слова, ещё числа, «+») = не уверены
+const V84_TOK = /[×xх*]?\s*10\s*(?:\^|\*{1,2}|e)?\s*(?:12|9|6|3|¹²|⁹|⁶|³)(?!\d)|(?<!\p{L})(?:млн|тыс|mln|min|milyon)(?!\p{L})|(?<!\p{L})(?:µ|μ|mk|мк|u|m|м|n|н)?(?:mol|моль)(?!\p{L})|(?<!\p{L})(?:m|м|µ|μ|mk|мк|n|н)?(?:g|г|q)(?!\p{L})|(?<!\p{L})(?:mg|мг|mq)(?!\p{L})|(?<!\p{L})(?:dl|дл|l|л|мкл|µl|μl|mkl|ul|мм3|mm3|мм³|mm³)(?!\p{L})|(?<!\p{L})(?:i?u|ед|ме|vahid|vah|bv|v|un|m?eq|мэкв)(?!\p{L})|(?<!\p{L})(?:mm|мм|hg|рт|ст|c|с|s|cüt|süt|cut|sut|h|hr|ч|час|saat|st)(?!\p{L})|(?<!\p{L})(?:уд|удар\S*|bpm|vurğu|vur|döyüntü)(?!\p{L})|(?<!\p{L})(?:мин|min|dəq|deq)\S*|°\s*[cсf]?|%|(?<!\p{L})(?:h|l|n|high|low|норма|в\s+норме|norma|normal|выше|ниже|yüksək|aşağı|повыш\S*|пониж\S*|натощак|acqarına|fasting)(?!\p{L})|[↑↓*()\[\]\/.,:;\s·—–-]+/giu;
+const V84_FLAGS = /(?<!\p{L})(?:h|l|n|high|low|норма|в\s+норме|norma|normal|выше|ниже|yüksək|aşağı|повыш\S*|пониж\S*|натощак|acqarına|fasting)(?!\p{L})|[↑↓*()\[\]\s.,:;·—–-]+/giu;
+/** «6,2 ммоль/л (H)», «<5», «7 500» → { cmp, v, tail }; иначе null (не уверены). */
+function v84Parse(s) {
+  let t = String(s === undefined || s === null ? '' : s).replace(/ /g, ' ').trim();
+  if (!t) return null;
+  t = t.replace(/(\d) (?=\d{3}(?!\d))/g, '$1'); // «250 000» — одно число
+  const m = t.match(/^([<>≤≥]=?)?\s*(\d+(?:[.,]\d+)?)(.*)$/);
+  if (!m) return null;
+  const tail = m[3] || '';
+  if (/[\p{L}\d+?❓]/u.test(tail.replace(V84_TOK, ''))) return null;
+  const v = parseFloat(m[2].replace(',', '.'));
+  return isFinite(v) ? { cmp: m[1] || '', v, tail } : null;
+}
+function v84Bp(s) {
+  const m = String(s || '').trim().match(/^(\d{2,3})\s*[\/\\]\s*(\d{2,3})(?!\d)(.*)$/);
+  if (!m || /[\p{L}\d+?❓]/u.test((m[3] || '').replace(V84_TOK, ''))) return null;
+  return { sys: +m[1], dia: +m[2], tail: m[3] || '' };
+}
+/** Норма из документа: «3,5–5,1», «до 40», «<5», «М 130–160; Ж 120–140» → { lo, hi } (null — не поняли). */
+function v84Ref(ref, sex) {
+  const s = String(ref || '').toLowerCase().replace(/(\d),(\d)/g, '$1.$2');
+  if (!s.trim()) return null;
+  const N = '(\\d+(?:\\.\\d+)?)', D = '\\s*(?:[-–—]|до|to|\\.\\.\\.?)\\s*';
+  const lab = re => { const m = s.match(re); return m ? [parseFloat(m[1]), parseFloat(m[2])] : null; };
+  const mR = lab(new RegExp('(?<!\\p{L})(?:м|муж\\S*|m|male|kişi|k)(?!\\p{L})\\.?\\s*[:=]?\\s*' + N + D + N, 'u'));
+  const fR = lab(new RegExp('(?<!\\p{L})(?:ж|жен\\S*|f|female|qadın|q)(?!\\p{L})\\.?\\s*[:=]?\\s*' + N + D + N, 'u'));
+  if (mR || fR) {
+    if (sex === 'm' && mR) return { lo: mR[0], hi: mR[1] };
+    if (sex === 'f' && fR) return { lo: fR[0], hi: fR[1] };
+    return mR && fR ? { lo: Math.min(mR[0], fR[0]), hi: Math.max(mR[1], fR[1]) } : null;
+  }
+  const all = [...s.matchAll(new RegExp(N + D + N, 'g'))];
+  if (all.length > 1) return null;
+  if (all.length === 1) { const lo = parseFloat(all[0][1]), hi = parseFloat(all[0][2]); return lo < hi ? { lo, hi } : null; }
+  let m = s.match(new RegExp('(?:<=?|≤|до|не\\s+более|less\\s+than|up\\s+to|max\\S*|maks\\S*)\\s*' + N)) || s.match(new RegExp(N + '\\s*-?\\s*(?:a|ə|e|ya|yə)?\\s*qədər'));
+  if (m) return { lo: null, hi: parseFloat(m[1]) };
+  m = s.match(new RegExp('(?:>=?|≥|более|не\\s+менее|more\\s+than|min\\S*)\\s*' + N));
+  return m ? { lo: parseFloat(m[1]), hi: null } : null;
+}
+
+/* ---------- показатели (взрослые). n — норма, m / f — для мужчин / женщин, imp — за пределами — невозможно, w — единицы без подписи ---------- */
+const V84_A = [
+  { k: 'esr', re: /(?<!\p{L})(?:соэ|роэ|eçs|ecs|esr)(?!\p{L})|оседани|çökmə|sed(?:imentation)?\s*rate/iu, noLow: 1,
+    v: [{ u: 'mmh', n: [0, 20], m: [0, 15], f: [0, 20], imp: [0, 160], w: () => true }] },
+  { k: 'hb', re: /гемоглоб|hemoqlob|ha?emoglob|(?<!\p{L})(?:hb|hgb)(?!\p{L})/iu, ex: /a1c|глик|qlik|glyc|(?<!\p{L})mchc?(?!\p{L})|средн|концентрац|содерж|orta|mean|эритроцит|eritrosit/iu,
+    v: [{ u: 'gl', n: [120, 170], m: [130, 170], f: [120, 150], imp: [25, 260], w: x => x >= 25 }, { u: 'gdl', n: [12, 17], m: [13, 17], f: [12, 15], imp: [2.5, 26], w: x => x < 25 }] },
+  { k: 'rbc', re: /эритроц|eritrosit|erythrocyt|(?<!\p{L})rbc(?!\p{L})|red\s+blood/iu, ex: /средн|объ[её]м|ширин|распредел|orta|həcm|mcv|rdw|anizo|пойк|оседан|çökmə|соэ|eçs|гемоглоб|hemoqlob|ретикул|retikul/iu,
+    v: [{ u: 't12', n: [3.8, 5.7], m: [4.3, 5.7], f: [3.8, 5.1], imp: [0.5, 9], w: x => x < 100 }, { u: 'ul', sc: 1e-6, n: [3.8, 5.7], m: [4.3, 5.7], f: [3.8, 5.1], imp: [0.5, 9], w: x => x >= 100000 }] },
+  { k: 'wbc', re: /лейкоц|leykosit|leukocyt|leucocyt|(?<!\p{L})wbc(?!\p{L})|white\s+blood/iu, ex: /формул|formul|indeks|индекс/iu,
+    v: [{ u: 't9', n: [4, 9], imp: [0.05, 500], w: x => x < 1000 }, { u: 'ul', sc: 1e-3, n: [4, 9], imp: [0.05, 500], w: x => x >= 1000 }] },
+  { k: 'plt', re: /тромбоц|trombosit|thrombocyt|platelet|(?<!\p{L})plt(?!\p{L})/iu, ex: /крит|krit|crit|mpv|pdw|средн|объ[её]м|orta|həcm|агрег|aqreq|aggreg/iu,
+    v: [{ u: 't9', n: [150, 400], imp: [1, 3000], w: x => x < 10000 }, { u: 'ul', sc: 1e-3, n: [150, 400], imp: [1, 3000], w: x => x >= 10000 }] },
+  { k: 'glu', re: /глюкоз|сахар|qlükoz|qlukoz|glukoz|glucose|(?<!\p{L})glu(?!\p{L})|şəkər/iu, ex: /толерант|tolerant|ogtt|нагруз|yükl|глик|qlik|glyc|a1c/iu, fast: 1,
+    v: [{ u: 'mmol', n: [3.3, 6.1], imp: [0.5, 70], w: x => x <= 25 }, { u: 'mgdl', n: [60, 110], imp: [9, 1260], w: x => x >= 50 }] }, // 25–50 без единиц — не гадаем
+  { k: 'crea', re: /креатинин|kreatinin|creatinin|(?<!\p{L})(?:cr|crea|kre)(?!\p{L})/iu, ex: /клиренс|klirens|clearance|скф|(?<!\p{L})e?gfr|киназ|kinaz/iu,
+    v: [{ u: 'umol', n: [53, 115], m: [62, 115], f: [53, 97], imp: [10, 3500], w: x => x >= 30 }, { u: 'mgdl', n: [0.6, 1.3], m: [0.7, 1.3], f: [0.6, 1.1], imp: [0.1, 40], w: x => x < 10 }] }, // 10–30 без единиц — не гадаем
+  { k: 'urea', re: /мочевин|sidik\s*cövhər|karbamid|(?<!\p{L})urea(?!\p{L})/iu, ex: /кислот|turşu|acid|клиренс|klirens|азот|azot|nitrogen|(?<!\p{L})bun(?!\p{L})/iu,
+    v: [{ u: 'mmol', n: [2.5, 8.3], imp: [0.3, 120], w: x => x < 50 }, { u: 'mgdl', n: [15, 45], imp: [2, 700], w: () => false }] },
+  { k: 'alt', re: /(?<!\p{L})(?:alt|алт|алат|alat|gpt|sgpt)(?!\p{L})|alanin|аланин/iu, noLow: 1,
+    v: [{ u: 'ue', n: [0, 40], imp: [0, 30000], w: x => x >= 3 }] },
+  { k: 'ast', re: /(?<!\p{L})(?:ast|аст|асат|asat|got|sgot)(?!\p{L})|aspartat|аспартат/iu, noLow: 1,
+    v: [{ u: 'ue', n: [0, 40], imp: [0, 30000], w: x => x >= 3 }] },
+  { k: 'bil', re: /билирубин|bilirubin/iu, ex: /прям|непрям|связ|свобод|конъюг|direct|indirect|düz|dolay|sərbəst|birləş|conjug|фракц/iu, noLow: 1,
+    v: [{ u: 'umol', n: [3.4, 21], imp: [0, 900], w: () => true }, { u: 'mgdl', n: [0.2, 1.2], imp: [0, 50], w: () => false }] },
+  { k: 'k', re: /(?<!\p{L})(?:k\+?|калий|kalium|kalı?um|potassium)(?!\p{L})/iu, ex: /витамин|vitamin/iu,
+    v: [{ u: 'mmol', n: [3.5, 5.1], imp: [1, 12], w: () => true }] },
+  { k: 'na', re: /(?<!\p{L})(?:na\+?|натрий|natrium|sodium)(?!\p{L})/iu,
+    v: [{ u: 'mmol', n: [135, 145], imp: [90, 200], w: () => true }] },
+  { k: 'crp', re: /(?<!\p{L})(?:срб|crp|hs-?crp)(?!\p{L})|[cс]-?\s*реактив|c-?\s*reakt/iu, noLow: 1,
+    v: [{ u: 'mgl', n: [0, 5], imp: [0, 700], w: () => true }, { u: 'mgdl', n: [0, 0.5], imp: [0, 70], w: () => false }] },
+  { k: 'spo2', re: /spo\s*2|spo₂|sao\s*2|сатурац|saturas|saturat|(?<!\p{L})sat(?!\p{L})/iu, ge: 1,
+    v: [{ u: 'pct', n: [95, 100], imp: [30, 100], w: () => true }] },
+  { k: 't', re: /температ|temperatur|hərarət|(?<![\p{L}\d])t\s*°?(?![\p{L}\d])/iu, ex: /хранен|saxlan|storage|комнат|otaq|холодил|soyuducu|воды|suyun/iu,
+    v: [{ u: 'degc', n: [35.5, 37], imp: [25, 44], w: () => true }] },
+  { k: 'hr', re: /(?<!\p{L})(?:чсс|hr|üvs|nəbz|пульс|pulse|ps)(?!\p{L})|heart\s+rate|ürək\s*(?:vurğu|döyün)|частота\s+сердеч/iu,
+    v: [{ u: 'bpm', n: [60, 90], imp: [15, 300], w: () => true }] },
+  { k: 'sbp', bp: 1, re: /(?<!\p{L})(?:ад|ат|а\/д|а\/т|a\/t|a\/d|bp|sad|сад|sbp)(?!\p{L})|артериальн|давлен|təzyiq|blood\s+pressure|sistol|систол/iu,
+    ex: /глаз|göz|intraocul|венозн|venoz|цвд|cvp|внутричереп|kəllədaxili|легочн|ağciyər|pulmon|диастол|diastol|пульсов|perfuz|среднее|orta|антител|antibod|anticism|(?<!\p{L})(?:igg|igm|hbs|hcv|вич|hiv|к)(?!\p{L})/iu,
+    v: [{ u: 'mmhg', n: [90, 139], imp: [40, 300], w: () => true }] }
+];
+// не кровь — не проверяем (моча, мокрота, ликвор, плевральная жидкость, кал, лаваж…)
+const V84_SPEC = /моч(?!евин)|sidik(?!\s*cövhər|\s*turşu)|urin|мокрот|bəlğəm|balgam|sputum|ликвор|likvor|liquor|(?<!\p{L})csf(?!\p{L})|спинномозг|плевр|plevr|pleur|(?<!\p{L})кал(?!\p{L})|nəcis|stool|(?<!\p{L})fec|асцит|assit|ascit|желч|синовиал|п\/зр|в\s*п\.?\s*зр|в\s+поле\s+зр|görmə\s+sah|лаваж|lavaj|lavage|экссудат|ekssudat|exsudat|транссудат/iu;
+const V84_BLOOD = /кров|(?<!\p{L})qan(?!\p{L})|qanın|blood|сыворот|плазм|serum|plasma|zərdab|биохим|biokim|biochem|(?<!\p{L})(?:оак|üqa|cbc)(?!\p{L})/iu;
+const v84Fmt = n => String(Math.round(n * 1000) / 1000).replace('.', ',');
+function v84Age(b) { try { return typeof dsAge === 'function' ? dsAge(b) : ''; } catch (e) { return ''; } }
+const v84Mid = r => r.lo !== null && r.hi !== null ? (r.lo + r.hi) / 2 : r.hi !== null ? r.hi / 2 : r.lo;
+/**
+ * Проверить одно значение. name — название анализа, val — «результат единицы», ref — норма из документа,
+ * o: { sex: 'm'|'f'|'', age, ctx: название документа }. → { st: 'hi'|'lo'|'imp', txt } или null (в норме / не уверены).
+ */
+function v84Check(name, val, ref, o) {
+  o = o || {};
+  const nm = String(name || '').trim();
+  if (!nm || nm.length > 90 || V84_SPEC.test(nm)) return null;
+  const ctx = String(o.ctx || '');
+  if (ctx && V84_SPEC.test(ctx) && !V84_BLOOD.test(ctx)) return null;
+  const A = V84_A.find(a => a.re.test(nm) && !(a.ex && a.ex.test(nm)));
+  if (!A) return null;
+  const sex = o.sex === 'm' || o.sex === 'f' ? o.sex : '';
+  const child = o.age !== '' && o.age !== undefined && o.age !== null && Number(o.age) < 16;
+  const lang = S.lang === 'az' ? 'az' : 'ru';
+  if (A.bp) return v84CheckBp(A, nm, val, child, lang);
+  const p = v84Parse(val); if (!p) return null;
+  const R = v84Ref(ref, sex);
+  let V = A.v.find(x => V84_U[x.u].re.test(p.tail));
+  if (!V) {
+    if (/[\p{L}%°]/u.test(p.tail.replace(V84_FLAGS, ''))) return null; // единицы есть, но не те — не уверены
+    if (R && A.v.length > 1 && v84Mid(R) > 0) V = A.v.slice().sort((a, b) => Math.abs(Math.log(v84Mid(R) / ((a.n[0] + a.n[1]) / 2 / (a.sc || 1)))) - Math.abs(Math.log(v84Mid(R) / ((b.n[0] + b.n[1]) / 2 / (b.sc || 1)))))[0];
+    else V = A.v.find(x => x.w(p.v));
+  }
+  if (!V) return null;
+  const sc = V.sc || 1, x = p.v * sc, uTxt = V84_U[V.u][lang];
+  if (!p.cmp) {
+    if (A.k === 'hb' && V.u === 'gl' && x < 25) return { st: 'imp', txt: x84('imp') + ' (' + x84('likeGdl') + ')' };
+    if (x < V.imp[0] || x > V.imp[1]) return { st: 'imp', txt: x84('imp') };
+  }
+  if (child) return null;
+  let lo, hi, txt, cv = x;
+  if (R) {
+    lo = R.lo; hi = R.hi; txt = x84('norm') + ': ' + String(ref).trim();
+    if (sc !== 1 && v84Mid(R) > 0 && Math.abs(Math.log(p.v / v84Mid(R))) < Math.abs(Math.log(x / v84Mid(R)))) cv = p.v; // норма в тех же единицах, что и число
+  } else {
+    const r = sex && V[sex] ? V[sex] : V.n; lo = r[0]; hi = r[1];
+    txt = x84('norm') + ' ' + (A.ge ? '≥ ' + v84Fmt(lo) : lo === 0 || A.noLow ? '≤ ' + v84Fmt(hi) : v84Fmt(lo) + '–' + v84Fmt(hi)) + ' ' + uTxt + (sex && V[sex] ? ' (' + x84(sex) + ')' : '') + (A.fast ? ', ' + x84('fast') : '') + (sc !== 1 ? ' (= ' + v84Fmt(x) + ' ' + uTxt + ')' : '');
+  }
+  if (A.noLow) lo = null;
+  if (A.ge) hi = null;
+  const has = n => n !== null && n !== undefined;
+  let st = '';
+  if (/^[<≤]/.test(p.cmp)) { if (has(lo) && cv <= lo) st = 'lo'; }
+  else if (/^[>≥]/.test(p.cmp)) { if (has(hi) && cv >= hi) st = 'hi'; }
+  else if (has(hi) && cv > hi) st = 'hi';
+  else if (has(lo) && cv < lo) st = 'lo';
+  return st ? { st, txt: (st === 'hi' ? '↑ ' : '↓ ') + txt } : null;
+}
+function v84CheckBp(A, nm, val, child, lang) {
+  let sys, dia = null;
+  const b = v84Bp(val);
+  if (b) { sys = b.sys; dia = b.dia; }
+  else {
+    if (!/sistol|систол|(?<!\p{L})(?:sbp|сад|sad)(?!\p{L})/iu.test(nm)) return null; // одно число — только если это точно систолическое
+    const p = v84Parse(val); if (!p || p.cmp) return null;
+    if (/[\p{L}%°]/u.test(p.tail.replace(V84_FLAGS, '')) && !V84_U.mmhg.re.test(p.tail)) return null;
+    sys = p.v;
+  }
+  const V = A.v[0];
+  if (sys < V.imp[0] || sys > V.imp[1] || (dia !== null && (dia < 20 || dia > 200 || dia >= sys))) return { st: 'imp', txt: x84('imp') };
+  if (child) return null;
+  const txt = x84('norm') + ' ' + V.n[0] + '–' + V.n[1] + ' ' + V84_U.mmhg[lang] + ' (' + x84('sys') + ')';
+  return sys > V.n[1] ? { st: 'hi', txt: '↑ ' + txt } : sys < V.n[0] ? { st: 'lo', txt: '↓ ' + txt } : null;
+}
+
+/* ---------- GT/098: «🧪 Анализы» ---------- */
+(function () {
+  if (typeof gtLabList !== 'function') return;
+  const o = gtLabList;
+  gtLabList = function (g) {
+    const out = o.apply(this, arguments);
+    try {
+      const p = (g && g.patient) || {};
+      const opt = { sex: p.sex || '', age: v84Age(p.birthDate) };
+      out.forEach(r => {
+        if (!r || r.differ) return;
+        const c = v84Check(r.name, r.val, r.ref, Object.assign({ ctx: r.ctx || '' }, opt));
+        if (!c) return;
+        r.vchk = c;
+        if (c.st === 'imp') { r.unsure = true; r.ref = c.txt + (r.ref ? ' · ' + r.ref : ''); }
+        else { r.flag = true; r.ref = c.txt; }
+      });
+    } catch (e) { console.error(e); }
+    return out;
+  };
+})();
+
+/* ---------- окно разбора документа: короткий список предупреждений ---------- */
+function v84Who() {
+  try {
+    const cur = typeof ptSt === 'function' ? ptSt().cur : null, cp = cur && cur.patient, st = S.ex;
+    if (st && st.pid && cp && cp.id === st.pid) return { sex: cp.sex || '', age: v84Age(cp.birthDate) };
+    if (st && st.who) return { sex: st.who.sex || '', age: v84Age(st.who.birthDate) };
+    if (cp) return { sex: cp.sex || '', age: v84Age(cp.birthDate) };
+  } catch (e) { }
+  return { sex: '', age: '' };
+}
+function v84DocHtml(d) {
+  if (!d || !(d.tests || []).length) return '';
+  const o = Object.assign({ ctx: d.title || '' }, v84Who());
+  const W = d.tests.map(t => ({ t, c: t && v84Check(t.name, [t.result, t.unit].filter(Boolean).join(' '), t.ref, o) })).filter(x => x.c);
+  if (!W.length) return '';
+  return '<div class="ex-k v84-k">' + esc(x84('title')) + '</div>' + W.map(({ t, c }) => '<div class="v84-w ' + (c.st === 'imp' ? 'v84-imp' : 'v84-hl') + '" data-v84="' + c.st + '">' +
+    esc((c.st === 'imp' ? '' : '⚠️ ') + t.name + ': ' + [t.result, t.unit].filter(Boolean).join(' ') + ' — ' + c.txt) + '</div>').join('');
+}
+(function () {
+  if (typeof exExtraHtml !== 'function') return;
+  const o = exExtraHtml;
+  exExtraHtml = function (d) {
+    let h = o.apply(this, arguments);
+    try { h += v84DocHtml(d); } catch (e) { console.error(e); }
+    return h;
+  };
+})();
+
+/* =====================================================================
+ * v85 (9.54): 🖼 фото документов — вместе с документом в GT/098; проверка качества фото до чтения ИИ.
+ *  1) «💾 Сохранить всё»: после сохранения разборов фото каждой страницы уходят к своему документу (по одному, с ходом в подсказке);
+ *     не загрузилось — документы всё равно сохранены. Фото — только в памяти окна, на телефоне не хранятся.
+ *  2) GT/098: у документа (список, окно документа, «✏️ Исправить») и у каждого пункта «❓ Уточнить» — «🖼 Фото»: страницы, нажать — крупнее.
+ *     Переданный GT/098 (из другого отделения) — без фото.
+ *  3) До «Прочитать»: размыто / темно / мелко — пометка на миниатюре и строка-подсказка; врач может продолжить.
+ * ===================================================================== */
+const PH_T = {
+  ru: {
+    btn: '🖼 Фото', title: '🖼 Фото документа', page: 'стр. {n} из {m}', loading: 'Загружаю фото…', none: 'Фото этого документа не сохранены.', fail: 'Не удалось загрузить фото.',
+    tap: 'Нажмите на фото — крупнее, ещё раз — обратно.', priv: 'На фото — личные данные пациента: не пересылайте и не сохраняйте на телефон.',
+    up: '🖼 Фото к документам: {a} из {n}…', upDone: '🖼 Фото сохранены к документам: {n}', upPart: '🖼 Фото сохранены: {ok} из {n}. Остальные не загрузились — документы сохранены.',
+    q_blur: '⚠ размыто', q_blurDo: 'переснимите', q_dark: '⚠ темно', q_small: '⚠ мелко', qw: { blur: 'размыто', dark: 'темно', small: 'мелко' }, qPh: 'фото {n}',
+    qHint: 'ИИ может прочитать с ошибками — лучше переснять (можно и продолжить).'
+  },
+  az: {
+    btn: '🖼 Foto', title: '🖼 Sənədin fotosu', page: 'səh. {n} / {m}', loading: 'Foto yüklənir…', none: 'Bu sənədin fotosu saxlanılmayıb.', fail: 'Fotonu yükləmək olmadı.',
+    tap: 'Fotoya basın — böyüyəcək, yenə basın — geri.', priv: 'Fotoda pasiyentin şəxsi məlumatları var: başqasına göndərməyin, telefona saxlamayın.',
+    up: '🖼 Fotolar sənədlərə: {a} / {n}…', upDone: '🖼 Fotolar sənədlərə saxlanıldı: {n}', upPart: '🖼 Fotolar saxlanıldı: {ok} / {n}. Qalanları yüklənmədi — sənədlər saxlanılıb.',
+    q_blur: '⚠ bulanıq', q_blurDo: 'yenidən çəkin', q_dark: '⚠ qaranlıq', q_small: '⚠ kiçik', qw: { blur: 'bulanıq', dark: 'qaranlıq', small: 'kiçik' }, qPh: 'foto {n}',
+    qHint: 'Sİ səhv oxuya bilər — yenidən çəkmək daha yaxşıdır (davam etmək də olar).'
+  }
+};
+function pht(k, v) { const L2 = PH_T[S.lang === 'az' ? 'az' : 'ru']; let s = L2[k] !== undefined ? L2[k] : PH_T.ru[k]; if (typeof s === 'string' && v) Object.keys(v).forEach(x => { s = s.split('{' + x + '}').join(v[x]); }); return s; }
+const PH = { seq: 0, chain: Promise.resolve(), progT: 0 };
+
+(function () {
+  if ($('#phCss')) return;
+  const s = document.createElement('style'); s.id = 'phCss';
+  s.textContent = '.ex-th>span.ph-bad>img{display:block;box-sizing:border-box;border:2px solid #d97706}.ph-q{position:absolute;left:0;right:0;bottom:0;padding:2px 1px 3px;border-radius:0 0 8px 8px;background:rgba(255,243,196,.95);color:#7a4300;font-size:10px;line-height:1.15;font-weight:700;text-align:center;pointer-events:none;white-space:nowrap;overflow:hidden}.ph-q2{font-size:9.5px;font-weight:600;letter-spacing:-.2px}' +
+    '.ph-qhint{margin:6px 0;padding:6px 8px;border-radius:8px;background:#fff3c4;color:#7a4300;font-size:13px}' +
+    '.ph-btn{white-space:nowrap}.gt-row.cs-list-row .ph-btn{align-self:center;flex:none}' +
+    '.ph-ov{position:fixed;inset:0;z-index:55;background:#0b0f17;color:#fff;display:flex;flex-direction:column}.ph-bar{display:flex;align-items:center;gap:8px;padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top));border-bottom:1px solid #2a3240}' +
+    '.ph-bar b{font-size:15px;line-height:1.25}.ph-bar .btn{min-width:44px}.ph-body{flex:1;overflow:auto;padding:10px 10px calc(16px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}' +
+    '.ph-note{font-size:12.5px;opacity:.75;margin:0 2px 8px}.ph-pg{margin:0 0 14px}.ph-pg figcaption{font-size:12.5px;opacity:.75;margin:0 2px 4px}.ph-img{background:#1a2130;border-radius:8px;min-height:90px;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:zoom-in}' +
+    '.ph-img img{display:block;width:100%;height:auto}.ph-img.zoom{display:block;overflow:auto;max-height:82vh;cursor:zoom-out}.ph-img.zoom img{width:250%;max-width:none}.ph-img .muted,.ph-msg{color:#c9d1dd;padding:14px;font-size:14px}';
+  document.head.appendChild(s);
+})();
+
+/* ---------- 3. качество фото: темно / размыто / мелко (на уменьшенной серой копии, ничего не отправляется) ----------
+ *  Резкость — дисперсия лапласиана в квадратах 32×32 с текстом, делённая на контраст квадрата (не зависит от яркости
+ *  и от того, сколько на листе пустого места); берётся 90-й процентиль — самые резкие места. Пороги — с запасом:
+ *  резкий лист ≈ 2,4; лёгкая нерезкость (σ 1–2 px) ≈ 1,6–0,65 — не отмечается; текст уже не читается (σ ≥ 2,5 px) — < 0,5. */
+const PHQ = { side: 800, tile: 32, minSd: 8, minTiles: 6, blur: 0.5, dark: 90, small: 900 };
+function phQuality(img) {
+  const w0 = img.naturalWidth || img.width, h0 = img.naturalHeight || img.height, long0 = Math.max(w0, h0);
+  if (!long0) return null;
+  const k = Math.min(1, PHQ.side / long0);
+  const W = Math.max(1, Math.round(w0 * k)), H = Math.max(1, Math.round(h0 * k));
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const cx = c.getContext('2d', { willReadFrequently: true });
+  cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'medium';
+  cx.drawImage(img, 0, 0, W, H);
+  const px = cx.getImageData(0, 0, W, H).data;
+  const N = W * H, g = new Float32Array(N), hist = new Uint32Array(256);
+  let sum = 0;
+  for (let i = 0, j = 0; j < N; i += 4, j++) { const v = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]; g[j] = v; sum += v; hist[Math.min(255, v | 0)]++; }
+  let acc = 0, p95 = 255;
+  for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= 0.95 * N) { p95 = v; break; } }
+  const T = PHQ.tile, tiles = [];
+  let ls = 0, ls2 = 0, ln = 0;
+  for (let ty = 1; ty + T <= H - 1; ty += T) for (let tx = 1; tx + T <= W - 1; tx += T) {
+    let s = 0, s2 = 0, l = 0, l2 = 0, n = 0;
+    for (let y = ty; y < ty + T; y++) {
+      let o = y * W + tx;
+      for (let x = 0; x < T; x++, o++) { const v = g[o], L = 4 * v - g[o - 1] - g[o + 1] - g[o - W] - g[o + W]; s += v; s2 += v * v; l += L; l2 += L * L; n++; }
+    }
+    const m = s / n, sd = Math.sqrt(Math.max(0, s2 / n - m * m)), lm = l / n, lv = Math.max(0, l2 / n - lm * lm);
+    ls += l; ls2 += l2; ln += n;
+    if (sd >= PHQ.minSd) tiles.push(Math.sqrt(lv) / sd);
+  }
+  tiles.sort((a, b) => a - b);
+  const sharp = tiles.length >= PHQ.minTiles ? tiles[Math.min(tiles.length - 1, Math.floor(tiles.length * 0.9))] : null;
+  const lapVar = ln ? ls2 / ln - (ls / ln) * (ls / ln) : 0;
+  return { mean: Math.round(sum / N), p95, lapVar: Math.round(lapVar), sharp: sharp === null ? null : Math.round(sharp * 1000) / 1000, long: long0,
+    dark: p95 < PHQ.dark, blur: sharp !== null && sharp < PHQ.blur, small: long0 < PHQ.small };
+}
+function phFlags(q) { return q ? ['blur', 'dark', 'small'].filter(k => q[k]) : []; }
+(function () {
+  if (typeof exPrep !== 'function') return;
+  const p0 = exPrep;
+  exPrep = function (img) {
+    const r = p0.apply(this, arguments);
+    try { if (r && typeof r === 'object') r.q = phQuality(img); } catch (e) { }
+    return r;
+  };
+})();
+function phQualityMarks() {
+  const st = S.ex, box = $('#exBox'); if (!st || !box || st.docs) return;
+  const bad = [];
+  box.querySelectorAll('.ex-th > span').forEach((sp, i) => {
+    const f = phFlags((st.photos[i] || {}).q); if (!f.length || sp.querySelector('.ph-q')) return;
+    sp.classList.add('ph-bad');
+    const full = f.map(k => pht('q_' + k) + (k === 'blur' ? ' — ' + pht('q_blurDo') : '')).join(', ');
+    sp.title = full;
+    sp.insertAdjacentHTML('beforeend', '<div class="ph-q" data-q="' + f.join(' ') + '" aria-label="' + esc(full) + '">' + f.map(k => esc(pht('q_' + k)) + (k === 'blur' ? '<br><span class="ph-q2">' + esc(pht('q_blurDo')) + '</span>' : '')).join('<br>') + '</div>');
+    bad.push(pht('qPh', { n: i + 1 }) + ' — ' + f.map(k => pht('qw')[k]).join(', '));
+  });
+  const rd = box.querySelector('[data-act=exRead]'), row = rd && rd.closest('.row');
+  if (bad.length && row && !box.querySelector('.ph-qhint')) row.insertAdjacentHTML('beforebegin', '<div class="ph-qhint">⚠ ' + esc(bad.join('; ')) + '. ' + esc(pht('qHint')) + '</div>');
+}
+(function () {
+  if (typeof exRender !== 'function') return;
+  const r0 = exRender;
+  exRender = function () {
+    const out = r0.apply(this, arguments);
+    try { phQualityMarks(); } catch (e) { }
+    return out;
+  };
+})();
+
+/* ---------- 1. после «Сохранить всё» — фото страниц к своим документам ---------- */
+function phProg(text, end, bad) {
+  const root = $('#toasts'); if (!root) return;
+  let el = $('#phProg');
+  if (!el || !document.body.contains(el)) { el = document.createElement('div'); el.id = 'phProg'; el.className = 'toast'; root.appendChild(el); }
+  el.classList.toggle('bad', !!bad);
+  el.innerHTML = '<span>' + esc(text) + '</span>';
+  clearTimeout(PH.progT);
+  if (end) PH.progT = setTimeout(() => { const x = $('#phProg'); if (x) x.remove(); }, bad ? 6500 : 4000);
+}
+/** Страницы документа по порядку: номера фото пакета (с 1), без повторов и без несуществующих. */
+function phPages(d, total) {
+  const out = [];
+  (Array.isArray(d && d.photos) ? d.photos : []).forEach(n => { n = Math.round(Number(n)); if (n >= 1 && n <= total && out.indexOf(n) === -1) out.push(n); });
+  return out.slice(0, 40);
+}
+async function phUploadRun(pid, photos, docs) {
+  const jobs = [];
+  docs.forEach(d => {
+    if (!d || !d._id || d._phDone || d._phBusy) return;
+    const pages = phPages(d, photos.length).filter(n => /^\/9j\//.test(String((photos[n - 1] || {}).data || '')));
+    if (!pages.length) return;
+    d._phBusy = true;
+    pages.forEach((n, k) => jobs.push({ d, n: k + 1, of: pages.length, data: photos[n - 1].data }));
+  });
+  if (!jobs.length || !pid) { docs.forEach(d => { if (d) d._phBusy = false; }); return; }
+  let ok = 0;
+  for (let i = 0; i < jobs.length; i++) {
+    const j = jobs[i];
+    phProg(pht('up', { a: i + 1, n: jobs.length }));
+    let r = null;
+    for (let t = 0; t < 2 && !(r && r.ok); t++) {
+      r = await rpc('extPhotoSave', { patientId: pid, extId: j.d._id, n: j.n, of: j.of, data: j.data }, 120000).catch(() => null);
+      if (r && !r.ok && !/^E_(BUSY|SERVER)$/.test(r.code || '')) break; // нет права / не тот документ — повтор не поможет
+    }
+    if (r && r.ok) ok++;
+    j.data = null;
+  }
+  docs.forEach(d => { if (d && d._phBusy) { d._phBusy = false; d._phDone = true; } });
+  phProg(ok === jobs.length ? pht('upDone', { n: ok }) : pht('upPart', { ok, n: jobs.length }), true, ok !== jobs.length);
+  // GT/098 этого пациента открыт — тихо обновить (счётчик фото), без прыжка наверх и без смены экрана
+  try {
+    if (typeof PT === 'object' && PT.cache) delete PT.cache[pid];
+    const vis = () => { const g = ptSt().cur; return !!(g && g.patient && g.patient.id === pid && !g.shared && S.screen === 'forms' && dsSt().seg === 'patients' && !S.fv); };
+    if (ok && vis()) { const g = await ptGet(pid, true); if (g && g.patient && vis()) { ptSt().cur = g; dsRender(); } }
+  } catch (e) { }
+}
+(function () {
+  if (typeof exSaveAll !== 'function') return;
+  const s0 = exSaveAll;
+  exSaveAll = async function () {
+    const st = S.ex;
+    const photos = st && Array.isArray(st.photos) ? st.photos.slice() : [];
+    const docs = st && Array.isArray(st.docs) ? st.docs.slice() : [];
+    try { return await s0.apply(this, arguments); }
+    finally {
+      // сохранённые документы (у них есть _id) — даже если сохранение остановилось на середине; каждый — один раз
+      try {
+        const pid = st && st.pid, cur = ptSt().cur;
+        const shared = !!(cur && cur.shared && cur.patient && cur.patient.id === pid); // переданный GT/098 — фото не прикладываются (и сервер не даст)
+        if (pid && !shared && photos.length && docs.some(d => d && d._id && !d._phDone && !d._phBusy)) {
+          PH.chain = PH.chain.then(() => phUploadRun(pid, photos, docs)).catch(() => { });
+        }
+      } catch (e) { }
+    }
+  };
+})();
+
+/* ---------- 2. просмотр: окно поверх всего (открытое окно документа / правки не теряется) ---------- */
+function phClose() {
+  PH.seq++;
+  const ov = $('#phView'); if (!ov) return;
+  ov.remove();
+  document.body.style.overflow = PH.bodyOv || '';
+  document.removeEventListener('keydown', phKey, true);
+}
+function phKey(e) { if (e.key === 'Escape' && $('#phView')) { e.stopPropagation(); phClose(); } }
+async function phView(extId) {
+  const g = ptSt().cur;
+  if (!extId || !g || g.shared) return;
+  const x = (g.ext || []).find(y => y.id === extId);
+  phClose();
+  const seq = ++PH.seq;
+  PH.bodyOv = document.body.style.overflow;
+  const ov = document.createElement('div'); ov.id = 'phView'; ov.className = 'ph-ov'; ov.setAttribute('role', 'dialog');
+  ov.innerHTML = '<div class="ph-bar"><b class="grow">' + esc(pht('title')) + (x && x.title ? ' — ' + esc(x.title) : '') + '</b><button class="btn small" data-act="phClose" aria-label="✕">✕</button></div>' +
+    '<div class="ph-body" id="phBody"><div class="ph-msg">' + esc(pht('loading')) + '</div></div>';
+  document.body.appendChild(ov);
+  document.body.style.overflow = 'hidden';
+  document.addEventListener('keydown', phKey, true);
+  const r = await rpc('extPhotos', { extId }, 60000).catch(() => null);
+  if (seq !== PH.seq) return;
+  const body = $('#phBody'); if (!body) return;
+  if (!r || !r.ok) { body.innerHTML = '<div class="ph-msg">' + esc(r && !r.ok ? errText(r) : pht('fail')) + '</div>'; return; }
+  const rows = r.rows || [];
+  if (!rows.length) { body.innerHTML = '<div class="ph-msg">' + esc(pht('none')) + '</div>'; return; }
+  body.innerHTML = '<div class="ph-note">' + esc(pht('priv')) + ' ' + esc(pht('tap')) + '</div>' + rows.map((p, i) => '<figure class="ph-pg"><figcaption>' + esc(pht('page', { n: i + 1, m: rows.length })) + '</figcaption>' +
+    '<div class="ph-img" data-act="phZoom" data-i="' + i + '"><div class="muted">' + esc(pht('loading')) + '</div></div></figure>').join('');
+  for (let i = 0; i < rows.length; i++) {
+    const p = await rpc('extPhotoGet', { id: rows[i].id }, 90000).catch(() => null);
+    if (seq !== PH.seq) return;
+    const cell = document.querySelector('#phView .ph-img[data-i="' + i + '"]'); if (!cell) continue;
+    const d = p && p.ok ? String(p.data || '') : '';
+    cell.innerHTML = /^\/9j\/[A-Za-z0-9+\/]*={0,2}$/.test(d) ? '<img alt="' + esc(pht('page', { n: i + 1, m: rows.length })) + '" src="data:image/jpeg;base64,' + d + '">' : '<div class="ph-msg">' + esc(p && !p.ok ? errText(p) : pht('fail')) + '</div>';
+  }
+}
+function phBtnHtml(id, n) { return '<button type="button" class="btn small ghost ph-btn" data-act="phView" data-id="' + esc(id) + '">' + esc(pht('btn')) + (n > 1 ? ' (' + n + ')' : '') + '</button>'; }
+/** GT/098: «🖼 Фото» у пунктов «❓ Уточнить» и у документов из других учреждений. */
+function phCardMarks(h, g) {
+  const cnt = {}; (g.ext || []).forEach(x => { if (Number(x.photoN) > 0) cnt[x.id] = Number(x.photoN); });
+  if (!Object.keys(cnt).length) return h;
+  const tpl = document.createElement('template'); tpl.innerHTML = h;
+  const R = tpl.content;
+  const ub = R.querySelector('details[data-gt="unsure"] > .gt-body');
+  if (ub) {
+    const rows = Array.from(ub.children).filter(e => e.classList.contains('gt-row'));
+    const uns = typeof gtUnsureItems === 'function' ? gtUnsureItems(g) : [];
+    rows.forEach((row, i) => {
+      const fx = row.querySelector('[data-act="gtFixDoc"][data-id]');
+      const id = rows.length === uns.length && uns[i] ? uns[i].id : fx ? fx.dataset.id : '';
+      if (!id || !cnt[id]) return;
+      let acts = row.querySelector('.gt-rowacts');
+      if (!acts) { acts = document.createElement('div'); acts.className = 'gt-rowacts'; row.appendChild(acts); }
+      acts.insertAdjacentHTML('beforeend', phBtnHtml(id, cnt[id]));
+    });
+  }
+  R.querySelectorAll('details[data-gt="ext"] .gt-row[data-act="exView"]').forEach(row => { const id = row.dataset.id; if (cnt[id] && !row.querySelector('.ph-btn')) row.insertAdjacentHTML('beforeend', phBtnHtml(id, cnt[id])); });
+  return tpl.innerHTML;
+}
+(function () {
+  const o = window.ptCardHtml;
+  if (typeof o !== 'function') return;
+  window.ptCardHtml = function () {
+    const h = o.apply(this, arguments);
+    try { const g = ptSt().cur; if (!g || !g.patient || g.shared) return h; return phCardMarks(h, g); } catch (e) { console.error(e); return h; }
+  };
+})();
+/** Окно документа и «✏️ Исправить» — «🖼 Фото» рядом с кнопками (просмотр открывается поверх, правки не теряются). */
+function phModalBtn(id) {
+  const g = ptSt().cur; if (!g || g.shared || !id) return;
+  const x = (g.ext || []).find(y => y.id === id); if (!x || !(Number(x.photoN) > 0)) return;
+  const acts = document.querySelector('#modalRoot .modal .acts'); if (!acts || acts.querySelector('[data-act=phView]')) return;
+  acts.insertAdjacentHTML('afterbegin', phBtnHtml(id, Number(x.photoN)));
+}
+['exView', 'gtFixDoc'].forEach(k => {
+  const f0 = H[k]; if (typeof f0 !== 'function') return;
+  H[k] = function (el) { const r = f0.apply(this, arguments); try { phModalBtn(el && el.dataset && el.dataset.id); } catch (e) { } return r; };
+});
+Object.assign(H, {
+  phView: el => phView(el.dataset.id),
+  phClose: () => phClose(),
+  phZoom: el => { el.classList.toggle('zoom'); if (el.classList.contains('zoom')) { const im = el.querySelector('img'); if (im) el.scrollLeft = Math.max(0, (im.scrollWidth - el.clientWidth) / 2); } }
+});
 
 
 function init() {
