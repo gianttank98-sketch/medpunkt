@@ -36101,6 +36101,309 @@ Object.assign(H, {
 // счётчик «?» — тоже в понятность (только число нажатий по экранам)
 if (typeof SM_SCR === 'object') SM_SCR.today = SM_SCR.today || 'tabToday';
 
+/* =====================================================================
+ * v72 (9.45): 📄 документы пациента → ИИ → приём и карта (Саид, 27.10: «после открытия бланка — добавлять все документы,
+ *  связанные с пациентом; пусть не телефон, а именно ИИ делает, и пусть даже имя и FİN разбирает — всю инфу»).
+ *  1) До 20 фото за раз: направления, выписки 027, заключения TƏBİB, анализы, посевы, ЭКГ, удостоверение — что угодно.
+ *  2) ИИ читает по 4 фото: всё медицинское (диагнозы XBT-10, анализы строками, снимки, лечение, рекомендации) и отдельно
+ *     данные пациента (ФИО, FİN, дата рождения, пол) — они только на телефон: врач видит, правит и отмечает «в приём».
+ *  3) «💾 Сохранить всё»: ФИО / FİN — в приём, карта пациента заводится сама, документы — в карту (без ФИО и FİN в тексте).
+ *  Вход: наверху открытого приёма (быстрый и полный бланк) и в карте пациента.
+ * ===================================================================== */
+const EX_T = {
+  ru: {
+    exBtn: '📄 Документы из других учреждений', exAdd: '＋ Добавить документы (фото)', exVisitBtn: '📄 Добавить документы пациента (ИИ прочитает всё)', exWho: '👤 Пациент в документах', exWhoApply: 'в приём', exWhoAlt: 'в другом документе: {v}', exWhoSeen: 'Обратите внимание: {v}', exWF: { surname: 'Фамилия', name: 'Имя', patronymic: 'Отчество', birthDate: 'Дата рождения', sex: 'Пол', fin: 'FİN', phone: 'Телефон', address: 'Адрес' },
+    exTitle: '📄 Документы пациента', exHow: 'Сфотографируйте все документы пациента (до 20 фото): направления, выписки, анализы, снимки, удостоверение. ИИ прочитает всё — ФИО, FİN и медицинское — и разложит по приёму и карте.',
+    exPhotos: 'Фото: {n} из 20', exMore: '📷 Добавить фото', exRead: '🤖 Прочитать', exReading: 'ИИ читает фото {a}–{b} из {n}…', exStopped: 'Остановилось — нажмите «Прочитать» ещё раз (прочитанное не потеряется).',
+    exTooMany: 'Не больше 20 фото за раз.', exNeedName: 'Нет имени пациента: впишите фамилию и имя в «Пациент в документах».',
+    exScan: '🪄 Ищу личные данные на фото…', exScanDone: '🪄 Закрашено мест: {n}. Проверьте: всё ли закрыто? Можно докрасить пальцем.', exScanNone: 'Личные данные сами не нашлись — закрасьте пальцем ФИО, FİN, дату рождения, адрес, телефон.', exScanFail: 'Не удалось распознать текст на телефоне — закрасьте пальцем.',
+    exReview: 'Проверьте разбор и сохраните', exSave: '💾 Сохранить в карту', exSaveAll: '💾 Сохранить всё в карту', exSaved: 'Сохранено в карту: {n}', exSkip: 'не сохранять',
+    exType: { referral: 'Направление', extract: 'Выписка из амбулаторной карты', discharge: 'Выписка из стационара', lab: 'Анализы', micro: 'Микробиология', imaging: 'Снимки / УЗИ', ecg: 'ЭКГ', consult: 'Консультация', rx: 'Рецепт', sick: 'Больничный', other: 'Документ' },
+    exF: { title: 'Что это', org: 'Учреждение', date: 'Дата', author: 'Врач', dx: 'Диагнозы', onset: 'Начало болезни', anamnesis: 'Анамнез', complaints: 'Жалобы', exam: 'Осмотр', tests: 'Исследования', imaging: 'Снимки', treatment: 'Лечение', recommendations: 'Рекомендации', outcome: 'Исход', notes: 'Важно', unclear: 'Не разобрать', to: 'Куда направлен' },
+    exDxKind: { main: 'основной', complication: 'осложнение', comorbid: 'сопутствующий', other: '' },
+    exTestsHint: 'по строке: название — результат единицы (дата)', exDel: '🗑 Удалить', exDelAsk: 'Удалить этот документ из карты?', exNone: 'Документов пока нет.', exPages: 'фото: {n}',
+    exAiNote: 'Прочитал ИИ — проверьте с оригиналом (особенно ФИО и FİN). Неразборчивое помечено «[не разобрать]».'
+  },
+  az: {
+    exBtn: '📄 Digər müəssisələrin sənədləri', exAdd: '＋ Sənəd əlavə et (foto)', exVisitBtn: '📄 Pasiyentin sənədlərini əlavə et (Sİ hamısını oxuyacaq)', exWho: '👤 Sənədlərdəki pasiyent', exWhoApply: 'qəbula', exWhoAlt: 'başqa sənəddə: {v}', exWhoSeen: 'Diqqət: {v}', exWF: { surname: 'Soyad', name: 'Ad', patronymic: 'Ata adı', birthDate: 'Doğum tarixi', sex: 'Cins', fin: 'FİN', phone: 'Telefon', address: 'Ünvan' },
+    exTitle: '📄 Pasiyentin sənədləri', exHow: 'Pasiyentin bütün sənədlərinin şəklini çəkin (20 fotoya qədər): göndərişlər, çıxarışlar, analizlər, şəkillər, şəxsiyyət vəsiqəsi. Sİ hamısını oxuyacaq — ad-soyad, FİN və tibbi hissə — və qəbula, karta yazacaq.',
+    exPhotos: 'Foto: {n} / 20', exMore: '📷 Foto əlavə et', exRead: '🤖 Oxu', exReading: 'Sİ {a}–{b} / {n} fotonu oxuyur…', exStopped: 'Dayandı — «Oxu»nu yenidən basın (oxunan itməyəcək).',
+    exTooMany: 'Bir dəfəyə 20 fotodan çox olmaz.', exNeedName: 'Pasiyentin adı yoxdur: «Sənədlərdəki pasiyent»də soyad və adı yazın.',
+    exScan: '🪄 Fotoda şəxsi məlumatlar axtarılır…', exScanDone: '🪄 Rənglənən yer: {n}. Yoxlayın: hər şey bağlıdır? Barmaqla əlavə rəngləmək olar.', exScanNone: 'Şəxsi məlumatlar özü tapılmadı — ad-soyad, FİN, doğum tarixi, ünvan, telefonu barmaqla rəngləyin.', exScanFail: 'Telefonda mətn tanınmadı — barmaqla rəngləyin.',
+    exReview: 'Təhlili yoxlayın və saxlayın', exSave: '💾 Karta saxla', exSaveAll: '💾 Hamısını karta saxla', exSaved: 'Karta saxlanıldı: {n}', exSkip: 'saxlama',
+    exType: { referral: 'Göndəriş', extract: 'Ambulator kitabçadan çıxarış', discharge: 'Stasionardan çıxarış', lab: 'Analizlər', micro: 'Mikrobiologiya', imaging: 'Şəkillər / USM', ecg: 'EKQ', consult: 'Konsultasiya', rx: 'Resept', sick: 'Xəstəlik vərəqəsi', other: 'Sənəd' },
+    exF: { title: 'Nədir', org: 'Müəssisə', date: 'Tarix', author: 'Həkim', dx: 'Diaqnozlar', onset: 'Xəstəliyin başlanması', anamnesis: 'Anamnez', complaints: 'Şikayətlər', exam: 'Baxış', tests: 'Müayinələr', imaging: 'Şəkillər', treatment: 'Müalicə', recommendations: 'Tövsiyələr', outcome: 'Nəticə', notes: 'Vacib', unclear: 'Oxunmadı', to: 'Hara göndərilib' },
+    exDxKind: { main: 'əsas', complication: 'ağırlaşma', comorbid: 'yanaşı', other: '' },
+    exTestsHint: 'sətir-sətir: ad — nəticə vahid (tarix)', exDel: '🗑 Sil', exDelAsk: 'Bu sənəd kartdan silinsin?', exNone: 'Hələ sənəd yoxdur.', exPages: 'foto: {n}',
+    exAiNote: 'Sİ oxuyub — əsli ilə yoxlayın. Oxunmayan «[не разобрать]» ilə qeyd olunub.'
+  }
+};
+Object.assign(I18N.ru, { exBtn: EX_T.ru.exBtn });
+Object.assign(I18N.az, { exBtn: EX_T.az.exBtn });
+function ext(k, v) { const L2 = EX_T[S.lang === 'az' ? 'az' : 'ru']; let s = L2[k] !== undefined ? L2[k] : EX_T.ru[k]; if (typeof s === 'string' && v) Object.keys(v).forEach(x => { s = s.split('{' + x + '}').join(v[x]); }); return s; }
+const EX_MAX = 20;
+
+(function () {
+  if ($('#exCss')) return;
+  const s = document.createElement('style'); s.id = 'exCss';
+  s.textContent = '.ex-th{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.ex-th span{position:relative}.ex-th img{width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}.ex-th button{position:absolute;top:-6px;right:-6px;min-height:0!important;width:24px;height:24px;padding:0;border-radius:12px}' +
+    '.ex-doc{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0}.ex-doc h4{margin:0 0 6px;font-size:16px}.ex-doc table{width:100%;border-collapse:collapse;font-size:13.5px}.ex-doc td,.ex-doc th{border-bottom:1px solid var(--line);padding:4px;text-align:left;vertical-align:top}' +
+    '.ex-doc .ex-k{color:var(--sub);font-size:12.5px;margin-top:6px}.ex-doc textarea{min-height:60px}.ex-flag{color:var(--red);font-weight:700}.ex-scan{font-size:13px;margin:6px 0;color:var(--sub)}';
+  document.head.appendChild(s);
+})();
+
+/* ---------- 1. фото: только уменьшить (ИИ читает всё — решение Саида 27.10, 15:58) ---------- */
+function exPrep(img) {
+  const k = Math.min(1, ATT_MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+  const W = Math.max(1, Math.round(img.naturalWidth * k)), H = Math.max(1, Math.round(img.naturalHeight * k));
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  c.getContext('2d').drawImage(img, 0, 0, W, H);
+  const data = c.toDataURL('image/jpeg', 0.85).split(',')[1];
+  const tc = document.createElement('canvas'); const tk = 64 / Math.max(W, H); tc.width = Math.round(W * tk); tc.height = Math.round(H * tk);
+  tc.getContext('2d').drawImage(c, 0, 0, tc.width, tc.height);
+  return { data, thumb: tc.toDataURL('image/jpeg', 0.6) };
+}
+
+/* ---------- 2. окно «Документы пациента» ---------- */
+function exKnown(p) { return p ? [p.surname, p.name, p.patronymic, p.fin].concat(String(p.surname || '').split(/\s+/)).filter(Boolean) : []; }
+function exOpen(patient, formId) {
+  S.ex = { pid: patient ? patient.id : '', known: exKnown(patient), formId: formId || '', photos: [], parts: {}, docs: null, skip: {}, who: null };
+  exModal();
+}
+function exModal() {
+  const st = S.ex; if (!st) return;
+  openModal('<h3>' + esc(ext('exTitle')) + '</h3><div id="exBox"></div><div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+  exRender();
+}
+function exRender() {
+  const st = S.ex, box = $('#exBox'); if (!st || !box) return;
+  if (st.docs) { box.innerHTML = exReviewHtml(); return; }
+  box.innerHTML = '<div class="muted" style="margin-bottom:8px">' + esc(ext('exHow')) + '</div>' +
+    '<div class="lbl">' + esc(ext('exPhotos', { n: st.photos.length })) + '</div><div class="ex-th">' + st.photos.map((p, i) => '<span><img src="' + p.thumb + '" alt=""><button class="btn small ghost" data-act="exDelPhoto" data-i="' + i + '">✕</button></span>').join('') + '</div>' +
+    '<div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn ghost" data-act="exAddPhoto"' + (st.photos.length >= EX_MAX ? ' disabled' : '') + '>' + esc(ext('exMore')) + '</button>' +
+    '<button class="btn primary" data-act="exRead"' + (st.photos.length ? '' : ' disabled') + '>' + esc(ext('exRead')) + '</button></div><div class="muted" id="exProg" style="margin-top:6px"></div>';
+}
+function exAddPhoto() {
+  let fi = $('#exFile');
+  if (!fi) { fi = document.createElement('input'); fi.type = 'file'; fi.id = 'exFile'; fi.accept = 'image/*'; fi.multiple = true; fi.style.display = 'none'; document.body.appendChild(fi); }
+  fi.value = '';
+  fi.onchange = async () => {
+    const st = S.ex; if (!st) return;
+    const files = Array.from(fi.files || []);
+    st.parts = {}; st.docs = null; // набор фото изменился — читать заново
+    for (const f of files) {
+      if (st.photos.length >= EX_MAX) { toast(ext('exTooMany'), 'bad'); break; }
+      try {
+        const img = await attLoadImg(f);
+        st.photos.push(exPrep(img));
+      } catch (e) { toast(t('attBad'), 'bad'); }
+    }
+    exModal();
+  };
+  fi.click();
+}
+async function exRead(btn) {
+  const st = S.ex; if (!st || !st.photos.length) return;
+  btn.disabled = true;
+  const prog = $('#exProg');
+  try {
+    const docs = [];
+    for (let i = 0; i < st.photos.length; i += 4) {
+      const part = st.photos.slice(i, i + 4);
+      if (prog) prog.textContent = ext('exReading', { a: i + 1, b: i + part.length, n: st.photos.length });
+      let r = st.parts[i];
+      if (!r) { r = await rpcA('extRead', { images: part.map(p => ({ data: p.data })), from: i + 1, full: true, patientId: st.pid }, { timeout: 300000 }); if (!r) throw new Error('read'); st.parts[i] = r; }
+      (r.docs || []).forEach(d => docs.push(d));
+      // данные пациента: первое непустое по каждому полю; разные значения — показать оба
+      const w = st.who || (st.who = {});
+      Object.keys(r.patient || {}).forEach(k => { const v = String(r.patient[k] || '').trim(); if (!v) return; if (!w[k]) w[k] = v; else if (w[k] !== v && k !== 'seen') w[k + '_alt'] = v; });
+    }
+    st.docs = exMerge(docs);
+    exRender();
+  } catch (e) {
+    if (prog) prog.textContent = ext('exStopped');
+    btn.disabled = false;
+  }
+}
+/** Документ, продолжившийся в следующей партии фото (тот же вид, учреждение, дата) — склеить. */
+function exMerge(docs) {
+  const out = [];
+  docs.forEach(d => {
+    const last = out[out.length - 1];
+    const same = last && last.type === d.type && (last.org || '') === (d.org || '') && (last.date || '') === (d.date || '') && (d.photos || [])[0] === Math.max(...(last.photos || [0])) + 1 && !d.title.match(/^(Флюоро|Рентген)/i);
+    if (same && (last.photos || []).length && d.photos && d.photos.length) {
+      last.photos = last.photos.concat(d.photos);
+      ['dx', 'tests', 'imaging'].forEach(k => { last[k] = (last[k] || []).concat(d[k] || []); });
+      ['anamnesis', 'complaints', 'exam', 'treatment', 'recommendations', 'notes', 'unclear', 'outcome'].forEach(k => { if (d[k]) last[k] = [last[k], d[k]].filter(Boolean).join('\n'); });
+    } else out.push(d);
+  });
+  return out;
+}
+function exDocHtml(d, i, edit) {
+  const F = ext('exF'), TY = ext('exType'), K = ext('exDxKind');
+  const ro = (k, v) => v ? '<div class="ex-k">' + esc(F[k]) + '</div><div style="white-space:pre-wrap">' + esc(v) + '</div>' : '';
+  const ta = (k, v, rows) => '<div class="ex-k">' + esc(F[k]) + '</div><textarea data-ex="' + i + '" data-k="' + k + '" rows="' + (rows || 2) + '">' + esc(v || '') + '</textarea>';
+  const inp = (k, v) => '<div class="ex-k">' + esc(F[k]) + '</div><input type="text" data-ex="' + i + '" data-k="' + k + '" value="' + esc(v || '') + '">';
+  const dxTxt = (d.dx || []).map(x => (x.icd ? x.icd + ' ' : '') + x.text + (K[x.kind] ? ' (' + K[x.kind] + ')' : '')).join('\n');
+  const testsTxt = (d.tests || []).map(x => x.name + ' — ' + x.result + (x.unit ? ' ' + x.unit : '') + (x.ref ? ' [' + x.ref + ']' : '') + (x.date ? ' (' + x.date + ')' : '')).join('\n');
+  const imgTxt = (d.imaging || []).map(x => x.name + (x.date ? ' (' + x.date + ')' : '') + ': ' + x.conclusion).join('\n');
+  if (edit) return '<div class="ex-doc"><div class="row" style="gap:6px;align-items:center"><b class="grow">' + esc(TY[d.type] || TY.other) + '</b><label class="check" style="margin:0"><input type="checkbox" data-exskip="' + i + '"' + (S.ex.skip[i] ? ' checked' : '') + '><span>' + esc(ext('exSkip')) + '</span></label></div>' +
+    inp('title', d.title) + '<div class="grid2">' + '<div>' + inp('date', d.date) + '</div><div>' + inp('org', d.org) + '</div></div>' + (d.author ? inp('author', d.author) : '') +
+    ta('dx', dxTxt, 2) + (d.onset ? inp('onset', d.onset) : '') + (d.complaints ? ta('complaints', d.complaints) : '') + (d.anamnesis ? ta('anamnesis', d.anamnesis, 3) : '') + (d.exam ? ta('exam', d.exam, 3) : '') +
+    '<div class="ex-k">' + esc(F.tests) + ' <span class="muted">(' + esc(ext('exTestsHint')) + ')</span></div><textarea data-ex="' + i + '" data-k="testsTxt" rows="' + Math.min(10, 2 + (d.tests || []).length) + '">' + esc(testsTxt) + '</textarea>' +
+    ta('imaging', imgTxt, 2) + (d.treatment ? ta('treatment', d.treatment) : '') + (d.recommendations ? ta('recommendations', d.recommendations) : '') + (d.notes ? ta('notes', d.notes) : '') +
+    (d.unclear ? '<div class="ex-k">' + esc(F.unclear) + '</div><div class="ex-flag">' + esc(d.unclear) + '</div>' : '') +
+    '<div class="muted" style="font-size:12px;margin-top:4px">' + esc(ext('exPages', { n: (d.photos || []).length })) + '</div></div>';
+  return '<div class="ex-doc"><h4>' + esc(d.title || TY[d.type] || '') + '</h4><div class="muted">' + esc([d.date, d.org, d.author].filter(Boolean).join(' · ')) + '</div>' +
+    ro('dx', dxTxt) + ro('onset', d.onset) + ro('complaints', d.complaints) + ro('anamnesis', d.anamnesis) + ro('exam', d.exam) +
+    ((d.tests || []).length ? '<div class="ex-k">' + esc(F.tests) + '</div><table>' + d.tests.map(x => '<tr><td>' + esc(x.name) + '</td><td' + (x.flag && x.flag !== 'negative' ? ' class="ex-flag"' : '') + '>' + esc([x.result, x.unit].filter(Boolean).join(' ')) + '</td><td class="muted">' + esc([x.ref, x.date].filter(Boolean).join(' · ')) + '</td></tr>').join('') + '</table>' : '') +
+    ro('imaging', imgTxt) + ro('treatment', d.treatment) + ro('recommendations', d.recommendations) + ro('outcome', d.outcome) + ro('notes', d.notes) + (d.unclear ? '<div class="ex-k">' + esc(F.unclear) + '</div><div class="ex-flag">' + esc(d.unclear) + '</div>' : '') + '</div>';
+}
+function exWhoHtml() {
+  const st = S.ex, w = st.who || {}, F = ext('exWF');
+  const keys = ['surname', 'name', 'patronymic', 'birthDate', 'sex', 'fin'];
+  if (!keys.some(k => w[k]) && !st.formId) return '';
+  const cur = st.formId && S.fv && S.fv.id === st.formId ? fData(st.formId) : {};
+  const curOf = { surname: '', name: '', patronymic: cur.pFather || '', birthDate: cur.pBirth || '', sex: cur.pSex || '', fin: cur.fin || '' };
+  const hasName = !!String(cur.pName || '').trim();
+  return '<div class="ex-doc"><h4>' + esc(ext('exWho')) + '</h4>' + keys.map(k => {
+    const v = w[k] || '';
+    const on = st.formId ? (k === 'surname' || k === 'name' ? !hasName && !!v : !curOf[k] && !!v) : false;
+    return '<div class="row" style="gap:6px;align-items:center;margin-top:4px"><span class="ex-k" style="margin:0;min-width:100px">' + esc(F[k]) + '</span>' +
+      (k === 'sex' ? '<select class="grow" data-who="sex"><option value=""></option><option value="m"' + (v === 'm' ? ' selected' : '') + '>' + esc(fdLabel(FD.sex[0])) + '</option><option value="f"' + (v === 'f' ? ' selected' : '') + '>' + esc(fdLabel(FD.sex[1])) + '</option></select>'
+        : '<input type="' + (k === 'birthDate' ? 'date' : 'text') + '" class="grow" data-who="' + k + '" value="' + esc(v) + '"' + (k === 'fin' ? ' maxlength="7" style="text-transform:uppercase"' : '') + '>') +
+      (st.formId ? '<label class="check" style="margin:0"><input type="checkbox" data-whoon="' + k + '"' + (on ? ' checked' : '') + '><span>' + esc(ext('exWhoApply')) + '</span></label>' : '') + '</div>' +
+      (w[k + '_alt'] ? '<div class="ex-flag" style="font-size:12.5px">' + esc(ext('exWhoAlt', { v: w[k + '_alt'] })) + '</div>' : '');
+  }).join('') + (w.seen ? '<div class="ex-flag" style="margin-top:6px">' + esc(ext('exWhoSeen', { v: w.seen })) + '</div>' : '') +
+    ((w.phone || w.address) ? '<div class="muted" style="margin-top:6px">' + esc([w.phone, w.address].filter(Boolean).join(' · ')) + '</div>' : '') + '</div>';
+}
+function exReviewHtml() {
+  const st = S.ex;
+  return '<div class="info" style="margin-bottom:8px">' + esc(ext('exAiNote')) + '</div>' + exWhoHtml() + '<div class="lbl">' + esc(ext('exReview')) + '</div>' +
+    st.docs.map((d, i) => exDocHtml(d, i, true)).join('') +
+    '<button class="btn primary block" data-act="exSaveAll" style="margin-top:8px">' + esc(ext('exSaveAll')) + '</button>';
+}
+/** Правки врача из полей окна — обратно в разбор. */
+function exCollect() {
+  const st = S.ex;
+  $$('[data-ex]').forEach(el => {
+    const d = st.docs[+el.dataset.ex]; if (!d) return;
+    const k = el.dataset.k, v = el.value.trim();
+    if (k === 'dx') d.dx = v.split('\n').map(s => s.trim()).filter(Boolean).map(s => { const m = s.match(/^([A-ZА-Я]\d{2}(?:\.\d{1,2})?)\s+(.*)$/i); return { icd: m ? m[1].toUpperCase() : '', text: (m ? m[2] : s).replace(/\s*\((основной|осложнение|сопутствующий|əsas|ağırlaşma|yanaşı)\)\s*$/i, ''), kind: /(основной|əsas)\)\s*$/i.test(s) ? 'main' : /(осложнение|ağırlaşma)\)\s*$/i.test(s) ? 'complication' : /(сопутствующий|yanaşı)\)\s*$/i.test(s) ? 'comorbid' : 'other' }; });
+    else if (k === 'testsTxt') d.tests = v.split('\n').map(s => s.trim()).filter(Boolean).map(s => { const m = s.match(/^(.*?)\s+—\s+(.*?)(?:\s+\[(.*?)\])?(?:\s+\(([^)]*)\))?$/); return m ? { name: m[1], result: m[2], unit: '', ref: m[3] || '', date: m[4] || '', flag: '' } : { name: s, result: '', unit: '', ref: '', date: '', flag: '' }; });
+    else if (k === 'imaging') d.imaging = v.split('\n').map(s => s.trim()).filter(Boolean).map(s => { const m = s.match(/^(.*?)(?:\s+\(([^)]*)\))?:\s*(.*)$/); return m ? { name: m[1], date: m[2] || '', conclusion: m[3] } : { name: '', date: '', conclusion: s }; });
+    else d[k] = v;
+  });
+  $$('[data-exskip]').forEach(el => { st.skip[+el.dataset.exskip] = el.checked; });
+}
+async function exSaveAll(btn) {
+  const st = S.ex; if (!st || !st.docs) return;
+  exCollect();
+  btn.disabled = true;
+  if (st.formId) {
+    if (!S.fv || S.fv.id !== st.formId) { btn.disabled = false; return; }
+    const val = k => { const el = $('[data-who="' + k + '"]'); return el ? String(el.value || '').trim() : ''; };
+    const on = k => { const el = $('[data-whoon="' + k + '"]'); return !!(el && el.checked); };
+    const patch = {};
+    if (on('surname') || on('name')) { const nm = [val('surname'), val('name')].filter(Boolean).join(' '); if (nm) patch.pName = nm; }
+    if (on('patronymic') && val('patronymic')) patch.pFather = val('patronymic');
+    if (on('birthDate') && /^\d{4}-\d{2}-\d{2}$/.test(val('birthDate'))) patch.pBirth = val('birthDate');
+    if (on('sex') && val('sex')) patch.pSex = val('sex');
+    if (on('fin') && /^[0-9A-Z]{7}$/.test(val('fin').toUpperCase())) patch.fin = val('fin').toUpperCase();
+    if (Object.keys(patch).length) { fSet(patch); fFlush(); }
+    const d = fData(st.formId);
+    if (!String(d.pName || '').trim()) { btn.disabled = false; return toast(ext('exNeedName'), 'bad'); }
+    if (!st.pid) {
+      st.pid = (typeof PT === 'object' && PT.formLink && PT.formLink[st.formId]) || ((fCache().full[st.formId] || {}).patientId) || '';
+      if (!st.pid) {
+        const pt = await ptEnsure(ptPiiFromForm(d), [{ kind: 'form', id: st.formId }]);
+        if (!pt) { btn.disabled = false; return; }
+        st.pid = pt.id;
+        if (typeof ptFormLink === 'function') ptFormLink(st.formId, pt.id);
+      }
+    }
+  }
+  let n = 0;
+  for (let i = 0; i < st.docs.length; i++) {
+    if (st.skip[i]) continue;
+    const d = st.docs[i];
+    if (d._saved) { n++; continue; }
+    const r = await rpcA('extSave', { patientId: st.pid, formId: st.formId, doc: d, pages: (d.photos || []).length, id: d._id || ('X' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10)) }).catch(() => null);
+    if (!r) { btn.disabled = false; return; }
+    d._saved = true; d._id = r.id; n++;
+  }
+  toast(ext('exSaved', { n }));
+  const pid = st.pid, fid = st.formId;
+  S.ex = null;
+  closeModal();
+  if (fid && S.fv && S.fv.id === fid) fRenderEditor(true);
+  if (typeof ptSt === 'function' && ptSt().cur && ptSt().cur.patient && ptSt().cur.patient.id === pid) { if (typeof ptOpen === 'function') ptOpen(pid, true); }
+}
+
+/* ---------- 3. в карте пациента: раздел «Документы из других учреждений» ---------- */
+(function () {
+  const top0 = window.ptCardTop;
+  window.ptCardTop = function (g) {
+    let h = typeof top0 === 'function' ? top0.apply(this, arguments) : '';
+    try {
+      const list = (g && g.ext) || [];
+      const TY = ext('exType');
+      h += '<div class="card"><div class="lbl">' + esc(ext('exBtn')) + ' (' + list.length + ')</div>' +
+        (list.length ? list.map(x => '<div class="cs-list-row" data-act="exView" data-id="' + esc(x.id) + '"><div class="grow"><div class="nm">' + esc(x.title || TY[x.docType] || '') + '</div><div class="fd">' + esc([x.docDate ? fmtDate(x.docDate) : '', x.org].filter(Boolean).join(' · ')) + '</div></div></div>').join('') : '<div class="muted">' + esc(ext('exNone')) + '</div>') +
+        (can('forms') && canAi() ? '<button class="btn ghost block" style="margin-top:8px" data-act="exFromCard">' + esc(ext('exAdd')) + '</button>' : '') + '</div>';
+    } catch (e) { }
+    return h;
+  };
+})();
+
+/* ---------- 4. в приёме: «📄 Принёс документы» ---------- */
+function exFromVisit() {
+  if (!S.fv) return;
+  const id = S.fv.id;
+  fFlush();
+  const d = fData(id);
+  const pid = (typeof PT === 'object' && PT.formLink && PT.formLink[id]) || ((fCache().full[id] || {}).patientId) || '';
+  exOpen(Object.assign({ id: pid }, ptPiiFromForm(d)), id);
+}
+(function () {
+  const ore = window.fRenderEditor;
+  if (typeof ore !== 'function') return;
+  window.fRenderEditor = function () {
+    const r = ore.apply(this, arguments);
+    try {
+      if (!S.fv || !canAi() || !can('forms') || (typeof hpPiiOn === 'function' && hpPiiOn()) || !fCanEdit(S.fv.id)) return r;
+      const box = $('#formsBox'); if (!box || box.querySelector('[data-act=exFromVisit]')) return r;
+      const b = '<button type="button" class="btn ghost block" style="margin-top:8px" data-act="exFromVisit">' + esc(ext('exVisitBtn')) + '</button>';
+      // сразу после открытия бланка — наверху (быстрый приём и полный бланк)
+      const head = box.querySelector('.qv > .card') || box.querySelector('.f-head');
+      if (head) head.insertAdjacentHTML('beforeend', b);
+    } catch (e) { }
+    return r;
+  };
+})();
+
+Object.assign(H, {
+  exFromCard: () => { const g = ptSt().cur; if (!g) return; exOpen(g.patient, ''); },
+  exFromVisit: () => exFromVisit(),
+  exAddPhoto: () => exAddPhoto(),
+  exDelPhoto: el => { const st = S.ex; if (!st) return; st.photos.splice(+el.dataset.i, 1); st.parts = {}; st.docs = null; exRender(); },
+  exRead: el => exRead(el),
+  exSaveAll: el => exSaveAll(el),
+  exView: el => {
+    const g = ptSt().cur; const x = g && (g.ext || []).find(y => y.id === el.dataset.id); if (!x) return;
+    openModal('<h3>📄 ' + esc(x.title || '') + '</h3>' + exDocHtml(Object.assign({ title: x.title, date: x.docDate || (x.data || {}).date, org: x.org }, x.data || {}), 0, false) +
+      '<div class="muted" style="font-size:12px">' + esc(fmtDt(x.createdAt)) + ' · ' + esc(x.createdByName || '') + '</div>' +
+      '<div class="acts"><button class="btn ghost" data-act="exDel" data-id="' + esc(x.id) + '">' + esc(ext('exDel')) + '</button><button class="btn primary" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+  },
+  exDel: async el => {
+    if (!confirm(ext('exDelAsk'))) return;
+    const r = await busy(el, () => rpcA('extDelete', { id: el.dataset.id }));
+    if (!r) return;
+    closeModal();
+    const g = ptSt().cur; if (g) ptOpen(g.patient.id, true);
+  }
+});
+
 
 function init() {
   vizTipInit();
