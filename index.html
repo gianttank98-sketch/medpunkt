@@ -36480,7 +36480,7 @@ const GT_T = {
     gtPassTitle: '🔁 Передать ведение GT/098', gtPassHint: 'Всё, что вы написали, после передачи сможет исправить только админ.', gtPassTo: 'Кому передать', gtPassNone: '🚪 Больше не веду (пациента перевели / выписали)', gtReason: 'Причина (необязательно)', gtReasonPh: 'например: переведён в терапию', gtPassGo: 'Передать',
     gtGrantTitle: '🔑 Разрешить править GT/098', gtGrantHint: 'Только тем, кто работал с этим пациентом. Разрешение само закончится.', gtGrantWho: 'Кому', gtGrantH: 'На сколько', gtGrantGo: 'Разрешить', gtGrantNow: 'Сейчас разрешено', gtGrantOff: 'забрать', gtHours: '{n} ч',
     gtConf: '⚖️ Расхождения', gtConfHint: 'Одно и то же записано по-разному. Сохранены оба варианта — выберите верный (или оставьте как есть).', gtConfA: 'Было в GT/098', gtConfB: 'Пришло', gtConfKeepA: '✓ Верно, как было', gtConfTakeB: '✓ Верно новое', gtConfWhy: 'Почему', gtConfDone: 'решено: {v} ({by}, {d})', gtConfDoc: 'в документе «{t}»',
-    gtAdded: 'добавлено {d} · {n}', gtHist: 'Кто вёл',
+    gtAdded: 'добавлено {d} · {n}', gtHist: 'Кто вёл', gtPrintBtn: '🖨️ Печать / PDF', gtShR: '📨 GT/098 вам передал(а) {by} ({s}) — до {d}. Только чтение.', gtShW: '📨 GT/098 вам передал(а) {by} ({s}) — до {d}. Можно дописывать свои разделы и строки.',
     gtType: 'Вид раздела', gtTypes: { text: '📝 Текст', chrono: '🕘 Хронология (по датам)', table: '📊 Таблица (показатель — значение)' }, gtTplHint: 'Быстро — выберите готовый раздел или впишите своё название:',
     gtRowAdd: '＋ Строка', gtEntryAdd: '＋ Запись', gtRowWhen: 'Дата и время', gtRowWhat: 'Что было', gtColName: 'Показатель', gtColVal: 'Значение', gtColUnit: 'Ед.', gtColDate: 'Дата', gtSecNote: 'Текст раздела (необязательно)',
     gtTpl: [['Хронология болезни', 'chrono'], ['Анамнез болезни', 'text'], ['Анамнез жизни', 'text'], ['Перенесённые болезни и операции', 'chrono'], ['Госпитализации', 'chrono'], ['Постоянно принимает', 'table'], ['Вакцинация', 'table'], ['Аллергологический анамнез', 'text'],
@@ -36502,7 +36502,7 @@ const GT_T = {
     gtPassTitle: '🔁 GT/098 aparmasını ötür', gtPassHint: 'Ötürəndən sonra yazdıqlarınızı yalnız admin düzəldə bilər.', gtPassTo: 'Kimə', gtPassNone: '🚪 Artıq aparmıram (köçürülüb / yazılıb)', gtReason: 'Səbəb (məcburi deyil)', gtReasonPh: 'məs.: terapiyaya köçürülüb', gtPassGo: 'Ötür',
     gtGrantTitle: '🔑 GT/098-də düzəlişə icazə', gtGrantHint: 'Yalnız bu pasiyentlə işləyənlərə. İcazə özü bitəcək.', gtGrantWho: 'Kimə', gtGrantH: 'Nə qədər', gtGrantGo: 'İcazə ver', gtGrantNow: 'İndi icazəlidir', gtGrantOff: 'götür', gtHours: '{n} saat',
     gtConf: '⚖️ Uyğunsuzluqlar', gtConfHint: 'Eyni şey fərqli yazılıb. Hər iki variant saxlanılıb — düzünü seçin.', gtConfA: 'GT/098-də idi', gtConfB: 'Gələn', gtConfKeepA: '✓ Əvvəlki düzdür', gtConfTakeB: '✓ Yeni düzdür', gtConfWhy: 'Niyə', gtConfDone: 'həll edilib: {v} ({by}, {d})', gtConfDoc: '«{t}» sənədində',
-    gtAdded: 'əlavə edilib {d} · {n}', gtHist: 'Kim aparıb',
+    gtAdded: 'əlavə edilib {d} · {n}', gtHist: 'Kim aparıb', gtPrintBtn: '🖨️ Çap / PDF', gtShR: '📨 GT/098-i sizə {by} ({s}) ötürüb — {d}-dək. Yalnız oxumaq.', gtShW: '📨 GT/098-i sizə {by} ({s}) ötürüb — {d}-dək. Öz bölmə və sətirlərinizi əlavə edə bilərsiniz.',
     gtType: 'Bölmənin növü', gtTypes: { text: '📝 Mətn', chrono: '🕘 Xronologiya (tarixlərlə)', table: '📊 Cədvəl (göstərici — dəyər)' }, gtTplHint: 'Tez — hazır bölməni seçin və ya öz adınızı yazın:',
     gtRowAdd: '＋ Sətir', gtEntryAdd: '＋ Qeyd', gtRowWhen: 'Tarix və saat', gtRowWhat: 'Nə olub', gtColName: 'Göstərici', gtColVal: 'Dəyər', gtColUnit: 'Vahid', gtColDate: 'Tarix', gtSecNote: 'Bölmənin mətni (məcburi deyil)',
     gtTpl: [['Xəstəliyin xronologiyası', 'chrono'], ['Xəstəlik anamnezi', 'text'], ['Həyat anamnezi', 'text'], ['Keçirilmiş xəstəliklər və əməliyyatlar', 'chrono'], ['Hospitalizasiyalar', 'chrono'], ['Daimi qəbul edir', 'table'], ['Peyvəndlər', 'table'], ['Allerqoloji anamnez', 'text'],
@@ -36583,7 +36583,8 @@ function gtHtml() {
   const pt = ptSt(), g = pt.cur, p = g.patient;
   const age = dsAge(p.birthDate);
   const A = g.access || { canWrite: can('forms'), canAddPhotos: can('forms') };
-  const edit = can('forms') && A.canWrite !== false, add = can('forms'), ai = canAi() && !(typeof hpPiiOn === 'function' && hpPiiOn());
+  const SH = g.shared || null, shW = !!(SH && SH.canWrite); // 9.48: GT/098, переданный мне из другого отделения / учреждения
+  const edit = !SH && can('forms') && A.canWrite !== false, add = !SH && can('forms'), ai = !SH && canAi() && !(typeof hpPiiOn === 'function' && hpPiiOn());
   // шапка
   let h = '<button class="btn small ghost" data-act="ptBack">' + esc(t('ptBack')) + '</button>' +
     '<div class="card gt-head" style="margin-top:8px"><div class="row" style="align-items:flex-start;gap:8px"><div class="grow"><div><span class="gt-tag">' + esc(gtt('gtTag')) + '</span><span class="muted" style="font-size:12.5px">' + esc(gtt('gtSub')) + '</span></div>' +
@@ -36596,10 +36597,10 @@ function gtHtml() {
     '<div style="margin-top:4px"><b>' + esc(gtt('gtLeadLbl')) + ':</b> ' + (A.leadName ? esc(A.leadName) + (A.leadSince ? ' <span class="muted">' + esc(gtt('gtSince', { d: fmtDt(A.leadSince) })) + '</span>' : '') : '<span class="muted">' + esc(p.leadName || gtt('gtLeadNone')) + '</span>') + '</div>' +
     ((A.hist || []).length > 1 ? '<div class="gt-src" style="margin-top:2px">' + esc(gtt('gtHist')) + ': ' + esc(A.hist.map(h => h.name + ' (' + fmtDt(h.from) + (h.to ? '–' + fmtDt(h.to) : '') + ')').join(' → ')) + '</div>' : '') +
     (p.note ? '<div class="muted" style="margin-top:4px">' + esc(p.note) + '</div>' : '') +
-    (A.isLead ? '<div class="info" style="margin-top:8px">' + esc(gtt('gtLeadMe')) + '</div>' : !A.canWrite ? '<div class="info" style="margin-top:8px;background:#fff3c4">' + esc(gtt('gtLocked', { n: A.leadName || '—' })) + '</div>' : '') +
+    (SH ? '<div class="info" style="margin-top:8px;background:#e8f0fe">' + esc(gtt(shW ? 'gtShW' : 'gtShR', { by: SH.by || '', s: SH.store || '', d: fmtDt(SH.until || '') })) + '</div>' : A.isLead ? '<div class="info" style="margin-top:8px">' + esc(gtt('gtLeadMe')) + '</div>' : !A.canWrite ? '<div class="info" style="margin-top:8px;background:#fff3c4">' + esc(gtt('gtLocked', { n: A.leadName || '—' })) + '</div>' : '') +
     (A.myGrant ? '<div class="info" style="margin-top:8px">' + esc(gtt('gtMyGrant', { d: fmtDt(((A.grants || []).find(x => S.me && x.id === S.me.id) || {}).until || '') })) + '</div>' : '') +
     '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">' +
-      (!A.leadId && can('forms') ? '<button class="btn small" data-act="gtTake">' + esc(gtt('gtTake')) + '</button>' : '') +
+      (!SH && !A.leadId && can('forms') ? '<button class="btn small" data-act="gtTake">' + esc(gtt('gtTake')) + '</button>' : '') +
       ((A.isLead || A.isAdmin) && A.leadId ? '<button class="btn small ghost" data-act="gtPassOpen">' + esc(gtt('gtPass')) + '</button>' : '') +
       (A.isAdmin ? '<button class="btn small ghost" data-act="gtGrantOpen">' + esc(gtt('gtGrantBtn')) + '</button>' : '') + '</div></div>';
   // что сделать
@@ -36614,11 +36615,14 @@ function gtHtml() {
       (ai ? '<button class="btn" data-act="pnAi">' + esc(gtt('gtAi')) + '</button>' : '') +
       (ai ? '<button class="btn" data-act="ptAudit">' + esc(gtt('gtAudit')) + '</button>' : '') +
       (edit ? '<button class="btn ghost" data-act="ptEdit">' + esc(gtt('gtEdit')) + '</button>' : '') +
+      (typeof gtShareBtn === 'function' && (A.isLead || A.isAdmin) && edit ? gtShareBtn() : '') +
+      '<button class="btn ghost" data-act="gtPrint">' + esc(gtt('gtPrintBtn')) + '</button>' +
       '<button class="btn ghost" data-act="ptLogOpen">' + esc(gtt('gtLog')) + '</button>' +
       (edit ? '<button class="btn ghost" data-act="ptStatus" data-v="' + (p.status === 'closed' ? 'active' : 'closed') + '">' + esc(p.status === 'closed' ? gtt('gtReopen') : gtt('gtClose')) + '</button>' : '') +
       '</div><div id="gtDocMenu" style="display:none;margin-top:8px"><div class="dx-row">' + docBtns + '</div></div>' +
       (ai ? '<div id="psAuditBox">' + (typeof psAuditHtml === 'function' ? psAuditHtml() : '') + '</div>' : '') + '</div>';
-  } else h += '<button class="btn ghost block" data-act="ptLogOpen">' + esc(gtt('gtLog')) + '</button>';
+  } else if (SH) h += '<div class="card"><div class="gt-acts">' + (shW ? '<button class="btn" data-act="gtSecNew">' + esc(gtt('gtSecNew')) + '</button>' : '') + '<button class="btn ghost" data-act="gtPrint">' + esc(gtt('gtPrintBtn')) + '</button></div></div>';
+  else h += '<button class="btn ghost block" data-act="ptLogOpen">' + esc(gtt('gtLog')) + '</button>';
   // ❓ уточнить
   const extCan = {}; (g.ext || []).forEach(x => { extCan[x.id] = x.canEdit !== false; });
   // ⚖️ расхождения: оба варианта, откуда, когда, почему
@@ -36663,7 +36667,7 @@ function gtHtml() {
       (s.type === 'table' && it.length ? '<table class="gt-tbl">' + it.map(y => '<tr><td>' + esc(y.name) + '</td><td><b>' + esc([y.value, y.unit].filter(Boolean).join(' ')) + '</b></td><td class="gt-src">' + esc(y.date || '') + '</td></tr>').join('') + '</table>' : '') +
       '<div class="gt-src" style="margin-top:6px">' + esc([fmtDt(s.updatedAt || s.createdAt), s.updatedByName || s.createdByName].filter(Boolean).join(' · ')) + '</div>';
     h += gtSec('s_' + s.id, '📌 ' + s.title, it.length || '', body +
-      (edit ? '<div class="gt-rowacts">' + (s.type !== 'text' ? '<button class="btn small" data-act="gtSecEdit" data-id="' + esc(s.id) + '" data-row="1">' + esc(gtt('gtEntryAdd')) + '</button>' : '') + '<button class="btn small ghost" data-act="gtSecEdit" data-id="' + esc(s.id) + '">' + esc(gtt('gtSecEdit')) + '</button></div>' : ''), gtOpenState('s_' + s.id, true));
+      (edit || shW ? '<div class="gt-rowacts">' + (s.type !== 'text' ? '<button class="btn small" data-act="gtSecEdit" data-id="' + esc(s.id) + '" data-row="1">' + esc(gtt('gtEntryAdd')) + '</button>' : '') + (edit || s.canEdit ? '<button class="btn small ghost" data-act="gtSecEdit" data-id="' + esc(s.id) + '">' + esc(gtt('gtSecEdit')) + '</button>' : '') + '</div>' : ''), gtOpenState('s_' + s.id, true));
   });
   // лента
   const items = (g.forms || []).map(f => ({ at: f.arrivedAt || f.createdAt, act: 'psOpenForm', id: f.id, title: t('ptFormTag') + (f.blankNo ? ' № ' + f.blankNo : ''), sub: [f.icd, f.dx, f.outcome === 'adm' ? '🏥 ' + (f.outTo || fdLabel(fdFind(FD.outcome, 'adm'))) : f.outcome === 'transfer' && f.outTo ? '🚑 ' + f.outTo : '', f.status === 'closed' ? t('dsClosed') : t('dsDraft')].filter(Boolean).join(' · ') }))
@@ -36673,6 +36677,7 @@ function gtHtml() {
     .concat(typeof window.ptExtraItems === 'function' ? window.ptExtraItems(g) : [])
     .concat([].concat(...(g.sec || []).filter(s => s.type === 'chrono').map(s => (s.items || []).filter(y => y.at).map(y => ({ at: y.at, act: 'gtSecEdit', id: s.id, title: '📌 ' + s.title, sub: String(y.text || '').slice(0, 140) })))))
     .sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  if (SH) items.forEach(x => { if (x.act !== 'exView' && x.act !== 'gtSecEdit') x.act = 'gtNoop'; }); // из чужого отделения бланки и документы не открываются — всё видно здесь
   h += gtSec('feed', gtt('gtFeed'), items.length, items.map(x => '<div class="gt-row cs-list-row" data-act="' + x.act + '" data-id="' + esc(x.id) + '"><div class="grow"><div class="nm">' + esc(x.title) + '</div><div class="fd">' + esc(fmtDt(String(x.at || ''))) + (x.sub ? ' · ' + esc(x.sub) : '') + '</div></div></div>').join(''), gtOpenState('feed', true));
   return h;
 }
@@ -36703,7 +36708,7 @@ function gtSecModal(s, addRow) {
     '<div id="gtRows">' + rows + '</div>' +
     '<div id="gtRowAddBox"' + (GTS.type === 'text' ? ' style="display:none"' : '') + '><button type="button" class="btn small ghost" data-act="gtRowAdd">' + esc(gtt('gtRowAdd')) + '</button></div>' +
     '<div class="field" style="margin-top:8px"><label>' + esc(GTS.type === 'text' ? gtt('gtSecText') : gtt('gtSecNote')) + '</label><textarea id="gtSecX" rows="' + (GTS.type === 'text' ? 8 : 3) + '" maxlength="20000">' + esc(s.text || '') + '</textarea></div>' +
-    '<div class="acts">' + (s.id && s.canEdit !== false ? '<button class="btn ghost" data-act="gtSecDel" data-id="' + esc(s.id) + '">' + esc(gtt('gtSecDel')) + '</button>' : '<button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button>') +
+    '<div class="acts">' + (s.id && s.canEdit !== false && !(ptSt().cur && ptSt().cur.shared) ? '<button class="btn ghost" data-act="gtSecDel" data-id="' + esc(s.id) + '">' + esc(gtt('gtSecDel')) + '</button>' : '<button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button>') +
     '<button class="btn primary" data-act="gtSecSave" data-id="' + esc(s.id || '') + '">' + esc(gtt('gtSecSave')) + '</button></div>');
   if (addRow) { const last = $$('#gtRows .gt-erow'); const el = last.length && last[last.length - 1].querySelector('textarea, .gt-n'); if (el) el.focus(); }
 }
@@ -36788,9 +36793,11 @@ Object.assign(H, {
     if (!title) return toast(gtt('gtNeedTitle'), 'bad');
     const g = ptSt().cur; if (!g) return;
     const items = GTS.type === 'text' ? [] : gtCollectRows();
-    const r = await busy(el, () => rpcA('gtSecSave', { patientId: g.patient.id, id: el.dataset.id || '', title, text, type: GTS.type, items, opId: 'gs' + Date.now().toString(36) }));
+    const body = { patientId: g.patient.id, id: el.dataset.id || '', title, text, type: GTS.type, items, opId: 'gs' + Date.now().toString(36) };
+    const r = await busy(el, () => g.shared ? rpcA('gtShareSecSave', Object.assign(body, { shareId: g.shared.id })) : rpcA('gtSecSave', body));
     if (!r || !r.ok) return;
-    closeModal(); toast(gtt('gtSaved'), 'ok'); ptOpen(g.patient.id, true);
+    closeModal(); toast(gtt('gtSaved'), 'ok');
+    if (g.shared) gtOpenShare(g.shared.id); else ptOpen(g.patient.id, true);
   },
   gtSecDel: async el => {
     if (!confirm(gtt('gtSecDelAsk'))) return;
@@ -37383,6 +37390,210 @@ Object.assign(H, {
   nsFromVisit: () => nsFromVisit(),
   nsList: () => nsListModal(),
   nsResolve: el => nsResolve(el)
+});
+
+/* =====================================================================
+ * v75 (9.48): 🔐 FİN в шифре — главный админ: «Профиль» → «🔐 FİN в шифре» → «Спрятать FİN» (с паролем, необратимо).
+ *  В программе FİN виден как раньше (тем, у кого есть право форм); в Google-таблице и копиях — только шифр и «•••••F6».
+ * ===================================================================== */
+const FN_T = {
+  ru: {
+    fnBtn: '🔐 FİN в шифре', fnTitle: '🔐 FİN в шифре', fnOn: '✅ Включено: в таблице и копиях FİN хранится шифром («•••••F6» + шифр). Включил {by}, {at}.', fnOff: 'Сейчас FİN хранится в таблице открыто.',
+    fnHow: 'После включения в Google-таблице, её копиях и в копиях документов на Диске вместо FİN будет «•••••F6» и шифр. В программе врачи с правом форм видят FİN как обычно: печать, отчёты, поиск, ИИ работают.',
+    fnWarn: 'Важно: 1) это необратимо; 2) ключ шифра — в Apps Script → «Настройки проекта» → «Свойства скрипта» → FIN_KEY. Сохраните его копию в надёжном месте: без ключа FİN не прочитать никому; 3) старые копии таблицы и история версий Google-таблицы ещё содержат FİN — их удалите вручную, если нужно.',
+    fnPw: 'Пароль главного админа', fnGo: '🔐 Спрятать FİN', fnAsk: 'Зашифровать все FİN? Это необратимо. Ключ сохраните (FIN_KEY в свойствах скрипта).', fnDone: 'Готово: зашифровано записей — {n}.', fnStore: '{s}: формы {f}, документы {d}, карты {p}, разделы {c}', fnErr: 'ошибка: {e}',
+    E_FIN_NO_KEY: 'Нет ключа шифра FİN (FIN_KEY) — обратитесь к главному админу.'
+  },
+  az: {
+    fnBtn: '🔐 FİN şifrəli', fnTitle: '🔐 FİN şifrəli', fnOn: '✅ Aktivdir: cədvəldə və surətlərdə FİN şifrəli saxlanılır («•••••F6» + şifr). {by}, {at}.', fnOff: 'Hazırda FİN cədvəldə açıq saxlanılır.',
+    fnHow: 'Aktivləşdirəndən sonra Google-cədvəldə, onun surətlərində və Diskdəki sənəd surətlərində FİN əvəzinə «•••••F6» və şifr olacaq. Proqramda forma hüququ olan həkimlər FİN-i əvvəlki kimi görür: çap, hesabatlar, axtarış, Sİ işləyir.',
+    fnWarn: 'Vacib: 1) geri qaytarılmır; 2) şifrin açarı — Apps Script → «Layihə parametrləri» → «Skript xassələri» → FIN_KEY. Surətini etibarlı yerdə saxlayın: açarsız FİN-i heç kim oxuya bilməz; 3) cədvəlin köhnə surətlərində və versiya tarixçəsində FİN hələ var — lazımdırsa əl ilə silin.',
+    fnPw: 'Baş adminin parolu', fnGo: '🔐 FİN-i gizlət', fnAsk: 'Bütün FİN-lər şifrələnsin? Geri qaytarılmır. Açarı saxlayın (skript xassələrində FIN_KEY).', fnDone: 'Hazırdır: şifrələnən qeydlər — {n}.', fnStore: '{s}: formalar {f}, sənədlər {d}, kartlar {p}, bölmələr {c}', fnErr: 'xəta: {e}',
+    E_FIN_NO_KEY: 'FİN şifr açarı (FIN_KEY) yoxdur — baş adminə müraciət edin.'
+  }
+};
+function fnt(k, v) { const L2 = FN_T[S.lang === 'az' ? 'az' : 'ru']; let s = L2[k] !== undefined ? L2[k] : FN_T.ru[k]; if (typeof s === 'string' && v) Object.keys(v).forEach(x => { s = s.split('{' + x + '}').join(v[x]); }); return s; }
+Object.assign(I18N.ru, { E_FIN_NO_KEY: FN_T.ru.E_FIN_NO_KEY }); Object.assign(I18N.az, { E_FIN_NO_KEY: FN_T.az.E_FIN_NO_KEY });
+(function () {
+  const op = window.profileModal;
+  if (typeof op !== 'function') return;
+  window.profileModal = async function () {
+    const r = await op.apply(this, arguments);
+    try {
+      const m = $('#modalRoot .modal');
+      if (m && typeof isOwner === 'function' && isOwner() && !m.querySelector('[data-act=fnOpen]')) {
+        const acts = m.querySelector('.acts');
+        const b = '<button type="button" class="btn ghost block" style="margin-top:8px" data-act="fnOpen">' + esc(fnt('fnBtn')) + '</button>';
+        if (acts) acts.insertAdjacentHTML('beforebegin', b); else m.insertAdjacentHTML('beforeend', b);
+      }
+    } catch (e) { }
+    return r;
+  };
+})();
+async function fnOpen() {
+  const st = await rpc('finStatus', {}, 30000).catch(() => null);
+  const s = st && st.ok ? st : { on: false };
+  openModal('<h3>' + esc(fnt('fnTitle')) + '</h3>' +
+    '<div class="info" style="margin-bottom:8px">' + esc(s.on ? fnt('fnOn', { by: s.by || '', at: s.at ? fmtDt(s.at) : '' }) : fnt('fnOff')) + '</div>' +
+    '<div class="muted" style="margin-bottom:8px">' + esc(fnt('fnHow')) + '</div>' +
+    '<div class="f-alert" style="margin-bottom:8px">' + esc(fnt('fnWarn')) + '</div>' +
+    '<div id="fnRes"></div>' +
+    '<div class="field"><label>' + esc(fnt('fnPw')) + '</label><input type="password" id="fnPw" autocomplete="current-password"></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button><button class="btn primary" data-act="fnGo">' + esc(fnt('fnGo')) + '</button></div>');
+}
+Object.assign(H, {
+  fnOpen: () => fnOpen(),
+  fnGo: async el => {
+    const pw = String(($('#fnPw') || {}).value || '');
+    if (!pw) return toast(fnt('fnPw'), 'bad');
+    if (!confirm(fnt('fnAsk'))) return;
+    const r = await busy(el, () => rpcA('finProtect', { password: pw }, { timeout: 330000 }));
+    if (!r || !r.ok) return;
+    const d = r.done || { stores: [] };
+    const n = (d.ptx || 0) + d.stores.reduce((a, x) => a + (x.forms || 0) + (x.pdocs || 0) + (x.patients || 0) + (x.ptsec || 0), 0);
+    const box = $('#fnRes');
+    if (box) box.innerHTML = '<div class="info" style="margin-bottom:8px"><b>' + esc(fnt('fnDone', { n })) + '</b><br>' + d.stores.map(x => esc(fnt('fnStore', { s: x.name, f: x.forms, d: x.pdocs, p: x.patients, c: x.ptsec }) + (x.err ? ' — ' + fnt('fnErr', { e: x.err }) : ''))).join('<br>') + '</div>';
+    toast(fnt('fnDone', { n }), 'ok');
+  }
+});
+
+/* =====================================================================
+ * v76 (9.48): 📨 передать GT/098 врачу (живой доступ) и 🖨️ печать / PDF GT/098.
+ *  - В GT/098: «📨 Передать GT/098» — коллеге (список) или врачу другого учреждения (по логину); срок 1 / 7 / 30 дней;
+ *    «может дописывать» — отдельной отметкой. Ниже — кому сейчас передан, «забрать».
+ *  - «Пациенты»: «📨 Мне передали» — открыть GT/098 из другого отделения / учреждения (только чтение или с дописыванием).
+ *  - «🖨️ Печать / PDF»: весь GT/098 на бумаге (или «Сохранить как PDF» в окне печати телефона).
+ * ===================================================================== */
+const SH_T = {
+  ru: {
+    shBtn: '📨 Передать GT/098', shTitle: '📨 Передать GT/098 врачу', shHint: 'Врач увидит GT/098 в своей программе — со всеми обновлениями, пока вы не заберёте доступ или не кончится срок. Всё записывается в журнал.',
+    shColleague: 'Коллеге', shOther: 'или врачу другого учреждения — его логин в программе', shLoginPh: 'логин врача', shDays: 'На сколько', shDay: '{n} дн.', shWrite: 'может дописывать свои разделы и строки', shNote: 'Заметка (необязательно)',
+    shGo: '📨 Передать', shNow: 'Сейчас передан', shNone: 'Никому не передан', shRevoke: 'забрать', shRevokeAsk: 'Забрать доступ к GT/098?', shDone: 'Передано: {n}', shRO: 'только чтение', shRW: 'может дописывать', shUntil: 'до {d}', shPick: 'Выберите врача или впишите логин',
+    shInbox: '📨 Мне передали GT/098', shFrom: 'от {by} · {s} · до {d}', shGone: 'Доступ закончился или его забрали',
+    E_GT_SHARE_GONE: 'Доступ к этому GT/098 закончился или его забрали.',
+    prTitle: 'GT/098 — единый документ пациента', prMade: 'Сформировано {d} · {n}', prLead: 'Ведёт', prAllergy: 'Аллергия', prChronic: 'Хронические'
+  },
+  az: {
+    shBtn: '📨 GT/098-i ötür', shTitle: '📨 GT/098-i həkimə ötür', shHint: 'Həkim GT/098-i öz proqramında görəcək — bütün yeniliklərlə, siz girişi geri alana və ya müddət bitənə qədər. Hamısı jurnala yazılır.',
+    shColleague: 'Həmkara', shOther: 'və ya başqa müəssisənin həkiminə — proqramdakı loqini', shLoginPh: 'həkimin loqini', shDays: 'Nə qədər', shDay: '{n} gün', shWrite: 'öz bölmə və sətirlərini əlavə edə bilər', shNote: 'Qeyd (məcburi deyil)',
+    shGo: '📨 Ötür', shNow: 'İndi ötürülüb', shNone: 'Heç kimə ötürülməyib', shRevoke: 'geri al', shRevokeAsk: 'GT/098 girişi geri alınsın?', shDone: 'Ötürüldü: {n}', shRO: 'yalnız oxumaq', shRW: 'əlavə edə bilər', shUntil: '{d}-dək', shPick: 'Həkimi seçin və ya loqini yazın',
+    shInbox: '📨 Mənə ötürülən GT/098', shFrom: '{by} · {s} · {d}-dək', shGone: 'Giriş bitib və ya geri alınıb',
+    E_GT_SHARE_GONE: 'Bu GT/098-ə giriş bitib və ya geri alınıb.',
+    prTitle: 'GT/098 — pasiyentin vahid sənədi', prMade: 'Hazırlanıb {d} · {n}', prLead: 'Aparır', prAllergy: 'Allergiya', prChronic: 'Xroniki'
+  }
+};
+function sht(k, v) { const L2 = SH_T[S.lang === 'az' ? 'az' : 'ru']; let s = L2[k] !== undefined ? L2[k] : SH_T.ru[k]; if (typeof s === 'string' && v) Object.keys(v).forEach(x => { s = s.split('{' + x + '}').join(v[x]); }); return s; }
+Object.assign(I18N.ru, { E_GT_SHARE_GONE: SH_T.ru.E_GT_SHARE_GONE }); Object.assign(I18N.az, { E_GT_SHARE_GONE: SH_T.az.E_GT_SHARE_GONE });
+function gtShareBtn() { return '<button class="btn ghost" data-act="gxShareOpen">' + esc(sht('shBtn')) + '</button>'; }
+
+/* ---------- передать ---------- */
+const SHS = { days: 30 };
+async function gxShareOpen() {
+  const g = ptSt().cur; if (!g) return;
+  const A = g.access || {};
+  const staff = (A.staff || []).filter(u => !S.me || u.id !== S.me.id);
+  SHS.days = 30;
+  openModal('<h3>' + esc(sht('shTitle')) + '</h3><div class="muted" style="margin-bottom:8px">' + esc(sht('shHint')) + '</div>' +
+    '<div id="shNow" class="muted" style="margin-bottom:8px">…</div>' +
+    (staff.length ? '<div class="lbl">' + esc(sht('shColleague')) + '</div>' + staff.map(u => '<label class="check" style="display:flex;margin:6px 0"><input type="radio" name="shTo" value="' + esc(u.id) + '"><span>👤 ' + esc(u.name) + '</span></label>').join('') : '') +
+    '<div class="field"><label>' + esc(sht('shOther')) + '</label><input type="text" id="shLogin" maxlength="60" autocapitalize="none" placeholder="' + esc(sht('shLoginPh')) + '"></div>' +
+    '<div class="lbl">' + esc(sht('shDays')) + '</div><div class="seg" id="shDaysSeg">' + [1, 7, 30].map(n => '<button type="button" data-act="shDays" data-n="' + n + '"' + (n === 30 ? ' class="on"' : '') + '>' + esc(sht('shDay', { n })) + '</button>').join('') + '</div>' +
+    '<label class="check" style="display:flex;margin:10px 0"><input type="checkbox" id="shW"><span>' + esc(sht('shWrite')) + '</span></label>' +
+    '<div class="field"><label>' + esc(sht('shNote')) + '</label><input type="text" id="shNote" maxlength="300"></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="shGo">' + esc(sht('shGo')) + '</button></div>');
+  const ri = $$('input[name=shTo]'); const li = $('#shLogin');
+  ri.forEach(x => x.addEventListener('change', () => { if (li) li.value = ''; }));
+  if (li) li.addEventListener('input', () => { if (li.value) ri.forEach(x => { x.checked = false; }); });
+  shDrawNow(g.patient.id);
+}
+async function shDrawNow(pid) {
+  const r = await rpc('gtSharesOf', { patientId: pid }, 30000).catch(() => null);
+  const box = $('#shNow'); if (!box) return;
+  const rows = r && r.ok ? r.rows : [];
+  box.innerHTML = rows.length ? '<div class="lbl" style="margin-top:0">' + esc(sht('shNow')) + '</div>' + rows.map(x => '<div class="row" style="gap:6px;align-items:center;margin:4px 0"><span class="grow">📨 ' + esc(x.toUserName) + ' · ' + esc(x.canWrite ? sht('shRW') : sht('shRO')) + ' · ' + esc(sht('shUntil', { d: fmtDt(x.until) })) + '</span><button class="btn small ghost" data-act="shRevoke" data-id="' + esc(x.id) + '">' + esc(sht('shRevoke')) + '</button></div>').join('') : esc(sht('shNone'));
+}
+/* ---------- мне передали ---------- */
+async function shInboxFill() {
+  const box = $('#shInbox'); if (!box || box.__busy) return;
+  box.__busy = 1;
+  const r = await rpc('gtShareInbox', {}, 30000).catch(() => null);
+  box.__busy = 0;
+  const rows = r && r.ok ? r.rows : [];
+  box.innerHTML = rows.length ? '<div class="card" style="border-left:4px solid #2f5bb7"><div class="lbl" style="margin-top:0">' + esc(sht('shInbox')) + ' (' + rows.length + ')</div>' +
+    rows.map(x => '<div class="cs-list-row" data-act="shView" data-id="' + esc(x.id) + '"><span>📘</span><div class="grow"><div class="nm">' + esc(x.ptLabel) + '</div><div class="fd">' + esc(sht('shFrom', { by: x.byName, s: x.storeName, d: fmtDt(x.until) })) + ' · ' + esc(x.canWrite ? sht('shRW') : sht('shRO')) + '</div></div></div>').join('') + '</div>' : '';
+}
+(function () {
+  const lt0 = window.ptListTop;
+  window.ptListTop = function () {
+    const h = typeof lt0 === 'function' ? lt0.apply(this, arguments) : '';
+    setTimeout(shInboxFill, 0);
+    return '<div id="shInbox"></div>' + h;
+  };
+})();
+async function gtOpenShare(id) {
+  const r = await rpcA('gtShareOpen', { id }).catch(() => null);
+  if (!r || !r.ok) return;
+  const pt = ptSt(); pt.cur = r;
+  if (S.screen !== 'forms') setScreen('forms');
+  const st = dsSt(); st.seg = 'patients'; st.cur = null; S.fv = null;
+  dsRender(); window.scrollTo(0, 0);
+}
+/* ---------- печать / PDF ---------- */
+function gtPrintHtml(g) {
+  const p = g.patient, A = g.access || {};
+  const e = esc;
+  const sec = (title, body) => body ? '<h3 style="margin:14px 0 6px;border-bottom:1px solid #999">' + e(title) + '</h3>' + body : '';
+  const tbl = rows => rows.length ? '<table class="pf" style="width:100%">' + rows.map(r => '<tr>' + r.map(c => '<td>' + e(c) + '</td>').join('') + '</tr>').join('') + '</table>' : '';
+  const dx = gtDxList(g).map(x => [x.icd, x.text, [x.at ? fmtDt(String(x.at)) : '', x.src].filter(Boolean).join(' · ')]);
+  const labs = gtLabList(g).map(x => [x.name, x.val + (x.ref ? ' [' + x.ref + ']' : ''), [x.at, x.where].filter(Boolean).join(' · ')]);
+  const imgs = gtImgList(g).map(x => [x.name, x.text, [x.at, x.where].filter(Boolean).join(' · ')]);
+  const rx = (g.rx || []).map(x => [x.at ? fmtDt(x.at) : '', x.drug + ' ' + [x.dose, x.route].filter(Boolean).join(', '), x.given ? '✓' : '—', x.blankNo ? '№ ' + x.blankNo : '']);
+  const ext = (g.ext || []).map(x => [x.docDate ? fmtDate(x.docDate) : '', x.title || '', x.org || '']);
+  const conf = (g.conf || []).filter(c => c.status === 'active').map(c => [c.title, (c.meta.a || {}).v + ' / ' + (c.meta.b || {}).v, c.meta.why || '']);
+  const secs = (g.sec || []).map(s => sec('📌 ' + s.title, (s.text ? '<div style="white-space:pre-wrap">' + e(s.text) + '</div>' : '') +
+    (s.type === 'chrono' ? tbl((s.items || []).map(y => [y.at ? fmtDt(y.at) : '', y.text])) : s.type === 'table' ? tbl((s.items || []).map(y => [y.name, [y.value, y.unit].filter(Boolean).join(' '), y.date || ''])) : ''))).join('');
+  const feed = (g.forms || []).map(f => [fmtDt(String(f.arrivedAt || f.createdAt || '')), (t('ptFormTag') + (f.blankNo ? ' № ' + f.blankNo : '')), [f.icd, f.dx, f.outTo ? '→ ' + f.outTo : ''].filter(Boolean).join(' · ')])
+    .concat((g.docs || []).map(d => [fmtDt(String(d.updatedAt || d.createdAt || '')), ((DOC_TPL[d.type] || {})[S.lang === 'az' ? 'az' : 'ru'] || d.type) + (d.docNo ? ' № ' + d.docNo : ''), [d.icd, d.dx].filter(Boolean).join(' · ')]))
+    .sort((a, b) => String(b[0]).localeCompare(String(a[0])));
+  const age = dsAge(p.birthDate);
+  return '<div class="pf-page last" style="font-size:12px">' +
+    '<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:16px">GT/098</b><span>' + e(sht('prTitle')) + '</span></div>' +
+    '<div style="font-size:15px;margin-top:6px"><b>' + e(ptLabel(p)) + '</b></div>' +
+    '<div>' + e([p.fin ? 'FİN: ' + p.fin : '', p.birthDate ? fmtDate(p.birthDate) + (age !== '' ? ' (' + t('ptAge', { n: age }) + ')' : '') : '', p.sex === 'm' ? t('ptMale') : p.sex === 'f' ? t('ptFemale') : '', p.phone || '', p.address || ''].filter(Boolean).join(' · ')) + '</div>' +
+    '<div><b>' + e(sht('prAllergy')) + ':</b> ' + e(p.allergy || '—') + (p.chronic ? ' · <b>' + e(sht('prChronic')) + ':</b> ' + e(p.chronic) : '') + (A.leadName || p.leadName ? ' · <b>' + e(sht('prLead')) + ':</b> ' + e(A.leadName || p.leadName) : '') + '</div>' +
+    sec(gtt('gtConf'), tbl(conf)) + sec(gtt('gtDx'), tbl(dx)) + sec(gtt('gtLabs'), tbl(labs)) + sec(gtt('gtImg'), tbl(imgs)) + sec(gtt('gtRx'), tbl(rx)) + sec(gtt('gtExt'), tbl(ext)) + secs + sec(gtt('gtFeed'), tbl(feed)) +
+    '<div class="pf-foot" style="margin-top:12px">' + e(sht('prMade', { d: fmtDt(nowLocal()), n: (S.me && S.me.name) || '' })) + '</div></div>';
+}
+function gtPrint() {
+  const g = ptSt().cur; if (!g || !g.patient) return;
+  const root = $('#printRoot'); if (!root) return;
+  root.innerHTML = gtPrintHtml(g);
+  document.body.classList.add('print-form');
+  setTimeout(() => { window.print(); setTimeout(() => { document.body.classList.remove('print-form'); root.innerHTML = ''; }, 800); }, 60);
+}
+Object.assign(H, {
+  gxShareOpen: () => gxShareOpen(),
+  shDays: el => { SHS.days = Number(el.dataset.n) || 30; $$('#shDaysSeg button').forEach(b => b.classList.toggle('on', b === el)); },
+  shGo: async el => {
+    const g = ptSt().cur; if (!g) return;
+    const sel = document.querySelector('input[name=shTo]:checked');
+    const login = String(($('#shLogin') || {}).value || '').trim();
+    if (!sel && !login) return toast(sht('shPick'), 'bad');
+    const body = { patientId: g.patient.id, days: SHS.days, canWrite: !!($('#shW') || {}).checked, note: String(($('#shNote') || {}).value || '') };
+    if (sel) body.toUserId = sel.value; else body.toLogin = login;
+    const r = await busy(el, () => rpcA('gtShare', body));
+    if (!r || !r.ok) return;
+    toast(sht('shDone', { n: r.share.toUserName }), 'ok');
+    shDrawNow(g.patient.id);
+  },
+  shRevoke: async el => {
+    if (!confirm(sht('shRevokeAsk'))) return;
+    const r = await busy(el, () => rpcA('gtShareRevoke', { id: el.dataset.id }));
+    if (r && r.ok) { const g = ptSt().cur; if (g) shDrawNow(g.patient.id); }
+  },
+  shView: el => gtOpenShare(el.dataset.id),
+  gtPrint: () => gtPrint(),
+  gtNoop: () => { }
 });
 
 
