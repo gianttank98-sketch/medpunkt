@@ -35890,6 +35890,217 @@ function qvMirrorUndone(spendOpId) {
   if (typeof ob === 'function') window.fBack = function () { S.qvDone = null; return ob.apply(this, arguments); };
 })();
 
+/* =====================================================================
+ * v71 (9.44): интерфейс, этапы 5–6 и замечание Саида (27.10, снимок «Сегодня»: «Зачем повтор этих разделов?»).
+ *  1) «Сегодня» без повторов: разделы, которые уже есть в нижней панели, большими кнопками не дублируются. Остаётся
+ *     главное действие «＋ Пришёл пациент» (новый приём — не то же, что список «Пациенты») и то, чего нет в панели
+ *     («Привезли»), плюс сигналы. Название отделения не повторяется, если оно уже в шапке.
+ *  2) «Что есть»: сверху три плитки-счётчика (Просрочено · Срок заканчивается · Мало) — нажал, и список отфильтрован;
+ *     те же фильтры из ряда кнопок убраны (не дублируются). «Дубли», «Без серии/срока», «Проверить» — одной кнопкой
+ *     «🔧 Проверки склада». «По МНН» → «По веществу».
+ *  3) «Привезли»: «📷 Сфотографировать коробку» — первым на экране, крупно; вручную — ниже.
+ *  4) «?» в шапке: 3–5 коротких ответов про этот экран. На «Сегодня» для новичка — карточка «Как начать» (закрывается).
+ *  Только простой вид («Подробный режим» — как было). Учёт не меняется.
+ * ===================================================================== */
+const TY_T = {
+  ru: {
+    viewInn: '💊 По веществу', tyChecks: '🔧 Проверки склада', tyChecksN: '🔧 Проверки склада ({n})', tyChecksIn: 'Ещё проверки:',
+    tyExp: 'Просрочено', tySoon: 'Срок заканчивается', tyLow: 'Мало', tyAll: 'Показать всё',
+    tyOrHand: 'или ввести вручную ↓',
+    tyHelp: 'Подсказка', tyHelpTitle: '❓ Как здесь работать', tyHelpOk: 'Понятно',
+    tyHello: '👋 Как начать', tyHelloOk: 'Понятно ✓',
+    tyHello1: 'Пришёл пациент — большая кнопка «＋ Пришёл пациент». Короткий приём на одном экране.',
+    tyHello2: 'Дали лекарство без приёма — внизу «💊 Дал лекарство».',
+    tyHello3: 'Всё остальное (пересчёт, отчёты, справочник, люди) — внизу «☰ Ещё». На любом экране «?» в шапке — подсказка.',
+    h_today: ['Сверху — главное действие: «＋ Пришёл пациент».', 'Ниже — только то, что требует внимания: просрочено, срок заканчивается, мало, незакрытые приёмы. Нажмите — откроется нужный список.', 'Разделы — в нижней панели. Всё остальное — «☰ Ещё».', '«🏠 Сегодня» — всегда вернуться сюда. Кнопка «назад» на телефоне тоже ведёт сюда.'],
+    h_forms: ['«＋ Пришёл пациент» — новый приём. Обычно хватает быстрого приёма на одном экране.', 'Для скорой, больницы, травмы на работе — «📄 Полный бланк»: тот же приём целиком.', 'Лекарство из приёма списывается со склада само («＋ Дал лекарство»).', 'Закрыть приём: нужны № бланка, имя и «Чем закончилось». 8 секунд можно отменить.'],
+    h_spend: ['Найдите лекарство: начните писать название (можно латиницей) или сфотографируйте штрихкод 📷.', '«Дал 1» — отметить одну штуку. «Дал больше…» — другое количество или «испортилось, выбросили».', '«Кому» — нажмите приём пациента: в приёме появится, что дали.', 'Ошиблись — «Отменить» на всплывающей строке или в «Мои последние действия».'],
+    h_receive: ['Проще всего — «📷 Сфотографировать коробку»: программа сама заполнит название, дозировку, серию и срок. Проверьте и сохраните.', 'Много позиций по накладной — «📋 По накладной».', '«Где лежит» — куда положили (шкаф, сумка, холодильник).'],
+    h_stock: ['Сверху — что требует внимания: просрочено, срок заканчивается, мало. Нажмите плитку — список отфильтруется.', 'Поиск — по названию, веществу, серии.', '«📍 По местам» — что лежит в каждом шкафу и сумке.', '«🔧 Проверки склада» — дубли, партии без серии и срока, спорные места.'],
+    h_revision: ['Раз в месяц пройдите по местам и впишите, сколько реально лежит.', 'Разница с учётом уйдёт в отчёт — исправлять руками ничего не нужно.'],
+    h_clinic: ['«По симптомам» — отметьте жалобы, программа подскажет, о чём подумать.', '«Протоколы» — что делать по шагам.', '«Разбор с ИИ» — обсудить случай (без имени пациента).'],
+    h_reports: ['Выберите отчёт и период — отчёт соберётся сам.', 'PDF и печать — кнопками под отчётом.']
+  },
+  az: {
+    viewInn: '💊 Maddə üzrə', tyChecks: '🔧 Anbar yoxlamaları', tyChecksN: '🔧 Anbar yoxlamaları ({n})', tyChecksIn: 'Digər yoxlamalar:',
+    tyExp: 'Vaxtı keçib', tySoon: 'Vaxtı bitir', tyLow: 'Azdır', tyAll: 'Hamısını göstər',
+    tyOrHand: 'və ya əl ilə daxil edin ↓',
+    tyHelp: 'Kömək', tyHelpTitle: '❓ Burada necə işləmək', tyHelpOk: 'Aydındır',
+    tyHello: '👋 Necə başlamaq', tyHelloOk: 'Aydındır ✓',
+    tyHello1: 'Pasiyent gəldi — böyük «＋ Pasiyent gəldi» düyməsi. Qısa qəbul bir ekranda.',
+    tyHello2: 'Qəbulsuz dərman verdiniz — aşağıda «💊 Dərman verdim».',
+    tyHello3: 'Qalan hər şey (sayım, hesabatlar, soraqça, işçilər) — aşağıda «☰ Digər». İstənilən ekranda yuxarıda «?» — kömək.',
+    h_today: ['Yuxarıda — əsas hərəkət: «＋ Pasiyent gəldi».', 'Aşağıda — yalnız diqqət tələb edən: vaxtı keçib, vaxtı bitir, azdır, bağlanmamış qəbullar. Basın — lazımi siyahı açılacaq.', 'Bölmələr — aşağı paneldə. Qalanı — «☰ Digər».', '«🏠 Bu gün» — həmişə bura qayıtmaq. Telefonda «geri» də bura gətirir.'],
+    h_forms: ['«＋ Pasiyent gəldi» — yeni qəbul. Adətən bir ekranda sürətli qəbul kifayətdir.', 'Təcili yardım, xəstəxana, işdə travma üçün — «📄 Tam blank»: həmin qəbul tam şəkildə.', 'Qəbuldakı dərman anbardan özü silinir («＋ Dərman verdim»).', 'Qəbulu bağlamaq: blank №, ad və «Nəticə» lazımdır. 8 saniyə ərzində geri almaq olar.'],
+    h_spend: ['Dərmanı tapın: adını yazmağa başlayın (latınca da olar) və ya barkodun şəklini çəkin 📷.', '«1 verdim» — bir ədəd. «Çox verdim…» — başqa miqdar və ya «xarab oldu, atıldı».', '«Kimə» — pasiyentin qəbulunu basın: qəbulda nə verildiyi görünəcək.', 'Səhv etdiniz — açılan sətirdə «Geri al» və ya «Son əməliyyatlarım».'],
+    h_receive: ['Ən asanı — «📷 Qutunun şəklini çəkin»: proqram adı, dozanı, seriyanı və müddəti özü dolduracaq. Yoxlayın və saxlayın.', 'Qaimə üzrə çox mövqe — «📋 Qaimə ilə».', '«Harada durur» — hara qoyduğunuz (şkaf, çanta, soyuducu).'],
+    h_stock: ['Yuxarıda — diqqət tələb edən: vaxtı keçib, vaxtı bitir, azdır. Plitəni basın — siyahı süzüləcək.', 'Axtarış — ad, maddə, seriya üzrə.', '«📍 Yerlər üzrə» — hər şkafda və çantada nə var.', '«🔧 Anbar yoxlamaları» — dublikatlar, seriyasız və müddətsiz partiyalar, mübahisəli yerlər.'],
+    h_revision: ['Ayda bir dəfə yerləri gəzin və real nə qədər olduğunu yazın.', 'Uçotla fərq hesabata düşəcək — əl ilə heç nə düzəltmək lazım deyil.'],
+    h_clinic: ['«Şikayətə görə» — şikayətləri qeyd edin, proqram nə barədə düşünməyi göstərəcək.', '«Protokollar» — addım-addım nə etmək.', '«Sİ ilə təhlil» — halı müzakirə etmək (pasiyentin adı olmadan).'],
+    h_reports: ['Hesabatı və dövrü seçin — hesabat özü yığılacaq.', 'PDF və çap — hesabatın altındakı düymələrlə.']
+  }
+};
+Object.assign(I18N.ru, TY_T.ru);
+Object.assign(I18N.az, TY_T.az);
+function tyHelpList(scr) { const L2 = I18N[S.lang] && I18N[S.lang]['h_' + scr] ? I18N[S.lang] : I18N.ru; return L2['h_' + scr] || []; }
+
+(function () {
+  if ($('#tyCss')) return;
+  const s = document.createElement('style'); s.id = 'tyCss';
+  s.textContent =
+    '#scrToday .ty-main{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:14px;width:100%;min-height:84px;padding:14px 16px;border-radius:16px;background:var(--brand);color:var(--brand-ink);margin-bottom:10px}' +
+    '#scrToday .ty-main .ic{font-size:38px;line-height:1}#scrToday .ty-main b{display:block;font-size:20px}#scrToday .ty-main span.s{font-size:13.5px;opacity:.85}#scrToday .ty-main:focus-visible{outline:3px solid var(--brand);outline-offset:2px}' +
+    '#scrToday .ty-sec{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:10px 14px;border-radius:14px;background:var(--card);border:1px solid var(--line);margin-bottom:10px}#scrToday .ty-sec .ic{font-size:26px}#scrToday .ty-sec b{font-size:16px}#scrToday .ty-sec span.s{display:block;font-size:13px;color:var(--sub)}' +
+    '#scrToday .ty-hello{background:var(--brand-soft);border-radius:14px;padding:12px 14px;margin-bottom:12px}#scrToday .ty-hello b{display:block;margin-bottom:6px}#scrToday .ty-hello ol{margin:0 0 8px;padding-left:20px}#scrToday .ty-hello li{margin:4px 0}' +
+    '.ty-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}.ty-tile{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:76px;padding:8px 6px;border-radius:14px;background:var(--card);border:1px solid var(--line)}' +
+    '.ty-tile b{font-size:24px;line-height:1.1}.ty-tile span{font-size:12px;color:var(--sub);line-height:1.2}.ty-tile.bad b{color:var(--red)}.ty-tile.warn b{color:var(--amber)}.ty-tile.zero b{color:var(--sub)}.ty-tile.on{border:2px solid var(--brand);background:var(--brand-soft)}' +
+    '#scrReceive .ty-photo{margin:0 0 4px}#scrReceive .ty-photo .row{margin-bottom:4px!important}#scrReceive .ty-photo [data-act=boxPhoto]{background:var(--brand-soft);border-color:var(--brand);min-height:64px;font-size:17px}#scrReceive .ty-or{text-align:center;color:var(--sub);font-size:13px;margin:2px 0 10px}' +
+    '#tyHelp{width:44px;min-width:44px;height:44px;padding:0;font-size:19px;flex:none;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--brand);font-weight:800}body.logged-out #tyHelp{display:none}' +
+    '.ty-help li{margin:8px 0;line-height:1.4}';
+  document.head.appendChild(s);
+})();
+
+/* ---------- 1. «Сегодня» без повторов ---------- */
+(function () {
+  const ort = window.renderToday;
+  if (typeof ort !== 'function') return;
+  window.renderToday = function () {
+    const r = ort.apply(this, arguments);
+    try { tyToday(); } catch (e) { console.error(e); }
+    return r;
+  };
+})();
+function tyToday() {
+  const box = $('#scrToday'); if (!box) return;
+  const grid = box.querySelector('.td-grid'); if (!grid) return;
+  const nav = typeof tdNavItems === 'function' ? tdNavItems() : [];
+  let h = '';
+  if (tdOk('forms')) h += '<button type="button" class="ty-main" data-act="tdGo" data-k="forms"><span class="ic">🧑‍⚕️</span><span><b>＋ ' + esc(t('tdNew')) + '</b><span class="s">' + esc(t('tdNewSub')) + '</span></span></button>';
+  // действия, которых нет в нижней панели (то, что есть внизу, здесь не повторяем)
+  ['spend', 'receive'].filter(k => tdOk(k) && nav.indexOf(k) === -1).forEach(k => {
+    const a = TD_ACTS[k];
+    h += '<button type="button" class="ty-sec" data-act="tdGo" data-k="' + k + '"><span class="ic">' + a.icon + '</span><span><b>' + esc(t(a.t)) + '</b><span class="s">' + esc(t(a.sub)) + '</span></span></button>';
+  });
+  if (!LS.get('MED_TY_HELLO', 0)) h = '<div class="ty-hello"><b>' + esc(t('tyHello')) + '</b><ol><li>' + esc(t('tyHello1')) + '</li><li>' + esc(t('tyHello2')) + '</li><li>' + esc(t('tyHello3')) + '</li></ol><button type="button" class="btn small primary" data-act="tyHelloOk">' + esc(t('tyHelloOk')) + '</button></div>' + h;
+  grid.outerHTML = '<div class="ty-acts">' + h + '</div>';
+  // отделение уже видно в шапке (их несколько) — в строке даты не повторяем
+  const hi = box.querySelector('.td-hi'), sb = $('#storeBtn');
+  if (hi && sb && !sb.classList.contains('sm-one')) hi.textContent = tdDateStr();
+}
+
+/* ---------- 2. «Что есть»: плитки сверху, без повторов ---------- */
+function tyStockCounts() {
+  const lots = (S.view && S.view.lots || []).filter(l => Number(l.qty) > 0);
+  return {
+    expired: lots.filter(l => lotStatus(l).cls === 'expired').length,
+    soon: lots.filter(l => lotStatus(l).cls === 'soon').length,
+    deficit: (S.view && S.view.items || []).filter(it => { try { return itemStats(it).deficit; } catch (e) { return false; } }).length
+  };
+}
+(function () {
+  const ors = window.renderStock;
+  if (typeof ors !== 'function') return;
+  window.renderStock = function () {
+    const r = ors.apply(this, arguments);
+    try { tyStock(); } catch (e) { console.error(e); }
+    return r;
+  };
+})();
+function tyStock() {
+  const scr = $('#scrStock'); if (!scr) return;
+  const on = typeof tdActive === 'function' && tdActive();
+  let tiles = $('#tyTiles');
+  // вид «Дубли / Без серии / Проверить» — в одной кнопке «Проверки склада»
+  const view = $('#stockView');
+  if (view) view.querySelectorAll('[data-view=dup],[data-view=noser]').forEach(b => b.classList.toggle('hidden', on));
+  const chk = $('#chkBtn');
+  if (on && chk) { const m = chk.textContent.match(/\((\d+)\)/); chk.textContent = m ? t('tyChecksN', { n: m[1] }) : t('tyChecks'); }
+  if (!on) { if (tiles) tiles.remove(); $$('#stockChips [data-f]').forEach(c => c.classList.remove('hidden')); return; }
+  const c = tyStockCounts();
+  const f = S.stock.filter;
+  const tile = (k, cls, lbl) => '<button type="button" class="ty-tile ' + (c[k] ? cls : 'zero') + (f === k ? ' on' : '') + '" data-act="tyTile" data-f="' + k + '"><b>' + c[k] + '</b><span>' + esc(t(lbl)) + '</span></button>';
+  const html = tile('expired', 'bad', 'tyExp') + tile('soon', 'warn', 'tySoon') + tile('deficit', 'warn', 'tyLow');
+  if (!tiles) { scr.insertAdjacentHTML('afterbegin', '<div class="ty-tiles" id="tyTiles"></div>'); tiles = $('#tyTiles'); }
+  tiles.innerHTML = html;
+  // те же фильтры в ряду кнопок не повторяем
+  $$('#stockChips [data-f]').forEach(ch => ch.classList.toggle('hidden', ['expired', 'soon', 'deficit'].indexOf(ch.dataset.f) !== -1));
+  // в «Проверках склада» — переход к дублям и партиям без серии/срока
+  if (S.stock.view === 'chk' || S.stock.view === 'dup' || S.stock.view === 'noser') {
+    const list = $('#stockList');
+    if (list && !list.querySelector('.ty-chkmore')) list.insertAdjacentHTML('afterbegin', '<div class="ty-chkmore chips" style="margin-bottom:10px"><span class="lbl" style="margin:0 6px 0 0">' + esc(t('tyChecksIn')) + '</span>' +
+      [['chk', 'viewChk'], ['dup', 'viewDup'], ['noser', 'viewNoSer']].map(x => '<button type="button" class="chip' + (S.stock.view === x[0] ? ' on' : '') + '" data-act="stockView" data-view="' + x[0] + '">' + esc(t(x[1])) + '</button>').join('') + '</div>');
+  }
+}
+
+/* ---------- 3. «Привезли»: фото — первым ---------- */
+function tyReceive() {
+  const scr = $('#scrReceive'); if (!scr) return;
+  const btn = scr.querySelector('[data-act=boxPhoto]'); if (!btn) return;
+  const row = btn.closest('.row'); if (!row) return;
+  const on = typeof tdActive === 'function' && tdActive();
+  let wrap = $('#tyPhoto');
+  if (on) {
+    if (!wrap) {
+      const anchor = scr.querySelector('[data-act=bulkModal]') || scr.firstElementChild;
+      anchor.insertAdjacentHTML('beforebegin', '<div class="ty-photo" id="tyPhoto"></div><div class="ty-or" id="tyOr"></div>');
+      wrap = $('#tyPhoto');
+      wrap.dataset.home = '1';
+      row.dataset.tyMoved = '1';
+      wrap.appendChild(row);
+    }
+    const or = $('#tyOr'); if (or) or.textContent = t('tyOrHand');
+  } else if (wrap && row.dataset.tyMoved) {
+    // «Подробный режим» — кнопка на прежнее место (над названием)
+    const nameField = $('#rcvName') && $('#rcvName').closest('.field');
+    if (nameField) nameField.parentNode.insertBefore(row, nameField);
+    delete row.dataset.tyMoved;
+    wrap.remove(); const or = $('#tyOr'); if (or) or.remove();
+  }
+}
+(function () {
+  const os = window.setScreen;
+  window.setScreen = function () { const r = os.apply(this, arguments); try { if (S.screen === 'receive') tyReceive(); } catch (e) { } return r; };
+  const orr = window.renderReceiveSelects;
+  if (typeof orr === 'function') window.renderReceiveSelects = function () { const r = orr.apply(this, arguments); try { tyReceive(); } catch (e) { } return r; };
+})();
+
+/* ---------- 4. «?» в шапке ---------- */
+(function () {
+  const hc = $('header.top .hdr-ctrl');
+  if (hc && !$('#tyHelp')) {
+    const ub = $('#userBtn');
+    const b = document.createElement('button');
+    b.id = 'tyHelp'; b.type = 'button'; b.dataset.act = 'tyHelp'; b.textContent = '?';
+    b.setAttribute('aria-label', t('tyHelp'));
+    if (ub) hc.insertBefore(b, ub); else hc.appendChild(b);
+  }
+  const oh = window.renderHeader;
+  window.renderHeader = function () {
+    const r = oh.apply(this, arguments);
+    try { const b = $('#tyHelp'); if (b) { b.setAttribute('aria-label', t('tyHelp')); b.classList.toggle('hidden', !tyHelpList(S.screen).length || !(typeof tdActive === 'function' && tdActive())); } } catch (e) { }
+    return r;
+  };
+})();
+
+Object.assign(H, {
+  tyHelloOk: () => { LS.set('MED_TY_HELLO', 1); if (S.screen === 'today') renderToday(); },
+  tyTile: el => {
+    const f = el.dataset.f;
+    S.stock.filter = S.stock.filter === f ? 'all' : f;
+    if (S.stock.view !== 'inn' && S.stock.view !== 'loc') S.stock.view = 'inn';
+    renderStock();
+  },
+  tyHelp: () => {
+    const list = tyHelpList(S.screen);
+    if (!list.length) return;
+    try { if (typeof uxAdd === 'function') uxAdd('e', 'help_' + S.screen); } catch (e) { }
+    openModal('<h3>' + esc(t('tyHelpTitle')) + '</h3><ol class="ty-help">' + list.map(x => '<li>' + esc(x) + '</li>').join('') + '</ol>' +
+      '<div class="acts"><button class="btn primary" data-act="closeModal">' + esc(t('tyHelpOk')) + '</button></div>');
+  }
+});
+// счётчик «?» — тоже в понятность (только число нажатий по экранам)
+if (typeof SM_SCR === 'object') SM_SCR.today = SM_SCR.today || 'tabToday';
+
 
 function init() {
   vizTipInit();
