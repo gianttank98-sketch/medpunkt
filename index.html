@@ -35181,6 +35181,266 @@ Object.assign(H, {
   smLang: el => { H.lang(el); closeModal(); profileModal(); }
 });
 
+/* =====================================================================
+ * v69 (9.42): переделка интерфейса, этап 2 — экран «Сегодня» и нижняя панель (план «Интерфейс_третий_взгляд_словарь_27-10»).
+ *  - «🏠 Сегодня» — главный экран: 4 большие кнопки-действия (по правам: Пришёл пациент · Дал лекарство · Привезли ·
+ *    Что есть) и сигналы — только если есть что сказать (просрочено, срок заканчивается, мало, приёмы не закрыты).
+ *    Нечего сказать — «✓ Всё спокойно».
+ *  - Нижняя панель (зона большого пальца), не больше 5 пунктов, по правам человека: Сегодня + 3 главных раздела + «Ещё».
+ *    «Ещё» открывает прежнее меню со всеми разделами. ☰ в шапке на телефоне больше не нужен.
+ *  - «Подробный режим» (👤 Я → «Вид программы»): всё как было — без «Сегодня» и нижней панели, меню ☰.
+ *    Помощнику врача и админ-профилю — прежний вид (у них свои экраны).
+ *  Ничего в учёте не меняет: кнопки ведут в прежние экраны.
+ * ===================================================================== */
+const TD_T = {
+  ru: {
+    tabToday: 'Сегодня', mDesc_today: 'Главное на сегодня', tdMore: 'Ещё', tdNavForms: 'Пациенты', tdNavSpend: 'Дал лекарство', tdNavStock: 'Что есть', tdNavReceive: 'Привезли', tdNavReports: 'Отчёты', tdNavClinic: 'Справочник',
+    tdNew: 'Пришёл пациент', tdNewSub: 'записать приём', tdSpend: 'Дал лекарство', tdSpendSub: 'отметить, что дали', tdReceive: 'Привезли', tdReceiveSub: 'внести поставку', tdStock: 'Что есть', tdStockSub: 'остатки и сроки',
+    tdRevision: 'Пересчёт', tdRevisionSub: 'пересчитать, что лежит', tdClinic: 'Справочник', tdClinicSub: 'симптомы, протоколы', tdReports: 'Отчёты', tdReportsSub: 'за месяц и период',
+    tdExpired: 'Просрочено: {n}', tdExpiredSub: 'убрать и выбросить', tdSoon: 'Срок заканчивается: {n}', tdSoonSub: 'в ближайшие 30 дней — дать первыми', tdLow: 'Мало: {n}', tdLowSub: 'меньше нормы — заказать',
+    tdOpen: 'Приёмы не закрыты: {n}', tdOpenSub: 'закончить и закрыть', tdCalm: '✓ Всё спокойно', tdCalmSub: 'просроченного нет, всего хватает, все приёмы закрыты',
+    tdView: 'Вид программы', tdViewSimple: 'Простой', tdViewDetail: 'Подробный (как раньше)', tdViewHint: 'Подробный — прежнее меню ☰ без экрана «Сегодня» и нижней панели.'
+  },
+  az: {
+    tabToday: 'Bu gün', mDesc_today: 'Bu günün əsası', tdMore: 'Digər', tdNavForms: 'Pasiyentlər', tdNavSpend: 'Dərman verdim', tdNavStock: 'Nə var', tdNavReceive: 'Gətirdilər', tdNavReports: 'Hesabatlar', tdNavClinic: 'Soraqça',
+    tdNew: 'Pasiyent gəldi', tdNewSub: 'qəbulu yaz', tdSpend: 'Dərman verdim', tdSpendSub: 'verdiyini qeyd et', tdReceive: 'Gətirdilər', tdReceiveSub: 'gələni daxil et', tdStock: 'Nə var', tdStockSub: 'qalıqlar və müddətlər',
+    tdRevision: 'Sayım', tdRevisionSub: 'olanı say', tdClinic: 'Soraqça', tdClinicSub: 'simptomlar, protokollar', tdReports: 'Hesabatlar', tdReportsSub: 'ay və dövr üzrə',
+    tdExpired: 'Vaxtı keçib: {n}', tdExpiredSub: 'götür və at', tdSoon: 'Vaxtı bitir: {n}', tdSoonSub: 'yaxın 30 gündə — əvvəlcə bunları ver', tdLow: 'Azdır: {n}', tdLowSub: 'normadan az — sifariş et',
+    tdOpen: 'Bağlanmamış qəbullar: {n}', tdOpenSub: 'bitir və bağla', tdCalm: '✓ Hər şey qaydasındadır', tdCalmSub: 'vaxtı keçmiş yoxdur, hər şey çatır, bütün qəbullar bağlanıb',
+    tdView: 'Proqramın görünüşü', tdViewSimple: 'Sadə', tdViewDetail: 'Ətraflı (əvvəlki kimi)', tdViewHint: 'Ətraflı — əvvəlki ☰ menyu, «Bu gün» ekranı və aşağı panel olmadan.'
+  }
+};
+Object.assign(I18N.ru, TD_T.ru);
+Object.assign(I18N.az, TD_T.az);
+if (typeof SM_SCR === 'object') SM_SCR.today = 'tabToday';
+
+/** Простой вид включён: не «Подробный режим», не Помощник врача, не админ-профиль. */
+function tdDetail() { return LS.get('MED_UI', 'simple') === 'detail'; }
+function tdActive() {
+  if (!S.sess || !S.me || tdDetail()) return false;
+  if (S.me.adminMode) return false;
+  if (typeof isHelper === 'function' && isHelper()) return false;
+  return true;
+}
+const TD_ACTS = {
+  forms: { icon: '🧑‍⚕️', t: 'tdNew', sub: 'tdNewSub', nav: 'tdNavForms', navIc: '🩺' },
+  spend: { icon: '💊', t: 'tdSpend', sub: 'tdSpendSub', nav: 'tdNavSpend', navIc: '💊' },
+  receive: { icon: '📦', t: 'tdReceive', sub: 'tdReceiveSub', nav: 'tdNavReceive', navIc: '📦' },
+  stock: { icon: '🔎', t: 'tdStock', sub: 'tdStockSub', nav: 'tdNavStock', navIc: '🔎' },
+  revision: { icon: '📋', t: 'tdRevision', sub: 'tdRevisionSub' },
+  clinic: { icon: '⚕️', t: 'tdClinic', sub: 'tdClinicSub', nav: 'tdNavClinic', navIc: '⚕️' },
+  reports: { icon: '📊', t: 'tdReports', sub: 'tdReportsSub', nav: 'tdNavReports', navIc: '📊' }
+};
+function tdOk(k) { try { return screenAllowed(k); } catch (e) { return false; } }
+/** 4 большие кнопки: главные действия, которые человеку можно; не хватает — добираем остальными. */
+function tdTiles() {
+  return ['forms', 'spend', 'receive', 'stock', 'revision', 'clinic', 'reports'].filter(tdOk).slice(0, 4);
+}
+/** Нижняя панель: Сегодня + 3 главных раздела по правам + «Ещё». */
+function tdNavItems() {
+  return ['forms', 'spend', 'stock', 'receive', 'reports', 'clinic'].filter(k => tdOk(k) && TD_ACTS[k].nav).slice(0, 3);
+}
+
+/* ---------- вид ---------- */
+(function () {
+  if ($('#tdCss')) return;
+  const s = document.createElement('style'); s.id = 'tdCss';
+  s.textContent =
+    ':root{--tdh:calc(62px + env(safe-area-inset-bottom))}' +
+    '#scrToday .td-hi{color:var(--sub);font-size:14px;margin:2px 2px 10px}' +
+    '#scrToday .td-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}' +
+    '#scrToday .td-tile{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;justify-content:center;gap:4px;min-height:118px;padding:14px;border-radius:16px;background:var(--card);border:1px solid var(--line);box-shadow:0 1px 2px rgba(0,0,0,.04)}' +
+    '#scrToday .td-tile .ic{font-size:34px;line-height:1}#scrToday .td-tile b{font-size:18px;line-height:1.2}#scrToday .td-tile span.s{font-size:13px;color:var(--sub)}' +
+    '#scrToday .td-tile.main{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}#scrToday .td-tile.main span.s{color:var(--brand-ink);opacity:.85}' +
+    '#scrToday .td-tile:focus-visible{outline:3px solid var(--brand);outline-offset:2px}#scrToday .td-tile:active{transform:scale(.98)}' +
+    '#scrToday .td-sig{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:12px;width:100%;min-height:60px;margin-bottom:8px;padding:10px 14px;border-radius:14px;background:var(--card);border:1px solid var(--line)}' +
+    '#scrToday .td-sig .ic{font-size:24px;flex:none}#scrToday .td-sig .tx{flex:1;min-width:0}#scrToday .td-sig b{display:block;font-size:16px}#scrToday .td-sig span.s{font-size:13px;color:var(--sub)}#scrToday .td-sig::after{content:"›";font-size:24px;color:var(--sub)}' +
+    '#scrToday .td-sig.bad{border-left:5px solid var(--red)}#scrToday .td-sig.warn{border-left:5px solid var(--amber)}#scrToday .td-sig.info{border-left:5px solid var(--brand)}' +
+    '#scrToday .td-calm{padding:14px;border-radius:14px;background:var(--green-soft);color:var(--green)}#scrToday .td-calm b{display:block;font-size:16px}#scrToday .td-calm span{font-size:13px}' +
+    // нижняя панель
+    '#tdNav{display:none}body.td-on #tdNav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:35;background:var(--card);border-top:1px solid var(--line);padding:4px 4px env(safe-area-inset-bottom);box-shadow:0 -4px 16px rgba(0,0,0,.06)}' +
+    '#tdNav button{all:unset;box-sizing:border-box;cursor:pointer;flex:1 1 0;min-width:0;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:12px;color:var(--sub);font-size:11.5px;font-weight:600;text-align:center;line-height:1.15}' +
+    '#tdNav button .ic{font-size:21px;line-height:1}#tdNav button.on{color:var(--brand);background:var(--brand-soft)}#tdNav button:focus-visible{outline:3px solid var(--brand);outline-offset:-3px}' +
+    'body.td-on.kb #tdNav{display:none}' +
+    'body.td-on:not(.kb){padding-bottom:var(--tdh)}body.td-on:not(.kb) #toasts{bottom:calc(var(--tdh) + 10px)}' +
+    'body.td-on:not(.kb) .sm-closebar{bottom:var(--tdh)}body.td-on:not(.kb) #dockFab{bottom:calc(var(--tdh) + 12px)}body.td-on:not(.kb) #micFab{bottom:calc(var(--tdh) + 72px)}' +
+    // ☰ в шапке на телефоне не нужен — «Ещё» внизу; на широком экране меню и так открыто слева
+    '@media (max-width:1099px){body.td-on #menuBtn{display:none!important}}@media (min-width:1100px){body.td-on #tdNav{display:none!important}body.td-on{padding-bottom:20px}}' +
+    'body.logged-out #tdNav,body.logged-out #scrToday{display:none!important}@media print{#tdNav,#scrToday{display:none!important}}' +
+    '.td-view{margin:0 0 12px}.td-view .seg button{min-width:0;padding:0 12px}';
+  document.head.appendChild(s);
+})();
+(function () {
+  const main = $('main');
+  if (main && !$('#scrToday')) main.insertAdjacentHTML('afterbegin', '<section id="scrToday" class="hidden"></section>');
+  if (!$('#tdNav')) document.body.insertAdjacentHTML('beforeend', '<nav id="tdNav" aria-label="' + esc(t('tabToday')) + '"></nav>');
+  // одна функция — одна картинка: в шапке, меню и нижней панели одинаково
+  if (typeof MENU_ICON === 'object') {
+    Object.assign(MENU_ICON, { today: '🏠', spend: '💊', receive: '📦', stock: '🔎', forms: '🩺', clinic: '⚕️', revision: '📋', reports: '📊' });
+    $$('#navTabs [data-tab]').forEach(b => { const ic = b.querySelector('.ic'); if (ic && MENU_ICON[b.dataset.tab]) ic.textContent = MENU_ICON[b.dataset.tab]; });
+  }
+  // меню ☰ («Ещё»): «Сегодня» — первым пунктом
+  const box = $('#navTabs');
+  if (box && !box.querySelector('[data-tab=today]')) {
+    box.insertAdjacentHTML('afterbegin', '<button data-act="tab" data-tab="today"><span class="ic">🏠</span><span class="m-t"><b data-i18n="tabToday"></b><span class="m-d" data-md="today"></span></span></button>');
+  }
+})();
+// клавиатура на экране — нижняя панель прячется, чтобы не занимать место над клавиатурой
+document.addEventListener('focusin', e => { const x = e.target; if (x && x.matches && x.matches('input:not([type=checkbox]):not([type=radio]):not([type=button]),textarea,[contenteditable=true]')) document.body.classList.add('kb'); });
+document.addEventListener('focusout', () => setTimeout(() => { const a = document.activeElement; if (!(a && a.matches && a.matches('input:not([type=checkbox]):not([type=radio]):not([type=button]),textarea,[contenteditable=true]'))) document.body.classList.remove('kb'); }, 120));
+
+/* ---------- экран «Сегодня» ---------- */
+const TD = { view: null, sig: null, formsAt: 0 };
+function tdSignals() {
+  if (TD.view === S.view && TD.sig && TD.lang === S.lang && TD.fts === ((S.fc && S.fc.ts) || 0) + ':' + ((S.fc && S.fc.list && S.fc.list.length) || 0)) return TD.sig;
+  const out = [];
+  try {
+    if (S.view && canStock()) {
+      const lots = (S.view.lots || []).filter(l => Number(l.qty) > 0);
+      const exp = lots.filter(l => lotStatus(l).cls === 'expired').length;
+      const soon = lots.filter(l => lotStatus(l).cls === 'soon').length;
+      const low = (S.view.items || []).filter(it => { try { return itemStats(it).deficit; } catch (e) { return false; } }).length;
+      if (exp) out.push({ k: 'expired', cls: 'bad', ic: '🔴', t: t('tdExpired', { n: exp }), s: t('tdExpiredSub') });
+      if (soon) out.push({ k: 'soon', cls: 'warn', ic: '🟡', t: t('tdSoon', { n: soon }), s: t('tdSoonSub') });
+      if (low) out.push({ k: 'deficit', cls: 'warn', ic: '🟠', t: t('tdLow', { n: low }), s: t('tdLowSub') });
+    }
+  } catch (e) { }
+  try {
+    if (tdOk('forms') && typeof fCache === 'function') {
+      const open = (fCache().list || []).filter(f => f.status !== 'closed' && f.status !== 'deleted').length;
+      if (open) out.push({ k: 'open', cls: 'info', ic: '🩺', t: t('tdOpen', { n: open }), s: t('tdOpenSub') });
+    }
+  } catch (e) { }
+  TD.view = S.view; TD.sig = out; TD.lang = S.lang; TD.fts = ((S.fc && S.fc.ts) || 0) + ':' + ((S.fc && S.fc.list && S.fc.list.length) || 0);
+  return out;
+}
+const TD_DAYS = { ru: ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'], az: ['bazar', 'bazar ertəsi', 'çərşənbə axşamı', 'çərşənbə', 'cümə axşamı', 'cümə', 'şənbə'] };
+const TD_MON = { ru: ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'], az: ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avqust', 'sentyabr', 'oktyabr', 'noyabr', 'dekabr'] };
+function tdDateStr() {
+  const d = new Date(), l = S.lang === 'az' ? 'az' : 'ru';
+  return l === 'az' ? d.getDate() + ' ' + TD_MON.az[d.getMonth()] + ', ' + TD_DAYS.az[d.getDay()] : TD_DAYS.ru[d.getDay()] + ', ' + d.getDate() + ' ' + TD_MON.ru[d.getMonth()];
+}
+function renderToday() {
+  const box = $('#scrToday'); if (!box) return;
+  const st = typeof myStores === 'function' ? myStores().find(x => x.id === S.storeId) : null;
+  const tiles = tdTiles();
+  const sig = tdSignals();
+  box.innerHTML = '<div class="td-hi">' + esc(tdDateStr()) + (st ? ' · ' + esc(storeName(st)) : '') + '</div>' +
+    '<div class="td-grid">' + tiles.map((k, i) => { const a = TD_ACTS[k]; return '<button type="button" class="td-tile' + (i === 0 ? ' main' : '') + '" data-act="tdGo" data-k="' + k + '"><span class="ic">' + a.icon + '</span><b>' + esc(t(a.t)) + '</b><span class="s">' + esc(t(a.sub)) + '</span></button>'; }).join('') + '</div>' +
+    (sig.length ? sig.map(x => '<button type="button" class="td-sig ' + x.cls + '" data-act="tdSig" data-k="' + x.k + '"><span class="ic">' + x.ic + '</span><span class="tx"><b>' + esc(x.t) + '</b><span class="s">' + esc(x.s) + '</span></span></button>').join('')
+      : '<div class="td-calm"><b>' + esc(t('tdCalm')) + '</b><span>' + esc(t('tdCalmSub')) + '</span></div>');
+  // открытые приёмы — свежий список (не чаще раза в минуту)
+  if (tdOk('forms') && typeof fLoadList === 'function' && Date.now() - TD.formsAt > 60000) {
+    TD.formsAt = Date.now();
+    Promise.resolve(fLoadList()).then(() => { if (S.screen === 'today') { TD.sig = null; renderToday(); } }).catch(() => { });
+  }
+}
+function renderTdNav() {
+  const nav = $('#tdNav'); if (!nav) return;
+  document.body.classList.toggle('td-on', tdActive());
+  if (!tdActive()) { nav.innerHTML = ''; return; }
+  const items = tdNavItems();
+  const cur = S.screen;
+  const inNav = cur === 'today' || items.indexOf(cur) !== -1;
+  nav.innerHTML = '<button type="button" data-act="tdNav" data-k="today"' + (cur === 'today' ? ' class="on" aria-current="page"' : '') + '><span class="ic">🏠</span><span>' + esc(t('tabToday')) + '</span></button>' +
+    items.map(k => '<button type="button" data-act="tdNav" data-k="' + k + '"' + (cur === k ? ' class="on" aria-current="page"' : '') + '><span class="ic">' + TD_ACTS[k].navIc + '</span><span>' + esc(t(TD_ACTS[k].nav)) + '</span></button>').join('') +
+    '<button type="button" data-act="tdMore"' + (!inNav && !document.body.classList.contains('menu-open') ? ' class="on"' : '') + '><span class="ic">☰</span><span>' + esc(t('tdMore')) + '</span></button>';
+}
+
+/* ---------- встраивание в навигацию ---------- */
+(function () {
+  const oa = window.screenAllowed;
+  window.screenAllowed = function (scr) { if (scr === 'today') return tdActive(); return oa.apply(this, arguments); };
+  const of = window.firstScreen;
+  window.firstScreen = function () { if (tdActive()) return 'today'; return of.apply(this, arguments); };
+  if (typeof NAV === 'object' && NAV) NAV.origFirst = window.firstScreen; // «назад» ведёт на «Сегодня»
+  const os = window.setScreen;
+  window.setScreen = function () {
+    const r = os.apply(this, arguments);
+    try {
+      const sc = $('#scrToday');
+      if (sc) sc.classList.toggle('hidden', S.screen !== 'today');
+      if (S.screen === 'today') renderToday();
+      renderTdNav();
+    } catch (e) { }
+    return r;
+  };
+  const ora = window.renderAll;
+  window.renderAll = function () {
+    const r = ora.apply(this, arguments);
+    try { if (S.screen === 'today') renderToday(); renderTdNav(); } catch (e) { }
+    return r;
+  };
+  const omm = window.menuMark;
+  if (typeof omm === 'function') window.menuMark = function () {
+    const r = omm.apply(this, arguments);
+    try { const n = $('#scrName'); if (n && S.screen === 'today') n.textContent = '🏠 ' + t('tabToday'); } catch (e) { }
+    return r;
+  };
+  const omo = window.menuOpen;
+  if (typeof omo === 'function') window.menuOpen = function () { const r = omo.apply(this, arguments); try { renderTdNav(); } catch (e) { } return r; };
+})();
+
+/* ---------- «Вид программы» — в «👤 Я» ---------- */
+(function () {
+  const op = window.profileModal;
+  if (typeof op !== 'function') return;
+  window.profileModal = async function () {
+    const r = await op.apply(this, arguments);
+    try {
+      const m = $('#modalRoot .modal');
+      if (m && !m.querySelector('.td-view') && S.me && !S.me.adminMode && !(typeof isHelper === 'function' && isHelper())) {
+        const d = tdDetail();
+        const html = '<div class="td-view"><div class="sm-lang" style="margin:0 0 4px"><span class="lbl" style="margin:0">🧭 ' + esc(t('tdView')) + '</span><div class="seg" role="group">' +
+          '<button type="button" data-act="tdView" data-v="simple"' + (d ? '' : ' class="on"') + '>' + esc(t('tdViewSimple')) + '</button>' +
+          '<button type="button" data-act="tdView" data-v="detail"' + (d ? ' class="on"' : '') + '>' + esc(t('tdViewDetail')) + '</button></div></div>' +
+          '<div class="muted" style="font-size:12.5px">' + esc(t('tdViewHint')) + '</div></div>';
+        const lang = m.querySelector('.sm-lang');
+        if (lang) lang.insertAdjacentHTML('afterend', html); else { const h = m.querySelector('h3'); if (h) h.insertAdjacentHTML('afterend', html); }
+      }
+    } catch (e) { }
+    return r;
+  };
+})();
+
+Object.assign(H, {
+  tdGo: async el => {
+    const k = el.dataset.k;
+    if (k === 'forms') {
+      setScreen('forms');
+      try { if (H.dsSeg && typeof dsSt === 'function' && dsSt().seg && dsSt().seg !== 'forms') await H.dsSeg({ dataset: { seg: 'forms' } }); } catch (e) { }
+      if (H.fNew) H.fNew();
+      return;
+    }
+    setScreen(k);
+  },
+  tdSig: async el => {
+    const k = el.dataset.k;
+    if (k === 'open') {
+      setScreen('forms');
+      try { if (H.dsSeg && typeof dsSt === 'function' && dsSt().seg && dsSt().seg !== 'forms') await H.dsSeg({ dataset: { seg: 'forms' } }); } catch (e) { }
+      return;
+    }
+    S.stock.filter = k; S.stock.view = 'inn'; S.stock.q = ''; S.stock.loc = 'ALL';
+    const q = $('#stockQ'); if (q) q.value = '';
+    setScreen('stock');
+  },
+  tdNav: el => {
+    const k = el.dataset.k;
+    if (typeof menuOpen === 'function') menuOpen(false);
+    if (k === 'today') { setScreen('today'); return; }
+    if (S.screen === k && k === 'forms' && S.fv && H.fBack) { H.fBack(); return; } // повторное нажатие — к списку
+    setScreen(k);
+  },
+  tdMore: () => { if (typeof menuOpen === 'function') menuOpen(!document.body.classList.contains('menu-open')); },
+  tdView: el => {
+    LS.set('MED_UI', el.dataset.v === 'detail' ? 'detail' : 'simple');
+    closeModal();
+    setScreen(tdActive() ? 'today' : firstScreen());
+    profileModal();
+  }
+});
+
 
 function init() {
   vizTipInit();
