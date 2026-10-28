@@ -30982,7 +30982,7 @@ function ptCaseGotPatient(caseId, pid) {
   window.rpc = async function (action, payload) {
     const r = await orpc.apply(this, arguments);
     try {
-      if (action === 'docSave' && r && r.ok && r.doc && payload && PT.newDocs[payload.id] && !r.doc.patientId && payload.patch && (payload.patch.surname || payload.patch.fin)) {
+      if (action === 'docSave' && r && r.ok && r.doc && payload && PT.newDocs[payload.id] && !r.doc.patientId && payload.patch && (r.doc.type !== 'rx' || /^[0-9A-Z]{7}$/i.test(String(payload.patch.fin || '').replace(/\s+/g, ''))) && (payload.patch.surname || payload.patch.fin)) { // 9.60.1: рецепт — в GT/098 только если врач вписал FİN (новую карту без FİN не заводим)
         delete PT.newDocs[payload.id];
         const pii = ptPiiFromDoc(Object.assign({}, r.data || {}, payload.patch));
         const links = [{ kind: 'doc', id: r.doc.id }].concat(payload.caseId ? [{ kind: 'case', id: payload.caseId }] : []);
@@ -40297,7 +40297,7 @@ const X92_T = {
     firmSaved: 'Фирма сохранена', firmDel: 'Удалить фирму', firmDelQ: 'Удалить фирму «{n}»? Рецепты останутся.', firmCnt: 'препаратов: {n}', firmUses: 'рецептов: {n}', firmDup: 'Такая фирма уже есть.',
     repFirm: 'Фирма', repFrom: 'С', repTo: 'По', repGo: '📊 Показать', repT: 'Отчёт: {f}', repNo: 'За этот период препаратов фирмы в ваших закрытых рецептах нет.',
     repCols: ['Препарат', 'Раз', 'Упаковок'], repDocs: 'Рецептов с препаратами фирмы: {n}', repPriv: 'В отчёте нет данных пациентов (ФИО, возраст, диагноз, номера) — его можно отдать представителю фирмы.', repCopy: '📋 Скопировать',
-    copied: 'Скопировано', blank: '📄 Пустой бланк (вручную)', E_RX_PERIOD: 'Период — не меньше 7 дней (за день-два по одному препарату можно узнать пациента).', nameWarn: 'Рецепт на азербайджанском — укажите имя латиницей: 👤 Профиль → «Имя в документах».', E_RX_FIRM_DUP: 'Такая фирма уже есть.'
+    copied: 'Скопировано', gtThis: 'эта карта', gtHave: 'Есть GT/098 — найти', gtNewT: '＋ Новая GT/098 (нужен FİN)', gtNewHint: 'Без FİN новую карту не завести. Если карта с этим FİN уже есть — рецепт попадёт в неё.', birth: 'Дата рождения', gtNewGo: 'Создать GT/098 и добавить рецепт', gtCreated: 'Создана GT/098 «{n}», рецепт добавлен.', gtExisted: 'Карта с этим FİN уже есть — рецепт добавлен в неё: {n}.', E_PT_FIN_NEED: 'Для новой GT/098 нужен FİN пациента (7 латинских букв и цифр).', blank: '📄 Пустой бланк (вручную)', E_RX_PERIOD: 'Период — не меньше 7 дней (за день-два по одному препарату можно узнать пациента).', nameWarn: 'Рецепт на азербайджанском — укажите имя латиницей: 👤 Профиль → «Имя в документах».', E_RX_FIRM_DUP: 'Такая фирма уже есть.'
   },
   az: {
     tabNew: '✍️ Yeni resept', tabMine: '🗂 Reseptlərim', tabFirms: '🏢 Firmalarım', tabRep: '📊 Firma üzrə hesabat',
@@ -40326,11 +40326,11 @@ const X92_T = {
     firmSaved: 'Firma saxlanıldı', firmDel: 'Firmanı sil', firmDelQ: '«{n}» firması silinsin? Reseptlər qalacaq.', firmCnt: 'dərman: {n}', firmUses: 'resept: {n}', firmDup: 'Belə firma artıq var.',
     repFirm: 'Firma', repFrom: 'Başlanğıc', repTo: 'Son', repGo: '📊 Göstər', repT: 'Hesabat: {f}', repNo: 'Bu dövrdə bağlanmış reseptlərinizdə firmanın dərmanı yoxdur.',
     repCols: ['Dərman', 'Dəfə', 'Qutu'], repDocs: 'Firmanın dərmanı olan reseptlər: {n}', repPriv: 'Hesabatda pasiyent məlumatı yoxdur (ad, yaş, diaqnoz, nömrələr) — firma nümayəndəsinə vermək olar.', repCopy: '📋 Kopyala',
-    copied: 'Kopyalandı', blank: '📄 Boş blank (əl ilə)', E_RX_PERIOD: 'Dövr ən azı 7 gün olmalıdır (bir-iki gün üzrə pasiyenti tanımaq olar).', nameWarn: 'Resept azərbaycancadır — adınızı latınca yazın: 👤 Profil → «Sənədlərdə ad».', E_RX_FIRM_DUP: 'Belə firma artıq var.'
+    copied: 'Kopyalandı', gtThis: 'bu kart', gtHave: 'GT/098 var — tapın', gtNewT: '＋ Yeni GT/098 (FİN lazımdır)', gtNewHint: 'FİN olmadan yeni kart açmaq olmaz. Bu FİN ilə kart artıq varsa — resept ora düşəcək.', birth: 'Doğum tarixi', gtNewGo: 'GT/098 yarat və resepti əlavə et', gtCreated: 'GT/098 «{n}» yaradıldı, resept əlavə olundu.', gtExisted: 'Bu FİN ilə kart artıq var — resept ora əlavə olundu: {n}.', E_PT_FIN_NEED: 'Yeni GT/098 üçün pasiyentin FİN-i lazımdır (7 latın hərfi və rəqəm).', blank: '📄 Boş blank (əl ilə)', E_RX_PERIOD: 'Dövr ən azı 7 gün olmalıdır (bir-iki gün üzrə pasiyenti tanımaq olar).', nameWarn: 'Resept azərbaycancadır — adınızı latınca yazın: 👤 Profil → «Sənədlərdə ad».', E_RX_FIRM_DUP: 'Belə firma artıq var.'
   }
 };
-Object.assign(I18N.ru, { E_RX_FIRM_DUP: X92_T.ru.E_RX_FIRM_DUP, E_RX_PERIOD: X92_T.ru.E_RX_PERIOD });
-Object.assign(I18N.az, { E_RX_FIRM_DUP: X92_T.az.E_RX_FIRM_DUP, E_RX_PERIOD: X92_T.az.E_RX_PERIOD });
+Object.assign(I18N.ru, { E_RX_FIRM_DUP: X92_T.ru.E_RX_FIRM_DUP, E_RX_PERIOD: X92_T.ru.E_RX_PERIOD, E_PT_FIN_NEED: X92_T.ru.E_PT_FIN_NEED });
+Object.assign(I18N.az, { E_RX_FIRM_DUP: X92_T.az.E_RX_FIRM_DUP, E_RX_PERIOD: X92_T.az.E_RX_PERIOD, E_PT_FIN_NEED: X92_T.az.E_PT_FIN_NEED });
 function x92(k, o) { let s = (X92_T[S.lang === 'az' ? 'az' : 'ru'] || {})[k]; if (s === undefined) s = X92_T.ru[k]; if (typeof s !== 'string') return s; return o ? s.replace(/\{(\w+)\}/g, (m, n) => o[n] !== undefined ? o[n] : m) : s; }
 /* ---------- группы (ATC) ---------- */
 // [ключ, az, ru, префиксы ATC, всегда показывать]
@@ -40778,9 +40778,9 @@ async function rxWrite(btn, force) {
   const id = dsNewId(), data = rxDocData(d, id);
   const r = await busy(btn, () => rpcA('docSave', { id, type: 'rx', patch: data, opId: newOpId(), close: true }, { timeout: 60000 })).catch(() => null);
   if (!r || !r.ok) return;
-  let pid = '';
-  if (d.pt.pid) { const l = await rpcA('patientLink', { patientId: d.pt.pid, kind: 'doc', id, opId: newOpId() }).catch(() => null); if (l && l.ok) { pid = d.pt.pid; delete PT.cache[pid]; } }
-  st.done = { id, data, createdAt: r.doc && r.doc.createdAt, patient: [data.surname, data.name].join(' '), date: fmtDate(data.date), pid, pname: d.pt.pname };
+  // в GT/098 — только если врач нажмёт (Саид, 28.10: «только если врач захотел»)
+  st.done = { id, data, createdAt: r.doc && r.doc.createdAt, patient: [data.surname, data.name].join(' '), date: fmtDate(data.date), pid: '', pname: '',
+    cand: d.pt.pid ? { id: d.pt.pid, name: d.pt.pname } : null, pt: { surname: data.surname, name: data.name, sex: d.pt.sex } };
   st.lastDone = { id, data, doc: r.doc };
   st.d = rxEmpty(); st.check = null; st.sugg = null; st.mine = null; st.firms = null; st.add = { fid: '', mfr: '', fname: '', grp: '', q: '', more: false, manual: false };
   rxSave(); rxRender(); window.scrollTo(0, 0);
@@ -40806,6 +40806,19 @@ async function rxSugg(btn) {
   const r = await busy(btn, () => rpcA('rxAi', { mode: 'suggest', lang: S.lang, patient: rxPtAi(d), items: d.items.map(rxItemAi), cands: cands.slice(0, 500) }, { timeout: 150000 })).catch(() => null);
   if (!r || !r.ok) return;
   st.sugg = { items: r.items || [], notInFirms: r.notInFirms || [], note: r.note || '' };
+  rxRender();
+}
+/** Рецепт → GT/098 (по нажатию врача): существующая карта или новая по FİN. */
+async function rxGtLink(o) {
+  const st = rxSt(), id = st.gtFor; if (!id) return;
+  const r = await rpcA('rxToGt', Object.assign({ docId: id, opId: newOpId() }, o)).catch(() => null);
+  if (!r || !r.ok) return;
+  st.gtFor = null; closeModal();
+  const p = r.patient || {}, nm = [p.surname, p.name].filter(Boolean).join(' ');
+  delete PT.cache[p.id];
+  if (st.done && st.done.id === id) { st.done.pid = p.id; st.done.pname = nm; }
+  st.mine = null;
+  toast(r.created ? x92('gtCreated', { n: nm }) : r.existed ? x92('gtExisted', { n: nm }) : x92('gtDone'), 'ok');
   rxRender();
 }
 /** Печать рецепта (по-азербайджански). */
@@ -40946,13 +40959,16 @@ Object.assign(H, {
   rxGtPick: async el => {
     const st = rxSt();
     const g = await ptGet(el.dataset.id, true); if (!g || !g.patient) return;
-    if (st.gtFor) { // уже выписанный рецепт — в GT/098
-      const id = st.gtFor; st.gtFor = null; closeModal();
-      const l = await rpcA('patientLink', { patientId: g.patient.id, kind: 'doc', id, opId: newOpId() }).catch(() => null);
-      if (l && l.ok) { delete PT.cache[g.patient.id]; if (st.done && st.done.id === id) { st.done.pid = g.patient.id; st.done.pname = [g.patient.surname, g.patient.name].join(' '); } st.mine = null; toast(x92('gtDone'), 'ok'); rxRender(); }
-      return;
-    }
+    if (st.gtFor) { rxGtLink({ patientId: g.patient.id }); return; } // уже выписанный рецепт — в эту карту
     rxFillPt(g); rxRender();
+  },
+  rxGtThis: el => rxGtLink({ patientId: el.dataset.id }),
+  rxGtNew: () => {
+    const fin = String(($('#rxNwFin') || {}).value || '').toUpperCase().replace(/\s+/g, '');
+    if (!/^[0-9A-Z]{7}$/.test(fin)) return toast(t('E_PT_FIN_NEED'), 'bad');
+    const sn = String(($('#rxNwSur') || {}).value || '').trim(), nm = String(($('#rxNwName') || {}).value || '').trim();
+    if (!sn || !nm) return toast(t('E_PT_NEED'), 'bad');
+    rxGtLink({ fin, surname: sn, name: nm, birthDate: ($('#rxNwBirth') || {}).value || '', sex: (rxSt().done && rxSt().done.pt && rxSt().done.pt.sex) || '' });
   },
   rxFirmPick: el => { const st = rxSt(); st.add.fid = st.add.fid === el.dataset.id && !el.dataset.g ? '' : el.dataset.id; st.add.mfr = ''; st.add.mfrQ = ''; st.add.q = ''; if (el.dataset.g !== undefined) st.add.grp = el.dataset.g || st.add.grp; rxRender(); },
   rxMfrPick: el => { const st = rxSt(), m = el.dataset.m; const mine = (st.firms || []).find(f => f.mfr.indexOf(m) !== -1); if (mine) { st.add.fid = mine.id; st.add.mfr = ''; } else { st.add.fid = ''; st.add.mfr = m; st.add.fname = rxMfrShort(m); } st.add.mfrQ = ''; st.add.q = ''; rxRender(); },
@@ -40989,7 +41005,18 @@ Object.assign(H, {
   rxNew: () => { const st = rxSt(); st.done = null; st.view = 'new'; rxRender(); window.scrollTo(0, 0); },
   rxPrint: el => rxPrint(el.dataset.id),
   rxOpenDoc: el => { dsOpen(el.dataset.id); },
-  rxToGt: el => { const st = rxSt(); st.gtFor = el.dataset.id; openModal('<h3>' + esc(x92('gtPick')) + '</h3><div class="searchbar"><input type="search" id="rxGtQ2" autocomplete="off" placeholder="' + esc(x92('ptGtPh')) + '"><button class="btn small" data-act="rxGtFind2">' + esc(x92('ptFind')) + '</button></div><div id="rxGtBox2"></div><div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button></div>'); },
+  rxToGt: el => {
+    const st = rxSt(); st.gtFor = el.dataset.id;
+    const x = st.done && st.done.id === el.dataset.id ? st.done : null, pt = (x && x.pt) || {};
+    openModal('<h3>' + esc(x92('gtPick')) + '</h3>' +
+      (x && x.cand ? '<button class="btn primary" style="width:100%;margin-bottom:8px" data-act="rxGtThis" data-id="' + esc(x.cand.id) + '">📘 ' + esc(x.cand.name || '') + ' — ' + esc(x92('gtThis')) + '</button>' : '') +
+      '<div class="lbl">' + esc(x92('gtHave')) + '</div><div class="searchbar"><input type="search" id="rxGtQ2" autocomplete="off" placeholder="' + esc(x92('ptGtPh')) + '" value="' + esc(pt.surname || '') + '"><button class="btn small" data-act="rxGtFind2">' + esc(x92('ptFind')) + '</button></div><div id="rxGtBox2"></div>' +
+      '<details style="margin-top:10px"><summary class="lbl" style="cursor:pointer">' + esc(x92('gtNewT')) + '</summary><div class="muted" style="margin:4px 0">' + esc(x92('gtNewHint')) + '</div>' +
+      '<div class="grid2"><div class="field"><label>' + esc(x92('surname')) + '</label><input id="rxNwSur" maxlength="60" value="' + esc(pt.surname || '') + '"></div><div class="field"><label>' + esc(x92('name')) + '</label><input id="rxNwName" maxlength="60" value="' + esc(pt.name || '') + '"></div></div>' +
+      '<div class="grid2"><div class="field"><label>FİN *</label><input id="rxNwFin" maxlength="7" autocapitalize="characters" autocomplete="off" placeholder="7 simvol"></div><div class="field"><label>' + esc(x92('birth')) + '</label><input id="rxNwBirth" type="date"></div></div>' +
+      '<button class="btn" data-act="rxGtNew">' + esc(x92('gtNewGo')) + '</button></details>' +
+      '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button></div>');
+  },
   rxGtFind2: async el => {
     const q = String(($('#rxGtQ2') || {}).value || '').trim(); if (q.length < 2) return;
     const r = await busy(el, () => rpcA('patientList', { q })).catch(() => null);
