@@ -40271,7 +40271,7 @@ Object.assign(H, {
  * ===================================================================== */
 const X92_T = {
   ru: {
-    tabNew: '✍️ Новый рецепт', tabMine: '🗂 Мои рецепты', tabFirms: '🏢 Мои фирмы', tabRep: '📊 Отчёт по фирме',
+    tabNew: '✍️ Новый рецепт', tabRev: '🔍 Чужой рецепт', tabMine: '🗂 Мои рецепты', tabFirms: '🏢 Мои фирмы', tabRep: '📊 Отчёт по фирме',
     pt: 'Пациент', ptGt: '📘 Из GT/098', ptGtPh: 'Фамилия или FİN', ptFind: 'Найти', ptNone: 'Не найдено', ptLinked: 'Карта GT/098: {n}', ptUnlink: 'отвязать',
     surname: 'Фамилия', name: 'Имя', age: 'Возраст, лет', ageM: 'мес. (до 3 лет)', sex: 'Пол', weight: 'Вес, кг', preg: 'Беременность', pregNo: 'нет', pregYes: 'да', pregUnk: 'не уточнено', lact: 'Кормит грудью',
     allergy: 'Аллергия', allergyNo: 'нет', chronic: 'Хронические болезни (почки, печень, язва, сердце, астма…)', meds: 'Что уже принимает', more: 'ещё о пациенте',
@@ -40284,7 +40284,7 @@ const X92_T = {
     manual: '✍️ Вписать вручную', manualPh: 'Торговое название, доза, форма', vars: 'вариантов: {n}', catWait: 'Загружается справочник препаратов…',
     sugg: '🤖 Что ещё предложить', suggNeed: 'Впишите жалобы или диагноз.', suggNoFirms: 'Сначала добавьте фирмы («🏢 Мои фирмы»).', suggT: 'Предложения ИИ (из ваших фирм, только показанное)',
     lvl_strong: 'показано', lvl_moderate: 'уместно', lvl_weak: 'польза слабая', suggAdd: '＋ в рецепт', notIn: 'Показано, но у ваших фирм нет:', suggNone: 'Добавить нечего — назначенного достаточно.',
-    check: '🛡 Проверить рецепт', checkT: 'Проверка ИИ', checkOk: '✅ ИИ замечаний не нашёл.', checkOld: 'Рецепт изменился — проверьте заново.', localT: '⚠️ Проверьте сочетания',
+    check: '🛡 Разобрать рецепт', checkT: 'Решение ИИ (польза и вред)', checkOk: '✅ ИИ замечаний не нашёл.', checkOld: 'Рецепт изменился — проверьте заново.', localT: '⚠️ Проверьте сочетания',
     dupInn: 'Одно вещество в двух препаратах: {a} и {b} ({i}).', hint: 'Подсказка программы — решает врач.',
     foot: 'Рецепт', rxNo: '№ рецепта', inst: 'Учреждение', doctor: 'Врач', valid: 'Действителен', note: 'Пояснение пациенту (az)',
     write: '✅ Выписать рецепт', needFields: 'Не хватает: {l}', redAsk: 'ИИ нашёл опасное. Всё равно выписать?', redGo: 'Выписать всё равно', writing: 'Сохраняю…',
@@ -40297,10 +40297,10 @@ const X92_T = {
     firmSaved: 'Фирма сохранена', firmDel: 'Удалить фирму', firmDelQ: 'Удалить фирму «{n}»? Рецепты останутся.', firmCnt: 'препаратов: {n}', firmUses: 'рецептов: {n}', firmDup: 'Такая фирма уже есть.',
     repFirm: 'Фирма', repFrom: 'С', repTo: 'По', repGo: '📊 Показать', repT: 'Отчёт: {f}', repNo: 'За этот период препаратов фирмы в ваших закрытых рецептах нет.',
     repCols: ['Препарат', 'Раз', 'Упаковок'], repDocs: 'Рецептов с препаратами фирмы: {n}', repPriv: 'В отчёте нет данных пациентов (ФИО, возраст, диагноз, номера) — его можно отдать представителю фирмы.', repCopy: '📋 Скопировать',
-    copied: 'Скопировано', gtThis: 'эта карта', gtHave: 'Есть GT/098 — найти', gtNewT: '＋ Новая GT/098 (нужен FİN)', gtNewHint: 'Без FİN новую карту не завести. Если карта с этим FİN уже есть — рецепт попадёт в неё.', birth: 'Дата рождения', gtNewGo: 'Создать GT/098 и добавить рецепт', gtCreated: 'Создана GT/098 «{n}», рецепт добавлен.', gtExisted: 'Карта с этим FİN уже есть — рецепт добавлен в неё: {n}.', E_PT_FIN_NEED: 'Для новой GT/098 нужен FİN пациента (7 латинских букв и цифр).', blank: '📄 Пустой бланк (вручную)', E_RX_PERIOD: 'Период — не меньше 7 дней (за день-два по одному препарату можно узнать пациента).', nameWarn: 'Рецепт на азербайджанском — укажите имя латиницей: 👤 Профиль → «Имя в документах».', E_RX_FIRM_DUP: 'Такая фирма уже есть.'
+    copied: 'Скопировано', gtClash: 'В карте с этим FİN — «{n}». Добавить рецепт в эту карту?', v_keep: 'оставлен', v_fix: 'изменён приём', v_remove: 'убран', undoRm: '↩ Вернуть', undoFix: '↩ Как было', undone: 'возвращено врачом', missT: 'Не хватает:', aiChanged: 'ИИ разобрал рецепт и поправил его — посмотрите итог и нажмите «Выписать» ещё раз.', gtThis: 'эта карта', gtHave: 'Есть GT/098 — найти', gtNewT: '＋ Новая GT/098 (нужен FİN)', gtNewHint: 'Без FİN новую карту не завести. Если карта с этим FİN уже есть — рецепт попадёт в неё.', birth: 'Дата рождения', gtNewGo: 'Создать GT/098 и добавить рецепт', gtCreated: 'Создана GT/098 «{n}», рецепт добавлен.', gtExisted: 'Карта с этим FİN уже есть — рецепт добавлен в неё: {n}.', E_PT_FIN_NEED: 'Для новой GT/098 нужен FİN пациента (7 латинских букв и цифр).', blank: '📄 Пустой бланк (вручную)', E_RX_PERIOD: 'Период — не меньше 7 дней (за день-два по одному препарату можно узнать пациента).', nameWarn: 'Рецепт на азербайджанском — укажите имя латиницей: 👤 Профиль → «Имя в документах».', E_RX_FIRM_DUP: 'Такая фирма уже есть.'
   },
   az: {
-    tabNew: '✍️ Yeni resept', tabMine: '🗂 Reseptlərim', tabFirms: '🏢 Firmalarım', tabRep: '📊 Firma üzrə hesabat',
+    tabNew: '✍️ Yeni resept', tabRev: '🔍 Başqasının resepti', tabMine: '🗂 Reseptlərim', tabFirms: '🏢 Firmalarım', tabRep: '📊 Firma üzrə hesabat',
     pt: 'Pasiyent', ptGt: '📘 GT/098-dən', ptGtPh: 'Soyad və ya FİN', ptFind: 'Tap', ptNone: 'Tapılmadı', ptLinked: 'GT/098 kartı: {n}', ptUnlink: 'ayır',
     surname: 'Soyadı', name: 'Adı', age: 'Yaşı', ageM: 'ay (3 yaşadək)', sex: 'Cinsi', weight: 'Çəkisi, kq', preg: 'Hamiləlik', pregNo: 'yox', pregYes: 'bəli', pregUnk: 'dəqiq deyil', lact: 'Ana südü ilə qidalandırır',
     allergy: 'Allergiya', allergyNo: 'yoxdur', chronic: 'Xroniki xəstəliklər (böyrək, qaraciyər, xora, ürək, astma…)', meds: 'Qəbul etdiyi dərmanlar', more: 'pasiyent haqqında daha çox',
@@ -40313,7 +40313,7 @@ const X92_T = {
     manual: '✍️ Əl ilə yazmaq', manualPh: 'Ticarət adı, doza, forma', vars: 'variant: {n}', catWait: 'Dərman kataloqu yüklənir…',
     sugg: '🤖 Daha nə təklif etmək olar', suggNeed: 'Şikayət və ya diaqnozu yazın.', suggNoFirms: 'Əvvəlcə firmaları əlavə edin («🏢 Firmalarım»).', suggT: 'Sİ təklifləri (firmalarınızdan, yalnız göstərişə görə)',
     lvl_strong: 'göstərişdir', lvl_moderate: 'uyğundur', lvl_weak: 'faydası zəifdir', suggAdd: '＋ reseptə', notIn: 'Göstərişdir, amma firmalarınızda yoxdur:', suggNone: 'Əlavə ediləcək bir şey yoxdur — təyin olunan kifayətdir.',
-    check: '🛡 Resepti yoxla', checkT: 'Sİ yoxlaması', checkOk: '✅ Sİ irad tapmadı.', checkOld: 'Resept dəyişib — yenidən yoxlayın.', localT: '⚠️ Uyğunluğu yoxlayın',
+    check: '🛡 Resepti təhlil et', checkT: 'Sİ qərarı (fayda və zərər)', checkOk: '✅ Sİ irad tapmadı.', checkOld: 'Resept dəyişib — yenidən yoxlayın.', localT: '⚠️ Uyğunluğu yoxlayın',
     dupInn: 'Eyni maddə iki dərmanda: {a} və {b} ({i}).', hint: 'Proqramın ipucusu — həkim qərar verir.',
     foot: 'Resept', rxNo: 'Resept №', inst: 'Müəssisə', doctor: 'Həkim', valid: 'Etibarlıdır', note: 'Pasiyent üçün qeyd',
     write: '✅ Resepti yaz', needFields: 'Çatışmır: {l}', redAsk: 'Sİ təhlükəli məqam tapıb. Yenə də yazılsın?', redGo: 'Yenə də yaz', writing: 'Saxlanılır…',
@@ -40326,7 +40326,7 @@ const X92_T = {
     firmSaved: 'Firma saxlanıldı', firmDel: 'Firmanı sil', firmDelQ: '«{n}» firması silinsin? Reseptlər qalacaq.', firmCnt: 'dərman: {n}', firmUses: 'resept: {n}', firmDup: 'Belə firma artıq var.',
     repFirm: 'Firma', repFrom: 'Başlanğıc', repTo: 'Son', repGo: '📊 Göstər', repT: 'Hesabat: {f}', repNo: 'Bu dövrdə bağlanmış reseptlərinizdə firmanın dərmanı yoxdur.',
     repCols: ['Dərman', 'Dəfə', 'Qutu'], repDocs: 'Firmanın dərmanı olan reseptlər: {n}', repPriv: 'Hesabatda pasiyent məlumatı yoxdur (ad, yaş, diaqnoz, nömrələr) — firma nümayəndəsinə vermək olar.', repCopy: '📋 Kopyala',
-    copied: 'Kopyalandı', gtThis: 'bu kart', gtHave: 'GT/098 var — tapın', gtNewT: '＋ Yeni GT/098 (FİN lazımdır)', gtNewHint: 'FİN olmadan yeni kart açmaq olmaz. Bu FİN ilə kart artıq varsa — resept ora düşəcək.', birth: 'Doğum tarixi', gtNewGo: 'GT/098 yarat və resepti əlavə et', gtCreated: 'GT/098 «{n}» yaradıldı, resept əlavə olundu.', gtExisted: 'Bu FİN ilə kart artıq var — resept ora əlavə olundu: {n}.', E_PT_FIN_NEED: 'Yeni GT/098 üçün pasiyentin FİN-i lazımdır (7 latın hərfi və rəqəm).', blank: '📄 Boş blank (əl ilə)', E_RX_PERIOD: 'Dövr ən azı 7 gün olmalıdır (bir-iki gün üzrə pasiyenti tanımaq olar).', nameWarn: 'Resept azərbaycancadır — adınızı latınca yazın: 👤 Profil → «Sənədlərdə ad».', E_RX_FIRM_DUP: 'Belə firma artıq var.'
+    copied: 'Kopyalandı', gtClash: 'Bu FİN ilə kartda — «{n}». Resept bu karta əlavə edilsin?', v_keep: 'saxlanıldı', v_fix: 'qəbul qaydası dəyişdi', v_remove: 'çıxarıldı', undoRm: '↩ Qaytar', undoFix: '↩ Əvvəlki kimi', undone: 'həkim qaytardı', missT: 'Çatışmır:', aiChanged: 'Sİ resepti təhlil edib düzəltdi — nəticəyə baxın və «Yaz»-ı yenidən basın.', gtThis: 'bu kart', gtHave: 'GT/098 var — tapın', gtNewT: '＋ Yeni GT/098 (FİN lazımdır)', gtNewHint: 'FİN olmadan yeni kart açmaq olmaz. Bu FİN ilə kart artıq varsa — resept ora düşəcək.', birth: 'Doğum tarixi', gtNewGo: 'GT/098 yarat və resepti əlavə et', gtCreated: 'GT/098 «{n}» yaradıldı, resept əlavə olundu.', gtExisted: 'Bu FİN ilə kart artıq var — resept ora əlavə olundu: {n}.', E_PT_FIN_NEED: 'Yeni GT/098 üçün pasiyentin FİN-i lazımdır (7 latın hərfi və rəqəm).', blank: '📄 Boş blank (əl ilə)', E_RX_PERIOD: 'Dövr ən azı 7 gün olmalıdır (bir-iki gün üzrə pasiyenti tanımaq olar).', nameWarn: 'Resept azərbaycancadır — adınızı latınca yazın: 👤 Profil → «Sənədlərdə ad».', E_RX_FIRM_DUP: 'Belə firma artıq var.'
   }
 };
 Object.assign(I18N.ru, { E_RX_FIRM_DUP: X92_T.ru.E_RX_FIRM_DUP, E_RX_PERIOD: X92_T.ru.E_RX_PERIOD, E_PT_FIN_NEED: X92_T.ru.E_PT_FIN_NEED });
@@ -40485,11 +40485,13 @@ async function rxSigna(id) {
   const st = rxSt(), d = st.d, it = d.items.find(x => x.id === id); if (!it) return;
   if (!(typeof canAi === 'function' && canAi())) { it.busy = false; it.manual = true; rxSave(); rxRender(); return; }
   it.busy = true; rxRender();
-  const r = await rpcA('rxAi', { mode: 'signa', lang: S.lang, patient: rxPtAi(d), items: d.items.filter(x => x.id !== id).map(rxItemAi), pick: rxItemAi(it) }, { timeout: 120000 }).catch(() => null);
+  const r = await rpcA('rxAi', { mode: 'signa', lang: S.lang, patient: rxPtAi(d), items: d.items.filter(x => x.id !== id).map(rxItemAi), pick: rxItemAi(it), firmId: it.firmId || '' }, { timeout: 150000 }).catch(() => null);
   const cur = rxSt().d.items.find(x => x.id === id); if (!cur) return;
   cur.busy = false;
   if (r && r.ok) {
     cur.signa = r.signa || cur.signa; cur.qty = r.qty || cur.qty; cur.days = r.days || ''; cur.warn = r.warn || []; cur.aiOk = r.allowed !== false;
+    if (r.inn && !cur.inn) { cur.inn = r.inn; S.rxProdCache = {}; rxSt().firms = null; } // состав найден — запомнен в «Моих фирмах»
+    if (r.cnt && !cur.cnt) cur.cnt = String(r.cnt);
     const m = /(\d+)\s*(qutu|flakon|tübik|şüşə|paket|blister)/i.exec(cur.qty || ''); cur.packs = m ? Math.min(20, Number(m[1])) : 1;
   } else cur.manual = true;
   rxSave(); rxRender();
@@ -40497,7 +40499,7 @@ async function rxSigna(id) {
 function rxAddItem(prod, v, firm) {
   const st = rxSt();
   const it = { id: rxId(), b: prod.b, inn: prod.inn || '', atc: prod.atc || '', dose: rxUnitsAz(v ? v.d : ''), formAz: v ? (RX_FORM_AZ[v.code] || '') : '', cnt: v ? v.cnt || '' : '',
-    firm: firm ? firm.name : '', firmMfr: firm && firm.once && firm.mfr ? firm.mfr[0] : '', signa: '', qty: v && v.cnt ? '1 qutu (№' + v.cnt + ')' : '', packs: 1, warn: [], busy: false };
+    firm: firm ? firm.name : '', firmId: firm && !firm.once ? firm.id : '', firmMfr: firm && firm.once && firm.mfr ? firm.mfr[0] : '', signa: '', qty: v && v.cnt ? '1 qutu (№' + v.cnt + ')' : '', packs: 1, warn: [], busy: false };
   st.d.items.push(it); st.check = null; st.sugg = st.sugg && Object.assign({}, st.sugg, { items: (st.sugg.items || []).filter(x => skel(x.b) !== skel(prod.b)) });
   rxSave();
   rxSigna(it.id);
@@ -40514,7 +40516,7 @@ function rxCss() {
   document.head.appendChild(s);
 }
 function rxTabsHtml(st) {
-  return '<div class="chips" style="margin-bottom:10px;flex-wrap:wrap;display:flex;gap:6px">' + [['new', 'tabNew'], ['mine', 'tabMine'], ['firms', 'tabFirms'], ['rep', 'tabRep']].map(x =>
+  return '<div class="chips" style="margin-bottom:10px;flex-wrap:wrap;display:flex;gap:6px">' + [['new', 'tabNew'], ['rev', 'tabRev'], ['mine', 'tabMine'], ['firms', 'tabFirms'], ['rep', 'tabRep']].map(x =>
     '<button class="chip' + (st.view === x[0] ? ' on' : '') + '" data-act="rxView" data-v="' + x[0] + '">' + esc(x92(x[1])) + '</button>').join('') +
     '<button class="chip ghost" data-act="dsNewPii" data-type="rx">' + esc(x92('blank')) + '</button></div>';
 }
@@ -40565,11 +40567,15 @@ function rxItemsHtml(st) {
   const loc = rxLocal(d);
   if (loc.length && typeof ixHtml === 'function') h += ixHtml(loc, x92('localT'));
   if (st.check) {
-    const old = st.check.sig !== rxSig(d);
-    h += '<div class="hint" style="display:block;margin:8px 0;border-left:4px solid ' + (st.check.issues.some(x => x.sev === 'red') ? 'var(--red)' : st.check.issues.length ? 'var(--amber)' : 'var(--green)') + '"><b>' + esc(x92('checkT')) + '</b>' +
+    const c = st.check, old = c.sig !== rxSig(d);
+    const ic = { keep: '✅', fix: '🔧', remove: '❌' };
+    h += '<div class="hint" style="display:block;margin:8px 0;border-left:4px solid ' + (c.items.some(x => x.verdict === 'remove') ? 'var(--red)' : c.items.some(x => x.verdict === 'fix') ? 'var(--amber)' : 'var(--green)') + '"><b>' + esc(x92('checkT')) + '</b>' +
       (old ? '<div class="muted">' + esc(x92('checkOld')) + '</div>' : '') +
-      (st.check.issues.length ? st.check.issues.map(x => '<div style="margin-top:4px">' + (x.sev === 'red' ? '🔴 ' : '🟠 ') + (x.items && x.items.length ? '<b>' + esc(x.items.join(', ')) + ':</b> ' : '') + esc(x.text) + '</div>').join('') : '<div>' + esc(x92('checkOk')) + '</div>') +
-      '<div class="muted" style="font-size:12px;margin-top:4px">' + esc(x92('hint')) + '</div></div>';
+      c.items.map(x => '<div style="margin-top:6px">' + ic[x.verdict] + ' <b>' + esc(x.b) + '</b> — ' + esc(x92('v_' + x.verdict)) + (x.why ? ': ' + esc(x.why) : '') +
+        (x.verdict === 'remove' && x.item ? ' <button class="btn small ghost" style="min-height:28px;padding:2px 10px" data-act="rxUndo" data-id="' + esc(x.id) + '">' + esc(x92('undoRm')) + '</button>' : '') +
+        (x.verdict === 'fix' && x.old !== undefined ? ' <button class="btn small ghost" style="min-height:28px;padding:2px 10px" data-act="rxUndo" data-id="' + esc(x.id) + '">' + esc(x92('undoFix')) + '</button>' : '') + '</div>').join('') +
+      ((c.missing || []).length ? '<div style="margin-top:8px"><b>' + esc(x92('missT')) + '</b> ' + c.missing.map(x => esc(x.inn) + (x.why ? ' — ' + esc(x.why) : '')).join('; ') + '</div>' : '') +
+      (c.note ? '<div style="margin-top:6px">⚠️ ' + esc(c.note) + '</div>' : '') + '</div>';
   }
   if (typeof canAi === 'function' && canAi()) h += '<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px"><button class="btn small" data-act="rxSugg">' + esc(x92('sugg')) + '</button>' + (d.items.length ? '<button class="btn small ghost" data-act="rxCheck">' + esc(x92('check')) + '</button>' : '') + '</div>';
   if (st.sugg) {
@@ -40703,6 +40709,7 @@ function rxHtml() {
   if (st.view === 'new') h += st.done ? rxDoneHtml(st) : rxPtHtml(st) + rxItemsHtml(st) + rxAddHtml(st) + rxFootHtml(st);
   else if (st.view === 'mine') h += rxMineHtml(st);
   else if (st.view === 'firms') h += rxFirmsHtml(st);
+  else if (st.view === 'rev') h += typeof rxRevHtml === 'function' ? rxRevHtml(st) : '';
   else h += rxRepHtml(st);
   return '<div class="rx-scope">' + h + '</div>';
 }
@@ -40766,14 +40773,11 @@ async function rxWrite(btn, force) {
   const miss = rxMissing(d);
   if (miss.length) return toast(x92('needFields', { l: miss.join(', ') }), 'bad');
   if (d.items.some(x => x.busy)) return toast(x92('signaWait'));
-  // перед выпиской — проверка ИИ всего рецепта (если ещё не было после изменений)
+  // перед выпиской — разбор ИИ всего рецепта (если ещё не было после изменений); ИИ что-то убрал или изменил — сначала показать врачу
   if (!force && typeof canAi === 'function' && canAi() && !(st.check && st.check.sig === rxSig(d))) {
-    const ok = await rxCheck(btn);
-    if (ok === false) {
-      openModal('<h3>⚠️ ' + esc(x92('redAsk')) + '</h3>' + st.check.issues.filter(x => x.sev === 'red').map(x => '<div style="margin:4px 0">🔴 ' + esc(x.text) + '</div>').join('') +
-        '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn danger" data-act="rxWriteForce">' + esc(x92('redGo')) + '</button></div>');
-      return;
-    }
+    const c = await rxCheck(btn);
+    if (c && c.changed) { toast(x92('aiChanged')); const el = document.querySelector('#formsBox .rx-it') || null; if (el) el.scrollIntoView({ block: 'center' }); return; }
+    if (!d.items.length) return;
   }
   const id = dsNewId(), data = rxDocData(d, id);
   const r = await busy(btn, () => rpcA('docSave', { id, type: 'rx', patch: data, opId: newOpId(), close: true }, { timeout: 60000 })).catch(() => null);
@@ -40785,15 +40789,25 @@ async function rxWrite(btn, force) {
   st.d = rxEmpty(); st.check = null; st.sugg = null; st.mine = null; st.firms = null; st.add = { fid: '', mfr: '', fname: '', grp: '', q: '', more: false, manual: false };
   rxSave(); rxRender(); window.scrollTo(0, 0);
 }
+/** Разбор ИИ по правилу пользы и вреда: решения применяются сразу (убрать / изменить приём), врач может вернуть. Возвращает, менял ли ИИ рецепт. */
 async function rxCheck(btn) {
   const st = rxSt(), d = st.d;
-  if (!d.items.length) return true;
-  const sig = rxSig(d);
-  const r = await busy(btn, () => rpcA('rxAi', { mode: 'check', lang: S.lang, patient: rxPtAi(d), items: d.items.map(rxItemAi) }, { timeout: 120000 })).catch(() => null);
+  if (!d.items.length) return { changed: false };
+  const r = await busy(btn, () => rpcA('rxAi', { mode: 'check', lang: S.lang, patient: rxPtAi(d), items: d.items.map(rxItemAi) }, { timeout: 150000 })).catch(() => null);
   if (!r || !r.ok) return null;
-  st.check = { sig, issues: r.issues || [] };
-  rxRender();
-  return !st.check.issues.some(x => x.sev === 'red');
+  const res = { items: [], missing: r.missing || [], note: r.note || '' };
+  let changed = false;
+  (r.items || []).forEach(v => {
+    const it = d.items.find(x => skel(x.b) === skel(v.b)); if (!it) return;
+    const row = { id: it.id, b: it.b, verdict: v.verdict, why: v.why, benefit: v.benefit, harm: v.harm };
+    if (v.verdict === 'fix' && v.signa && v.signa !== it.signa) { row.old = it.signa; it.signa = v.signa; changed = true; }
+    if (v.verdict === 'remove') { row.item = JSON.parse(JSON.stringify(it)); d.items = d.items.filter(x => x.id !== it.id); changed = true; }
+    res.items.push(row);
+  });
+  res.sig = rxSig(d);
+  st.check = res;
+  rxSave(); rxRender();
+  return { changed };
 }
 async function rxSugg(btn) {
   const st = rxSt(), d = st.d;
@@ -40811,7 +40825,9 @@ async function rxSugg(btn) {
 /** Рецепт → GT/098 (по нажатию врача): существующая карта или новая по FİN. */
 async function rxGtLink(o) {
   const st = rxSt(), id = st.gtFor; if (!id) return;
-  const r = await rpcA('rxToGt', Object.assign({ docId: id, opId: newOpId() }, o)).catch(() => null);
+  let clash = null;
+  const r = await rpcA('rxToGt', Object.assign({ docId: id, opId: newOpId() }, o)).catch(e => { if (e && e.res && e.res.code === 'E_PT_FIN_OTHER') clash = (e.res.info || {}).name || '?'; return null; });
+  if (clash && !o.confirm) { if (confirm(x92('gtClash', { n: clash }))) return rxGtLink(Object.assign({}, o, { confirm: true })); return; }
   if (!r || !r.ok) return;
   st.gtFor = null; closeModal();
   const p = r.patient || {}, nm = [p.surname, p.name].filter(Boolean).join(' ');
@@ -40853,7 +40869,7 @@ dsPrintRx = function (c) {
 function rxFeHtml() {
   const fe = rxSt().fe;
   const sel = fe.mfr.map((m, i) => '<div class="list-row"><span>🏭</span><div class="grow">' + esc(m) + '</div><button class="btn small ghost" data-act="rxFeMfrDel" data-i="' + i + '">✕</button></div>').join('');
-  const its = fe.items.map((x, i) => '<div class="list-row"><span>💊</span><div class="grow"><b>' + esc(x.b) + '</b> <span class="muted">' + esc([x.dose, x.form, x.inn ? catInnName(x.inn) : ''].filter(Boolean).join(' · ')) + '</span></div><button class="btn small ghost" data-act="rxFeItemDel" data-i="' + i + '">✕</button></div>').join('');
+  const its = fe.items.map((x, i) => '<div class="list-row"><span>💊</span><div class="grow"><b>' + esc(x.b) + '</b> <span class="muted">' + esc([x.dose, x.form, x.inn ? catInnName(x.inn) + (x.innSrc === 'ai' ? ' 🤖' : '') : ''].filter(Boolean).join(' · ')) + '</span></div><button class="btn small ghost" data-act="rxFeItemDel" data-i="' + i + '">✕</button></div>').join('');
   let found = '';
   if (fe.found) found = '<div class="hint" style="display:block;margin-top:8px"><b>' + esc(x92('firmReadT')) + ' (' + fe.found.items.length + ')</b>' +
     fe.found.items.map((x, i) => '<label class="check" style="margin:4px 0"><input type="checkbox" class="rx-fd" data-i="' + i + '" checked><span><b>' + esc(x.b) + '</b> <span class="muted">' + esc([x.dose, x.form, x.inn].filter(Boolean).join(' · ')) + (x.inCat ? ' ✓' : '') + '</span></span></label>').join('') +
@@ -40998,6 +41014,13 @@ Object.assign(H, {
     rxAddItem(p, p.vars[0], f);
   },
   rxCheck: el => rxCheck(el),
+  rxUndo: el => {
+    const st = rxSt(), c = st.check; if (!c) return;
+    const x = c.items.find(y => y.id === el.dataset.id); if (!x) return;
+    if (x.verdict === 'remove' && x.item) { st.d.items.push(x.item); x.item = null; x.verdict = 'keep'; x.why = x92('undone'); }
+    else if (x.verdict === 'fix' && x.old !== undefined) { const it = st.d.items.find(y => y.id === x.id); if (it) it.signa = x.old; delete x.old; x.verdict = 'keep'; x.why = x92('undone'); }
+    c.sig = rxSig(st.d); rxSave(); rxRender();
+  },
   rxWrite: el => rxWrite(el),
   rxWriteForce: () => { closeModal(); rxWrite(null, true); },
   rxClear: () => { openModal('<h3>' + esc(x92('clearQ')) + '</h3><div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn danger" data-act="rxClearGo">' + esc(x92('clear')) + '</button></div>'); },
@@ -41112,9 +41135,16 @@ function x93TplName(type) { const tp = DOC_TPL[type] || {}; return (tp.ic ? tp.i
 /** Такой же документ у карты за тот же период: госпитализация (с её начала) или сегодня. */
 function x93DupDoc(type, g) {
   const docs = (g.docs || []).filter(d => d.type === type && d.status !== 'deleted');
-  const from = X93_ONE.indexOf(type) !== -1 && g.hosp && g.hosp.at ? String(g.hosp.at) : '';
-  const today = x93Today();
-  return docs.filter(d => from ? String(d.createdAt || '') >= from : String(d.createdAt || '').slice(0, 10) === today).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0] || null;
+  const h = g.hosp || {}, today = x93Today();
+  const T = v => { const d = new Date(String(v || '').replace(' ', 'T')); return isNaN(d) ? NaN : d.getTime(); };
+  // госпитализация идёт — с её начала; выписан — до выписки + 3 дня (историю дописывают после); дальше — по дню
+  let from = NaN, to = Infinity;
+  if (X93_ONE.indexOf(type) !== -1 && h.at) {
+    if (h.on) from = T(h.at);
+    else if (h.end && Date.now() <= T(h.end) + 3 * 86400000) { from = T(h.at); to = T(h.end) + 3 * 86400000; }
+  }
+  return docs.filter(d => { const c = T(d.createdAt); return isFinite(from) ? c >= from && c <= to : String(d.createdAt || '').slice(0, 10) === today; })
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0] || null;
 }
 const X93 = { go: null };
 (function () {
@@ -41161,7 +41191,7 @@ const X93 = { go: null };
 /* ---------- 🗑 в ленте GT/098 и в разделе «Разбор ИИ» ---------- */
 function x93Deletable(g) {
   const own = isOwner(), out = {};
-  (g.docs || []).forEach(d => { if ((d.mine && !d.everClosed && !d.closedAt) || own) out['dsOpen|' + d.id] = { k: 'doc', id: d.id, t: x93TplName(d.type) + (d.docNo ? ' № ' + d.docNo : ''), closed: !!(d.closedAt || d.everClosed) }; });
+  (g.docs || []).forEach(d => { const ownDraft = d.mine && !d.everClosed && !d.closedAt; if (ownDraft || own) out['dsOpen|' + d.id] = { k: 'doc', id: d.id, t: x93TplName(d.type) + (d.docNo ? ' № ' + d.docNo : ''), closed: !ownDraft }; }); // не свой черновик — админ, с причиной
   (g.forms || []).forEach(f => { if ((f.mine && f.status === 'draft') || can('formsEdit')) out['psOpenForm|' + f.id] = { k: 'form', id: f.id, t: t('ptFormTag') + (f.blankNo ? ' № ' + f.blankNo : ''), closed: f.status === 'closed' }; });
   (g.cases || []).forEach(c => { if (c.mine || isOwner()) out['ptOpenCase|' + c.id] = { k: 'case', id: c.id, t: x93('delCase') + ': ' + (c.title || ''), closed: false }; });
   return out;
@@ -41218,6 +41248,147 @@ Object.assign(H, {
     X93.del = null; closeModal(); toast(x93('delDone'), 'ok');
     if (x.kind === 'form' && typeof fCache === 'function') { try { const c = fCache(); if (c && c.full) delete c.full[x.id]; } catch (e) { } }
     ptOpen(g.patient.id, true);
+  }
+});
+
+/* =====================================================================
+ * v94 (9.62): 🔍 разбор рецепта другого врача → в GT/098 (нужен FİN).
+ *  «💊 Рецепты» → «🔍 Чужой рецепт» (или в карте GT/098 «🔍 Разобрать рецепт»): пациент (FİN), жалобы, что выписано (фото / текст) →
+ *  ИИ по каждому препарату: ✅ оставить / 🔧 изменить приём / ❌ убрать — с причиной; чего не хватает. Разбор — в GT/098.
+ * ===================================================================== */
+const X94_T = {
+  ru: {
+    t: '🔍 Разбор рецепта другого врача', hint: 'Сфотографируйте рецепт (до 4 фото) или впишите, что выписано. ИИ разберёт каждый препарат: польза, вред, совместимость — и сохранит разбор в GT/098 пациента.',
+    pt: 'Пациент (GT/098)', fin: 'FİN *', finHint: 'Без FİN разбор не сохранить: по FİN найдётся GT/098 или заведётся новая.', compl: 'Жалобы *', dx: 'Диагноз (если есть)', byDoc: 'Кто выписал (необязательно)',
+    text: 'Что выписано (если без фото)', textPh: 'например: Ceftriaxone 1 g v/d 2 dəfə, Ketonal 100 mq…', photo: '📷 Фото рецепта', go: '🤖 Разобрать', wait: 'ИИ читает и разбирает рецепт…',
+    res: 'Итог разбора', missT: 'Не хватает:', open: '📘 Открыть GT/098', saved: 'Разбор сохранён в GT/098: {n}', created: 'Заведена GT/098 «{n}», разбор сохранён.', again: '＋ Новый разбор',
+    needCompl: 'Впишите жалобы.', needRx: 'Добавьте фото рецепта или впишите, что выписано.', gtSec: '🔍 Разборы рецептов', gtBtn: '🔍 Разобрать рецепт', delAsk: 'Удалить этот разбор рецепта?',
+    v_keep: 'оставить', v_fix: 'изменить приём', v_remove: 'убрать', ben: 'польза', harm: 'вред', L: { none: 'нет', low: 'малая', mid: 'средняя', high: 'большая' },
+    clashT: 'В карте с этим FİN — «{n}». Сохранить разбор в эту карту?', clashFix: 'Исправить FİN', clashGo: 'Да, в эту карту',
+    E_RX_REV_COMPL: 'Впишите жалобы пациента.', E_RX_REV_EMPTY: 'Добавьте фото рецепта или впишите, что выписано.', E_RX_REV_NONE: 'На фото не удалось прочитать препараты — переснимите или впишите текстом.'
+  },
+  az: {
+    t: '🔍 Başqa həkimin reseptinin təhlili', hint: 'Reseptin şəklini çəkin (4-ə qədər) və ya nə yazıldığını yazın. Sİ hər dərmanı təhlil edəcək: fayda, zərər, uyğunluq — və təhlili pasiyentin GT/098-inə yazacaq.',
+    pt: 'Pasiyent (GT/098)', fin: 'FİN *', finHint: 'FİN olmadan təhlili saxlamaq olmaz: FİN üzrə GT/098 tapılacaq və ya yenisi açılacaq.', compl: 'Şikayətlər *', dx: 'Diaqnoz (varsa)', byDoc: 'Kim yazıb (vacib deyil)',
+    text: 'Nə yazılıb (şəkil yoxdursa)', textPh: 'məs.: Ceftriaxone 1 g v/d 2 dəfə, Ketonal 100 mq…', photo: '📷 Reseptin şəkli', go: '🤖 Təhlil et', wait: 'Sİ resepti oxuyur və təhlil edir…',
+    res: 'Təhlilin nəticəsi', missT: 'Çatışmır:', open: '📘 GT/098-i aç', saved: 'Təhlil GT/098-də saxlanıldı: {n}', created: 'GT/098 «{n}» açıldı, təhlil saxlanıldı.', again: '＋ Yeni təhlil',
+    needCompl: 'Şikayətləri yazın.', needRx: 'Reseptin şəklini əlavə edin və ya nə yazıldığını yazın.', gtSec: '🔍 Reseptlərin təhlili', gtBtn: '🔍 Resepti təhlil et', delAsk: 'Bu resept təhlili silinsin?',
+    v_keep: 'saxla', v_fix: 'qəbulu dəyiş', v_remove: 'çıxar', ben: 'fayda', harm: 'zərər', L: { none: 'yox', low: 'az', mid: 'orta', high: 'böyük' },
+    clashT: 'Bu FİN ilə kartda — «{n}». Təhlil bu karta yazılsın?', clashFix: 'FİN-i düzəlt', clashGo: 'Bəli, bu karta',
+    E_RX_REV_COMPL: 'Pasiyentin şikayətlərini yazın.', E_RX_REV_EMPTY: 'Reseptin şəklini əlavə edin və ya nə yazıldığını yazın.', E_RX_REV_NONE: 'Şəkildə dərmanları oxumaq olmadı — yenidən çəkin və ya mətnlə yazın.'
+  }
+};
+I18N.ru.E_PT_FIN_OTHER = 'Этот FİN — в карте другого человека. Проверьте FİN.'; I18N.az.E_PT_FIN_OTHER = 'Bu FİN başqa adamın kartındadır. FİN-i yoxlayın.';
+['E_RX_REV_COMPL', 'E_RX_REV_EMPTY', 'E_RX_REV_NONE'].forEach(k => { I18N.ru[k] = X94_T.ru[k]; I18N.az[k] = X94_T.az[k]; });
+function x94(k, o) { let s = (X94_T[S.lang === 'az' ? 'az' : 'ru'] || {})[k]; if (s === undefined) s = X94_T.ru[k]; return o && typeof s === 'string' ? s.replace(/\{(\w+)\}/g, (m, n) => o[n] !== undefined ? o[n] : m) : s; }
+function rvSt() { const st = rxSt(); if (!st.rv) st.rv = { pid: '', pname: '', fin: '', surname: '', name: '', age: '', sex: '', weight: '', allergy: '', chronic: '', meds: '', complaint: '', dx: '', byDoc: '', text: '', photos: [], res: null, gtList: null }; return st.rv; }
+function rvField(k, lab, v, o) {
+  o = o || {};
+  const id = 'rvf_' + k;
+  if (o.ta) return '<div class="field"><label for="' + id + '">' + esc(lab) + '</label><textarea id="' + id + '" data-rv="' + k + '" rows="' + (o.rows || 2) + '" maxlength="' + (o.max || 1000) + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + '>' + esc(v || '') + '</textarea></div>';
+  return '<div class="field"><label for="' + id + '">' + esc(lab) + '</label><input id="' + id + '" data-rv="' + k + '" maxlength="' + (o.max || 120) + '" value="' + esc(v || '') + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + (o.cap ? ' autocapitalize="characters" autocomplete="off"' : '') + '></div>';
+}
+function rvVerdictHtml(x) {
+  const ic = { keep: '✅', fix: '🔧', remove: '❌' }, L = x94('L');
+  return '<div class="rx-it"><div><b>' + ic[x.verdict] + ' ' + esc(x.b) + '</b>' + (x.inn || x.dose ? ' <span class="muted">' + esc([x.inn ? catInnName(x.inn) : '', x.dose].filter(Boolean).join(' · ')) + '</span>' : '') + ' — ' + esc(x94('v_' + x.verdict)) + '</div>' +
+    (x.given ? '<div class="muted" style="font-size:13px">' + esc(x.given) + '</div>' : '') +
+    (x.why ? '<div style="margin-top:2px">' + esc(x.why) + '</div>' : '') + (x.fix ? '<div style="margin-top:2px">🔧 ' + esc(x.fix) + '</div>' : '') +
+    (x.benefit || x.harm ? '<div class="muted" style="font-size:12.5px;margin-top:2px">' + esc(x94('ben') + ': ' + (L[x.benefit] || '—') + ' · ' + x94('harm') + ': ' + (L[x.harm] || '—')) + '</div>' : '') + '</div>';
+}
+function rvResHtml(r) {
+  return (r.summary ? '<div style="margin:4px 0 6px"><b>' + esc(r.summary) + '</b></div>' : '') + (r.drugs || []).map(rvVerdictHtml).join('') +
+    ((r.missing || []).length ? '<div style="margin-top:6px"><b>' + esc(x94('missT')) + '</b> ' + r.missing.map(x => esc(x.inn) + (x.why ? ' — ' + esc(x.why) : '')).join('; ') + '</div>' : '') +
+    (r.note ? '<div style="margin-top:6px">⚠️ ' + esc(r.note) + '</div>' : '') + (r.unreadable ? '<div class="muted" style="margin-top:4px">' + esc(r.unreadable) + '</div>' : '');
+}
+function rxRevHtml() {
+  const v = rvSt();
+  if (v.res) return '<div class="card"><h3 style="margin:0 0 6px">' + esc(x94('res')) + '</h3><div class="muted">' + esc(v.pname || '') + '</div>' + rvResHtml(v.res) +
+    '<div class="muted" style="font-size:12px;margin-top:6px">' + esc(x92('hint')) + '</div><div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn primary" data-act="rvOpenGt">' + esc(x94('open')) + '</button><button class="btn ghost" data-act="rvAgain">' + esc(x94('again')) + '</button></div></div>';
+  const chips = (k, list) => '<div class="chips" style="display:flex;gap:6px;flex-wrap:wrap">' + list.map(x => '<button type="button" class="chip' + (v[k] === x[0] ? ' on' : '') + '" data-act="rvSet" data-k="' + k + '" data-v="' + x[0] + '">' + esc(x[1]) + '</button>').join('') + '</div>';
+  let h = '<div class="card"><h3 style="margin:0 0 4px">' + esc(x94('t')) + '</h3><div class="muted" style="margin-bottom:8px">' + esc(x94('hint')) + '</div><div class="lbl">' + esc(x94('pt')) + '</div>';
+  if (v.pid) h += '<div class="info" style="margin:6px 0">📘 ' + esc(v.pname) + ' · <button type="button" class="btn small ghost" style="min-height:28px;padding:2px 10px" data-act="rvUnlink">' + esc(x92('ptUnlink')) + '</button></div>';
+  else {
+    h += '<div class="searchbar" style="margin:6px 0"><input type="search" id="rvGtQ" autocomplete="off" placeholder="' + esc(x92('ptGtPh')) + '"><button class="btn small" data-act="rvGtFind">' + esc(x92('ptGt')) + '</button></div>' +
+      (v.gtList ? (v.gtList.length ? v.gtList.map(x => '<div class="list-row" data-act="rvGtPick" data-id="' + esc(x.id) + '" style="cursor:pointer"><span>📘</span><div class="grow"><b>' + esc([x.surname, x.name].filter(Boolean).join(' ')) + '</b><div class="muted">' + esc(x.birthDate || '') + '</div></div></div>').join('') : '<div class="muted">' + esc(x92('ptNone')) + '</div>') : '') +
+      '<div class="grid2">' + rvField('surname', x92('surname'), v.surname, { max: 60 }) + rvField('name', x92('name'), v.name, { max: 60 }) + '</div>' +
+      rvField('fin', x94('fin'), v.fin, { max: 7, cap: 1, ph: '7 simvol' }) + '<div class="muted" style="margin:-4px 0 6px;font-size:12.5px">' + esc(x94('finHint')) + '</div>';
+  }
+  h += '<div class="grid2">' + rvField('age', x92('age'), v.age, { max: 3 }) + rvField('weight', x92('weight'), v.weight, { max: 5 }) + '</div>' +
+    '<div class="field"><label>' + esc(x92('sex')) + '</label>' + chips('sex', [['m', S.lang === 'az' ? 'Kişi' : 'Мужской'], ['f', S.lang === 'az' ? 'Qadın' : 'Женский']]) + '</div>' +
+    rvField('allergy', x92('allergy'), v.allergy, { max: 300 }) + rvField('chronic', x92('chronic'), v.chronic, { ta: 1, max: 600 }) + rvField('meds', x92('meds'), v.meds, { ta: 1, max: 600 }) +
+    rvField('complaint', x94('compl'), v.complaint, { ta: 1, max: 1000 }) + '<div class="grid2">' + rvField('dx', x94('dx'), v.dx, { max: 200 }) + rvField('byDoc', x94('byDoc'), v.byDoc, { max: 120 }) + '</div>' +
+    '<div class="lbl">' + esc(x94('photo')) + ' (' + v.photos.length + '/4)</div><div class="row" style="gap:6px;flex-wrap:wrap">' + v.photos.map((p, i) => '<span style="position:relative"><img src="' + p.thumb + '" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:8px"><button class="btn small ghost" style="min-height:26px;padding:0 8px" data-act="rvPhDel" data-i="' + i + '">✕</button></span>').join('') +
+    (v.photos.length < 4 ? '<label class="btn small ghost" style="cursor:pointer">＋<input type="file" accept="image/*" multiple id="rvPhoto" style="display:none"></label>' : '') + '</div>' +
+    rvField('text', x94('text'), v.text, { ta: 1, rows: 3, max: 3000, ph: x94('textPh') }) +
+    '<button class="btn primary" style="margin-top:8px" data-act="rvGo">' + esc(x94('go')) + '</button></div>';
+  return h;
+}
+document.addEventListener('input', e => { const el = e.target; if (el && el.dataset && el.dataset.rv) { const v = rvSt(); v[el.dataset.rv] = el.dataset.rv === 'fin' ? el.value.toUpperCase().replace(/\s+/g, '') : el.value; } });
+document.addEventListener('change', async e => {
+  const el = e.target; if (!el || el.id !== 'rvPhoto') return;
+  const v = rvSt();
+  for (const f of Array.from(el.files || []).slice(0, 4 - v.photos.length)) { try { const img = await fileToImage(f); v.photos.push(exPrep(img)); } catch (er) { } }
+  rxRender();
+});
+function rvFill(g) {
+  const v = rvSt(), p = g.patient, a = typeof rxAgeOf === 'function' ? rxAgeOf(p.birthDate) : null;
+  Object.assign(v, { pid: p.id, pname: [p.surname, p.name].filter(Boolean).join(' '), sex: p.sex || v.sex, allergy: p.allergy || v.allergy, chronic: p.chronic || v.chronic, gtList: null, res: null });
+  if (a) v.age = String(a.y);
+  const meds = (g.rx || []).filter(x => x.drug).slice(0, 8).map(x => x.drug).filter((x, i, arr) => arr.indexOf(x) === i);
+  if (meds.length && !v.meds) v.meds = meds.join(', ');
+}
+// в GT/098: раздел «🔍 Разборы рецептов» и кнопка «🔍 Разобрать рецепт»
+(function () {
+  const o = window.ptCardHtml;
+  window.ptCardHtml = function () {
+    let h = o.apply(this, arguments);
+    try {
+      const g = ptSt().cur; if (!g || !g.patient || g.shared) return h;
+      if (can('forms') && typeof canAi === 'function' && canAi()) h = h.replace('<div class="gt-acts">', '<div class="gt-acts"><button class="btn" data-act="rvFromGt">' + esc(x94('gtBtn')) + '</button>');
+      const L = g.rxrev || [];
+      if (L.length) {
+        const body = L.map(r => '<div class="gt-row"><div class="gt-src">' + esc([fmtDt(String(r.createdAt || '')), r.createdByName, r.byDoc ? '← ' + r.byDoc : ''].filter(Boolean).join(' · ')) + '</div>' +
+          (r.complaint ? '<div class="muted">' + esc(r.complaint) + '</div>' : '') + rvResHtml(r) +
+          (can('forms') ? '<div class="gt-rowacts"><button class="btn small ghost" data-act="rvDel" data-id="' + esc(r.id) + '">🗑</button></div>' : '') + '</div>').join('');
+        const sec = typeof gtSec === 'function' ? gtSec('rxrev', x94('gtSec'), L.length, body, typeof gtOpenState === 'function' ? gtOpenState('rxrev', false) : false) : '';
+        const k = h.indexOf('<details'); const i = h.indexOf('data-gt="dx"');
+        if (sec && i !== -1) { const s0 = h.lastIndexOf('<details', i); h = h.slice(0, s0) + sec + h.slice(s0); } else h += sec;
+      }
+    } catch (e) { console.error(e); }
+    return h;
+  };
+})();
+Object.assign(H, {
+  rvSet: el => { const v = rvSt(); v[el.dataset.k] = v[el.dataset.k] === el.dataset.v ? '' : el.dataset.v; rxRender(); },
+  rvUnlink: () => { const v = rvSt(); v.pid = ''; v.pname = ''; rxRender(); },
+  rvGtFind: async el => { const q = String(($('#rvGtQ') || {}).value || '').trim(); if (q.length < 2) return; const r = await busy(el, () => rpcA('patientList', { q })).catch(() => null); rvSt().gtList = r && r.ok ? (r.rows || []).slice(0, 8) : []; rxRender(); },
+  rvGtPick: async el => { const g = await ptGet(el.dataset.id, true); if (!g || !g.patient) return; rvFill(g); rxRender(); },
+  rvPhDel: el => { rvSt().photos.splice(Number(el.dataset.i), 1); rxRender(); },
+  rvGo: async el => {
+    const v = rvSt();
+    if (!String(v.complaint).trim()) return toast(x94('needCompl'), 'bad');
+    if (!v.photos.length && !String(v.text).trim()) return toast(x94('needRx'), 'bad');
+    if (!v.pid && !/^[0-9A-Z]{7}$/.test(v.fin)) return toast(t('E_PT_FIN_NEED'), 'bad');
+    toast(x94('wait'));
+    let clash = null;
+    const r = await busy(el, () => rpcA('rxReview', { confirm: !!el.dataset.confirm, patientId: v.pid || '', fin: v.fin, surname: v.surname, name: v.name, sex: v.sex, lang: S.lang, complaint: v.complaint, dx: v.dx, byDoc: v.byDoc, text: v.text,
+      images: v.photos.map(p => ({ data: p.data, type: 'image/jpeg' })), patient: { age: v.age, sex: v.sex, weight: v.weight, allergy: v.allergy, chronic: v.chronic, meds: v.meds } }, { timeout: 300000 })).catch(e => { if (e && e.res && e.res.code === 'E_PT_FIN_OTHER') clash = (e.res.info || {}).name || '?'; return null; });
+    if (clash) { openModal('<h3>' + esc(x94('clashT', { n: clash })) + '</h3><div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(x94('clashFix')) + '</button><button class="btn primary" data-act="rvGo" data-confirm="1">' + esc(x94('clashGo')) + '</button></div>'); return; }
+    if (el.dataset.confirm) closeModal();
+    if (!r || !r.ok) return;
+    const nm = [r.patient.surname, r.patient.name].filter(Boolean).join(' ');
+    v.pid = r.patient.id; v.pname = nm; v.res = r.review; v.photos = [];
+    delete PT.cache[r.patient.id];
+    toast(r.created ? x94('created', { n: nm }) : x94('saved', { n: nm }), 'ok');
+    rxRender(); window.scrollTo(0, 0);
+  },
+  rvOpenGt: () => { const v = rvSt(); if (!v.pid) return; const ds = dsSt(); ds.seg = 'patients'; ds.cur = null; ptOpen(v.pid, true); },
+  rvAgain: () => { const st = rxSt(); st.rv = null; rxRender(); },
+  rvFromGt: () => { const g = ptSt().cur; if (!g) return; const st = rxSt(); st.rv = null; rvFill(g); st.view = 'rev'; const ds = dsSt(); ds.cur = null; ds.seg = 'rx'; if (S.screen !== 'forms') setScreen('forms'); else dsRender(); window.scrollTo(0, 0); },
+  rvDel: async el => {
+    if (!confirm(x94('delAsk'))) return;
+    const r = await busy(el, () => rpcA('rxReviewDelete', { id: el.dataset.id })).catch(() => null);
+    if (r && r.ok) { const g = ptSt().cur; if (g) ptOpen(g.patient.id, true); }
   }
 });
 
