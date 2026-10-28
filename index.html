@@ -41082,6 +41082,145 @@ Object.assign(H, {
   window.logout = logout;
 })();
 
+/* =====================================================================
+ * v93 (9.61): GT/098 без дублей и удаление неудачных попыток (Саид, 28.10, 19:06).
+ *  - «＋ Документ» в GT/098: история болезни / эпикриз уже начаты за эту госпитализацию (или сегодня) — открывается начатый.
+ *    Другой документ того же вида сегодня — спросить: открыть его или нужен ещё один.
+ *  - «＋ Приём»: сегодня у пациента уже есть приём — открыть его; новый — только «Это повторное обращение».
+ *  - 🗑 в ленте GT/098: свой черновик документа или приёма, свой разбор с ИИ; в разделе «Разбор ИИ» — удалить разбор.
+ * ===================================================================== */
+const X93_T = {
+  ru: {
+    dupOne: '{t} за эту госпитализацию уже начат(а) — открываю его. Второй не нужен.', dupOneDay: '{t} сегодня уже есть — открываю.',
+    dupAskT: 'Сегодня уже есть: {t}', dupOpen: 'Открыть его', dupNew: '＋ Нужен ещё один', formDupT: 'Сегодня у пациента уже есть приём {n}', formDupNew: 'Это повторное обращение — новый приём',
+    del: '🗑', delT: 'Удалить: {t}?', delReason: 'Почему (необязательно для черновика)', delReasonReq: 'Причина (обязательно — документ был закрыт)', delGo: 'Удалить', delDone: 'Удалено',
+    delNight: '🗑 Удалить этот разбор ИИ', delNightT: 'Удалить разбор ИИ от {d}?', delCase: 'разбор с ИИ', E_GT_DUP: 'У пациента это уже есть за этот период — откройте начатый документ.', E_DOC_DEL_OWN: 'Удалить можно только свой черновик. Закрытый документ удаляет главный админ (с причиной).'
+  },
+  az: {
+    dupOne: '{t} bu hospitalizasiya üçün artıq başlanıb — onu açıram. İkincisi lazım deyil.', dupOneDay: '{t} bu gün artıq var — açıram.',
+    dupAskT: 'Bu gün artıq var: {t}', dupOpen: 'Onu aç', dupNew: '＋ Daha biri lazımdır', formDupT: 'Pasiyentin bu gün artıq qəbulu var {n}', formDupNew: 'Bu təkrar müraciətdir — yeni qəbul',
+    del: '🗑', delT: 'Silinsin: {t}?', delReason: 'Niyə (qaralama üçün vacib deyil)', delReasonReq: 'Səbəb (vacibdir — sənəd bağlanmışdı)', delGo: 'Sil', delDone: 'Silindi',
+    delNight: '🗑 Bu Sİ təhlilini sil', delNightT: '{d} tarixli Sİ təhlili silinsin?', delCase: 'Sİ ilə təhlil', E_GT_DUP: 'Pasiyentdə bu dövr üçün artıq var — başlanmış sənədi açın.', E_DOC_DEL_OWN: 'Yalnız öz qaralamanızı silə bilərsiniz. Bağlanmış sənədi baş admin silir (səbəblə).'
+  }
+};
+Object.assign(I18N.ru, { E_GT_DUP: X93_T.ru.E_GT_DUP, E_DOC_DEL_OWN: X93_T.ru.E_DOC_DEL_OWN });
+Object.assign(I18N.az, { E_GT_DUP: X93_T.az.E_GT_DUP, E_DOC_DEL_OWN: X93_T.az.E_DOC_DEL_OWN });
+function x93(k, o) { let s = (X93_T[S.lang === 'az' ? 'az' : 'ru'] || {})[k]; if (s === undefined) s = X93_T.ru[k]; return o ? String(s).replace(/\{(\w+)\}/g, (m, n) => o[n] !== undefined ? o[n] : m) : s; }
+const X93_ONE = ['h003', 'epi'];
+function x93Today() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function x93TplName(type) { const tp = DOC_TPL[type] || {}; return (tp.ic ? tp.ic + ' ' : '') + (tp[S.lang === 'az' ? 'az' : 'ru'] || type); }
+/** Такой же документ у карты за тот же период: госпитализация (с её начала) или сегодня. */
+function x93DupDoc(type, g) {
+  const docs = (g.docs || []).filter(d => d.type === type && d.status !== 'deleted');
+  const from = X93_ONE.indexOf(type) !== -1 && g.hosp && g.hosp.at ? String(g.hosp.at) : '';
+  const today = x93Today();
+  return docs.filter(d => from ? String(d.createdAt || '') >= from : String(d.createdAt || '').slice(0, 10) === today).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0] || null;
+}
+const X93 = { go: null };
+(function () {
+  if (typeof ptNewDocFor !== 'function') return;
+  const o = ptNewDocFor;
+  ptNewDocFor = async function (type, g, force) {
+    try {
+      if (!force && type !== 'rx' && g && g.patient) {
+        const ex = x93DupDoc(type, g);
+        if (ex) {
+          if (X93_ONE.indexOf(type) !== -1) { toast(x93(g.hosp && g.hosp.at ? 'dupOne' : 'dupOneDay', { t: x93TplName(type) })); const ds = dsSt(); ds.seg = 'docs'; if (S.screen !== 'forms') setScreen('forms'); await dsOpen(ex.id); return; }
+          X93.go = { type, g };
+          openModal('<h3>' + esc(x93('dupAskT', { t: x93TplName(type) + (ex.docNo ? ' № ' + ex.docNo : '') })) + '</h3><div class="muted">' + esc(fmtDt(String(ex.createdAt || '')) + (ex.createdByName ? ' · ' + ex.createdByName : '')) + '</div>' +
+            '<div class="acts"><button class="btn ghost" data-act="x93New">' + esc(x93('dupNew')) + '</button><button class="btn primary" data-act="x93Open" data-id="' + esc(ex.id) + '">' + esc(x93('dupOpen')) + '</button></div>');
+          return;
+        }
+      }
+    } catch (e) { console.error(e); }
+    return o.apply(this, arguments);
+  };
+  window.ptNewDocFor = ptNewDocFor;
+})();
+// «＋ Приём»: сегодня уже есть — открыть его; новый — только как повторное обращение
+(function () {
+  const o = H.ptNewForm;
+  if (typeof o !== 'function') return;
+  H.ptNewForm = function (el) {
+    try {
+      const g = ptSt().cur;
+      if (g && g.patient && !(el && el.dataset && el.dataset.again)) {
+        const today = x93Today();
+        const ex = (g.forms || []).filter(f => f.status !== 'deleted' && String(f.arrivedAt || f.createdAt || '').slice(0, 10) === today)[0];
+        if (ex) {
+          openModal('<h3>' + esc(x93('formDupT', { n: ex.blankNo ? '№ ' + ex.blankNo : '' })) + '</h3><div class="muted">' + esc([fmtDt(String(ex.arrivedAt || ex.createdAt || '')), ex.dx || ex.compl || '', ex.createdByName || ''].filter(Boolean).join(' · ')) + '</div>' +
+            '<div class="acts"><button class="btn ghost" data-act="ptNewForm" data-again="1">' + esc(x93('formDupNew')) + '</button><button class="btn primary" data-act="x93OpenForm" data-id="' + esc(ex.id) + '">' + esc(x93('dupOpen')) + '</button></div>');
+          return;
+        }
+      }
+    } catch (e) { console.error(e); }
+    if (el && el.dataset && el.dataset.again) closeModal();
+    return o.apply(this, arguments);
+  };
+})();
+/* ---------- 🗑 в ленте GT/098 и в разделе «Разбор ИИ» ---------- */
+function x93Deletable(g) {
+  const own = isOwner(), out = {};
+  (g.docs || []).forEach(d => { if ((d.mine && !d.everClosed && !d.closedAt) || own) out['dsOpen|' + d.id] = { k: 'doc', id: d.id, t: x93TplName(d.type) + (d.docNo ? ' № ' + d.docNo : ''), closed: !!(d.closedAt || d.everClosed) }; });
+  (g.forms || []).forEach(f => { if ((f.mine && f.status === 'draft') || can('formsEdit')) out['psOpenForm|' + f.id] = { k: 'form', id: f.id, t: t('ptFormTag') + (f.blankNo ? ' № ' + f.blankNo : ''), closed: f.status === 'closed' }; });
+  (g.cases || []).forEach(c => { if (c.mine || isOwner()) out['ptOpenCase|' + c.id] = { k: 'case', id: c.id, t: x93('delCase') + ': ' + (c.title || ''), closed: false }; });
+  return out;
+}
+(function () {
+  const o = window.ptCardHtml;
+  window.ptCardHtml = function () {
+    let h = o.apply(this, arguments);
+    try {
+      const g = ptSt().cur; if (!g || !g.patient || g.shared || !can('forms')) return h;
+      const del = x93Deletable(g);
+      Object.keys(del).forEach(k => {
+        const [act, id] = k.split('|');
+        const key = 'data-act="' + act + '" data-id="' + esc(id) + '"><div class="grow"><div class="nm">';
+        const i = h.indexOf(key); if (i === -1) return;
+        const j = h.indexOf('</div>', i + key.length); if (j === -1) return;
+        h = h.slice(0, j) + '<button type="button" class="btn small ghost" style="float:right;min-height:30px;padding:2px 10px" data-act="x93Del" data-k="' + del[k].k + '" data-id="' + esc(id) + '" aria-label="' + esc(x93('delGo')) + '">🗑</button>' + h.slice(j);
+      });
+      // разбор ИИ: удалить последний
+      const nl = g.night || [], A = g.access || {};
+      if (nl.length && A.canWrite !== false) {
+        const i0 = h.indexOf('data-gt="night"');
+        if (i0 !== -1) { const k = h.indexOf('</details>', i0); if (k !== -1) h = h.slice(0, k) + '<button class="btn small ghost block" style="margin-top:8px;color:var(--red)" data-act="x93NightDel" data-id="' + esc(nl[0].id) + '">' + esc(x93('delNight')) + '</button>' + h.slice(k); }
+      }
+    } catch (e) { console.error(e); }
+    return h;
+  };
+})();
+function x93DelModal(kind, id, title, closed) {
+  X93.del = { kind, id, closed };
+  openModal('<h3>' + esc(x93('delT', { t: title })) + '</h3><div class="field"><label>' + esc(closed ? x93('delReasonReq') : x93('delReason')) + '</label><textarea id="x93Why" rows="2" maxlength="300"></textarea></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn danger" data-act="x93DelGo">' + esc(x93('delGo')) + '</button></div>');
+}
+Object.assign(H, {
+  x93Open: async el => { closeModal(); const ds = dsSt(); ds.seg = 'docs'; if (S.screen !== 'forms') setScreen('forms'); await dsOpen(el.dataset.id); },
+  x93New: () => { closeModal(); const x = X93.go; X93.go = null; if (x) ptNewDocFor(x.type, x.g, true); },
+  x93OpenForm: el => { closeModal(); H.psOpenForm({ dataset: { id: el.dataset.id } }); },
+  x93Del: el => {
+    const g = ptSt().cur; if (!g) return;
+    const d = x93Deletable(g), x = Object.keys(d).map(k => d[k]).find(y => y.id === el.dataset.id && y.k === el.dataset.k); if (!x) return;
+    x93DelModal(x.k, x.id, x.t, x.closed);
+  },
+  x93NightDel: el => { const g = ptSt().cur; const r = g && (g.night || []).find(x => x.id === el.dataset.id); if (!r) return; X93.del = { kind: 'night', id: r.id, closed: false }; openModal('<h3>' + esc(x93('delNightT', { d: fmtDt(String(r.at || r.createdAt || '')) })) + '</h3><div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn danger" data-act="x93DelGo">' + esc(x93('delGo')) + '</button></div>'); },
+  x93DelGo: async el => {
+    const x = X93.del, g = ptSt().cur; if (!x || !g) return;
+    const why = String(($('#x93Why') || {}).value || '').trim();
+    if (x.closed && why.length < 3) return toast(x93('delReasonReq'), 'bad');
+    let r = null;
+    if (x.kind === 'doc') r = await busy(el, () => rpcA('docDelete', { id: x.id, reason: why, opId: newOpId() })).catch(() => null);
+    else if (x.kind === 'form') r = await busy(el, () => rpcA('formDelete', { id: x.id, reason: why }, { op: true })).catch(() => null);
+    else if (x.kind === 'case') r = await busy(el, () => rpcA('caseDelete', { id: x.id, reason: why })).catch(() => null);
+    else if (x.kind === 'night') r = await busy(el, () => rpcA('gtNightDelete', { patientId: g.patient.id, id: x.id })).catch(() => null);
+    if (!r || !r.ok) return;
+    X93.del = null; closeModal(); toast(x93('delDone'), 'ok');
+    if (x.kind === 'form' && typeof fCache === 'function') { try { const c = fCache(); if (c && c.full) delete c.full[x.id]; } catch (e) { } }
+    ptOpen(g.patient.id, true);
+  }
+});
+
 
 function init() {
   vizTipInit();
