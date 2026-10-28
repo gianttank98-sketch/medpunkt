@@ -39895,6 +39895,370 @@ Object.assign(H, {
   };
 })();
 
+/* =====================================================================
+ * v91 (9.59): документ «как у врача» — на азербайджанском, по образцам историй AXM (claude/TQS003_как_пишут_врачи_образцы_28-10.md).
+ *  - Запись приёмного (TQS 003) — связный азербайджанский текст; диагнозы — официальные названия XBT-10.
+ *  - Ежедневные осмотры из дневника — по-азербайджански (кнопки дневника переводятся словарём, без ИИ).
+ *  - Имя врача латиницей (👤 профиль) — в подписях; «Регистратура» свёрнута; лишние строки по диагнозу и исходу скрыты.
+ *  - «🇦🇿 На азербайджанский» — ИИ переводит то, что написано по-русски; «🔄 Сверить с GT/098» — что не дошло или отличается.
+ *  - Аллергия кнопками: перечень / yoxdur / məlum deyil.
+ * ===================================================================== */
+const X91_T = {
+  ru: { nameT: '✍️ Имя в документах (латиницей)', nameHint: 'Как в удостоверении: Soyad Ad (Ata adı). Пишется в подписях истории болезни, эпикриза и других документов.', nameSave: 'Сохранить', nameSaved: 'Имя для документов сохранено',
+    nameBad: 'Только латиница (можно ə, ğ, ı, ö, ş, ç, ü), 2–80 букв', sign: 'Подпись', nameWarn: 'Ваше имя для документов не указано латиницей — в документе будет «{n}». 👤 Профиль → «Имя в документах».',
+    az: '🇦🇿 На азербайджанский', azN: '🇦🇿 На азербайджанский ({n})', azNone: 'Всё уже на азербайджанском', azWait: 'Перевожу на азербайджанский…', azDone: 'Переведено полей: {n}. Проверьте текст.', azSkip: 'С личными данными (скрываются от ИИ) — не переведено: {n}. Переведите сами.', azAuto: 'Из GT/098 вписано, по-русски было {n} — перевожу…',
+    sync: '🔄 Сверить с GT/098', syncT: '🔄 Сверка с GT/098', syncNone: 'Всё из GT/098 уже в документе', syncAdd: 'Нет в документе — добавить', syncDiff: 'Отличается (в документе оставлено ваше; отметьте, чтобы заменить)', syncDoc: 'В документе', syncGt: 'В GT/098', syncGo: 'Добавить отмеченное', syncDone: 'Добавлено: {n}',
+    rows: 'строк: {n}', miss: 'Не хватает (впишите в приёме или здесь): {l}', missL: { compl: 'жалобы', amorbi: 'anamnesis morbi', avitae: 'anamnesis vitae', allergy: 'аллергоанамнез', exam: 'осмотр по системам', dx: 'диагноз' },
+    reg: '🗂 Регистратура (адрес, соц. сведения, полис) — из GT/098, не обязательно', regOpen: 'показать', regClose: 'скрыть',
+    adrNo: 'yoxdur — отрицает', adrUnk: 'məlum deyil — выяснить нельзя' },
+  az: { nameT: '✍️ Sənədlərdə ad (latınca)', nameHint: 'Vəsiqədəki kimi: Soyad Ad (Ata adı). Xəstəlik tarixi, epikriz və digər sənədlərdə imzada yazılır.', nameSave: 'Saxla', nameSaved: 'Sənədlər üçün ad saxlanıldı',
+    nameBad: 'Yalnız latın hərfləri (ə, ğ, ı, ö, ş, ç, ü olar), 2–80 hərf', sign: 'İmza', nameWarn: 'Sənədlər üçün adınız latınca yazılmayıb — sənəddə «{n}» olacaq. 👤 Profil → «Sənədlərdə ad».',
+    az: '🇦🇿 Azərbaycancaya', azN: '🇦🇿 Azərbaycancaya ({n})', azNone: 'Hamısı artıq azərbaycancadır', azWait: 'Azərbaycancaya tərcümə edilir…', azDone: 'Tərcümə olunan sahələr: {n}. Mətni yoxlayın.', azSkip: 'Şəxsi məlumatlı (Sİ-dən gizlədilir) sahələr tərcümə olunmadı: {n}. Özünüz tərcümə edin.', azAuto: 'GT/098-dən yazıldı, rusca {n} sahə var — tərcümə edilir…',
+    sync: '🔄 GT/098 ilə tutuşdur', syncT: '🔄 GT/098 ilə tutuşdurma', syncNone: 'GT/098-dəki hər şey artıq sənəddədir', syncAdd: 'Sənəddə yoxdur — əlavə et', syncDiff: 'Fərqlidir (sənəddə sizinki saxlanılıb; əvəz etmək üçün işarələyin)', syncDoc: 'Sənəddə', syncGt: 'GT/098-də', syncGo: 'İşarələnəni əlavə et', syncDone: 'Əlavə edildi: {n}',
+    rows: 'sətir: {n}', miss: 'Çatışmır (qəbulda və ya burada yazın): {l}', missL: { compl: 'şikayətlər', amorbi: 'anamnesis morbi', avitae: 'anamnesis vitae', allergy: 'allerqoloji anamnez', exam: 'sistemlər üzrə müayinə', dx: 'diaqnoz' },
+    reg: '🗂 Qeydiyyat (ünvan, sosial məlumat, sığorta) — GT/098-dən, vacib deyil', regOpen: 'göstər', regClose: 'gizlət',
+    adrNo: 'yoxdur — inkar edir', adrUnk: 'məlum deyil — öyrənmək mümkün deyil' }
+};
+function x91(k, v) { const L2 = X91_T[S.lang === 'az' ? 'az' : 'ru']; let s = L2[k] !== undefined ? L2[k] : X91_T.ru[k]; if (typeof s === 'string' && v) Object.keys(v).forEach(x => { s = s.split('{' + x + '}').join(v[x]); }); return s; }
+const X91_LAT = /^[A-Za-zƏəĞğİıÖöŞşÇçÜü][A-Za-zƏəĞğİıÖöŞşÇçÜü .'\-]{1,79}$/;
+const X91_CYR = /[А-Яа-яЁё]/;
+/** «Məmmədov Səid Lətif» → «Dr. Məmmədov S.» (Soyad Ad). */
+function x91Sign(full) { const p = String(full || '').trim().split(/\s+/); return p.length >= 2 ? 'Dr. ' + p[0] + ' ' + p[1].charAt(0) + '.' : (p[0] ? 'Dr. ' + p[0] : ''); }
+function x91MyAz() { const n = S.me && S.me.nameAz; return n && X91_LAT.test(n) ? n : ''; }
+/** Имя сотрудника латиницей: по таблице GT/098 (имя RU / AZ), иначе как есть. */
+function x91NameAz(g, name) { const m = (g && g.azNames) || {}; const k = String(name || '').trim(); return m[k] || (S.me && (k === S.me.name || k === S.me.nameAz) && x91MyAz()) || k; }
+/* ---------- 👤 профиль: имя латиницей ---------- */
+(function () {
+  if (typeof profileModal !== 'function') return;
+  const o = profileModal;
+  profileModal = async function () {
+    const r = o.apply(this, arguments);
+    try {
+      const h3 = $('.modal h3'); if (!h3 || $('#x91Name')) return r;
+      const cur = x91MyAz();
+      h3.insertAdjacentHTML('afterend', '<div class="card"><div class="lbl">' + esc(x91('nameT')) + '</div><div class="muted" style="font-size:13px;margin-bottom:6px">' + esc(x91('nameHint')) + '</div>' +
+        '<div class="row" style="gap:6px"><input id="x91Name" class="grow" maxlength="80" autocomplete="off" value="' + esc(cur) + '" placeholder="Məmmədov Səid"><button class="btn small primary" data-act="x91NameSave">' + esc(x91('nameSave')) + '</button></div>' +
+        '<div class="muted" id="x91Sign" style="margin-top:4px">' + esc(x91('sign')) + ': ' + esc(x91Sign(cur) || '—') + '</div></div>');
+      const i = $('#x91Name'); if (i) i.addEventListener('input', () => { const s = $('#x91Sign'); if (s) s.textContent = x91('sign') + ': ' + (x91Sign(i.value) || '—'); });
+    } catch (e) { console.error(e); }
+    return r;
+  };
+})();
+/* ---------- XBT-10 по-азербайджански ---------- */
+function x91IcdAz(code) { const c = String(code || '').toUpperCase().trim(); const e = S.icd && S.icd.by && S.icd.by[c]; return e && e.az ? e.az : ''; }
+function x91DxLine(list) { return (list || []).map(x => { const az = x91IcdAz(x.icd); const t = String(x.text || '').replace(new RegExp('^' + String(x.icd || '').replace('.', '\\.') + '\\s*[—–-]?\\s*'), ''); return [x.icd, az || t].filter(Boolean).join(' — '); }).join('; '); }
+/** «J44.9 — Хроническая …; B90.9 — …» → официальные азербайджанские названия по кодам (что не нашлось — как было). */
+function x91DxTextAz(s) {
+  if (!S.icd || !s) return s;
+  return String(s).split(/\s*;\s*/).map(part => { const m = part.match(/^\s*([A-Z]\d\d(?:\.\d{1,2})?)\b/i); const az = m ? x91IcdAz(m[1]) : ''; return az ? m[1].toUpperCase() + ' — ' + az : part; }).join('; ');
+}
+/* ---------- дневник → ежедневный осмотр по-азербайджански (словарь кнопок дневника) ---------- */
+const X91_SENT = {
+  'Состояние': { 'удовлетворительное': 'Xəstənin ümumi vəziyyəti kafidir', 'средней тяжести': 'Xəstənin ümumi vəziyyəti orta ağırdır', 'тяжёлое': 'Xəstənin ümumi vəziyyəti ağırdır', 'крайне тяжёлое': 'Xəstənin ümumi vəziyyəti çox ağırdır' },
+  'Сознание': { 'ясное': 'Huşu aydındır', 'оглушение': 'Huşu karıxmışdır', 'сопор': 'Sopor vəziyyətindədir', 'кома': 'Koma vəziyyətindədir' },
+  'Положение': { 'активное': 'Vəziyyəti aktivdir', 'вынужденное': 'Məcburi vəziyyətdədir', 'пассивное': 'Passiv vəziyyətdədir' },
+  'Кожа': { 'обычной окраски': 'Dəri və görünən selikli qişalar adi rəngdədir', 'бледная': 'Dəri və görünən selikli qişalar solğundur', 'цианоз': 'Dəri örtüyü sianotikdir', 'желтушность': 'Dəri örtüyü sarımtıldır', 'влажная': 'Dəri nəmdir' },
+  'Дыхание': { 'везикулярное': 'Auskultasiya zamanı hər iki ağciyər üzərində vezikulyar tənəffüs eşidilir', 'жёсткое': 'Auskultasiya zamanı hər iki ağciyər üzərində sərt tənəffüs eşidilir', 'ослаблено': 'Auskultasiya zamanı tənəffüs zəifləmişdir', 'хрипы сухие': 'Quru xırıltılar eşidilir', 'хрипы влажные': 'Yaş xırıltılar eşidilir' },
+  'Сердце': { 'тоны ритмичные': 'Ürək tonları aydın, ritmikdir', 'аритмия': 'Ürək tonları aritmikdir', 'тоны приглушены': 'Ürək tonları boğuqdur' },
+  'Живот': { 'мягкий, безболезненный': 'Qarın yumşaq, ağrısızdır', 'болезненный': 'Qarın palpasiyada ağrılıdır', 'вздут': 'Qarın köpmüşdür' },
+  'Отёки': { 'нет': 'Periferik ödem yoxdur', 'есть': 'Periferik ödemlər var' },
+  'Диурез': { 'адекватный': 'Sidik ifrazı adekvatdır', 'снижен': 'Diurez azalmışdır', 'по катетеру': 'Sidik ifrazı kateterlədir' },
+  'Динамика': { 'значительно лучше': 'Dinamikada xeyli yaxşılaşma qeyd olunur', 'чуть лучше': 'Dinamikada müsbət dəyişiklik qeyd olunur', 'без изменений': 'Dinamikada dəyişiklik yoxdur', 'чуть хуже': 'Dinamikada bir qədər pisləşmə qeyd olunur', 'значительно хуже': 'Vəziyyəti xeyli pisləşmişdir' }
+};
+// азербайджанские группы из кнопок дневника (если дневник вели на азербайджанском) → те же предложения
+(function () {
+  try {
+    const ru = X90_T.ru.tplG, az = X90_T.az.tplG;
+    ru.forEach((g, i) => { const ag = az[i]; if (!ag || !X91_SENT[g[0]]) return; X91_SENT[ag[0]] = {}; g[1].forEach((v, j) => { if (ag[1][j]) X91_SENT[ag[0]][ag[1][j]] = X91_SENT[g[0]][v]; }); });
+    const dr = X90_T.ru.dyns.map(x => x.replace(/^\S+\s/, '').toLowerCase()), da = X90_T.az.dyns.map(x => x.replace(/^\S+\s/, '').toLowerCase());
+    X91_SENT[X90_T.az.dyn] = {}; da.forEach((v, j) => { X91_SENT[X90_T.az.dyn][v] = X91_SENT['Динамика'][dr[j]]; });
+  } catch (e) { }
+})();
+/** Словарь кнопок дневника «ru → az» (жалобы, сделано, план). */
+function x91Dict(key) {
+  const m = {}; try { X90_T.ru[key].forEach((v, i) => { m[v.toLowerCase()] = String(X90_T.az[key][i] || v).toLowerCase(); }); } catch (e) { }
+  return m;
+}
+function x91MapList(s, key) {
+  const D = x91Dict(key);
+  return String(s || '').split(/\s*;\s*/).map(x => { const k = x.trim().toLowerCase().replace(/[.]$/, ''); return D[k] || x.trim(); }).filter(Boolean).join(', ');
+}
+function x91Vit(v) {
+  v = v || {}; const n = x => String(x).replace('.', ',');
+  return [v.t !== undefined && v.t !== '' ? 't ' + n(v.t) + ' °C' : '', v.sbp ? 'AT ' + v.sbp + '/' + (v.dbp || '') + ' mm c.s.' : '', v.hr ? 'PS ' + v.hr + ' v/d' : '', v.rr ? 'TS ' + v.rr + '/dəq' : '', v.spo2 ? 'SpO₂ ' + v.spo2 + '%' : '', v.glu ? 'qlükoza ' + n(v.glu) + ' mmol/l' : '', v.gcs ? 'GCS ' + v.gcs : ''].filter(Boolean).join(', ');
+}
+/** Запись дневника → ежедневный осмотр по образцам: показатели; состояние; сознание; динамика; жалобы; Ob-v; сделано; план. Свободный текст — как написан (переведёт «🇦🇿»). */
+function x91DiaryAz(n) {
+  const p = n.parts || {};
+  const order = ['Состояние', 'Vəziyyət', 'Сознание', 'Şüur', 'Динамика', 'Dinamika', '__compl', 'Кожа', 'Dəri', 'Сердце', 'Ürək', 'Дыхание', 'Tənəffüs', 'Живот', 'Qarın', 'Отёки', 'Ödem', 'Диурез', 'Diurez', 'Положение', 'Vəziyyəti (yatağda)', '__rest'];
+  const got = {}, rest = [];
+  String(p.status || '').split('\n').map(l => l.trim()).filter(Boolean).forEach(l => {
+    const m = l.match(/^([^:]{2,40}):\s*(.+?)\.?$/);
+    const tab = m && X91_SENT[m[1].trim()];
+    const sent = tab && tab[m[2].trim().toLowerCase()];
+    if (sent) got[m[1].trim()] = sent; else rest.push(l);
+  });
+  // жалобы: «Со слов пациента: одышка меньше; кашель»
+  let compl = String(p.complaints || '').trim();
+  if (compl) {
+    const from = compl.match(/^(со слов пациента|pasiyentin sözlərinə görə)\s*:\s*/i);
+    const body = from ? compl.slice(from[0].length) : compl;
+    const noC = /^(жалоб нет|şikayəti yoxdur)\.?$/i.test(body.trim());
+    compl = noC ? 'Şikayəti yoxdur' : (from ? 'Pasiyentin sözlərinə görə şikayətləri: ' : 'Şikayətləri: ') + x91MapList(body, 'complQ');
+  }
+  const out = [];
+  const vit = x91Vit(n.vitals); if (vit) out.push(vit);
+  order.forEach(k => {
+    if (k === '__compl') { if (compl) out.push(compl); return; }
+    if (k === '__rest') { rest.forEach(l => out.push(l)); return; }
+    if (got[k]) out.push(got[k]);
+  });
+  if (String(n.text || '').trim()) out.push(String(n.text).trim());
+  if (String(p.done || '').trim()) out.push('Aparılan müalicə: ' + x91MapList(p.done, 'doneQ'));
+  if (String(p.plan || '').trim()) {
+    const pl = x91MapList(p.plan, 'planQ');
+    out.push(/^müalicəni davam etdirmək$/i.test(pl.trim()) ? 'Təyinat üzrə müalicə davam edir' : 'Plan: ' + pl);
+  }
+  if ((n.labs || []).length) out.push('Analizlər: ' + n.labs.map(x => x.name + ' ' + [x.value, x.unit].filter(Boolean).join(' ')).join('; '));
+  return out.map(s => { s = String(s).trim(); s = s.charAt(0).toUpperCase() + s.slice(1); return /[.!?]$/.test(s) ? s : s + '.'; }).join(' ');
+}
+/* ---------- данные из GT/098 → документ: по-азербайджански ---------- */
+function x91DeptAz(s) {
+  s = String(s || '').trim(); const m = (typeof F_HOSP_DEPTS !== 'undefined' ? F_HOSP_DEPTS : []).find(x => x[0] === s || x[1] === s);
+  return m ? m[1] : s;
+}
+function x91AllergyAz(p, v) {
+  const a = String((p && p.allergy) || '').trim();
+  if (a) return /^(нет|не отягощ|отрицает|yoxdur|-|—)/i.test(a) ? 'yoxdur' : a;
+  if (v && v.allergyNone) return 'yoxdur';
+  return v && v.allergy ? v.allergy : '';
+}
+(function () {
+  if (typeof gtDocPatch !== 'function') return;
+  const o = gtDocPatch;
+  gtDocPatch = function (type, g) {
+    const out = o.apply(this, arguments);
+    try {
+      const keys = {}; dsFields(type).forEach(f => { keys[f.k] = f; });
+      const fit = (k, val) => keys[k] && keys[k].o && keys[k].o.max ? String(val).slice(0, keys[k].o.max) : String(val);
+      const set = (k, val) => { if (keys[k] && val !== undefined && val !== null && String(val).trim()) out[k] = fit(k, val); };
+      const v = g && g.visitExam, p = (g && g.patient) || {};
+      if (v) {
+        // запись приёмного — азербайджанский текст; диагнозы — по XBT-10
+        if (v.narrAzT) set('edExam', v.narrAzT.replace('⟦DX⟧', (v.dxList || []).length ? 'İlkin diaqnoz: ' + x91DxLine(v.dxList) + '.' : ''));
+        set('edDoctor', v.byAz || x91NameAz(g, v.by));
+        set('histNo', v.xqn);
+        // «Диагноз приёмного»: основной — без кода (код — в своей графе), сопутствующие — с кодом
+        if ((v.dxList || []).length && x91IcdAz(v.dxList[0].icd)) set('edDx', v.dxList.map((x, i) => { const az = x91IcdAz(x.icd) || String(x.text || ''); return i ? az + ' (' + x.icd + ')' : az; }).join('; '));
+        const P = v.partsAz || {};
+        if (P.obj) set('status', P.obj);
+        if (keys.cons && keys.cons.type === 'rows' && out.cons) Object.keys(out.cons).forEach(id => { const r = out.cons[id], c = (v.cons || [])[+String(id).replace(/^v/, '')]; if (r && r.who) r.who = (c && c.docAz) || x91NameAz(g, r.who); });
+        if (keys.moves && out.moves) Object.keys(out.moves).forEach(id => { const r = out.moves[id]; if (r.to) r.to = x91DeptAz(r.to); if (r.acc) r.acc = x91NameAz(g, r.acc); });
+      }
+      // диагнозы других документов — официальные названия
+      ['edDx', 'dx', 'dxMain', 'dxComorb'].forEach(k => { if (out[k] && X91_CYR.test(out[k])) { const az = x91DxTextAz(out[k]); if (az !== out[k]) out[k] = fit(k, az); } });
+      // аллергия: «Dərmanların əlavə təsiri» — из аллергии карты (не адрес!)
+      if (keys.adr) { delete out.adr; set('adr', x91AllergyAz(p, v)); }
+      if (out.dept) out.dept = fit('dept', x91DeptAz(out.dept));
+      if (out.transDept) out.transDept = fit('transDept', x91DeptAz(out.transDept));
+      // № направления — с фото направления
+      const ref = (g.ext || []).filter(x => x.docType === 'referral').sort((a, b) => String(b.docDate || b.createdAt).localeCompare(String(a.docDate || a.createdAt)))[0];
+      if (ref && ref.data && ref.data.docNo) set('refNo', ref.data.docNo);
+      // ежедневные осмотры — по-азербайджански, врач латиницей
+      if (keys.daily && keys.daily.type === 'rows' && out.daily && typeof hsDiary === 'function') {
+        const by = {}; hsDiary(g, '').forEach(n => { by['d' + String(n.id).slice(-10)] = n; });
+        Object.keys(out.daily).forEach(id => { const n = by[id]; if (!n) return; out.daily[id].text = x91DiaryAz(n).slice(0, 3000); /* у строк max — число строк, у текста — 3000 */ out.daily[id].by = x91NameAz(g, n.createdByName); });
+      }
+    } catch (e) { console.error(e); }
+    return out;
+  };
+})();
+/* ---------- 🇦🇿 На азербайджанский ---------- */
+/** Текстовые поля документа, где есть кириллица (кроме личных и полей «ru…»). k: «поле» или «поле|строка|подполе». */
+function x91CyrFields(c) {
+  const d = c.data || {}, list = [];
+  dsFields(c.type).forEach(f => {
+    if (f.o.pii || /^ru[A-Z]/.test(f.k)) return;
+    if (f.type === 'rows') {
+      const subs = (f.o.sub || []).filter(s => s[1] === 't' || s[1] === 'ta');
+      dsRows(d, f.k).forEach(r => subs.forEach(s => { const val = r[s[0]]; if (val && X91_CYR.test(String(val))) list.push({ k: f.k + '|' + r._id + '|' + s[0], v: String(val) }); }));
+      return;
+    }
+    if ((f.type === 't' || f.type === 'ta') && d[f.k] && X91_CYR.test(String(d[f.k]))) list.push({ k: f.k, v: String(d[f.k]) });
+  });
+  return list;
+}
+async function x91AzAll(btn, quiet) {
+  const c = dsSt().cur; if (!c || c.status === 'closed') return;
+  const list = x91CyrFields(c);
+  if (!list.length) { if (!quiet) toast(x91('azNone')); return; }
+  toast(x91('azWait'));
+  const r = await busy(btn, () => rpcA('docAz', { title: (DOC_TPL[c.type] || {}).ru || c.type, texts: list }, { timeout: 180000 })).catch(() => null);
+  if (!r || !r.ok) return;
+  const F = {}; dsFields(c.type).forEach(f => { F[f.k] = f; });
+  const patch = {};
+  (r.texts || []).forEach(x => {
+    const [k, rid, sub] = String(x.k).split('|');
+    const f = F[k]; if (!f) return;
+    if (rid) { const sf = (f.o.sub || []).find(s => s[0] === sub); const max = (sf && sf[4] && sf[4].max) || 3000; patch[k] = patch[k] || {}; patch[k][rid] = Object.assign(patch[k][rid] || {}, { [sub]: String(x.v).slice(0, max) }); }
+    else patch[k] = f.o.max ? String(x.v).slice(0, f.o.max) : String(x.v);
+  });
+  const n = (r.texts || []).length;
+  if (n) {
+    // запомнить, из какого текста сделан перевод: «Сверить» не будет считать это расхождением с GT/098
+    const src = {}; list.forEach(x => { if (x.k.indexOf('|') === -1 && patch[x.k] !== undefined) src[x.k] = x91Hash(x.v); });
+    x91TrSet(c.id, src);
+    dsQueuePatch(patch); dsRender(true);
+  }
+  toast(x91('azDone', { n }), 'ok');
+  if (r.skipped) toast(x91('azSkip', { n: r.skipped }), 'warn');
+}
+/** Источник перевода по полям документа (на этом устройстве): { docId: { поле: хеш русского текста } }. */
+function x91Hash(v) { let h = 5381; const s = x91Norm(v); for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36) + '.' + s.length; }
+function x91TrAll() { try { const v = JSON.parse(localStorage.getItem('x91tr') || '{}'); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; } }
+function x91TrGet(id) { return x91TrAll()[id] || {}; }
+function x91TrSet(id, src) {
+  try {
+    const all = x91TrAll(); all[id] = Object.assign(all[id] || {}, src);
+    const ids = Object.keys(all); if (ids.length > 200) ids.slice(0, ids.length - 200).forEach(x => { delete all[x]; });
+    localStorage.setItem('x91tr', JSON.stringify(all));
+  } catch (e) { }
+}
+/* ---------- 🔄 Сверить с GT/098 ---------- */
+const X91 = { sync: null };
+function x91Norm(v) { return String(v === undefined || v === null ? '' : v).toLowerCase().replace(/\s+/g, ' ').trim(); }
+async function x91Sync(btn) {
+  const c = dsSt().cur; if (!c) return;
+  const pid = c.doc && c.doc.patientId; if (!pid) return toast(gtt('gtFillNoPt'), 'bad');
+  const g = await busy(btn, () => ptGet(pid, true)); if (!g || !g.patient) return;
+  const add = gtDocPatch(c.type, g), d = c.data || {}, tr = x91TrGet(c.id);
+  const F = {}; dsFields(c.type).forEach(f => { F[f.k] = f; });
+  const items = [];
+  Object.keys(add).forEach(k => {
+    const f = F[k]; if (!f) return;
+    if (f.type === 'rows') {
+      const have = d[k] && typeof d[k] === 'object' ? d[k] : {};
+      const miss = Object.keys(add[k] || {}).filter(id => !have[id]);
+      if (miss.length) { const o = {}; miss.forEach(id => { o[id] = add[k][id]; }); items.push({ k, f, kind: 'add', v: o, show: x91('rows', { n: miss.length }) }); }
+      return;
+    }
+    const dv = d[k], gv = add[k];
+    if (dsEmpty(dv)) items.push({ k, f, kind: 'add', v: gv, show: String(gv) });
+    else if (x91Norm(dv) !== x91Norm(gv) && tr[k] !== x91Hash(gv)) items.push({ k, f, kind: 'diff', v: gv, show: String(gv), doc: String(dv) });
+  });
+  X91.sync = items;
+  const lab = f => dsL([0, 0, f.ru, f.az]) + (f.secRu ? ' · ' + (S.lang === 'az' ? f.secAz : f.secRu) : '');
+  const cut = s => { s = String(s || ''); return s.length > 220 ? s.slice(0, 220) + '…' : s; };
+  const row = (x, i) => '<label class="check" style="align-items:flex-start;margin:6px 0"><input type="checkbox" class="x91-sy" data-i="' + i + '"' + (x.kind === 'add' ? ' checked' : '') + '><span><b>' + esc(lab(x.f)) + '</b>' +
+    (x.kind === 'diff' ? '<div class="gt-src">' + esc(x91('syncDoc')) + ': ' + esc(cut(x.doc)) + '</div><div class="gt-src">' + esc(x91('syncGt')) + ': ' + esc(cut(x.show)) + '</div>' : '<div class="gt-src">' + esc(cut(x.show)) + '</div>') + '</span></label>';
+  const adds = items.map((x, i) => x.kind === 'add' ? row(x, i) : '').join(''), diffs = items.map((x, i) => x.kind === 'diff' ? row(x, i) : '').join('');
+  openModal('<h3>' + esc(x91('syncT')) + '</h3>' + (!items.length ? '<div class="info">' + esc(x91('syncNone')) + '</div>' :
+    (adds ? '<div class="lbl">' + esc(x91('syncAdd')) + '</div>' + adds : '') + (diffs ? '<div class="lbl" style="margin-top:8px">' + esc(x91('syncDiff')) + '</div>' + diffs : '')) +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button>' + (items.length ? '<button class="btn primary" data-act="x91SyncGo">' + esc(x91('syncGo')) + '</button>' : '') + '</div>');
+}
+/* ---------- редактор: кнопки, свёрнутая регистратура, лишние строки, аллергия ---------- */
+const X91_REG = ['address', 'social'];
+function x91DocCodes(d) { return [d.edIcd, d.refIcd, d.dxIcd, d.finIcd].concat(dsRows(d, 'cdx').map(r => r.icd)).filter(Boolean).map(x => String(x).toUpperCase()); }
+/** Строка не относится к пациенту (и пустая) — не показывать. */
+function x91Irrelevant(k, d) {
+  const codes = x91DocCodes(d), any = re => codes.some(c => re.test(c));
+  if (k === 'traumaType') return !any(/^[ST]\d|^[V-Y]\d/);
+  if (k === 'onco') return !any(/^C\d|^D0\d/);
+  if (k === 'deathNote' || k === 'deathIcd' || k === 'deathCause' || k === 'pathology' || k === 'patoIcd' || k === 'patoDx') return d.outcome !== 'death' && !/^death/.test(String(d.outcome || ''));
+  return false;
+}
+(function () {
+  if (typeof dsFieldHtml !== 'function') return;
+  const o = dsFieldHtml;
+  dsFieldHtml = function (f, d, ro, miss) {
+    try { if (dsEmpty(d[f.k]) && x91Irrelevant(f.k, d || {})) return ''; } catch (e) { }
+    let h = o.apply(this, arguments);
+    try {
+      const c = dsSt().cur;
+      if (f.k === 'adr' && !ro) h = h.replace(/<\/div>$/, '<div class="pn-q" style="margin-top:4px"><button type="button" class="chip" data-act="x91Adr" data-v="yoxdur">' + esc(x91('adrNo')) + '</button><button type="button" class="chip" data-act="x91Adr" data-v="məlum deyil">' + esc(x91('adrUnk')) + '</button></div></div>');
+      if (f.k === 'edExam' && c && c.doc && c.doc.patientId) {
+        const g = ptSt().cur; const v = g && g.patient && g.patient.id === c.doc.patientId ? g.visitExam : null;
+        const L = x91('missL'), ms = (v && v.missing || []).filter(k => !(k === 'allergy' && !dsEmpty(d.adr)));
+        if (ms.length) h = h.replace(/<\/div>$/, '<div class="muted" style="margin-top:2px;color:var(--amber)">' + esc(x91('miss', { l: ms.map(k => L[k] || k).join(', ') })) + '</div></div>');
+      }
+    } catch (e) { console.error(e); }
+    return h;
+  };
+})();
+(function () {
+  if (typeof dsEditorHtml !== 'function') return;
+  const o = dsEditorHtml;
+  dsEditorHtml = function () {
+    let h = o.apply(this, arguments);
+    try {
+      const c = dsSt().cur; if (!c) return h;
+      const open = c.status !== 'closed', pid = c.doc && c.doc.patientId;
+      // кнопки: сверка с GT/098 и перевод
+      if (open && can('forms') && pid) {
+        const nCyr = x91CyrFields(c).length;
+        const btns = '<button class="btn small ghost" data-act="x91Sync">' + esc(x91('sync')) + '</button>' + (typeof canAi === 'function' && canAi() ? '<button class="btn small' + (nCyr ? '' : ' ghost') + '" data-act="x91Az">' + esc(nCyr ? x91('azN', { n: nCyr }) : x91('az')) + '</button>' : '');
+        h = h.indexOf('class="card x89-st"') !== -1 ? h.replace(/(<div class="card x89-st"[\s\S]*?<div class="chips f-chips">[\s\S]*?<\/div>)/, '$1<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px">' + btns + '</div>')
+          : h.replace('<div id="dsMissBox">', '<div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:6px">' + btns + '</div><div id="dsMissBox">');
+      }
+      // имя врача не латиницей — предупредить
+      if (open && c.type === 'h003' && S.me && !x91MyAz()) h = h.replace('<div id="dsMissBox">', '<div class="hint" style="margin:6px 0;display:block">' + esc(x91('nameWarn', { n: S.me.name || '' })) + '</div><div id="dsMissBox">');
+      // регистратура свёрнута
+      if (c.type === 'h003' && !(S.x91Reg)) {
+        let first = true;
+        h = h.replace(/<details class="dx-grp ds-sec" data-sec="h003:(address|social)"/g, (m) => {
+          const tag = first ? '<div class="muted" style="margin:6px 0">' + esc(x91('reg')) + ' · <button type="button" class="btn small ghost" style="min-height:28px;padding:2px 10px" data-act="x91Reg">' + esc(x91('regOpen')) + '</button></div>' : '';
+          first = false; return tag + m.replace('<details ', '<details style="display:none" ');
+        });
+      } else if (c.type === 'h003') h = h.replace(/(<details class="dx-grp ds-sec" data-sec="h003:address")/, '<div class="muted" style="margin:6px 0">' + esc(x91('reg')) + ' · <button type="button" class="btn small ghost" style="min-height:28px;padding:2px 10px" data-act="x91Reg">' + esc(x91('regClose')) + '</button></div>$1');
+    } catch (e) { console.error(e); }
+    return h;
+  };
+})();
+// после «📘 Из GT/098» (весь документ или этап): что по-русски — сразу на азербайджанский
+(function () {
+  const wrap = name => {
+    if (typeof window[name] !== 'function') return;
+    const o = window[name];
+    window[name] = async function (btn) {
+      const r = await o.apply(this, arguments);
+      try {
+        const c = dsSt().cur;
+        if (c && c.status !== 'closed' && typeof canAi === 'function' && canAi()) { const n = x91CyrFields(c).length; if (n) { toast(x91('azAuto', { n })); await x91AzAll(null, true); } }
+      } catch (e) { }
+      return r;
+    };
+  };
+  wrap('gtFillDoc'); wrap('x89GtFill'); wrap('ptNewDocFor'); // и новый документ из карты GT/098
+})();
+// справочник XBT-10 нужен для названий диагнозов — подгрузить заранее, когда открыт документ
+(function () {
+  if (typeof dsRender !== 'function') return;
+  const o = dsRender;
+  dsRender = function () { const r = o.apply(this, arguments); try { if (dsSt().cur && !S.icd && typeof icdLoad === 'function') icdLoad(); } catch (e) { } return r; };
+})();
+Object.assign(H, {
+  x91NameSave: async el => {
+    const v = String(($('#x91Name') || {}).value || '').replace(/\s+/g, ' ').trim();
+    if (!X91_LAT.test(v)) return toast(x91('nameBad'), 'bad');
+    const r = await busy(el, () => rpcA('setMyNameAz', { nameAz: v })).catch(() => null);
+    if (!r || !r.ok) return;
+    if (S.me) S.me.nameAz = r.nameAz;
+    toast(x91('nameSaved'), 'ok');
+  },
+  x91Az: el => x91AzAll(el),
+  x91Sync: el => x91Sync(el),
+  x91SyncGo: () => {
+    const items = X91.sync || [], patch = {};
+    $$('.x91-sy').forEach(b => { if (!b.checked) return; const x = items[+b.dataset.i]; if (!x) return; patch[x.k] = x.f.type === 'rows' ? Object.assign(patch[x.k] || {}, x.v) : x.v; });
+    const n = Object.keys(patch).length;
+    closeModal();
+    if (n) { dsQueuePatch(patch); dsRender(true); }
+    toast(x91('syncDone', { n }), 'ok');
+  },
+  x91Adr: el => { dsQueuePatch({ adr: el.dataset.v }); dsRender(true); },
+  x91Reg: () => { S.x91Reg = !S.x91Reg; dsRender(true); }
+});
+
 
 function init() {
   vizTipInit();
