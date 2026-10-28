@@ -36487,7 +36487,7 @@ const GT_T = {
     gtTag: 'GT/098', gtSub: 'Один документ пациента — всё о нём и что с ним делали', gtDo: 'Что сделать',
     gtVisit: '＋ Приём', gtDocs: '📄 Документы, анализы (фото → ИИ)', gtNote: '📝 Запись наблюдения', gtNewDoc: '🧾 Документ: перевод, эпикриз…', gtSecNew: '＋ Свой раздел',
     gtAi: '🤖 Разбор с ИИ', gtAudit: '🔍 Проверить документы', gtEdit: '✏️ Данные пациента', gtLog: '🕓 Журнал', gtClose: '✔ Закончить наблюдение', gtReopen: '🩺 Снова лечится',
-    gtUnsure: '❓ Уточнить', gtUnsureHint: 'ИИ прочитал это неуверенно. Проверьте по документу: «✓ Верно» или «✏️ Исправить».', gtOk: '✓ Верно', gtFix: '✏️ Исправить',
+    gtUnsure: '❓ Уточнить', gtUnsureHint: 'ИИ прочитал это неуверенно. Проверьте по документу: «✓ Верно», «✍️ Вписать своё» или «📄 Весь документ».', gtOk: '✓ Верно', gtFix: '✏️ Исправить',
     gtDx: '🩺 Диагнозы', gtLabs: '🧪 Анализы', gtImg: '🩻 Снимки и исследования', gtRx: '💊 Лечение', gtExt: '📄 Документы из других учреждений', gtFeed: '🕘 Лента — всё по датам',
     gtEmpty: 'Пока пусто', gtGiven: 'дано', gtNotGiven: 'назначено', gtChronic: 'хроническое', gtFromVisit: 'приём', gtNotes: 'запись',
     gtSecTitle: 'Название раздела', gtSecText: 'Текст', gtSecTitlePh: 'например: Вакцинация, Беременность, Диспансерный учёт', gtSecSave: 'Сохранить раздел', gtSecDel: '🗑️ Удалить раздел', gtSecDelAsk: 'Удалить этот раздел?',
@@ -36509,7 +36509,7 @@ const GT_T = {
     gtTag: 'GT/098', gtSub: 'Pasiyentin vahid sənədi — onun haqqında hər şey və nə edilib', gtDo: 'Nə etmək',
     gtVisit: '＋ Qəbul', gtDocs: '📄 Sənədlər, analizlər (foto → Sİ)', gtNote: '📝 Müşahidə qeydi', gtNewDoc: '🧾 Sənəd: köçürmə, epikriz…', gtSecNew: '＋ Öz bölmən',
     gtAi: '🤖 Sİ ilə təhlil', gtAudit: '🔍 Sənədləri yoxla', gtEdit: '✏️ Pasiyentin məlumatları', gtLog: '🕓 Jurnal', gtClose: '✔ Müşahidəni bitir', gtReopen: '🩺 Yenə müalicədə',
-    gtUnsure: '❓ Dəqiqləşdir', gtUnsureHint: 'Sİ bunu əmin olmadan oxuyub. Sənədə baxın: «✓ Düzdür» və ya «✏️ Düzəlt».', gtOk: '✓ Düzdür', gtFix: '✏️ Düzəlt',
+    gtUnsure: '❓ Dəqiqləşdir', gtUnsureHint: 'Sİ bunu əmin olmadan oxuyub. Sənədə baxın: «✓ Düzdür», «✍️ Özüm yazım» və ya «📄 Bütün sənəd».', gtOk: '✓ Düzdür', gtFix: '✏️ Düzəlt',
     gtDx: '🩺 Diaqnozlar', gtLabs: '🧪 Analizlər', gtImg: '🩻 Şəkillər və müayinələr', gtRx: '💊 Müalicə', gtExt: '📄 Başqa müəssisələrin sənədləri', gtFeed: '🕘 Lent — tarixlərlə hər şey',
     gtEmpty: 'Hələ boşdur', gtGiven: 'verilib', gtNotGiven: 'təyin edilib', gtChronic: 'xroniki', gtFromVisit: 'qəbul', gtNotes: 'qeyd',
     gtSecTitle: 'Bölmənin adı', gtSecText: 'Mətn', gtSecTitlePh: 'məs.: Peyvənd, Hamiləlik, Dispanser qeydiyyatı', gtSecSave: 'Bölməni saxla', gtSecDel: '🗑️ Bölməni sil', gtSecDelAsk: 'Bu bölmə silinsin?',
@@ -36554,8 +36554,8 @@ function gtt(k, v) { const L2 = GT_T[S.lang === 'az' ? 'az' : 'ru']; let s = L2[
     'details.gt-sec{margin:8px 0;border-radius:14px;background:var(--card,#fff);border:1px solid var(--line,#e2e6ee);overflow:hidden}details.gt-sec>summary{list-style:none;cursor:pointer;padding:12px 14px;font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px}' +
     'details.gt-sec>summary::-webkit-details-marker{display:none}details.gt-sec>summary::after{content:"▾";margin-left:auto;opacity:.5}details.gt-sec:not([open])>summary::after{content:"▸"}.gt-n{font-weight:600;font-size:13px;padding:1px 8px;border-radius:10px;background:var(--bg,#f1f3f7)}' +
     '.gt-body{padding:0 14px 12px}.gt-row{padding:8px 0;border-top:1px solid var(--line,#eef0f4)}.gt-row:first-child{border-top:0}.gt-src{font-size:12.5px;opacity:.7}' +
-    'details.gt-sec.gt-warn{background:#fff8e1;border-color:#f2c94c}.gt-unsure{background:#fff3c4;border-radius:6px;padding:0 4px}.gt-tbl{width:100%;border-collapse:collapse;font-size:14px}.gt-tbl td{padding:5px 4px;border-top:1px solid var(--line,#eef0f4);vertical-align:top}' +
-    '.gt-flag{color:var(--red,#c0392b);font-weight:700}.gt-rowacts{display:flex;gap:6px;margin-top:4px}';
+    'details.gt-sec.gt-warn{background:var(--amber-soft,#fff8e1);border-color:var(--amber,#f2c94c)}.gt-unsure{background:var(--amber-soft,#fff3c4);border-left:3px solid var(--amber,#f2c94c);border-radius:6px;padding:2px 6px}.gt-tbl{width:100%;border-collapse:collapse;font-size:14px}.gt-tbl td{padding:5px 4px;border-top:1px solid var(--line,#eef0f4);vertical-align:top}' +
+    '.gt-flag{color:var(--red,#c0392b);font-weight:700}.gt-rowacts{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}';
   document.head.appendChild(css);
 })();
 
@@ -36645,20 +36645,22 @@ function gtHtml() {
   const extCan = {}; (g.ext || []).forEach(x => { extCan[x.id] = x.canEdit !== false; });
   // ⚖️ расхождения: оба варианта, откуда, когда, почему
   const confOpen = (g.conf || []).filter(c => c.status === 'active');
-  const confDocs = [];
-  gtExtDocs(g).forEach(({ x, d }) => (d.conflicts || []).forEach(c => confDocs.push({ x, d, c })));
+  const confDocs = [], confDocsDone = [];
+  gtExtDocs(g).forEach(({ x, d }) => (d.conflicts || []).forEach((c, k) => (c.done ? confDocsDone : confDocs).push({ x, d, c, ci: c._i !== undefined ? c._i : k })));
   const confDone = (g.conf || []).filter(c => c.status !== 'active');
   const vbox = (lbl, o) => '<div class="gt-row" style="padding:6px 8px;border-radius:8px;background:var(--bg,#f1f3f7);margin-top:4px"><div class="gt-src">' + esc(lbl) + '</div><div><b>' + esc(o.v || '') + '</b></div><div class="gt-src">' + esc([o.src, o.by, o.at ? fmtDt(o.at) : ''].filter(Boolean).join(' · ')) + '</div></div>';
-  if (confOpen.length || confDocs.length) h += gtSec('conf', gtt('gtConf'), confOpen.length + confDocs.length, '<div class="muted" style="margin-bottom:6px">' + esc(gtt('gtConfHint')) + '</div>' +
+  if (confOpen.length || confDocs.length || confDocsDone.length) h += gtSec('conf', gtt('gtConf'), confOpen.length + confDocs.length, '<div class="muted" style="margin-bottom:6px">' + esc(gtt('gtConfHint')) + '</div>' +
     confOpen.map(c => { const m = c.meta || {}; return '<div class="gt-row"><b>' + esc(c.title) + '</b>' + vbox(gtt('gtConfA'), m.a || {}) + vbox(gtt('gtConfB'), m.b || {}) +
       (m.why ? '<div class="gt-src" style="margin-top:4px"><b>' + esc(gtt('gtConfWhy')) + ':</b> ' + esc(m.why) + '</div>' : '') +
-      (edit ? '<div class="gt-rowacts"><button class="btn small" data-act="gtConfPick" data-id="' + esc(c.id) + '" data-pick="a">' + esc(gtt('gtConfKeepA')) + '</button><button class="btn small" data-act="gtConfPick" data-id="' + esc(c.id) + '" data-pick="b">' + esc(gtt('gtConfTakeB')) + '</button></div>' : '') + '</div>'; }).join('') +
-    confDocs.map(({ x, d, c }) => '<div class="gt-row"><b>' + esc(c.what || '') + '</b> <span class="gt-src">' + esc(gtt('gtConfDoc', { t: d.title || '' })) + '</span>' + vbox('A', { v: c.a }) + vbox('B', { v: c.b }) +
-      (c.why ? '<div class="gt-src" style="margin-top:4px"><b>' + esc(gtt('gtConfWhy')) + ':</b> ' + esc(c.why) + '</div>' : '') + '<div class="gt-src">' + esc(gtt('gtAdded', { d: fmtDt(x.createdAt), n: x.createdByName || '' })) + '</div></div>').join('') +
-    (confDone.length ? '<div class="gt-src" style="margin-top:8px">' + confDone.map(c => esc(c.title + ': ' + gtt('gtConfDone', { v: (c.meta && c.meta.picked === 'b' ? (c.meta.b || {}).v : (c.meta.a || {}).v) || '', by: (c.meta && c.meta.pickedBy) || '', d: fmtDt((c.meta && c.meta.pickedAt) || '') }))).join('<br>') + '</div>' : ''), true, 'gt-warn');
+      (edit ? '<div class="gt-rowacts"><button class="btn small" data-act="gtConfPick" data-id="' + esc(c.id) + '" data-pick="a">' + esc(gtt('gtConfKeepA')) + '</button><button class="btn small" data-act="gtConfPick" data-id="' + esc(c.id) + '" data-pick="b">' + esc(gtt('gtConfTakeB')) + '</button>' + (typeof x13 === 'function' && m.field ? '<button class="btn small" data-act="x13PtOwn" data-id="' + esc(c.id) + '">' + esc(x13('own')) + '</button>' : '') + '</div>' : '') + '</div>'; }).join('') +
+    confDocs.map(({ x, d, c, ci }) => '<div class="gt-row"><b>' + esc(c.what || '') + '</b> <span class="gt-src">' + esc(gtt('gtConfDoc', { t: d.title || '' })) + '</span>' + vbox('A', { v: c.a }) + vbox('B', { v: c.b }) +
+      (c.why ? '<div class="gt-src" style="margin-top:4px"><b>' + esc(gtt('gtConfWhy')) + ':</b> ' + esc(c.why) + '</div>' : '') + '<div class="gt-src">' + esc(gtt('gtAdded', { d: fmtDt(x.createdAt), n: x.createdByName || '' })) + '</div>' +
+      (add && extCan[x.id] && typeof x13 === 'function' ? '<div class="gt-rowacts"><button class="btn small" data-act="x13Pick" data-id="' + esc(x.id) + '" data-ci="' + ci + '" data-pick="a">' + esc(x13('pickA')) + '</button><button class="btn small" data-act="x13Pick" data-id="' + esc(x.id) + '" data-ci="' + ci + '" data-pick="b">' + esc(x13('pickB')) + '</button><button class="btn small" data-act="x13Pick" data-id="' + esc(x.id) + '" data-ci="' + ci + '" data-pick="own">' + esc(x13('own')) + '</button></div>' : '') + '</div>').join('') +
+    (confDocsDone.length && typeof x13 === 'function' ? '<div class="gt-src" style="margin-top:8px">' + confDocsDone.map(({ c }) => esc((c.what || '') + ': ' + x13('done', { v: c.done.v || (c.done.pick === 'a' ? c.a : c.b) || '', by: c.done.by || '', d: fmtDt(c.done.at || '') }))).join('<br>') + '</div>' : '') +
+    (confDone.length ? '<div class="gt-src" style="margin-top:8px">' + confDone.map(c => esc(c.title + ': ' + gtt('gtConfDone', { v: (c.meta && c.meta.picked === 'own' ? c.meta.own : c.meta && c.meta.picked === 'b' ? (c.meta.b || {}).v : (c.meta.a || {}).v) || '', by: (c.meta && c.meta.pickedBy) || '', d: fmtDt((c.meta && c.meta.pickedAt) || '') }))).join('<br>') + '</div>' : ''), true, 'gt-warn');
   const uns = gtUnsureItems(g);
   if (uns.length) h += gtSec('unsure', gtt('gtUnsure'), uns.length, '<div class="muted" style="margin-bottom:6px">' + esc(gtt('gtUnsureHint')) + '</div>' + uns.map(u => '<div class="gt-row"><div class="gt-unsure">' + esc(u.text) + '</div><div class="gt-src">' + esc(u.src || '') + '</div>' +
-    (add && ai && extCan[u.id] ? '<div class="gt-rowacts"><button class="btn small" data-act="gtOk" data-id="' + esc(u.id) + '" data-path="' + esc(u.path) + '">' + esc(gtt('gtOk')) + '</button><button class="btn small ghost" data-act="gtFixDoc" data-id="' + esc(u.id) + '">' + esc(gtt('gtFix')) + '</button></div>' : '') + '</div>').join(''), true, 'gt-warn');
+    (add && ai && extCan[u.id] ? '<div class="gt-rowacts"><button class="btn small" data-act="gtOk" data-id="' + esc(u.id) + '" data-path="' + esc(u.path) + '">' + esc(gtt('gtOk')) + '</button>' + (typeof x13 === 'function' ? '<button class="btn small" data-act="x13Own" data-id="' + esc(u.id) + '" data-path="' + esc(u.path) + '">' + esc(x13('write')) + '</button>' : '') + '<button class="btn small ghost" data-act="gtFixDoc" data-id="' + esc(u.id) + '">' + esc(typeof x13 === 'function' ? x13('whole') : gtt('gtFix')) + '</button></div>' : '') + '</div>').join(''), true, 'gt-warn');
   // диагнозы
   const dx = gtDxList(g);
   h += gtSec('dx', gtt('gtDx'), dx.length, dx.map(x => '<div class="gt-row"><div' + (x.unsure ? ' class="gt-unsure"' : '') + '><b>' + esc(x.icd) + '</b> ' + esc(x.text) + '</div><div class="gt-src">' + esc([x.at ? fmtDt(String(x.at)) : '', x.src].filter(Boolean).join(' · ')) + '</div></div>').join(''), gtOpenState('dx', true));
@@ -38084,7 +38086,7 @@ function x9Unclear(s) { return String(s || '').split(/\n|\s(?=-\s+[^\d\s])/).map
   gtExtDocs = function (g) {
     return o(g).map(({ x, d }) => {
       const d2 = Object.assign({}, d);
-      d2.conflicts = (d.conflicts || []).filter(x9ConfOk).filter(c => !x9IdLine([c.what, c.a, c.b].join(' '))).map(c => ({ what: x9Ph(c.what), a: x9Ph(c.a), b: x9Ph(c.b), why: x9Ph(c.why) }));
+      d2.conflicts = (d.conflicts || []).map((c, i) => Object.assign({}, c, { _i: i })).filter(x9ConfOk).filter(c => !x9IdLine([c.what, c.a, c.b].join(' '))).map(c => Object.assign({}, c, { what: x9Ph(c.what), a: x9Ph(c.a), b: x9Ph(c.b), why: x9Ph(c.why) })); // _i — место в документе (для выбора A / B / своё)
       d2.unclear = x9Unclear(d.unclear);
       d2.tests = (d.tests || []).map(t => Object.assign({}, t, { name: x9Ph(t.name), result: x9Ph(t.result), date: x9Ph(t.date) }));
       d2.imaging = (d.imaging || []).map(t => Object.assign({}, t, { name: x9Ph(t.name), conclusion: x9Ph(t.conclusion), date: x9Ph(t.date) }));
@@ -39140,6 +39142,438 @@ Object.assign(H, {
   phView: el => phView(el.dataset.id),
   phClose: () => phClose(),
   phZoom: el => { el.classList.toggle('zoom'); if (el.classList.contains('zoom')) { const im = el.querySelector('img'); if (im) el.scrollLeft = Math.max(0, (im.scrollWidth - el.clientWidth) / 2); } }
+});
+
+/* =====================================================================
+ * v88 (9.57): выбор в «⚖️ Расхождения» и «❓ Уточнить» — нажатием (Саид, 28.10, 03:48: «даёт выбор между вариантами —
+ *  почему нет кликабельной возможности выбрать? и если не уверен — должна быть возможность прописать самому»).
+ *  - Расхождение в документе: «✓ Верно A» / «✓ Верно B» / «✏️ Своё» → окно: что записать (подставлено, можно поправить) и куда
+ *    (анализ / диагноз / снимок документа — угадано); сохраняется в документ, расхождение — «решено: … (кто, когда)».
+ *  - Расхождение в данных карты (FİN, дата рождения…): ещё «✏️ Своё».
+ *  - «Уточнить»: «✍️ Вписать своё» — прямо этот пункт (результат, код, заключение или ответ на вопрос), без всего документа.
+ * ===================================================================== */
+const X13_T = {
+  ru: { pickA: '✓ Верно A', pickB: '✓ Верно B', own: '✏️ Своё', write: '✍️ Вписать своё', whole: '📄 Весь документ', done: 'решено: {v} ({by}, {d})',
+    title: 'Что записать в GT/098', val: 'Значение', to: 'Куда записать', toNone: 'только отметить «решено» (ничего не менять)', save: '💾 Сохранить', need: 'Впишите значение',
+    tTest: 'Анализ: {n}', tDx: 'Диагноз: {n}', tImg: 'Снимок: {n}', chosen: 'Вы выбрали {k}:', answer: 'Как на самом деле (ваш ответ)', res: 'Результат', date: 'Дата', icd: 'Код МКБ', text: 'Текст', concl: 'Заключение', note: 'Уточнено врачом', ownPt: 'Своё значение: {f}' },
+  az: { pickA: '✓ A düzdür', pickB: '✓ B düzdür', own: '✏️ Öz variantım', write: '✍️ Özüm yazım', whole: '📄 Bütün sənəd', done: 'həll edilib: {v} ({by}, {d})',
+    title: 'GT/098-ə nə yazılsın', val: 'Dəyər', to: 'Hara yazılsın', toNone: 'yalnız «həll edildi» qeyd et (heç nə dəyişmə)', save: '💾 Saxla', need: 'Dəyəri yazın',
+    tTest: 'Analiz: {n}', tDx: 'Diaqnoz: {n}', tImg: 'Şəkil: {n}', chosen: 'Seçdiniz {k}:', answer: 'Əslində necədir (cavabınız)', res: 'Nəticə', date: 'Tarix', icd: 'XBT kodu', text: 'Mətn', concl: 'Rəy', note: 'Həkim dəqiqləşdirib', ownPt: 'Öz dəyəriniz: {f}' }
+};
+function x13(k, v) { const L2 = X13_T[S.lang === 'az' ? 'az' : 'ru']; let s = L2[k] !== undefined ? L2[k] : X13_T.ru[k]; if (typeof s === 'string' && v) Object.keys(v).forEach(x => { s = s.split('{' + x + '}').join(v[x]); }); return s; }
+const X13_ICD = /\b[A-ZА-Я]\d\d(?:\.\d{1,2})?\b/;
+/** Короткое значение из пояснения ИИ: «Mənfi — bitmə yoxdur: рядом с квадратом…» → «Mənfi — bitmə yoxdur»; «Выписка 027: … «Bitmə yoxdur»» → «Bitmə yoxdur». */
+function x13Short(s, isDx) {
+  s = String(s || '').trim();
+  if (isDx) { const m = s.match(X13_ICD); if (m) return m[0]; }
+  const head = s.split(':')[0].trim();
+  if (s.indexOf(':') > 0 && head.length <= 60 && !/^(выписк|бланк|в |в документ|код|текст|027|документ|sənəd|çıxarış)/i.test(head)) return head;
+  const q = s.match(/«([^»]{1,120})»/); if (q) return q[1];
+  return s.replace(/\s*\([^)]*\)\s*$/, '').slice(0, 120);
+}
+/** Куда относится расхождение: диагноз (по коду) / анализ / снимок (по названию). */
+function x13Guess(d, c) {
+  const w = String(c.what || ''), ab = String(c.a || '') + ' ' + String(c.b || '');
+  if (/МКБ|код|диагноз|XBT|ICD/i.test(w)) { const i = (d.dx || []).findIndex(y => y.icd && ab.indexOf(y.icd) !== -1); if (i !== -1) return 'dx.' + i; if ((d.dx || []).length === 1) return 'dx.0'; }
+  const tok = s => String(s || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(x => x.length >= 3);
+  const sim = (a, b) => { const fa = typeof x9Fam === 'function' ? x9Fam(a, d.title) : '', fb = typeof x9Fam === 'function' ? x9Fam(b, d.title) : ''; if (fa && fa === fb && fa.indexOf('n:') !== 0) return 1; const x = tok(a), y = tok(b); if (!x.length || !y.length) return 0; return x.filter(t => y.some(u => u.slice(0, 5) === t.slice(0, 5))).length / Math.min(x.length, y.length); };
+  let best = '', bs = 0;
+  (d.tests || []).forEach((t, i) => { const v = sim(w, t.name); if (v > bs) { bs = v; best = 'tests.' + i; } });
+  (d.imaging || []).forEach((m, i) => { const v = sim(w, m.name); if (v > bs) { bs = v; best = 'imaging.' + i; } });
+  return bs >= 0.5 ? best : '';
+}
+function x13Targets(d) {
+  return [['', x13('toNone')]].concat((d.tests || []).map((t, i) => ['tests.' + i, x13('tTest', { n: t.name + ' — ' + String(t.result || '').slice(0, 40) })]),
+    (d.dx || []).map((y, i) => ['dx.' + i, x13('tDx', { n: [y.icd, String(y.text || '').slice(0, 40)].filter(Boolean).join(' ') })]),
+    (d.imaging || []).map((m, i) => ['imaging.' + i, x13('tImg', { n: m.name })]));
+}
+function x13DocCopy(x) { return JSON.parse(JSON.stringify(Object.assign({ title: x.title, date: x.docDate || (x.data || {}).date, org: x.org }, x.data || {}))); }
+function x13Apply(d, path, v) {
+  if (!path) return;
+  const [k, i] = path.split('.'); const it = d[k] && d[k][+i]; if (!it) return;
+  if (k === 'tests') it.result = v;
+  else if (k === 'dx') { const m = v.match(/^\s*([A-ZА-Я]\d\d(?:\.\d{1,2})?)\s*(.*)$/); if (m) { it.icd = m[1].toUpperCase(); if (m[2]) it.text = m[2]; } else it.text = v; }
+  else if (k === 'imaging') it.conclusion = v;
+  it.unsure = false;
+}
+Object.assign(H, {
+  // ⚖️ расхождение в документе: A / B / своё
+  x13Pick: el => {
+    const x = gtFindExt(el.dataset.id); if (!x) return;
+    const d = x13DocCopy(x), ci = +el.dataset.ci, c = (d.conflicts || [])[ci]; if (!c) return;
+    const pick = el.dataset.pick, guess = x13Guess(d, c), isDx = /^dx\./.test(guess);
+    const v0 = pick === 'a' ? (c.va || x13Short(c.a, isDx)) : pick === 'b' ? (c.vb || x13Short(c.b, isDx)) : '';
+    S.x13 = { id: x.id, ci, pick };
+    openModal('<h3>' + esc(x13('title')) + '</h3><div class="gt-src" style="margin-bottom:6px"><b>' + esc(c.what || '') + '</b></div>' +
+      (pick !== 'own' ? '<div class="muted" style="margin-bottom:6px">' + esc(x13('chosen', { k: pick.toUpperCase() })) + ' ' + esc(pick === 'a' ? c.a : c.b) + '</div>' : '') +
+      '<div class="field"><label>' + esc(x13('val')) + '</label><textarea id="x13V" rows="2" maxlength="400">' + esc(v0) + '</textarea></div>' +
+      '<div class="field"><label>' + esc(x13('to')) + '</label><select id="x13To">' + x13Targets(d).map(o => '<option value="' + esc(o[0]) + '"' + (o[0] === guess ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('') + '</select></div>' +
+      '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="x13PickSave">' + esc(x13('save')) + '</button></div>');
+    const ta = $('#x13V'); if (ta && pick === 'own') ta.focus();
+  },
+  x13PickSave: async el => {
+    const st = S.x13; if (!st) return;
+    const x = gtFindExt(st.id); if (!x) return;
+    const v = ($('#x13V').value || '').trim(), to = $('#x13To').value;
+    if (!v && st.pick === 'own') return toast(x13('need'), 'bad');
+    const d = x13DocCopy(x), c = (d.conflicts || [])[st.ci]; if (!c) return;
+    c.done = { pick: st.pick, v: v || (st.pick === 'a' ? c.a : c.b) };
+    if (v) x13Apply(d, to, v);
+    if (await gtSaveExt(x, d, el)) { S.x13 = null; closeModal(); }
+  },
+  // ⚖️ расхождение в данных карты: своё значение
+  x13PtOwn: el => {
+    const g = ptSt().cur; const c = g && (g.conf || []).find(y => y.id === el.dataset.id); if (!c) return;
+    const f = (c.meta || {}).field || '';
+    openModal('<h3>' + esc(x13('ownPt', { f: c.title || f })) + '</h3><div class="field"><input id="x13PV" type="' + (f === 'birthDate' ? 'date' : 'text') + '" maxlength="120"' + (f === 'fin' ? ' style="text-transform:uppercase" maxlength="7"' : '') + '></div>' +
+      '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="x13PtOwnSave" data-id="' + esc(c.id) + '">' + esc(x13('save')) + '</button></div>');
+    const i = $('#x13PV'); if (i) i.focus();
+  },
+  x13PtOwnSave: async el => {
+    const v = ($('#x13PV').value || '').trim(); if (!v) return toast(x13('need'), 'bad');
+    const g = ptSt().cur; if (!g) return;
+    const r = await busy(el, () => rpcA('gtConfResolve', { id: el.dataset.id, pick: 'own', v }));
+    if (r && r.ok) { closeModal(); toast(gtt('gtSaved'), 'ok'); ptOpen(g.patient.id, true); }
+  },
+  // ❓ уточнить: вписать своё — прямо этот пункт
+  x13Own: el => {
+    const x = gtFindExt(el.dataset.id); if (!x) return;
+    const d = x13DocCopy(x), path = String(el.dataset.path || '');
+    const clean = s => /^❓/.test(String(s || '')) ? '' : String(s || '').replace(/\s*\[\?\]\s*$/, '');
+    let body = '';
+    if (path === 'unclear') body = '<div class="gt-unsure" style="margin-bottom:8px;white-space:pre-line">' + esc(typeof x9Unclear === 'function' ? x9Unclear(d.unclear) : d.unclear) + '</div><div class="field"><label>' + esc(x13('answer')) + '</label><textarea id="x13A" rows="4" maxlength="2000"></textarea></div>';
+    else {
+      const [k, i] = path.split('.'); const it = (d[k] || [])[+i]; if (!it) return;
+      if (k === 'tests') body = '<div class="gt-src"><b>' + esc(it.name) + '</b></div><div class="field"><label>' + esc(x13('res')) + '</label><input id="x13R" type="text" maxlength="300" value="' + esc(clean(it.result)) + '"></div><div class="field"><label>' + esc(x13('date')) + '</label><input id="x13D" type="text" maxlength="40" value="' + esc(it.date || '') + '"></div>';
+      else if (k === 'dx') body = '<div class="field"><label>' + esc(x13('icd')) + '</label><input id="x13I" type="text" maxlength="12" style="text-transform:uppercase" value="' + esc(it.icd || '') + '"></div><div class="field"><label>' + esc(x13('text')) + '</label><textarea id="x13T" rows="2" maxlength="400">' + esc(clean(it.text)) + '</textarea></div>';
+      else if (k === 'imaging') body = '<div class="gt-src"><b>' + esc(it.name) + '</b></div><div class="field"><label>' + esc(x13('concl')) + '</label><textarea id="x13C" rows="4" maxlength="2000">' + esc(clean(it.conclusion)) + '</textarea></div>';
+    }
+    S.x13o = { id: x.id, path };
+    openModal('<h3>' + esc(x13('write')) + '</h3><div class="gt-src" style="margin-bottom:6px">' + esc(d.title || '') + '</div>' + body +
+      '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="x13OwnSave">' + esc(x13('save')) + '</button></div>');
+    const f = $('.modal input, .modal textarea:not([readonly])'); if (f) f.focus();
+  },
+  x13OwnSave: async el => {
+    const st = S.x13o; if (!st) return;
+    const x = gtFindExt(st.id); if (!x) return;
+    const d = x13DocCopy(x), path = st.path;
+    const val = id => { const e = $('#' + id); return e ? String(e.value || '').trim() : ''; };
+    if (path === 'unclear') {
+      const a = val('x13A'); if (!a) return toast(x13('need'), 'bad');
+      d.notes = [d.notes, x13('note') + ' (' + ((S.me && S.me.name) || '') + ', ' + (function () { const n = new Date(), p2 = v => String(v).padStart(2, '0'); return p2(n.getDate()) + '.' + p2(n.getMonth() + 1) + '.' + n.getFullYear() + ' ' + p2(n.getHours()) + ':' + p2(n.getMinutes()); })() + '): ' + a].filter(Boolean).join('\n');
+      d.unclear = '';
+    } else {
+      const [k, i] = path.split('.'); const it = (d[k] || [])[+i]; if (!it) return;
+      if (k === 'tests') { const r = val('x13R'); if (!r) return toast(x13('need'), 'bad'); it.result = r; it.date = val('x13D'); }
+      else if (k === 'dx') { const c = val('x13I').toUpperCase(), tx = val('x13T'); if (!c && !tx) return toast(x13('need'), 'bad'); it.icd = c; it.text = tx; }
+      else if (k === 'imaging') { const c = val('x13C'); if (!c) return toast(x13('need'), 'bad'); it.conclusion = c; }
+      it.unsure = false;
+    }
+    if (await gtSaveExt(x, d, el)) { S.x13o = null; closeModal(); }
+  }
+});
+
+/* =====================================================================
+ * v89 (9.57): названия лекарств и умный поиск МНН (Саид, 28.10, 03:40: «Dexamethasone (Дехаметгасоне) — почему в одном случае
+ *  правильно, а в другом нет? И в карточке МНН приходится писать так же неправильно. Поиск должен понимать, пишу я по-русски
+ *  или по-азербайджански, искать по другим названиям, даже если я название фирмы похожее пишу — пусть покажет, что в базе
+ *  или похожее есть: может, врач уставший»).
+ *  Было: английское название (Dexamethasone) в скобках читалось по-азербайджански: x → х, h → г («Дехаметгасоне»).
+ *  Стало:
+ *  - сначала — русское МНН из справочника по международному написанию (Dexamethasone = Дексаметазон);
+ *    нет в справочнике, а слово английское — по правилам английского (x = кс, th = т, ph = ф, c = к / ц, конечная e не пишется);
+ *  - поле «МНН» (карточка, приход): ищет по-русски, по-азербайджански и по-английски, по фирме (выдаёт её МНН), по карточкам
+ *    базы (их МНН) и по реестру АР; опечатки — «похоже»;
+ *  - поле «Название» в карточке — те же подсказки, что в приходе; выбрал — МНН подставится, если пусто.
+ * ===================================================================== */
+/** Похоже на английское написание (не азербайджанское): нет ə ı ğ ş ç ö ü, есть th / ph / w / qu / ck / y внутри или английское окончание. */
+function enLooks(s) {
+  s = String(s || '').trim();
+  if (!s || !/^[A-Za-z][A-Za-z\s\-.,]*$/.test(s)) return false;
+  return /th|ph|w|qu|ck|ae|oe|y[^aeiou\s]|[^aeiou\s]y\b/i.test(s) || /(one|ine|ide|ate|ole|ane|ene|yl|mab|pril|sartan|olol|azole|parin|statin|cillin|mycin|cycline|floxacin|vir|tidine|prazole|caine)\b/i.test(s);
+}
+/** Английское МНН → русское по правилам (Dexamethasone → Дексаметазон, Ceftriaxone → Цефтриаксон, Lidocaine → Лидокаин). */
+function enToRu(s) {
+  const L = { a: 'а', b: 'б', d: 'д', e: 'е', f: 'ф', g: 'г', i: 'и', j: 'дж', k: 'к', l: 'л', m: 'м', n: 'н', o: 'о', p: 'п', r: 'р', s: 'с', t: 'т', u: 'у', v: 'в', z: 'з', w: 'в', h: 'г', q: 'к', c: 'к', x: 'кс', y: 'и' };
+  return String(s || '').split(/(\s+|-)/).map(w => {
+    if (!/[a-z]/i.test(w)) return w;
+    let v = w.toLowerCase();
+    v = v.replace(/([^aeiouy])e$/, '$1').replace(/ae|oe/g, 'e')
+      .replace(/qu/g, 'кв').replace(/ph/g, 'ф').replace(/th/g, 'т').replace(/ch/g, 'х').replace(/sh/g, 'ш').replace(/ck/g, 'к').replace(/x/g, 'кс')
+      .replace(/c(?=[eiy])/g, 'ц').replace(/^y(?=[aeiou])/, 'й').replace(/([aeiou])y(?=[aeiou])/g, '$1й')
+      .replace(/([aeiou])s(?=[aeiou])/g, '$1з').replace(/^e/, 'э');
+    let o = '';
+    for (const ch of v) o += L[ch] !== undefined ? L[ch] : ch;
+    return o;
+  }).join('').replace(/^./, c => c.toUpperCase());
+}
+/** Русское МНН из справочника по международному / азербайджанскому написанию (целиком или по первому слову: «Dexamethasone sodium phosphate»). */
+function refByAnyName(name, whole) {
+  if (!S.refIdx || !name) return null;
+  const R = S.refIdx;
+  if (!R.byQ) { R.byQ = {}; R.subs.forEach(s => { if (!R.byQ[s.q]) R.byQ[s.q] = s; }); }
+  const tries = whole ? [name] : [name, String(name).trim().split(/\s+/)[0]];
+  for (const n of tries) {
+    if (!n || n.length < 5) continue;
+    const hit = R.byQ[qkeyEn(n)] || R.byQ[qk(n)] || (enLooks(n) ? R.byQ[qk(enToRu(n))] : null);
+    if (hit) return hit;
+  }
+  return null;
+}
+const ALT89_MEMO = new Map();
+(function () {
+  const a0 = altName;
+  altName = function (name, substance) {
+    const alt = a0.apply(this, arguments);
+    try {
+      if (!name || isCyr(name) || S.lang === 'az' || !alt || alt !== azToRu(name)) return alt; // своё написание нашлось (справочник, реестр) — не трогаем
+      const key = name + '|' + (substance || '');
+      if (ALT89_MEMO.has(key)) return ALT89_MEMO.get(key);
+      const r = refByAnyName(name, true);
+      const qn = qkeyEn(name);
+      let v = r && isCyr(r.s) && (qn.slice(0, 6) === r.q.slice(0, 6) || qk(name) === r.q) ? r.s
+        : isCyr(substance) && (qn === qk(substance) || qk(enToRu(name)) === qk(substance)) ? substance
+          : enLooks(name) ? enToRu(name) : alt;
+      if (v && skel(v) === skel(name) && isCyr(v) === isCyr(name)) v = '';
+      if (ALT89_MEMO.size > 3000) ALT89_MEMO.clear();
+      ALT89_MEMO.set(key, v);
+      return v;
+    } catch (e) { return alt; }
+  };
+  const s0 = altSub;
+  altSub = function (sub, name) {
+    const v = s0.apply(this, arguments);
+    try {
+      if (v || !sub || isCyr(sub) || S.lang === 'az') return v;
+      const r = refByAnyName(sub);
+      return r && isCyr(r.s) ? r.s : enLooks(sub) ? enToRu(sub) : '';
+    } catch (e) { return v; }
+  };
+})();
+/** Ключи запроса: как написано, по-английски (th = т, x = кс), английское → русское. */
+function q89Keys(q) {
+  const k = [qk(q)];
+  if (/[a-z]/i.test(q) && !isCyr(q)) { k.push(qkeyEn(q)); k.push(qk(enToRu(q))); }
+  return k.filter((x, i) => x && k.indexOf(x) === i);
+}
+function sc89(keys, cand, fuzzy) { let m = 0; for (const k of keys) { const s = score(k, cand, fuzzy); if (s > m) m = s; } return m; }
+/** МНН по-русски для строки реестра АР: из справочника по фирме или по международному МНН; иначе — международное. */
+function catSubOf(e) {
+  if (!e) return '';
+  if (S.refIdx) { const b = S.refIdx.byBrandSk[e.sk]; if (b && b.length) return b[0].sub.s; }
+  if (!e.inn) return '';
+  if (e.inn.indexOf('+') !== -1) return e.inn;
+  const r = refByAnyName(e.inn);
+  return r ? r.s : catInnName(e.inn);
+}
+/* ---------- поле «МНН»: всё, что может значить запрос ---------- */
+(function () {
+  const sub0 = subSuggestions;
+  subSuggestions = function (q) {
+    const base = sub0.apply(this, arguments);
+    try {
+      const keys = q89Keys(String(q || '').replace(/\s+\d.*$/, '').trim() || q);
+      if (!S.refIdx || !keys.length || keys[0].length <= 2) return base;
+      const run = fuzzy => {
+        const m = new Map();
+        const add = (label, so, sub, sc) => { if (!label || sc <= 0) return; const k = normText(label); const was = m.get(k); if (!was || was.sc < sc) m.set(k, { kind: 'sub', label, so, sub, sc }); };
+        S.refIdx.subs.forEach(s => add(s.s, s, t('brandsCount', { n: s.brands.length }), sc89(keys, s.q, fuzzy)));
+        S.refIdx.brands.forEach(b => add(b.sub.s, b.sub, t('brandTag') + ': ' + b.b, sc89(keys, b.q, fuzzy) - 4));
+        (S.view.items || []).filter(i => i.category === 'med' && i.substance).forEach(i => {
+          const sc = Math.max(sc89(keys, qk(i.name), fuzzy) - 2, sc89(keys, qk(i.substance), fuzzy));
+          if (sc > 0) add(i.substance, refBySubstance(i.substance) || { s: i.substance }, t('inBase') + ': ' + i.name, sc);
+        });
+        if (S.catInns) S.catInns.forEach(x => { const sc = sc89(keys, x.q, fuzzy); if (sc > 0) { const r = refByAnyName(x.s); add(r ? r.s : x.s, r || { s: x.s }, t('catSrc'), sc - 3); } });
+        if (typeof catSuggest === 'function') keys.slice(0, 2).forEach(k => catSuggest(k, fuzzy, false).sort((a, b) => b.sc - a.sc).slice(0, 60).forEach(o => { const s = catSubOf(o.ce); if (s) add(s, refBySubstance(s) || { s }, t('catTag') + ': ' + o.label, o.sc - 6); }));
+        return Array.from(m.values());
+      };
+      let list = run(false), fuzzy = false;
+      if (!list.some(o => o.sc >= 50)) { const f = run(true); if (f.length) { list = list.concat(f.filter(o => !list.some(x => normText(x.label) === normText(o.label)))); fuzzy = !list.some(o => o.sc >= 50); } }
+      list.sort((a, b) => b.sc - a.sc || (isCyr(b.label) ? 1 : 0) - (isCyr(a.label) ? 1 : 0) || a.label.localeCompare(b.label, 'ru'));
+      return list.length ? { list: list.slice(0, 12), fuzzy } : base;
+    } catch (e) { console.error(e); return base; }
+  };
+})();
+/* ---------- поле «Название»: английское написание ищется и по-русски ---------- */
+(function () {
+  const n0 = nameSuggestions;
+  nameSuggestions = function (q, cat) {
+    const res = n0.apply(this, arguments);
+    try {
+      const b = qName(q);
+      if (cat !== 'med' || isCyr(b) || !/[a-z]{4,}/i.test(b) || (res.list.length && !res.fuzzy && res.list.some(o => (o.sc || 0) >= 50))) return res;
+      const ru = enToRu(b);
+      const r2 = n0.call(this, ru, cat);
+      const seen = {}; res.list.forEach(o => { seen[o.kind + '|' + o.label + '|' + (o.item ? o.item.id : '')] = 1; });
+      // по-русски нашлось точно (не «похоже») — добавить к найденному; порядок — по совпадению, при равенстве — как было
+      // не нашлось ничего — всё найденное по-русски; нашлось только «похоже» — только точное совпадение по-русски (100)
+      const more = r2.fuzzy ? [] : r2.list.filter(o => (o.sc || 0) >= (res.list.length ? 100 : 50) && !seen[o.kind + '|' + o.label + '|' + (o.item ? o.item.id : '')]);
+      if (!more.length) return res;
+      const all = res.list.map((o, i) => ({ o, i, sc: res.fuzzy ? (o.sc || 0) - 40 : (o.sc || 0) })).concat(more.map((o, i) => ({ o, i: 1000 + i, sc: o.sc || 0 })));
+      all.sort((a, b) => b.sc - a.sc || a.i - b.i);
+      return { list: all.map(x => x.o).slice(0, 14), fuzzy: false };
+    } catch (e) { return res; }
+  };
+})();
+/* ---------- карточка: подсказки и для названия ---------- */
+(function () {
+  const e0 = editItemModal;
+  editItemModal = function (id) {
+    const r = e0.apply(this, arguments);
+    try {
+      const nm = $('#eiName'); if (!nm || nm.dataset.sg) return r;
+      nm.dataset.sg = '1'; nm.setAttribute('autocomplete', 'off');
+      attachSuggest(nm, q => nameSuggestions(q, ($('#eiCat') || {}).value || 'med'), o => {
+        nm.value = o.item ? o.item.name : o.kind === 'sub' && o.so ? o.so.s : o.label;
+        const sb = $('#eiSub');
+        if (sb && !sb.value.trim()) {
+          const s = o.item ? o.item.substance : o.bo ? o.bo.sub.s : o.so ? o.so.s : o.ce ? catSubOf(o.ce) : '';
+          if (s) sb.value = s;
+        }
+        if (o.ce && $('#eiDose') && !$('#eiDose').value.trim()) $('#eiDose').value = o.ce.d || '';
+      });
+    } catch (e) { console.error(e); }
+    return r;
+  };
+})();
+
+/* =====================================================================
+ * v89 (9.57): документы из приёма — по правилам и со структурой (сервер: v89-docs.gs → GT/098 «visitExam»).
+ *  TQS 003: «Первичный осмотр» — по разделам из приёма; врач и время осмотра; консультации — строками (кого вызвали, когда
+ *  пришёл, ФИО, заключение); положили в реанимацию, а реаниматолога в приёме нет — строка «Реаниматолог» для заполнения;
+ *  перевод из приёмного — в отделение из исхода (принял — консультант этого отделения).
+ *  Другие документы: «Объективно», «Жалобы», «Анамнез», «Консультации» — из тех же разделов приёма, если пусто.
+ * ===================================================================== */
+(function () {
+  if (typeof gtDocPatch !== 'function') return;
+  const o = gtDocPatch;
+  gtDocPatch = function (type, g) {
+    const out = o.apply(this, arguments);
+    try {
+      const v = g && g.visitExam; if (!v) return out;
+      const az = S.lang === 'az', P = (az ? v.partsAz : v.parts) || {};
+      const keys = {}; dsFields(type).forEach(f => { keys[f.k] = f; });
+      const fit = (k, val) => keys[k] && keys[k].o && keys[k].o.max ? String(val).slice(0, keys[k].o.max) : String(val);
+      const put = (k, val, force) => { if (keys[k] && val !== undefined && val !== null && String(val).trim() && (force || !out[k])) out[k] = fit(k, val); };
+      put('edExam', az ? v.textAz || v.text : v.text);
+      put('edExamAt', v.at || v.arrivedAt); put('edDoctor', v.by);
+      put('edAt', v.arrivedAt);
+      put('status', P.obj);
+      if (P.compl && String(P.compl).length > String(out.complaints || '').length) put('complaints', P.compl, true); // в списке приёмов жалобы обрезаны
+      put('anamnesis', P.morbi); put('history', P.vitae);
+      if (P.cons) put('consults', [P.cons, out.consults].filter(Boolean).join('\n'), true);
+      // TQS 003: консультации строками
+      const cons = (v.cons || []).slice(0, 20);
+      if (keys.cons && keys.cons.type === 'rows' && !out.cons && (cons.length || v.consNeed)) {
+        const rows = {};
+        cons.forEach((c, i) => { rows['v' + i] = { ord: String(i).padStart(3, '0'), spec: c.spec || 'other', calledAt: c.req || '', seenAt: c.arr || '', who: c.doc || '', concl: [c.spec === 'other' && c.dept ? c.dept + ':' : '', c.note].filter(Boolean).join(' ').slice(0, 2000) }; });
+        if (v.consNeed) rows['vn'] = { ord: '999', spec: v.consNeed, calledAt: '', seenAt: '', who: '', concl: '' }; // положили в отделение — его специалист должен быть
+        out.cons = rows;
+      }
+      // TQS 003: перевод из приёмного — туда, куда госпитализировали
+      if (keys.moves && keys.moves.type === 'rows' && !out.moves && v.outcome === 'adm' && v.outTo) {
+        const sp = typeof DS_ICU_RE === 'object' && DS_ICU_RE.test(v.outTo) ? 'reanim' : '';
+        const acc = cons.find(c => c.doc && (sp ? c.spec === sp : false));
+        out.moves = { v0: { ord: '000', at: v.outAt || v.at || '', to: String(v.outTo).slice(0, 120), reason: String(v.dx || '').slice(0, 200), acc: acc ? acc.doc : '' } };
+      }
+    } catch (e) { console.error(e); }
+    return out;
+  };
+})();
+/* ---------- TQS 003 по этапам (Саид, 04:07: «историю он должен давать этапами: первый этап — написать приём пациента мне как
+ *  врачу неотложки») ----------
+ *  ① Приём — врач неотложки: титульный лист, пациент, поступление, первичный осмотр, консультации, перевод;
+ *  ② Отделение: клинический диагноз, операции, ежедневные осмотры, назначения;
+ *  ③ Выписка: исход, лечение, эпикриз, заключительный диагноз.
+ *  Показывается один этап (остальные — «Все разделы»); «📘 Из GT/098» и «🤖 ИИ» — только поля этого этапа. */
+const X89_T = {
+  ru: { title: 'Этапы истории болезни', all: 'Все разделы', gt: '📘 Этап из GT/098', ai: '🤖 ИИ: написать этап', done: '✓', left: 'осталось {n}', none: 'В GT/098 для этого этапа нового нет',
+    s: ['① Приём — врач неотложки', '② Отделение — диагноз, дневник', '③ Выписка — исход, эпикриз'],
+    hint: ['Этап 1 — приём пациента врачом неотложки (приёмное отделение): поступление (дата и время, отделение, кем направлен, экстренно / планово, через сколько часов от начала), диагноз приёмного отделения с кодом МКБ-10, первичный осмотр по разделам (edExam) — из «ПРИЁМ ПОДРОБНО», врач и время первичного осмотра, консультации (кого вызвали, когда вызван и осмотрел, ФИО, заключение — как в приёме), перевод из приёмного (куда, когда, кто принял). Пациент и титульный лист — из GT/098.',
+      'Этап 2 — отделение: клинический диагноз (код МКБ-10, дата установления), операции, ежедневные осмотры по датам — из дневника наблюдения, назначения.',
+      'Этап 3 — выписка: исход, дата выписки, проведённое лечение, трудоспособность, эпикриз, заключительный диагноз.'] },
+  az: { title: 'Xəstəlik tarixinin mərhələləri', all: 'Bütün bölmələr', gt: '📘 Mərhələ GT/098-dən', ai: '🤖 Sİ: mərhələni yaz', done: '✓', left: '{n} qalıb', none: 'GT/098-də bu mərhələ üçün yeni məlumat yoxdur',
+    s: ['① Qəbul — təcili yardım həkimi', '② Şöbə — diaqnoz, gündəlik', '③ Çıxış — nəticə, epikriz'] }
+};
+function x89(k, v) { const L2 = X89_T[S.lang === 'az' ? 'az' : 'ru']; let s = L2[k] !== undefined ? L2[k] : X89_T.ru[k]; if (typeof s === 'string' && v) Object.keys(v).forEach(x => { s = s.split('{' + x + '}').join(v[x]); }); return s; }
+const X89_STAGES = { h003: [['title', 'patient', 'address', 'social', 'admission', 'consult'], ['cdx', 'ops', 'daily', 'obs', 'meds'], ['course', 'epi', 'final']] };
+const X89_LATE = ['disAt', 'bedDays', 'transDept', 'transAt']; // в титульном листе, но пишутся при выписке
+function x89Keys(type, n) {
+  const st = X89_STAGES[type]; if (!st || !st[n - 1]) return null;
+  return dsFields(type).filter(f => st[n - 1].indexOf(f.sec) !== -1 && !(n === 1 && X89_LATE.indexOf(f.k) !== -1)).map(f => f.k).concat(n === 3 ? X89_LATE : []);
+}
+function x89Id(c) { return (c && (c.id || (c.doc && c.doc.id))) || ''; }
+function x89Cur(c) {
+  S.dsStage = S.dsStage || {};
+  const id = x89Id(c);
+  if (S.dsStage[id] !== undefined) return S.dsStage[id];
+  // первый незаконченный этап
+  const miss = dsCheck(c.type, c.data || {}).map(m => m.k);
+  for (let n = 1; n <= 3; n++) { const ks = x89Keys(c.type, n); if (ks && miss.some(k => ks.indexOf(k) !== -1)) return n; }
+  return 1;
+}
+(function () {
+  if (typeof dsEditorHtml !== 'function') return;
+  const o = dsEditorHtml;
+  dsEditorHtml = function () {
+    let h = o.apply(this, arguments);
+    try {
+      const c = dsSt().cur;
+      if (!c || !X89_STAGES[c.type]) return h;
+      const cur = x89Cur(c);
+      const miss = dsCheck(c.type, c.data || {}).map(m => m.k);
+      const open = c.status !== 'closed';
+      const tabs = x89('s').map((lab, i) => { const ks = x89Keys(c.type, i + 1) || []; const left = miss.filter(k => ks.indexOf(k) !== -1).length;
+        return '<button type="button" class="chip' + (cur === i + 1 ? ' on' : '') + '" data-act="x89Stage" data-n="' + (i + 1) + '">' + esc(lab) + ' <span class="muted">' + esc(left ? x89('left', { n: left }) : x89('done')) + '</span></button>'; }).join('') +
+        '<button type="button" class="chip' + (cur === 0 ? ' on' : '') + '" data-act="x89Stage" data-n="0">' + esc(x89('all')) + '</button>';
+      const acts = open && cur > 0 ? '<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px">' + (can('forms') && c.doc && c.doc.patientId ? '<button class="btn small ghost" data-act="x89Gt">' + esc(x89('gt')) + '</button>' : '') +
+        (can('forms') && typeof canAi === 'function' && canAi() && c.doc && c.doc.patientId ? '<button class="btn small" data-act="x89Ai">' + esc(x89('ai')) + '</button>' : '') + '</div>' : '';
+      const card = '<div class="card x89-st" style="margin-bottom:8px"><div class="lbl">' + esc(x89('title')) + '</div><div class="chips f-chips">' + tabs + '</div>' + acts + '</div>';
+      h = h.replace('<div id="dsMissBox">', card + '<div id="dsMissBox">');
+      if (cur > 0) {
+        const secs = X89_STAGES[c.type][cur - 1];
+        h = h.replace(/<details class="dx-grp ds-sec" data-sec="([a-z0-9]+):([A-Za-z0-9_]+)"/g, (m, ty, sec) => secs.indexOf(sec) !== -1 || (cur === 3 && sec === 'title') ? m : m.replace('<details ', '<details style="display:none" '));
+      }
+    } catch (e) { console.error(e); }
+    return h;
+  };
+})();
+// только поля этапа: «📘 Из GT/098» и «🤖 ИИ» (на время вызова список полей документа — поля этапа)
+const X89 = { keys: null, stage: '' };
+(function () {
+  const f0 = dsFields;
+  dsFields = function (type) { const r = f0.apply(this, arguments); return X89.keys ? r.filter(f => X89.keys.indexOf(f.k) !== -1) : r; };
+  if (typeof rpcA === 'function') {
+    const r0 = rpcA;
+    rpcA = function (a, p) { if (a === 'gtDocAi' && X89.stage && p) { const p2 = Object.assign({}, p, { stage: X89.stage }); return r0.apply(this, [a, p2].concat([].slice.call(arguments, 2))); } return r0.apply(this, arguments); };
+  }
+})();
+function x89Run(fn, btn) {
+  const c = dsSt().cur; if (!c) return;
+  const n = x89Cur(c); const ks = x89Keys(c.type, n); if (!ks) return fn(btn);
+  X89.keys = ks; X89.stage = (X89_T.ru.hint[n - 1] || '');
+  let p;
+  try { p = fn(btn); } finally { X89.keys = null; X89.stage = ''; }
+  return p;
+}
+/** «📘 Этап из GT/098»: пустые поля этого этапа — из GT/098 (приём, стационар, документы). */
+async function x89GtFill(btn) {
+  const c = dsSt().cur; if (!c) return;
+  if (c.status === 'closed') return toast(gtt('gtFillClosed'), 'bad');
+  const pid = c.doc && c.doc.patientId; if (!pid) return toast(gtt('gtFillNoPt'), 'bad');
+  const ks = x89Keys(c.type, x89Cur(c)) || dsFields(c.type).map(f => f.k);
+  const g = await busy(btn, () => ptGet(pid, true)); if (!g || !g.patient) return;
+  const add = gtDocPatch(c.type, g), d = c.data || {}, patch = {};
+  Object.keys(add).forEach(k => { if (ks.indexOf(k) !== -1 && (typeof add[k] === 'object' ? !d[k] || !Object.keys(d[k]).length : dsEmpty(d[k]))) patch[k] = add[k]; });
+  const n = Object.keys(patch).length;
+  if (!n) return toast(x89('none'));
+  dsQueuePatch(patch); dsRender(true);
+  toast(gtt('gtFillDone', { n }), 'ok');
+}
+Object.assign(H, {
+  x89Stage: el => { const c = dsSt().cur; if (!c) return; S.dsStage = S.dsStage || {}; S.dsStage[x89Id(c)] = +el.dataset.n; dsRender(true); },
+  x89Gt: el => x89GtFill(el),
+  x89Ai: el => x89Run(b => aiFillDoc(b), el)
 });
 
 
