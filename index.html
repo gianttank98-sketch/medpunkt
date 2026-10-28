@@ -40259,6 +40259,802 @@ Object.assign(H, {
   x91Reg: () => { S.x91Reg = !S.x91Reg; dsRender(true); }
 });
 
+/* =====================================================================
+ * v92 (9.60): 💊 Resept — рецепт по фирмам врача (Саид, 28.10, 18:09–18:11).
+ *  Пациент (или из GT/098) → жалоба / диагноз → препарат: фирма → группа (ağrıkəsici, spazmolitik…) → препараты этой фирмы →
+ *  доза и «как принимать» пишет ИИ (по-азербайджански, с учётом возраста, веса, аллергии, болезней).
+ *  - Нет в группе у фирмы — «yoxdur» и что есть в этой группе у других моих фирм.
+ *  - «🤖 Daha nə təklif etmək olar» — только показанное и только из моих фирм; слабая польза — с пометкой.
+ *  - Проверка: сочетания и аллергия (сразу, на телефоне) + ИИ по всему рецепту перед выпиской. Решает врач.
+ *  - Рецепт — документ «rx»: копия у врача («Mənim reseptlərim»), печать на азербайджанском, «📘 GT/098-ə».
+ *  - Отчёт по фирме — без данных пациентов.
+ * ===================================================================== */
+const X92_T = {
+  ru: {
+    tabNew: '✍️ Новый рецепт', tabMine: '🗂 Мои рецепты', tabFirms: '🏢 Мои фирмы', tabRep: '📊 Отчёт по фирме',
+    pt: 'Пациент', ptGt: '📘 Из GT/098', ptGtPh: 'Фамилия или FİN', ptFind: 'Найти', ptNone: 'Не найдено', ptLinked: 'Карта GT/098: {n}', ptUnlink: 'отвязать',
+    surname: 'Фамилия', name: 'Имя', age: 'Возраст, лет', ageM: 'мес. (до 3 лет)', sex: 'Пол', weight: 'Вес, кг', preg: 'Беременность', pregNo: 'нет', pregYes: 'да', pregUnk: 'не уточнено', lact: 'Кормит грудью',
+    allergy: 'Аллергия', allergyNo: 'нет', chronic: 'Хронические болезни (почки, печень, язва, сердце, астма…)', meds: 'Что уже принимает', more: 'ещё о пациенте',
+    compl: 'Жалобы', dx: 'Диагноз', dxIcd: 'МКБ-10',
+    items: 'Препараты', noItems: 'Пока пусто — выберите фирму и группу ниже.', signa: 'S. — как принимать (az)', qty: 'D.t.d. — сколько', redo: '🔄 Доза заново', del: '✕',
+    signaWait: 'ИИ пишет дозу…', signaManual: 'Впишите дозу и как принимать (ИИ недоступен).',
+    add: '＋ Препарат', firm: 'Фирма', firmMy: 'Мои фирмы', firmFind: 'Другая фирма (госреестр): начните писать — KRKA, Gedeon, Abdi…', firmNone: 'Нет такой фирмы в реестре. Дистрибьютор (Tempus, VeNatura…)? «🏢 Мои фирмы» → свой список.',
+    firmOnce: 'запомнится, когда выпишете рецепт', grp: 'Группа', grpAll: 'Все', grpMore: 'другие группы', q: 'Название или вещество',
+    noneInGrp: 'У фирмы «{f}» нет: {g}.', altFirms: 'Есть у ваших фирм:', noAlt: 'У ваших фирм тоже нет — можно выбрать другую фирму или вписать вручную.',
+    manual: '✍️ Вписать вручную', manualPh: 'Торговое название, доза, форма', vars: 'вариантов: {n}', catWait: 'Загружается справочник препаратов…',
+    sugg: '🤖 Что ещё предложить', suggNeed: 'Впишите жалобы или диагноз.', suggNoFirms: 'Сначала добавьте фирмы («🏢 Мои фирмы»).', suggT: 'Предложения ИИ (из ваших фирм, только показанное)',
+    lvl_strong: 'показано', lvl_moderate: 'уместно', lvl_weak: 'польза слабая', suggAdd: '＋ в рецепт', notIn: 'Показано, но у ваших фирм нет:', suggNone: 'Добавить нечего — назначенного достаточно.',
+    check: '🛡 Проверить рецепт', checkT: 'Проверка ИИ', checkOk: '✅ ИИ замечаний не нашёл.', checkOld: 'Рецепт изменился — проверьте заново.', localT: '⚠️ Проверьте сочетания',
+    dupInn: 'Одно вещество в двух препаратах: {a} и {b} ({i}).', hint: 'Подсказка программы — решает врач.',
+    foot: 'Рецепт', rxNo: '№ рецепта', inst: 'Учреждение', doctor: 'Врач', valid: 'Действителен', note: 'Пояснение пациенту (az)',
+    write: '✅ Выписать рецепт', needFields: 'Не хватает: {l}', redAsk: 'ИИ нашёл опасное. Всё равно выписать?', redGo: 'Выписать всё равно', writing: 'Сохраняю…',
+    done: '✅ Рецепт выписан', print: '🖨 Печать', toGt: '📘 В GT/098', inGt: '📘 В GT/098: {n}', openEd: '✏️ Открыть', newRx: '＋ Новый рецепт', gtPick: 'Чей это рецепт? Найдите карту GT/098', gtDone: 'Рецепт в GT/098.',
+    clear: 'Очистить', clearQ: 'Очистить рецепт?',
+    mineEmpty: 'Вы ещё не выписывали рецептов здесь.', mineQ: 'Пациент, препарат или фирма',
+    firmsEmpty: 'Фирм пока нет. Добавьте, с какими работаете — или они запомнятся сами из рецептов.', firmAdd: '＋ Фирма', firmEdit: 'Фирма', firmName: 'Название (как вы её зовёте)',
+    firmMfr: 'Производители из госреестра', firmMfrPh: 'KRKA, Gedeon Richter, Abdi İbrahim…', firmItems: 'Свой список препаратов (для дистрибьюторов: Tempus, VeNatura, E-NN…)',
+    firmItemPh: 'Найти препарат в справочнике', firmPhoto: '📷 С фото каталога / прайса', firmWeb: '🌐 Найти в интернете', firmReadT: 'Найдено — отметьте нужное', firmReadAdd: 'Добавить отмеченное', firmReading: 'ИИ читает каталог…',
+    firmSaved: 'Фирма сохранена', firmDel: 'Удалить фирму', firmDelQ: 'Удалить фирму «{n}»? Рецепты останутся.', firmCnt: 'препаратов: {n}', firmUses: 'рецептов: {n}', firmDup: 'Такая фирма уже есть.',
+    repFirm: 'Фирма', repFrom: 'С', repTo: 'По', repGo: '📊 Показать', repT: 'Отчёт: {f}', repNo: 'За этот период препаратов фирмы в ваших закрытых рецептах нет.',
+    repCols: ['Препарат', 'Раз', 'Упаковок'], repDocs: 'Рецептов с препаратами фирмы: {n}', repPriv: 'В отчёте нет данных пациентов (ФИО, возраст, диагноз, номера) — его можно отдать представителю фирмы.', repCopy: '📋 Скопировать',
+    copied: 'Скопировано', blank: '📄 Пустой бланк (вручную)', E_RX_PERIOD: 'Период — не меньше 7 дней (за день-два по одному препарату можно узнать пациента).', nameWarn: 'Рецепт на азербайджанском — укажите имя латиницей: 👤 Профиль → «Имя в документах».', E_RX_FIRM_DUP: 'Такая фирма уже есть.'
+  },
+  az: {
+    tabNew: '✍️ Yeni resept', tabMine: '🗂 Reseptlərim', tabFirms: '🏢 Firmalarım', tabRep: '📊 Firma üzrə hesabat',
+    pt: 'Pasiyent', ptGt: '📘 GT/098-dən', ptGtPh: 'Soyad və ya FİN', ptFind: 'Tap', ptNone: 'Tapılmadı', ptLinked: 'GT/098 kartı: {n}', ptUnlink: 'ayır',
+    surname: 'Soyadı', name: 'Adı', age: 'Yaşı', ageM: 'ay (3 yaşadək)', sex: 'Cinsi', weight: 'Çəkisi, kq', preg: 'Hamiləlik', pregNo: 'yox', pregYes: 'bəli', pregUnk: 'dəqiq deyil', lact: 'Ana südü ilə qidalandırır',
+    allergy: 'Allergiya', allergyNo: 'yoxdur', chronic: 'Xroniki xəstəliklər (böyrək, qaraciyər, xora, ürək, astma…)', meds: 'Qəbul etdiyi dərmanlar', more: 'pasiyent haqqında daha çox',
+    compl: 'Şikayətlər', dx: 'Diaqnoz', dxIcd: 'XBT-10',
+    items: 'Dərmanlar', noItems: 'Hələ boşdur — aşağıda firma və qrup seçin.', signa: 'S. — necə qəbul etməli', qty: 'D.t.d. — nə qədər', redo: '🔄 Dozanı yenidən', del: '✕',
+    signaWait: 'Sİ dozanı yazır…', signaManual: 'Dozanı və qəbul qaydasını yazın (Sİ əlçatan deyil).',
+    add: '＋ Dərman', firm: 'Firma', firmMy: 'Firmalarım', firmFind: 'Başqa firma (dövlət reyestri): yazmağa başlayın — KRKA, Gedeon, Abdi…', firmNone: 'Reyestrdə belə firma yoxdur. Distribyutor (Tempus, VeNatura…)? «🏢 Firmalarım» → öz siyahısı.',
+    firmOnce: 'resept yazılanda yadda qalacaq', grp: 'Qrup', grpAll: 'Hamısı', grpMore: 'digər qruplar', q: 'Ad və ya maddə',
+    noneInGrp: '«{f}» firmasında yoxdur: {g}.', altFirms: 'Firmalarınızda var:', noAlt: 'Digər firmalarınızda da yoxdur — başqa firma seçin və ya əl ilə yazın.',
+    manual: '✍️ Əl ilə yazmaq', manualPh: 'Ticarət adı, doza, forma', vars: 'variant: {n}', catWait: 'Dərman kataloqu yüklənir…',
+    sugg: '🤖 Daha nə təklif etmək olar', suggNeed: 'Şikayət və ya diaqnozu yazın.', suggNoFirms: 'Əvvəlcə firmaları əlavə edin («🏢 Firmalarım»).', suggT: 'Sİ təklifləri (firmalarınızdan, yalnız göstərişə görə)',
+    lvl_strong: 'göstərişdir', lvl_moderate: 'uyğundur', lvl_weak: 'faydası zəifdir', suggAdd: '＋ reseptə', notIn: 'Göstərişdir, amma firmalarınızda yoxdur:', suggNone: 'Əlavə ediləcək bir şey yoxdur — təyin olunan kifayətdir.',
+    check: '🛡 Resepti yoxla', checkT: 'Sİ yoxlaması', checkOk: '✅ Sİ irad tapmadı.', checkOld: 'Resept dəyişib — yenidən yoxlayın.', localT: '⚠️ Uyğunluğu yoxlayın',
+    dupInn: 'Eyni maddə iki dərmanda: {a} və {b} ({i}).', hint: 'Proqramın ipucusu — həkim qərar verir.',
+    foot: 'Resept', rxNo: 'Resept №', inst: 'Müəssisə', doctor: 'Həkim', valid: 'Etibarlıdır', note: 'Pasiyent üçün qeyd',
+    write: '✅ Resepti yaz', needFields: 'Çatışmır: {l}', redAsk: 'Sİ təhlükəli məqam tapıb. Yenə də yazılsın?', redGo: 'Yenə də yaz', writing: 'Saxlanılır…',
+    done: '✅ Resept yazıldı', print: '🖨 Çap et', toGt: '📘 GT/098-ə', inGt: '📘 GT/098-də: {n}', openEd: '✏️ Aç', newRx: '＋ Yeni resept', gtPick: 'Resept kimindir? GT/098 kartını tapın', gtDone: 'Resept GT/098-dədir.',
+    clear: 'Təmizlə', clearQ: 'Resept təmizlənsin?',
+    mineEmpty: 'Burada hələ resept yazmamısınız.', mineQ: 'Pasiyent, dərman və ya firma',
+    firmsEmpty: 'Hələ firma yoxdur. İşlədiyiniz firmaları əlavə edin — və ya reseptlərdən özləri yadda qalacaq.', firmAdd: '＋ Firma', firmEdit: 'Firma', firmName: 'Adı (sizin dediyiniz kimi)',
+    firmMfr: 'Dövlət reyestrindən istehsalçılar', firmMfrPh: 'KRKA, Gedeon Richter, Abdi İbrahim…', firmItems: 'Öz dərman siyahısı (distribyutorlar üçün: Tempus, VeNatura, E-NN…)',
+    firmItemPh: 'Kataloqda dərman tap', firmPhoto: '📷 Kataloq / qiymət siyahısının şəklindən', firmWeb: '🌐 İnternetdə tap', firmReadT: 'Tapıldı — lazım olanı qeyd edin', firmReadAdd: 'Qeyd olunanı əlavə et', firmReading: 'Sİ kataloqu oxuyur…',
+    firmSaved: 'Firma saxlanıldı', firmDel: 'Firmanı sil', firmDelQ: '«{n}» firması silinsin? Reseptlər qalacaq.', firmCnt: 'dərman: {n}', firmUses: 'resept: {n}', firmDup: 'Belə firma artıq var.',
+    repFirm: 'Firma', repFrom: 'Başlanğıc', repTo: 'Son', repGo: '📊 Göstər', repT: 'Hesabat: {f}', repNo: 'Bu dövrdə bağlanmış reseptlərinizdə firmanın dərmanı yoxdur.',
+    repCols: ['Dərman', 'Dəfə', 'Qutu'], repDocs: 'Firmanın dərmanı olan reseptlər: {n}', repPriv: 'Hesabatda pasiyent məlumatı yoxdur (ad, yaş, diaqnoz, nömrələr) — firma nümayəndəsinə vermək olar.', repCopy: '📋 Kopyala',
+    copied: 'Kopyalandı', blank: '📄 Boş blank (əl ilə)', E_RX_PERIOD: 'Dövr ən azı 7 gün olmalıdır (bir-iki gün üzrə pasiyenti tanımaq olar).', nameWarn: 'Resept azərbaycancadır — adınızı latınca yazın: 👤 Profil → «Sənədlərdə ad».', E_RX_FIRM_DUP: 'Belə firma artıq var.'
+  }
+};
+Object.assign(I18N.ru, { E_RX_FIRM_DUP: X92_T.ru.E_RX_FIRM_DUP, E_RX_PERIOD: X92_T.ru.E_RX_PERIOD });
+Object.assign(I18N.az, { E_RX_FIRM_DUP: X92_T.az.E_RX_FIRM_DUP, E_RX_PERIOD: X92_T.az.E_RX_PERIOD });
+function x92(k, o) { let s = (X92_T[S.lang === 'az' ? 'az' : 'ru'] || {})[k]; if (s === undefined) s = X92_T.ru[k]; if (typeof s !== 'string') return s; return o ? s.replace(/\{(\w+)\}/g, (m, n) => o[n] !== undefined ? o[n] : m) : s; }
+/* ---------- группы (ATC) ---------- */
+// [ключ, az, ru, префиксы ATC, всегда показывать]
+const RX_GROUPS = [
+  ['pain', 'Ağrıkəsici', 'Обезболивающее', ['N02B', 'M01A', 'M02A', 'N02C'], 1],
+  ['fever', 'Qızdırmasalan', 'Жаропонижающее', ['N02BE', 'N02BA', 'M01AE'], 1],
+  ['spasm', 'Spazmolitik', 'Спазмолитик', ['A03A', 'A03B', 'A03D', 'A03E', 'G04BD'], 1],
+  ['abx', 'Antibiotik', 'Антибиотик', ['J01'], 1],
+  ['allergy', 'Antiallergik', 'Противоаллергическое', ['R06', 'R01AC', 'S01G'], 1],
+  ['stomach', 'Mədə (turşuluq)', 'Желудок (кислотность)', ['A02'], 1],
+  ['nausea', 'Qusma əleyhinə', 'Противорвотное', ['A04', 'A03F'], 1],
+  ['diar', 'İshal', 'Диарея', ['A07'], 1],
+  ['cough', 'Öskürək', 'Кашель', ['R05'], 1],
+  ['throat', 'Boğaz', 'Горло', ['R02'], 1],
+  ['nose', 'Burun', 'Нос', ['R01'], 1],
+  ['vit', 'Vitamin', 'Витамины', ['A11'], 1],
+  ['antivir', 'Virus əleyhinə', 'Противовирусное', ['J05']],
+  ['fung', 'Göbələk əleyhinə', 'Противогрибковое', ['J02', 'D01', 'G01AF']],
+  ['constip', 'Qəbizlik', 'Запор', ['A06']],
+  ['enzyme', 'Həzm fermentləri', 'Ферменты', ['A09']],
+  ['liver', 'Qaraciyər / öd', 'Печень / желчь', ['A05']],
+  ['probio', 'Probiotik', 'Пробиотик', ['A07FA']],
+  ['asthma', 'Bronxlar (inhalyasiya)', 'Бронхи (ингаляции)', ['R03']],
+  ['bp', 'Təzyiq / ürək', 'Давление / сердце', ['C01', 'C02', 'C03', 'C07', 'C08', 'C09']],
+  ['lipid', 'Xolesterin', 'Холестерин', ['C10']],
+  ['vein', 'Venalar / hemorroy', 'Вены / геморрой', ['C05']],
+  ['blood', 'Qan (antiaqreqant, dəmir)', 'Кровь (антиагреганты, железо)', ['B01', 'B03']],
+  ['sugar', 'Şəkər', 'Сахар', ['A10']],
+  ['mineral', 'Mineral (Ca, Mg, K)', 'Минералы (Ca, Mg, K)', ['A12']],
+  ['nerve', 'Sinir sistemi, yuxu', 'Нервы, сон', ['N05C', 'N05B', 'N06A', 'N06B', 'N07']],
+  ['muscle', 'Əzələ boşaldıcı', 'Миорелаксант', ['M03']],
+  ['joint', 'Oynaq', 'Суставы', ['M01AX', 'M09A']],
+  ['skin', 'Dəri', 'Кожа', ['D']],
+  ['eye', 'Göz', 'Глаза', ['S01']],
+  ['ear', 'Qulaq', 'Уши', ['S02', 'S03']],
+  ['uro', 'Sidik yolları', 'Мочевые пути', ['G04']],
+  ['gyn', 'Ginekoloji', 'Гинекология', ['G01', 'G02', 'G03']],
+  ['hormone', 'Hormonlar', 'Гормоны', ['H02', 'H03']]
+];
+// наркотические, психотропные, наркоз — по особому бланку; в списках не показываем
+const RX_CONTROLLED = /^(N01|N02A|N05BA|N05CD|N05CF|N03AE|N06BA)/;
+const RX_FORM_AZ = { med_tab: 'tablet', med_cap: 'kapsul', med_amp: 'ampul', med_vial: 'flakon', med_inf: 'infuziya məhlulu', med_pow: 'toz', med_neb: 'nebula', med_spray: 'sprey', med_drop: 'damcı', med_oint: 'məlhəm', med_gel: 'gel', med_supp: 'şam', med_other: '' };
+function rxGrp(k) { return RX_GROUPS.find(g => g[0] === k) || null; }
+function rxGrpName(g) { return g ? (S.lang === 'az' ? g[1] : g[2]) : ''; }
+function rxInGrp(atc, g) { atc = String(atc || '').toUpperCase(); return !!atc && g[3].some(p => atc.indexOf(p) === 0); }
+function rxUnitsAz(s) {
+  return String(s || '').replace(/мкг/g, 'mkq').replace(/мг/g, 'mq').replace(/мл/g, 'ml').replace(/(\d)\s*г\b/g, '$1 q').replace(/\bг\b/g, 'q').replace(/МЕ|ЕД/g, 'BV').replace(/доз[аы]?/g, 'doza').replace(/(\d),(\d)/g, '$1,$2');
+}
+function rxToday() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function rxId() { return 'i' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36); }
+/* ---------- состояние и черновик ---------- */
+function rxDraftKey() { return 'MED_RX_DRAFT:' + ((S.me && S.me.id) || '') + ':' + (S.storeId || ''); }
+function rxEmpty() { return { pt: { surname: '', name: '', age: '', ageM: '', sex: '', weight: '', preg: '', lact: false, allergy: '', chronic: '', meds: '', pid: '', pname: '' }, complaint: '', dx: '', dxIcd: '', items: [], rxNo: '', valid: '10 gün', note: '' }; }
+function rxSt() {
+  if (!S.rx) {
+    let d = null; try { d = LS.get(rxDraftKey(), null); } catch (e) { d = null; }
+    S.rx = { view: 'new', d: d && d.pt && Array.isArray(d.items) ? d : rxEmpty(), firms: null, mine: null, add: { fid: '', mfr: '', fname: '', grp: '', q: '', more: false, manual: false }, sugg: null, check: null, done: null, rep: null, mq: '', gtList: null };
+  }
+  return S.rx;
+}
+function rxSave() { try { LS.set(rxDraftKey(), rxSt().d); } catch (e) { } }
+async function rxFirmsLoad(force) {
+  const st = rxSt();
+  if (st.firms && !force) return st.firms;
+  const r = await rpcA('rxFirms', {}).catch(() => null);
+  st.firms = r && r.ok ? r.firms || [] : (st.firms || []);
+  return st.firms;
+}
+/* ---------- справочник: производители и препараты фирмы ---------- */
+function rxMfrIndex() {
+  if (S.rxMfr && S.rxMfr.n === (S.cat || []).length) return S.rxMfr.list;
+  const by = {};
+  (S.cat || []).forEach(e => { if (!e.mfr || e.pack === 'TR') return; const m = String(e.mfr).trim(); (by[m] = by[m] || { m, n: 0, q: qkey(m) }).n++; });
+  const list = Object.keys(by).map(k => by[k]).sort((a, b) => b.n - a.n);
+  S.rxMfr = { n: (S.cat || []).length, list };
+  return list;
+}
+function rxMfrFind(q) { const k = qkey(q); if (k.length < 2) return []; return rxMfrIndex().filter(x => x.q.indexOf(k) !== -1).slice(0, 10); }
+/** «KRKA DD, Sloveniya» → «KRKA DD». */
+function rxMfrShort(m) { return String(m || '').split(',')[0].trim(); }
+/** Вещество → ATC (по другим записям каталога), для препаратов из своего списка без кода. */
+function rxAtcOfInn(inn) {
+  if (!inn) return '';
+  if (!S.rxInnAtc || S.rxInnAtc.n !== (S.cat || []).length) { const m = {}; (S.cat || []).forEach(e => { if (e.atc && e.inn) { const k = qkeyEn(e.inn); if (!m[k]) m[k] = e.atc; } }); S.rxInnAtc = { n: (S.cat || []).length, m }; }
+  return S.rxInnAtc.m[qkeyEn(inn)] || '';
+}
+/** Препараты фирмы, сгруппированные по торговому названию: [{k, b, inn, atc, vars:[{d, code, cnt}]}]. firm: {mfr:[], items:[]}. */
+function rxProducts(firm) {
+  if (!firm || !S.cat) return [];
+  const ck = JSON.stringify([firm.mfr || [], (firm.items || []).length, S.cat.length]);
+  S.rxProdCache = S.rxProdCache || {};
+  const key = (firm.id || firm.mfr && firm.mfr.join('|') || '') + '';
+  if (S.rxProdCache[key] && S.rxProdCache[key].ck === ck) return S.rxProdCache[key].list;
+  const mf = {}; (firm.mfr || []).forEach(m => { mf[String(m).trim()] = 1; });
+  const by = {};
+  const put = (e, own) => {
+    const k = skel(e.b); if (!k) return;
+    const atc = e.atc || rxAtcOfInn(e.inn);
+    if (RX_CONTROLLED.test(atc)) return;
+    const x = by[k] = by[k] || { k, b: e.b, inn: e.inn || '', atc: atc || '', vars: [], seen: {} };
+    if (!x.atc && atc) x.atc = atc;
+    const vk = (e.d || '') + '|' + (e.code || '') + '|' + (e.cnt || '');
+    if (!x.seen[vk]) { x.seen[vk] = 1; x.vars.push({ d: e.d || '', code: e.code || 'med_other', cnt: e.cnt || '', own }); }
+  };
+  S.cat.forEach(e => { if (e.pack !== 'TR' && e.mfr && mf[String(e.mfr).trim()]) put(e, false); });
+  (firm.items || []).forEach(it => {
+    const m = S.catBy && S.catBy[skel(it.b)];
+    const ms = (m || []).filter(e => e.pack !== 'TR');
+    if (ms.length && !it.dose) ms.forEach(e => put(e, true));
+    else if (ms.length && it.dose) { const hit = ms.filter(e => qkey(e.d) === qkey(it.dose)); (hit.length ? hit : ms).forEach(e => put(e, true)); }
+    else put({ b: it.b, inn: it.inn, d: it.dose, code: rxFormCode(it.form), cnt: '', atc: it.atc }, true);
+  });
+  const list = Object.keys(by).map(k => { const x = by[k]; delete x.seen; return x; }).sort((a, b) => a.b.localeCompare(b.b));
+  S.rxProdCache[key] = { ck, list };
+  return list;
+}
+function rxFormCode(f) {
+  const s = String(f || '').toLowerCase();
+  if (/tab|таб/.test(s)) return 'med_tab'; if (/caps|kaps|капс/.test(s)) return 'med_cap'; if (/syr|sirop|şərbət|сироп|susp|сусп/.test(s)) return 'med_other';
+  if (/spray|sprey|спрей|aeroz/.test(s)) return 'med_spray'; if (/drop|damc|капл/.test(s)) return 'med_drop'; if (/oint|cream|krem|məlhəm|мазь|крем/.test(s)) return 'med_oint';
+  if (/gel|гел/.test(s)) return 'med_gel'; if (/supp|şam|свеч/.test(s)) return 'med_supp'; if (/inj|amp|ампул/.test(s)) return 'med_amp'; if (/powd|toz|порош|sachet|саше/.test(s)) return 'med_pow';
+  return 'med_other';
+}
+function rxFirmOf(st) {
+  const a = st.add;
+  if (a.fid) return (st.firms || []).find(f => f.id === a.fid) || null;
+  if (a.mfr) return { id: 'mfr:' + a.mfr, name: a.fname || rxMfrShort(a.mfr), mfr: [a.mfr], items: [], once: true };
+  return null;
+}
+/* ---------- пациент для ИИ (без ФИО) ---------- */
+function rxPtAi(d) {
+  const p = d.pt;
+  return { age: p.age, ageMonths: p.ageM, sex: p.sex, weight: p.weight, preg: p.preg, lact: p.lact, allergy: p.allergy, chronic: p.chronic, meds: p.meds, dx: [d.dxIcd, d.dx].filter(Boolean).join(' '), complaint: d.complaint };
+}
+function rxItemAi(it) { return { b: it.b, inn: it.inn, dose: it.dose, form: it.formAz, atc: it.atc, signa: it.signa, qty: it.qty }; }
+/* ---------- проверка на телефоне: сочетания, аллергия, одно вещество дважды ---------- */
+function rxInnParts(inn) { return String(inn || '').toLowerCase().split(/\s*(?:\+|,|\/| and | və | и )\s*/).map(x => x.replace(/\b(hydrochloride|hcl|sodium|potassium|calcium|magnesium|maleate|besylate|besilate|mesylate|sulfate|sulphate|phosphate|citrate|succinate|tartrate|acetate|monohydrate|dihydrate|trihydrate)\b/g, '').replace(/\s+/g, ' ').trim()).filter(x => x.length >= 4); }
+function rxLocal(d) {
+  const out = [];
+  const names = d.items.map(it => it.b + (it.inn ? ' (' + it.inn + (typeof innOfLatin === 'function' && innOfLatin(it.inn) && innOfLatin(it.inn).ru ? ', ' + innOfLatin(it.inn).ru : '') + ')' : ''));
+  try { if (typeof ixAll === 'function') ixAll(names, d.pt.allergy, String(d.pt.meds || '').split(/[,;\n]+/).map(x => x.trim()).filter(x => x.length >= 3)).forEach(x => out.push(x)); } catch (e) { }
+  for (let i = 0; i < d.items.length; i++) for (let j = i + 1; j < d.items.length; j++) {
+    const a = rxInnParts(d.items[i].inn), b = rxInnParts(d.items[j].inn);
+    const same = a.find(x => b.indexOf(x) !== -1);
+    if (same) out.push({ sev: 'red', text: x92('dupInn', { a: d.items[i].b, b: d.items[j].b, i: same }) });
+  }
+  const seen = {}; return out.filter(x => { if (seen[x.text]) return false; seen[x.text] = 1; return true; });
+}
+function rxSig(d) { return JSON.stringify([rxPtAi(d), d.items.map(rxItemAi)]); }
+/* ---------- ИИ: доза ---------- */
+async function rxSigna(id) {
+  const st = rxSt(), d = st.d, it = d.items.find(x => x.id === id); if (!it) return;
+  if (!(typeof canAi === 'function' && canAi())) { it.busy = false; it.manual = true; rxSave(); rxRender(); return; }
+  it.busy = true; rxRender();
+  const r = await rpcA('rxAi', { mode: 'signa', lang: S.lang, patient: rxPtAi(d), items: d.items.filter(x => x.id !== id).map(rxItemAi), pick: rxItemAi(it) }, { timeout: 120000 }).catch(() => null);
+  const cur = rxSt().d.items.find(x => x.id === id); if (!cur) return;
+  cur.busy = false;
+  if (r && r.ok) {
+    cur.signa = r.signa || cur.signa; cur.qty = r.qty || cur.qty; cur.days = r.days || ''; cur.warn = r.warn || []; cur.aiOk = r.allowed !== false;
+    const m = /(\d+)\s*(qutu|flakon|tübik|şüşə|paket|blister)/i.exec(cur.qty || ''); cur.packs = m ? Math.min(20, Number(m[1])) : 1;
+  } else cur.manual = true;
+  rxSave(); rxRender();
+}
+function rxAddItem(prod, v, firm) {
+  const st = rxSt();
+  const it = { id: rxId(), b: prod.b, inn: prod.inn || '', atc: prod.atc || '', dose: rxUnitsAz(v ? v.d : ''), formAz: v ? (RX_FORM_AZ[v.code] || '') : '', cnt: v ? v.cnt || '' : '',
+    firm: firm ? firm.name : '', firmMfr: firm && firm.once && firm.mfr ? firm.mfr[0] : '', signa: '', qty: v && v.cnt ? '1 qutu (№' + v.cnt + ')' : '', packs: 1, warn: [], busy: false };
+  st.d.items.push(it); st.check = null; st.sugg = st.sugg && Object.assign({}, st.sugg, { items: (st.sugg.items || []).filter(x => skel(x.b) !== skel(prod.b)) });
+  rxSave();
+  rxSigna(it.id);
+}
+/* ---------- вид ---------- */
+function rxCss() {
+  if ($('#rxCss')) return;
+  const s = document.createElement('style'); s.id = 'rxCss';
+  s.textContent = '.rx-it{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;background:var(--card)}.rx-it .t{display:flex;gap:8px;align-items:flex-start}.rx-it .t b{flex:1}' +
+    '.rx-pr{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:6px 0}.rx-pr .vars{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}' +
+    '.rx-lvl{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:10px;margin-left:6px}.rx-lvl.strong{background:var(--green-soft);color:var(--green)}.rx-lvl.moderate{background:var(--brand-soft);color:var(--brand)}.rx-lvl.weak{background:var(--amber-soft,#fff3cd);color:var(--amber)}' +
+    '.rx-scope .grid2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.rx-scope .field{min-width:0}.rx-scope input,.rx-scope textarea,.rx-scope select{max-width:100%;min-width:0;box-sizing:border-box}.rx-scope .searchbar input{flex:1 1 auto;width:auto}' +
+    '.rx-g{opacity:.55}.rx-g.has{opacity:1}.rx-w{margin-top:4px;font-size:13.5px}.rx-tbl{width:100%;border-collapse:collapse}.rx-tbl td,.rx-tbl th{border-bottom:1px solid var(--line);padding:6px 4px;text-align:left}.rx-tbl td.n,.rx-tbl th.n{text-align:right}';
+  document.head.appendChild(s);
+}
+function rxTabsHtml(st) {
+  return '<div class="chips" style="margin-bottom:10px;flex-wrap:wrap;display:flex;gap:6px">' + [['new', 'tabNew'], ['mine', 'tabMine'], ['firms', 'tabFirms'], ['rep', 'tabRep']].map(x =>
+    '<button class="chip' + (st.view === x[0] ? ' on' : '') + '" data-act="rxView" data-v="' + x[0] + '">' + esc(x92(x[1])) + '</button>').join('') +
+    '<button class="chip ghost" data-act="dsNewPii" data-type="rx">' + esc(x92('blank')) + '</button></div>';
+}
+function rxField(k, lab, v, o) {
+  o = o || {};
+  const id = 'rxf_' + k.replace(/\./g, '_');
+  if (o.ta) return '<div class="field"><label for="' + id + '">' + esc(lab) + '</label><textarea id="' + id + '" data-rx="' + k + '" rows="' + (o.rows || 2) + '" maxlength="' + (o.max || 800) + '">' + esc(v || '') + '</textarea></div>';
+  return '<div class="field"' + (o.w ? ' style="max-width:' + o.w + '"' : '') + '><label for="' + id + '">' + esc(lab) + '</label><input id="' + id + '" data-rx="' + k + '"' + (o.type ? ' type="' + o.type + '" inputmode="decimal"' : '') + ' maxlength="' + (o.max || 120) + '" value="' + esc(v === undefined || v === null ? '' : String(v)) + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + '></div>';
+}
+function rxShowAgeM(p) { const a = Number(p.age); return p.age !== '' && a >= 0 && a < 3; }
+function rxShowPreg(p) { const a = Number(p.age); return p.sex === 'f' && (p.age === '' || (a >= 12 && a <= 55)); }
+function rxPtHtml(st) {
+  const p = st.d.pt;
+  const chips = (k, list) => '<div class="chips" style="display:flex;gap:6px;flex-wrap:wrap">' + list.map(x => '<button type="button" class="chip' + (p[k] === x[0] ? ' on' : '') + '" data-act="rxPtSet" data-k="' + k + '" data-v="' + x[0] + '">' + esc(x[1]) + '</button>').join('') + '</div>';
+  let h = '<div class="card"><div class="lbl">👤 ' + esc(x92('pt')) + '</div>';
+  if (p.pid) h += '<div class="info" style="margin:6px 0">' + esc(x92('ptLinked', { n: p.pname || '' })) + ' · <button type="button" class="btn small ghost" style="min-height:28px;padding:2px 10px" data-act="rxPtUnlink">' + esc(x92('ptUnlink')) + '</button></div>';
+  else h += '<div class="searchbar" style="margin:6px 0"><input type="search" id="rxGtQ" autocomplete="off" placeholder="' + esc(x92('ptGtPh')) + '"><button class="btn small" data-act="rxGtFind">' + esc(x92('ptGt')) + '</button></div>' +
+    (st.gtList ? (st.gtList.length ? st.gtList.map(x => '<div class="list-row" data-act="rxGtPick" data-id="' + esc(x.id) + '" style="cursor:pointer"><span>📘</span><div class="grow"><b>' + esc([x.surname, x.name, x.patronymic].filter(Boolean).join(' ')) + '</b><div class="muted">' + esc([x.birthDate, x.fin ? '•••' + String(x.fin).slice(-2) : ''].filter(Boolean).join(' · ')) + '</div></div></div>').join('') : '<div class="muted">' + esc(x92('ptNone')) + '</div>') : '');
+  h += '<div class="grid2">' + rxField('pt.surname', x92('surname'), p.surname, { max: 60 }) + rxField('pt.name', x92('name'), p.name, { max: 60 }) + '</div>' +
+    '<div class="grid2">' + rxField('pt.age', x92('age'), p.age, { type: 'n', max: 3 }) + rxField('pt.weight', x92('weight'), p.weight, { type: 'n', max: 5 }) + '</div>' +
+    '<div id="rxAgeMBox"' + (rxShowAgeM(p) ? '' : ' style="display:none"') + '>' + rxField('pt.ageM', x92('ageM'), p.ageM, { type: 'n', max: 2, w: '160px' }) + '</div>' +
+    '<div class="field"><label>' + esc(x92('sex')) + '</label>' + chips('sex', [['m', S.lang === 'az' ? 'Kişi' : 'Мужской'], ['f', S.lang === 'az' ? 'Qadın' : 'Женский']]) + '</div>' +
+    '<div class="field" id="rxPregBox"' + (rxShowPreg(p) ? '' : ' style="display:none"') + '><label>' + esc(x92('preg')) + '</label>' + chips('preg', [['no', x92('pregNo')], ['yes', x92('pregYes')], ['unk', x92('pregUnk')]]) +
+      '<label class="check" style="margin-top:6px"><input type="checkbox" data-rx="pt.lact"' + (p.lact ? ' checked' : '') + '><span>' + esc(x92('lact')) + '</span></label></div>' +
+    rxField('pt.allergy', x92('allergy'), p.allergy, { max: 300, ph: x92('allergyNo') }) +
+    '<details' + (p.chronic || p.meds ? ' open' : '') + '><summary class="muted" style="cursor:pointer">' + esc(x92('more')) + '</summary>' +
+    rxField('pt.chronic', x92('chronic'), p.chronic, { ta: 1, max: 600 }) + rxField('pt.meds', x92('meds'), p.meds, { ta: 1, max: 600 }) + '</details>' +
+    rxField('complaint', x92('compl'), st.d.complaint, { ta: 1, max: 800 }) +
+    '<div class="grid2">' + rxField('dx', x92('dx'), st.d.dx, { max: 200 }) + rxField('dxIcd', x92('dxIcd'), st.d.dxIcd, { max: 10, w: '140px' }) + '</div></div>';
+  return h;
+}
+function rxItemsHtml(st) {
+  const d = st.d;
+  let h = '<div class="card"><div class="lbl">💊 ' + esc(x92('items')) + (d.items.length ? ' (' + d.items.length + ')' : '') + '</div>';
+  if (!d.items.length) h += '<div class="muted">' + esc(x92('noItems')) + '</div>';
+  d.items.forEach((it, i) => {
+    h += '<div class="rx-it" data-id="' + esc(it.id) + '"><div class="t"><b>' + (i + 1) + '. ' + esc([it.b, it.dose].filter(Boolean).join(' ') + (it.formAz ? ', ' + it.formAz : '')) + '</b>' +
+      '<button type="button" class="btn small ghost" data-act="rxDel" data-id="' + esc(it.id) + '" aria-label="' + esc(x92('del')) + '">' + esc(x92('del')) + '</button></div>' +
+      '<div class="muted" style="font-size:13px">' + esc([it.inn ? catInnName(it.inn) : '', it.firm].filter(Boolean).join(' · ')) + '</div>' +
+      (it.busy ? '<div class="muted" style="margin-top:6px">⏳ ' + esc(x92('signaWait')) + '</div>' :
+        (it.manual && !it.signa ? '<div class="muted" style="margin-top:6px;color:var(--amber)">' + esc(x92('signaManual')) + '</div>' : '') +
+        '<div class="field" style="margin-top:6px"><label>' + esc(x92('signa')) + '</label><textarea rows="2" maxlength="300" data-rxi="signa" data-id="' + esc(it.id) + '">' + esc(it.signa || '') + '</textarea></div>' +
+        '<div class="row" style="gap:8px;align-items:flex-end"><div class="field" style="flex:1;margin:0"><label>' + esc(x92('qty')) + '</label><input maxlength="60" data-rxi="qty" data-id="' + esc(it.id) + '" value="' + esc(it.qty || '') + '"></div>' +
+        (typeof canAi === 'function' && canAi() ? '<button type="button" class="btn small ghost" data-act="rxRedo" data-id="' + esc(it.id) + '">' + esc(x92('redo')) + '</button>' : '') + '</div>') +
+      (it.warn && it.warn.length ? it.warn.map(w => '<div class="rx-w">' + (w.sev === 'red' ? '🔴 ' : '🟠 ') + esc(w.text) + '</div>').join('') : '') + '</div>';
+  });
+  // проверка: на телефоне — всегда; ИИ — по кнопке и перед выпиской
+  const loc = rxLocal(d);
+  if (loc.length && typeof ixHtml === 'function') h += ixHtml(loc, x92('localT'));
+  if (st.check) {
+    const old = st.check.sig !== rxSig(d);
+    h += '<div class="hint" style="display:block;margin:8px 0;border-left:4px solid ' + (st.check.issues.some(x => x.sev === 'red') ? 'var(--red)' : st.check.issues.length ? 'var(--amber)' : 'var(--green)') + '"><b>' + esc(x92('checkT')) + '</b>' +
+      (old ? '<div class="muted">' + esc(x92('checkOld')) + '</div>' : '') +
+      (st.check.issues.length ? st.check.issues.map(x => '<div style="margin-top:4px">' + (x.sev === 'red' ? '🔴 ' : '🟠 ') + (x.items && x.items.length ? '<b>' + esc(x.items.join(', ')) + ':</b> ' : '') + esc(x.text) + '</div>').join('') : '<div>' + esc(x92('checkOk')) + '</div>') +
+      '<div class="muted" style="font-size:12px;margin-top:4px">' + esc(x92('hint')) + '</div></div>';
+  }
+  if (typeof canAi === 'function' && canAi()) h += '<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px"><button class="btn small" data-act="rxSugg">' + esc(x92('sugg')) + '</button>' + (d.items.length ? '<button class="btn small ghost" data-act="rxCheck">' + esc(x92('check')) + '</button>' : '') + '</div>';
+  if (st.sugg) {
+    const s = st.sugg;
+    h += '<div class="hint" style="display:block;margin:8px 0"><b>' + esc(x92('suggT')) + '</b>' +
+      ((s.items || []).length ? s.items.map((x, i) => '<div class="rx-pr"><b>' + esc(x.b) + '</b><span class="rx-lvl ' + esc(x.level) + '">' + esc(x92('lvl_' + x.level)) + '</span>' + (x.firm ? ' <span class="muted">· ' + esc(x.firm) + '</span>' : '') +
+        '<div style="font-size:13.5px;margin-top:2px">' + esc(x.why) + '</div><button class="btn small" style="margin-top:6px" data-act="rxSuggAdd" data-i="' + i + '">' + esc(x92('suggAdd')) + '</button></div>').join('') : '<div>' + esc(x92('suggNone')) + '</div>') +
+      ((s.notInFirms || []).length ? '<div style="margin-top:8px"><b>' + esc(x92('notIn')) + '</b>' + s.notInFirms.map(x => '<div>• ' + esc(x.inn) + ' — ' + esc(x.why) + '</div>').join('') + '</div>' : '') +
+      (s.note ? '<div style="margin-top:8px">⚠️ ' + esc(s.note) + '</div>' : '') +
+      '<div class="muted" style="font-size:12px;margin-top:4px">' + esc(x92('hint')) + '</div></div>';
+  }
+  return h + '</div>';
+}
+function rxAddHtml(st) {
+  const a = st.add, firms = st.firms || [];
+  let h = '<div class="card"><div class="lbl">' + esc(x92('add')) + '</div>';
+  if (!S.cat) return h + '<div class="muted">⏳ ' + esc(x92('catWait')) + '</div></div>';
+  // фирма
+  h += '<div class="field"><label>' + esc(x92('firm')) + '</label>' + (firms.length ? '<div class="chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">' + firms.map(f => '<button type="button" class="chip' + (a.fid === f.id ? ' on' : '') + '" data-act="rxFirmPick" data-id="' + esc(f.id) + '">' + esc(f.name) + '</button>').join('') + '</div>' : '') +
+    '<input id="rxMfrQ" autocomplete="off" placeholder="' + esc(x92('firmFind')) + '" value="' + esc(a.mfrQ || '') + '"><div id="rxMfrBox">' + rxMfrBoxHtml(a.mfrQ || '') + '</div></div>';
+  const firm = rxFirmOf(st);
+  if (firm) {
+    if (firm.once) h += '<div class="muted" style="margin:-4px 0 6px">🏢 <b>' + esc(firm.name) + '</b> — ' + esc(x92('firmOnce')) + '</div>';
+    const prods = rxProducts(firm);
+    const cnt = g => prods.filter(p => rxInGrp(p.atc, g)).length;
+    const groups = RX_GROUPS.filter(g => g[4] || cnt(g) || a.more);
+    h += '<div class="field"><label>' + esc(x92('grp')) + '</label><div class="chips" style="display:flex;gap:6px;flex-wrap:wrap">' +
+      '<button type="button" class="chip' + (!a.grp ? ' on' : '') + '" data-act="rxGrp" data-g="">' + esc(x92('grpAll')) + ' · ' + prods.length + '</button>' +
+      groups.map(g => { const n = cnt(g); return '<button type="button" class="chip rx-g' + (n ? ' has' : '') + (a.grp === g[0] ? ' on' : '') + '" data-act="rxGrp" data-g="' + g[0] + '">' + esc(rxGrpName(g)) + (n ? ' · ' + n : '') + '</button>'; }).join('') +
+      (!a.more ? '<button type="button" class="chip ghost" data-act="rxGrpMore">' + esc(x92('grpMore')) + ' ▾</button>' : '') + '</div></div>' +
+      '<input type="search" id="rxProdQ" autocomplete="off" placeholder="' + esc(x92('q')) + '" value="' + esc(a.q || '') + '" style="margin-bottom:6px">' +
+      '<div id="rxProdBox">' + rxProdBoxHtml(st, firm, prods) + '</div>';
+  }
+  h += a.manual ? '<div class="row" style="gap:6px;margin-top:8px"><input id="rxManual" maxlength="160" placeholder="' + esc(x92('manualPh')) + '" style="flex:1"><button class="btn small primary" data-act="rxManualAdd">＋</button></div>'
+    : '<button class="btn small ghost" style="margin-top:8px" data-act="rxManual">' + esc(x92('manual')) + '</button>';
+  return h + '</div>';
+}
+function rxMfrBoxHtml(q) {
+  if (!q || q.length < 2) return '';
+  const list = rxMfrFind(q);
+  if (!list.length) return '<div class="muted" style="margin-top:4px">' + esc(x92('firmNone')) + '</div>';
+  return list.map(x => '<div class="list-row" style="cursor:pointer" data-act="rxMfrPick" data-m="' + esc(x.m) + '"><span>🏭</span><div class="grow"><b>' + esc(rxMfrShort(x.m)) + '</b><div class="muted">' + esc(x.m) + ' · ' + esc(x92('firmCnt', { n: x.n })) + '</div></div></div>').join('');
+}
+function rxProdBoxHtml(st, firm, prods) {
+  const a = st.add, g = a.grp ? rxGrp(a.grp) : null;
+  const k = qkey(a.q || ''), ke = qkeyEn(a.q || '');
+  let list = prods.filter(p => (!g || rxInGrp(p.atc, g)) && (!k || qkey(p.b).indexOf(k) !== -1 || (ke && qkeyEn(p.inn).indexOf(ke) !== -1)));
+  if (!list.length && g && !k) {
+    // нет в группе у этой фирмы — что есть у других моих фирм
+    let h = '<div class="hint" style="display:block">' + esc(x92('noneInGrp', { f: firm.name, g: rxGrpName(g).toLowerCase() }));
+    const alt = (st.firms || []).filter(f => f.id !== firm.id).map(f => ({ f, ps: rxProducts(f).filter(p => rxInGrp(p.atc, g)) })).filter(x => x.ps.length);
+    h += alt.length ? '<div style="margin-top:6px"><b>' + esc(x92('altFirms')) + '</b>' + alt.map(x => '<div style="margin-top:4px"><button class="btn small ghost" data-act="rxFirmPick" data-id="' + esc(x.f.id) + '" data-g="' + g[0] + '">🏢 ' + esc(x.f.name) + '</button> ' + esc(x.ps.slice(0, 5).map(p => p.b).join(', ') + (x.ps.length > 5 ? '…' : '')) + '</div>').join('') + '</div>'
+      : '<div class="muted" style="margin-top:4px">' + esc(x92('noAlt')) + '</div>';
+    return h + '</div>';
+  }
+  return list.slice(0, 60).map((p, i) => '<div class="rx-pr"><b>' + esc(p.b) + '</b>' + (p.inn ? ' <span class="muted">· ' + esc(catInnName(p.inn)) + '</span>' : '') +
+    '<div class="vars">' + p.vars.slice(0, 10).map((v, j) => '<button type="button" class="chip" data-act="rxPick" data-k="' + esc(p.k) + '" data-j="' + j + '">' + esc([rxUnitsAz(v.d), RX_FORM_AZ[v.code] || '', v.cnt ? '№' + v.cnt : ''].filter(Boolean).join(' · ') || '＋') + '</button>').join('') + '</div></div>').join('') +
+    (list.length > 60 ? '<div class="muted">… ' + (list.length - 60) + '</div>' : '');
+}
+function rxFootHtml(st) {
+  const d = st.d;
+  const doc = (typeof x91MyAz === 'function' && x91MyAz()) || (S.me && (S.me.nameAz || S.me.name)) || '';
+  return '<div class="card"><div class="lbl">📝 ' + esc(x92('foot')) + '</div><div class="grid2">' + rxField('rxNo', x92('rxNo'), d.rxNo, { max: 30, ph: 'avtomatik' }) + rxField('valid', x92('valid'), d.valid, { max: 40 }) + '</div>' +
+    rxField('note', x92('note'), d.note, { ta: 1, max: 600 }) +
+    '<div class="muted" style="margin:4px 0 8px">' + esc(x92('doctor')) + ': <b>' + esc(doc) + '</b></div>' +
+    (typeof x91MyAz === 'function' && !x91MyAz() ? '<div class="hint" style="display:block;margin:0 0 8px">' + esc(x92('nameWarn')) + '</div>' : '') +
+    '<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn primary" data-act="rxWrite">' + esc(x92('write')) + '</button><button class="btn ghost" data-act="rxClear">' + esc(x92('clear')) + '</button></div></div>';
+}
+function rxDoneHtml(st) {
+  const x = st.done;
+  return '<div class="card"><h3 style="margin:0 0 6px">' + esc(x92('done')) + '</h3><div class="muted">' + esc([x.patient, x.date].filter(Boolean).join(' · ')) + '</div>' +
+    '<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn primary" data-act="rxPrint" data-id="' + esc(x.id) + '">' + esc(x92('print')) + '</button>' +
+    (x.pid ? '<span class="muted" style="align-self:center">' + esc(x92('inGt', { n: x.pname || '' })) + '</span>' : '<button class="btn" data-act="rxToGt" data-id="' + esc(x.id) + '">' + esc(x92('toGt')) + '</button>') +
+    '<button class="btn ghost" data-act="rxOpenDoc" data-id="' + esc(x.id) + '">' + esc(x92('openEd')) + '</button><button class="btn ghost" data-act="rxNew">' + esc(x92('newRx')) + '</button></div></div>';
+}
+function rxMineHtml(st) {
+  if (!st.mine) { rxMineLoad(); return '<div class="muted">⏳</div>'; }
+  const k = qkey(st.mq || '');
+  const rows = st.mine.filter(r => !k || qkey([r.patient, r.brands.join(' '), r.firms.join(' ')].join(' ')).indexOf(k) !== -1);
+  return '<div class="searchbar"><input type="search" id="rxMineQ" autocomplete="off" placeholder="' + esc(x92('mineQ')) + '" value="' + esc(st.mq || '') + '"></div>' +
+    (!st.mine.length ? '<div class="muted">' + esc(x92('mineEmpty')) + '</div>' : '<div class="grp">' + rows.slice(0, 200).map(r => '<div class="list-row"><span>' + (r.patientId ? '📘' : '💊') + '</span><div class="grow" data-act="rxOpenDoc" data-id="' + esc(r.id) + '" style="cursor:pointer"><b>' + esc(r.patient || '—') + '</b> <span class="muted">' + esc(r.date ? fmtDate(r.date) : String(r.createdAt || '').slice(0, 10)) + (r.status !== 'closed' ? ' · ' + (S.lang === 'az' ? 'qaralama' : 'черновик') : '') + '</span>' +
+      '<div class="muted">' + esc(r.brands.join(', ')) + (r.firms.length ? ' · 🏢 ' + esc(r.firms.join(', ')) : '') + '</div></div><button class="btn small ghost" data-act="rxPrint" data-id="' + esc(r.id) + '" aria-label="print">🖨</button></div>').join('') + '</div>');
+}
+async function rxMineLoad() {
+  const st = rxSt();
+  if (st.mineLoading) return; st.mineLoading = true;
+  const r = await rpcA('rxMine', {}).catch(() => null);
+  st.mineLoading = false;
+  st.mine = r && r.ok ? r.rows || [] : [];
+  rxRender();
+}
+function rxFirmsHtml(st) {
+  if (!st.firms) { rxFirmsLoad().then(rxRender); return '<div class="muted">⏳</div>'; }
+  return '<button class="btn primary" data-act="rxFirmNew" style="margin-bottom:8px">' + esc(x92('firmAdd')) + '</button>' +
+    (!st.firms.length ? '<div class="muted">' + esc(x92('firmsEmpty')) + '</div>' : '<div class="grp">' + st.firms.map(f => {
+      const n = S.cat ? rxProducts(f).length : 0;
+      return '<div class="list-row"><span>🏢</span><div class="grow" data-act="rxFirmEdit" data-id="' + esc(f.id) + '" style="cursor:pointer"><b>' + esc(f.name) + '</b><div class="muted">' + esc([S.cat ? x92('firmCnt', { n }) : '', f.mfr.length ? f.mfr.map(rxMfrShort).join(', ') : '', x92('firmUses', { n: f.uses || 0 })].filter(Boolean).join(' · ')) + '</div></div>' +
+        '<button class="btn small ghost" data-act="rxRepFor" data-id="' + esc(f.id) + '">📊</button></div>';
+    }).join('') + '</div>');
+}
+function rxRepHtml(st) {
+  if (!st.firms) { rxFirmsLoad().then(rxRender); return '<div class="muted">⏳</div>'; }
+  const r = st.rep || {};
+  const today = rxToday(), from = r.from || today.slice(0, 8) + '01', to = r.to || today;
+  let h = '<div class="card"><div class="field"><label>' + esc(x92('repFirm')) + '</label><select id="rxRepFirm">' + st.firms.map(f => '<option value="' + esc(f.id) + '"' + (r.fid === f.id ? ' selected' : '') + '>' + esc(f.name) + '</option>').join('') + '</select></div>' +
+    '<div class="grid2"><div class="field"><label>' + esc(x92('repFrom')) + '</label><input type="date" id="rxRepFrom" value="' + esc(from) + '"></div><div class="field"><label>' + esc(x92('repTo')) + '</label><input type="date" id="rxRepTo" value="' + esc(to) + '"></div></div>' +
+    '<button class="btn primary" data-act="rxRepGo"' + (st.firms.length ? '' : ' disabled') + '>' + esc(x92('repGo')) + '</button>' +
+    '<div class="muted" style="margin-top:6px;font-size:12.5px">🔒 ' + esc(x92('repPriv')) + '</div></div>';
+  if (r.res) h += '<div class="card" id="rxRepOut">' + rxRepTableHtml(r.res) + '<div class="row" style="gap:8px;margin-top:8px"><button class="btn small" data-act="rxRepPrint">' + esc(x92('print')) + '</button><button class="btn small ghost" data-act="rxRepCopy">' + esc(x92('repCopy')) + '</button></div></div>';
+  return h;
+}
+function rxRepTableHtml(x) {
+  const C = x92('repCols');
+  const months = {}; x.rows.forEach(r => Object.keys(r.months).forEach(m => { months[m] = 1; }));
+  const ms = Object.keys(months).sort();
+  return '<h3 style="margin:0 0 4px">' + esc(x92('repT', { f: x.firm })) + '</h3><div class="muted">' + esc([x.from ? fmtDate(x.from) : '', x.to ? fmtDate(x.to) : ''].join(' — ')) + ' · ' + esc(x.by) + '</div>' +
+    (!x.rows.length ? '<div class="muted" style="margin-top:8px">' + esc(x92('repNo')) + '</div>' :
+      '<table class="rx-tbl" style="margin-top:8px"><tr><th>' + esc(C[0]) + '</th>' + (ms.length > 1 ? ms.map(m => '<th class="n">' + esc(m) + '</th>').join('') : '') + '<th class="n">' + esc(C[1]) + '</th><th class="n">' + esc(C[2]) + '</th></tr>' +
+      x.rows.map(r => '<tr><td>' + esc(r.name) + '</td>' + (ms.length > 1 ? ms.map(m => '<td class="n">' + (r.months[m] || '') + '</td>').join('') : '') + '<td class="n">' + r.n + '</td><td class="n">' + r.packs + '</td></tr>').join('') + '</table>' +
+      '<div class="muted" style="margin-top:6px">' + esc(x92('repDocs', { n: x.docs })) + '</div>');
+}
+function rxRepText(x) {
+  return x92('repT', { f: x.firm }) + ' (' + [x.from, x.to].join(' — ') + ')\n' + x.rows.map(r => '• ' + r.name + ' — ' + r.n + ' / ' + r.packs).join('\n') + '\n' + x92('repDocs', { n: x.docs }) + '\n' + x.by;
+}
+function rxHtml() {
+  const st = rxSt();
+  rxCss();
+  if (st.firms === null && !st.firmsLoading) { st.firmsLoading = true; rxFirmsLoad().then(() => { st.firmsLoading = false; rxRender(); }); }
+  if (!S.cat && !S.catLoading && typeof loadCatalog === 'function') loadCatalog().then(() => rxRender());
+  let h = rxTabsHtml(st);
+  if (st.view === 'new') h += st.done ? rxDoneHtml(st) : rxPtHtml(st) + rxItemsHtml(st) + rxAddHtml(st) + rxFootHtml(st);
+  else if (st.view === 'mine') h += rxMineHtml(st);
+  else if (st.view === 'firms') h += rxFirmsHtml(st);
+  else h += rxRepHtml(st);
+  return '<div class="rx-scope">' + h + '</div>';
+}
+function rxRender() {
+  const ds = dsSt();
+  if (S.screen !== 'forms' || ds.seg !== 'rx' || ds.cur) return;
+  const box = $('#formsBox'); if (!box) return;
+  const y = window.scrollY, act = document.activeElement, aid = act && act.id, pos = act && act.selectionStart;
+  box.innerHTML = dsSegHtml() + rxHtml();
+  rxBind();
+  window.scrollTo(0, y);
+  if (aid) { const el = document.getElementById(aid); if (el) { el.focus(); try { if (pos !== undefined && pos !== null) el.setSelectionRange(pos, pos); } catch (e) { } } }
+}
+function rxBind() {
+  const st = rxSt(), box = $('#formsBox'); if (!box) return;
+  const mq = $('#rxMfrQ'); if (mq) mq.addEventListener('input', () => { st.add.mfrQ = mq.value; const b = $('#rxMfrBox'); if (b) b.innerHTML = rxMfrBoxHtml(mq.value); });
+  const pq = $('#rxProdQ'); if (pq) pq.addEventListener('input', () => { st.add.q = pq.value; const f = rxFirmOf(st), b = $('#rxProdBox'); if (f && b) b.innerHTML = rxProdBoxHtml(st, f, rxProducts(f)); });
+  const gq = $('#rxGtQ'); if (gq) gq.addEventListener('keydown', e => { if (e.key === 'Enter') H.rxGtFind(); });
+  const mi = $('#rxMineQ'); if (mi) mi.addEventListener('input', () => { st.mq = mi.value; clearTimeout(st.mqT); st.mqT = setTimeout(rxRender, 250); });
+  const ma = $('#rxManual'); if (ma) { ma.focus(); ma.addEventListener('keydown', e => { if (e.key === 'Enter') H.rxManualAdd(); }); }
+}
+// ввод в поля черновика — без перерисовки
+document.addEventListener('input', e => {
+  const el = e.target; if (!el || !el.dataset) return;
+  if (el.dataset.rx) {
+    const st = rxSt(), k = el.dataset.rx, v = el.type === 'checkbox' ? el.checked : el.value;
+    if (k.indexOf('pt.') === 0) st.d.pt[k.slice(3)] = v; else st.d[k] = v;
+    rxSave();
+    if (k === 'pt.age') { const a = $('#rxAgeMBox'), b = $('#rxPregBox'); if (a) a.style.display = rxShowAgeM(st.d.pt) ? '' : 'none'; if (b) b.style.display = rxShowPreg(st.d.pt) ? '' : 'none'; }
+  } else if (el.dataset.rxi) {
+    const it = rxSt().d.items.find(x => x.id === el.dataset.id); if (!it) return;
+    it[el.dataset.rxi] = el.value;
+    if (el.dataset.rxi === 'qty') { const m = /(\d+)\s*(qutu|flakon|tübik|şüşə|paket|blister)/i.exec(el.value || ''); it.packs = m ? Math.min(20, Number(m[1])) : 1; }
+    rxSave();
+  }
+});
+/* ---------- выписать ---------- */
+function rxMissing(d) {
+  const L = [];
+  if (!String(d.pt.surname).trim()) L.push(x92('surname'));
+  if (!String(d.pt.name).trim()) L.push(x92('name'));
+  if (!d.items.length) L.push(x92('items'));
+  d.items.forEach((it, i) => { if (!String(it.signa || '').trim()) L.push((i + 1) + '. ' + it.b + ' — S.'); if (!String(it.qty || '').trim()) L.push((i + 1) + '. ' + it.b + ' — D.t.d.'); });
+  return L;
+}
+function rxDocData(d, id) {
+  const st = typeof myStores === 'function' ? myStores().find(x => x.id === S.storeId) : null;
+  const items = {};
+  d.items.forEach((it, i) => {
+    items[it.id] = { rp: [it.b, it.dose].filter(Boolean).join(' ') + (it.formAz ? ', ' + it.formAz : ''), dtd: it.qty, signa: it.signa, brand: '', b: it.b, inn: it.inn, atc: it.atc, dose: it.dose, formAz: it.formAz,
+      firm: it.firm, firmMfr: it.firmMfr || '', packs: it.packs || 1, days: it.days || '', ord: String(i + 1).padStart(2, '0') };
+  });
+  return {
+    rxNo: String(d.rxNo || '').trim() || 'R-' + String(id).slice(-8).toUpperCase(), inst: st ? (st.nameAz || st.nameRu || '') : '', date: rxToday(),
+    surname: String(d.pt.surname).trim(), name: String(d.pt.name).trim(), age: d.pt.age, sex: d.pt.sex, weight: d.pt.weight, allergy: d.pt.allergy, complaint: d.complaint,
+    dx: d.dx, dxIcd: String(d.dxIcd || '').toUpperCase().trim(), doctor: (typeof x91MyAz === 'function' && x91MyAz()) || (S.me && (S.me.nameAz || S.me.name)) || '', valid: d.valid, note: d.note, items
+  };
+}
+async function rxWrite(btn, force) {
+  const st = rxSt(), d = st.d;
+  const miss = rxMissing(d);
+  if (miss.length) return toast(x92('needFields', { l: miss.join(', ') }), 'bad');
+  if (d.items.some(x => x.busy)) return toast(x92('signaWait'));
+  // перед выпиской — проверка ИИ всего рецепта (если ещё не было после изменений)
+  if (!force && typeof canAi === 'function' && canAi() && !(st.check && st.check.sig === rxSig(d))) {
+    const ok = await rxCheck(btn);
+    if (ok === false) {
+      openModal('<h3>⚠️ ' + esc(x92('redAsk')) + '</h3>' + st.check.issues.filter(x => x.sev === 'red').map(x => '<div style="margin:4px 0">🔴 ' + esc(x.text) + '</div>').join('') +
+        '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn danger" data-act="rxWriteForce">' + esc(x92('redGo')) + '</button></div>');
+      return;
+    }
+  }
+  const id = dsNewId(), data = rxDocData(d, id);
+  const r = await busy(btn, () => rpcA('docSave', { id, type: 'rx', patch: data, opId: newOpId(), close: true }, { timeout: 60000 })).catch(() => null);
+  if (!r || !r.ok) return;
+  let pid = '';
+  if (d.pt.pid) { const l = await rpcA('patientLink', { patientId: d.pt.pid, kind: 'doc', id, opId: newOpId() }).catch(() => null); if (l && l.ok) { pid = d.pt.pid; delete PT.cache[pid]; } }
+  st.done = { id, data, createdAt: r.doc && r.doc.createdAt, patient: [data.surname, data.name].join(' '), date: fmtDate(data.date), pid, pname: d.pt.pname };
+  st.lastDone = { id, data, doc: r.doc };
+  st.d = rxEmpty(); st.check = null; st.sugg = null; st.mine = null; st.firms = null; st.add = { fid: '', mfr: '', fname: '', grp: '', q: '', more: false, manual: false };
+  rxSave(); rxRender(); window.scrollTo(0, 0);
+}
+async function rxCheck(btn) {
+  const st = rxSt(), d = st.d;
+  if (!d.items.length) return true;
+  const sig = rxSig(d);
+  const r = await busy(btn, () => rpcA('rxAi', { mode: 'check', lang: S.lang, patient: rxPtAi(d), items: d.items.map(rxItemAi) }, { timeout: 120000 })).catch(() => null);
+  if (!r || !r.ok) return null;
+  st.check = { sig, issues: r.issues || [] };
+  rxRender();
+  return !st.check.issues.some(x => x.sev === 'red');
+}
+async function rxSugg(btn) {
+  const st = rxSt(), d = st.d;
+  if (!String(d.complaint || '').trim() && !String(d.dx || '').trim() && !d.items.length) return toast(x92('suggNeed'), 'bad');
+  const firms = await rxFirmsLoad();
+  if (!firms.length) return toast(x92('suggNoFirms'), 'bad');
+  if (!S.cat) return toast(x92('catWait'));
+  const cands = [], seen = {};
+  firms.forEach(f => rxProducts(f).forEach(p => { const k = skel(p.b); if (seen[k] || d.items.some(it => skel(it.b) === k)) return; seen[k] = 1; cands.push({ b: p.b, inn: p.inn, atc: p.atc, form: p.vars.map(v => RX_FORM_AZ[v.code]).filter((x, i, a) => x && a.indexOf(x) === i).join('/'), dose: p.vars.slice(0, 3).map(v => rxUnitsAz(v.d)).filter(Boolean).join('; '), firm: f.name }); }));
+  const r = await busy(btn, () => rpcA('rxAi', { mode: 'suggest', lang: S.lang, patient: rxPtAi(d), items: d.items.map(rxItemAi), cands: cands.slice(0, 500) }, { timeout: 150000 })).catch(() => null);
+  if (!r || !r.ok) return;
+  st.sugg = { items: r.items || [], notInFirms: r.notInFirms || [], note: r.note || '' };
+  rxRender();
+}
+/** Печать рецепта (по-азербайджански). */
+async function rxPrint(id) {
+  const st = rxSt();
+  let c = st.lastDone && st.lastDone.id === id ? { id, data: st.lastDone.data, doc: st.lastDone.doc || {} } : null;
+  if (!c) { const r = await rpcA('docGet', { id }).catch(() => null); if (!r || !r.ok) return; c = { id, data: r.data || {}, doc: r.doc || {} }; }
+  $('#printRoot').innerHTML = dsPrintRx(c);
+  document.body.classList.add('print-form');
+  setTimeout(() => { window.print(); setTimeout(() => { document.body.classList.remove('print-form'); $('#printRoot').innerHTML = ''; }, 800); }, 60);
+}
+/* ---------- печать рецепта — по-азербайджански (Саид, 28.10: «рецепт на азербайджанском») ---------- */
+dsPrintRx = function (c) {
+  const d = c.data || {};
+  const v = k => esc(d[k] === undefined || d[k] === null ? '' : String(d[k]));
+  const items = dsRows(d, 'items').slice().sort((a, b) => String(a.ord || '').localeCompare(String(b.ord || '')));
+  const fio = [d.surname, d.name, d.patronymic].filter(Boolean).join(' ');
+  const age = d.age !== undefined && d.age !== '' ? d.age : (typeof dsAge === 'function' ? dsAge(d.birth, d.date) : '');
+  const one = '<div style="border:1.5px solid #000;padding:12px 14px;font-size:13px;line-height:1.5">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px"><div>' + v('inst') + '</div><div style="text-align:right"><b style="font-size:17px;letter-spacing:.5px">RESEPT</b><br>№ <b>' + v('rxNo') + '</b></div></div>' +
+    '<div style="margin-top:6px">Tarix: <b>' + esc(d.date ? fmtDate(String(d.date).slice(0, 10)) : '') + '</b></div>' +
+    '<div>Xəstənin soyadı, adı: <b>' + esc(fio) + '</b>' + (age !== '' && age !== undefined ? ' &nbsp; Yaşı: <b>' + esc(String(age)) + '</b>' : '') + (d.weight ? ' &nbsp; Çəkisi: <b>' + v('weight') + ' kq</b>' : '') + '</div>' +
+    (d.dx || d.dxIcd ? '<div>Diaqnoz: ' + (d.dxIcd ? '<b>' + v('dxIcd') + '</b> ' : '') + v('dx') + '</div>' : '') +
+    '<div style="margin-top:10px">' + items.map(r => '<div style="margin-bottom:10px;padding-left:4px"><div><b>Rp.:</b> ' + esc(r.rp || '') + '</div><div style="padding-left:30px">D.t.d.: ' + esc(r.dtd || '') + '</div><div style="padding-left:30px"><b>S.:</b> ' + esc(r.signa || '') + '</div>' + (r.brand ? '<div style="padding-left:30px;font-size:11.5px">(aptekdə: ' + esc(r.brand) + ')</div>' : '') + '</div>').join('') + '</div>' +
+    (d.note ? '<div style="font-size:12px;margin-top:4px;white-space:pre-wrap">' + v('note') + '</div>' : '') +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:16px;gap:10px"><div>Həkim: <b>' + v('doctor') + '</b><br><br>İmza: ________________</div><div style="width:90px;height:60px;border:1px dashed #000;display:flex;align-items:center;justify-content:center;font-size:11px">M.Y.</div></div>' +
+    (d.valid ? '<div style="font-size:11.5px;margin-top:6px">Resept etibarlıdır: ' + v('valid') + '</div>' : '') +
+    '<div style="font-size:8px;margin-top:6px">ID ' + esc(c.id) + (c.doc && c.doc.createdAt ? ' · ' + esc(c.doc.createdAt) : '') + '</div></div>';
+  return '<div class="pf-page last">' + one + '</div>';
+};
+/* ---------- фирма: редактор ---------- */
+function rxFeHtml() {
+  const fe = rxSt().fe;
+  const sel = fe.mfr.map((m, i) => '<div class="list-row"><span>🏭</span><div class="grow">' + esc(m) + '</div><button class="btn small ghost" data-act="rxFeMfrDel" data-i="' + i + '">✕</button></div>').join('');
+  const its = fe.items.map((x, i) => '<div class="list-row"><span>💊</span><div class="grow"><b>' + esc(x.b) + '</b> <span class="muted">' + esc([x.dose, x.form, x.inn ? catInnName(x.inn) : ''].filter(Boolean).join(' · ')) + '</span></div><button class="btn small ghost" data-act="rxFeItemDel" data-i="' + i + '">✕</button></div>').join('');
+  let found = '';
+  if (fe.found) found = '<div class="hint" style="display:block;margin-top:8px"><b>' + esc(x92('firmReadT')) + ' (' + fe.found.items.length + ')</b>' +
+    fe.found.items.map((x, i) => '<label class="check" style="margin:4px 0"><input type="checkbox" class="rx-fd" data-i="' + i + '" checked><span><b>' + esc(x.b) + '</b> <span class="muted">' + esc([x.dose, x.form, x.inn].filter(Boolean).join(' · ')) + (x.inCat ? ' ✓' : '') + '</span></span></label>').join('') +
+    (fe.found.note ? '<div class="muted">' + esc(fe.found.note) + '</div>' : '') + ((fe.found.sources || []).length ? '<div class="muted" style="font-size:12px">' + fe.found.sources.slice(0, 4).map(s => esc(s.title || s.url)).join(' · ') + '</div>' : '') +
+    '<button class="btn small primary" style="margin-top:6px" data-act="rxFeFoundAdd">' + esc(x92('firmReadAdd')) + '</button></div>';
+  return '<h3>🏢 ' + esc(x92('firmEdit')) + '</h3><div class="field"><label>' + esc(x92('firmName')) + '</label><input id="rxFeName" maxlength="80" value="' + esc(fe.name) + '"></div>' +
+    '<div class="lbl">' + esc(x92('firmMfr')) + '</div>' + sel + '<input id="rxFeMfrQ" autocomplete="off" placeholder="' + esc(x92('firmMfrPh')) + '"><div id="rxFeMfrBox"></div>' +
+    '<div class="lbl" style="margin-top:10px">' + esc(x92('firmItems')) + '</div>' + its + '<input id="rxFeItemQ" autocomplete="off" placeholder="' + esc(x92('firmItemPh')) + '"><div id="rxFeItemBox"></div>' +
+    (typeof canAi === 'function' && canAi() ? '<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px"><label class="btn small ghost" style="cursor:pointer">' + esc(x92('firmPhoto')) + '<input type="file" accept="image/*" multiple id="rxFePhoto" style="display:none"></label><button class="btn small ghost" data-act="rxFeWeb">' + esc(x92('firmWeb')) + '</button></div>' : '') +
+    found +
+    '<div class="acts">' + (fe.id ? '<button class="btn danger ghost" data-act="rxFeDel">' + esc(x92('firmDel')) + '</button>' : '') + '<button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="rxFeSave">' + esc(t('save')) + '</button></div>';
+}
+function rxFeOpen(f) {
+  const st = rxSt();
+  st.fe = { id: f ? f.id : '', name: f ? f.name : '', mfr: f ? f.mfr.slice() : [], items: f ? f.items.slice() : [], found: null };
+  rxFeShow();
+}
+function rxFeShow() {
+  const st = rxSt(), fe = st.fe;
+  const nm = $('#rxFeName'); if (nm) fe.name = nm.value;
+  openModal(rxFeHtml());
+  const mq = $('#rxFeMfrQ');
+  if (mq) mq.addEventListener('input', () => { const b = $('#rxFeMfrBox'); if (b) b.innerHTML = rxMfrFind(mq.value).filter(x => fe.mfr.indexOf(x.m) === -1).map(x => '<div class="list-row" style="cursor:pointer" data-act="rxFeMfrAdd" data-m="' + esc(x.m) + '"><span>＋</span><div class="grow"><b>' + esc(rxMfrShort(x.m)) + '</b><div class="muted">' + esc(x.m) + ' · ' + esc(x92('firmCnt', { n: x.n })) + '</div></div></div>').join(''); });
+  const iq = $('#rxFeItemQ');
+  if (iq) iq.addEventListener('input', () => {
+    const b = $('#rxFeItemBox'); if (!b) return;
+    const k = qkey(iq.value); if (k.length < 2 || !S.cat) { b.innerHTML = ''; return; }
+    const seen = {}, list = [];
+    S.cat.some(e => { if (e.pack === 'TR' || e.qb.indexOf(k) !== 0) return false; const kk = e.sk; if (seen[kk]) return false; seen[kk] = 1; list.push(e); return list.length >= 10; });
+    b.innerHTML = list.map(e => '<div class="list-row" style="cursor:pointer" data-act="rxFeItemAdd" data-b="' + esc(e.b) + '" data-inn="' + esc(e.inn || '') + '" data-atc="' + esc(e.atc || '') + '"><span>＋</span><div class="grow"><b>' + esc(e.b) + '</b><div class="muted">' + esc([e.inn ? catInnName(e.inn) : '', rxMfrShort(e.mfr)].filter(Boolean).join(' · ')) + '</div></div></div>').join('');
+  });
+  const ph = $('#rxFePhoto');
+  if (ph) ph.addEventListener('change', async () => {
+    const files = Array.from(ph.files || []).slice(0, 6); if (!files.length) return;
+    const images = [];
+    for (const f of files) { try { images.push({ data: await photoB64(f, 1800), type: 'image/jpeg' }); } catch (e) { } }
+    if (!images.length) return;
+    toast(x92('firmReading'));
+    const r = await rpcA('rxFirmRead', { name: fe.name || 'firma', images }, { timeout: 180000 }).catch(() => null);
+    if (r && r.ok) { fe.found = rxFound(r); rxFeShow(); }
+  });
+}
+function rxFound(r) { return { items: (r.items || []).map(x => Object.assign({}, x, { inCat: !!(S.catBy && S.catBy[skel(x.b)]) })), note: r.note || '', sources: r.sources || [] }; }
+/* ---------- встраивание: сегмент «Рецепты» = раздел Resept ---------- */
+(function () {
+  const o = dsRender;
+  dsRender = function (keep) {
+    const st = dsSt();
+    if (S.screen === 'forms' && st.seg === 'rx' && !st.cur) {
+      if (typeof dsCss === 'function') dsCss();
+      const box = $('#formsBox'); if (!box) return;
+      const y = window.scrollY;
+      box.innerHTML = dsSegHtml() + rxHtml();
+      rxBind();
+      if (keep) window.scrollTo(0, y);
+      return;
+    }
+    return o.apply(this, arguments);
+  };
+})();
+// «＋ Документ: Рецепт» из GT/098 — открыть раздел Resept с этим пациентом
+(function () {
+  if (typeof ptNewDocFor !== 'function') return;
+  const o = ptNewDocFor;
+  ptNewDocFor = async function (type, g) {
+    if (type !== 'rx' || !g || !g.patient) return o.apply(this, arguments);
+    rxFillPt(g);
+    const st = rxSt(); st.view = 'new'; st.done = null;
+    const ds = dsSt(); ds.cur = null; ds.seg = 'rx';
+    if (S.screen !== 'forms') setScreen('forms'); else dsRender();
+    window.scrollTo(0, 0);
+  };
+  window.ptNewDocFor = ptNewDocFor;
+})();
+function rxAgeOf(birth) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(birth || '')); if (!m) return null;
+  const b = new Date(+m[1], +m[2] - 1, +m[3]), n = new Date();
+  let months = (n.getFullYear() - b.getFullYear()) * 12 + n.getMonth() - b.getMonth(); if (n.getDate() < b.getDate()) months--;
+  return months >= 0 ? { y: Math.floor(months / 12), m: months % 12 } : null;
+}
+/** Пациент из GT/098 → в рецепт: ФИО, возраст, пол, аллергия, болезни, что принимает. */
+function rxFillPt(g) {
+  const st = rxSt(), p = g.patient, pt = st.d.pt;
+  const a = rxAgeOf(p.birthDate);
+  Object.assign(pt, { surname: p.surname || '', name: p.name || '', sex: p.sex === 'm' || p.sex === 'f' ? p.sex : pt.sex, allergy: p.allergy || pt.allergy, chronic: p.chronic || pt.chronic, pid: p.id, pname: [p.surname, p.name].filter(Boolean).join(' ') });
+  if (a) { pt.age = String(a.y); pt.ageM = a.y < 3 ? String(a.m) : ''; }
+  const meds = (g.rx || []).filter(x => x.drug && x.given !== false).slice(0, 8).map(x => x.drug).filter((x, i, arr) => arr.indexOf(x) === i);
+  if (meds.length && !pt.meds) pt.meds = meds.join(', ');
+  try { const v = g.visitExam; if (v && Array.isArray(v.dxList) && v.dxList[0] && !st.d.dx) { st.d.dx = String(v.dxList[0].text || v.dxList[0].az || '').slice(0, 200); st.d.dxIcd = String(v.dxList[0].icd || v.dxList[0].code || '').slice(0, 10); } } catch (e) { }
+  st.gtList = null;
+  rxSave();
+}
+Object.assign(H, {
+  rxView: el => { const st = rxSt(); if (st.view === 'new' && el.dataset.v === 'new') st.done = null; st.view = el.dataset.v; if (st.view === 'mine') st.mine = null; rxRender(); window.scrollTo(0, 0); },
+  rxPtSet: el => { const st = rxSt(), k = el.dataset.k; st.d.pt[k] = st.d.pt[k] === el.dataset.v ? '' : el.dataset.v; rxSave(); rxRender(); },
+  rxPtUnlink: () => { const p = rxSt().d.pt; p.pid = ''; p.pname = ''; rxSave(); rxRender(); },
+  rxGtFind: async el => {
+    const q = String(($('#rxGtQ') || {}).value || '').trim(); if (q.length < 2) return;
+    const r = await busy(el, () => rpcA('patientList', { q })).catch(() => null);
+    rxSt().gtList = r && r.ok ? (r.rows || r.patients || []).slice(0, 8) : [];
+    rxRender();
+  },
+  rxGtPick: async el => {
+    const st = rxSt();
+    const g = await ptGet(el.dataset.id, true); if (!g || !g.patient) return;
+    if (st.gtFor) { // уже выписанный рецепт — в GT/098
+      const id = st.gtFor; st.gtFor = null; closeModal();
+      const l = await rpcA('patientLink', { patientId: g.patient.id, kind: 'doc', id, opId: newOpId() }).catch(() => null);
+      if (l && l.ok) { delete PT.cache[g.patient.id]; if (st.done && st.done.id === id) { st.done.pid = g.patient.id; st.done.pname = [g.patient.surname, g.patient.name].join(' '); } st.mine = null; toast(x92('gtDone'), 'ok'); rxRender(); }
+      return;
+    }
+    rxFillPt(g); rxRender();
+  },
+  rxFirmPick: el => { const st = rxSt(); st.add.fid = st.add.fid === el.dataset.id && !el.dataset.g ? '' : el.dataset.id; st.add.mfr = ''; st.add.mfrQ = ''; st.add.q = ''; if (el.dataset.g !== undefined) st.add.grp = el.dataset.g || st.add.grp; rxRender(); },
+  rxMfrPick: el => { const st = rxSt(), m = el.dataset.m; const mine = (st.firms || []).find(f => f.mfr.indexOf(m) !== -1); if (mine) { st.add.fid = mine.id; st.add.mfr = ''; } else { st.add.fid = ''; st.add.mfr = m; st.add.fname = rxMfrShort(m); } st.add.mfrQ = ''; st.add.q = ''; rxRender(); },
+  rxGrp: el => { const st = rxSt(); st.add.grp = el.dataset.g; st.add.q = ''; rxRender(); },
+  rxGrpMore: () => { rxSt().add.more = true; rxRender(); },
+  rxPick: el => {
+    const st = rxSt(), firm = rxFirmOf(st); if (!firm) return;
+    const p = rxProducts(firm).find(x => x.k === el.dataset.k); if (!p) return;
+    rxAddItem(p, p.vars[Number(el.dataset.j)] || p.vars[0], firm);
+  },
+  rxManual: () => { rxSt().add.manual = true; rxRender(); },
+  rxManualAdd: () => {
+    const v = String(($('#rxManual') || {}).value || '').replace(/\s+/g, ' ').trim(); if (v.length < 2) return;
+    const st = rxSt(), firm = rxFirmOf(st); st.add.manual = false;
+    const hit = S.catBy && S.catBy[skel(v.split(' ')[0])];
+    const e = hit && hit[0];
+    rxAddItem({ b: e ? e.b : v, inn: e ? e.inn : '', atc: e ? e.atc : '' }, e && v.split(' ').length === 1 ? { d: e.d, code: e.code, cnt: e.cnt } : { d: e ? v.slice(v.split(' ')[0].length).trim() : '', code: 'med_other', cnt: '' }, firm);
+  },
+  rxDel: el => { const st = rxSt(); st.d.items = st.d.items.filter(x => x.id !== el.dataset.id); st.check = null; rxSave(); rxRender(); },
+  rxRedo: el => rxSigna(el.dataset.id),
+  rxSugg: el => rxSugg(el),
+  rxSuggAdd: el => {
+    const st = rxSt(), x = st.sugg && st.sugg.items[Number(el.dataset.i)]; if (!x) return;
+    const f = (st.firms || []).find(ff => ff.name === x.firm) || null;
+    const p = f ? rxProducts(f).find(pp => skel(pp.b) === skel(x.b)) : null;
+    if (!p) return;
+    rxAddItem(p, p.vars[0], f);
+  },
+  rxCheck: el => rxCheck(el),
+  rxWrite: el => rxWrite(el),
+  rxWriteForce: () => { closeModal(); rxWrite(null, true); },
+  rxClear: () => { openModal('<h3>' + esc(x92('clearQ')) + '</h3><div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn danger" data-act="rxClearGo">' + esc(x92('clear')) + '</button></div>'); },
+  rxClearGo: () => { closeModal(); const st = rxSt(); st.d = rxEmpty(); st.check = null; st.sugg = null; rxSave(); rxRender(); },
+  rxNew: () => { const st = rxSt(); st.done = null; st.view = 'new'; rxRender(); window.scrollTo(0, 0); },
+  rxPrint: el => rxPrint(el.dataset.id),
+  rxOpenDoc: el => { dsOpen(el.dataset.id); },
+  rxToGt: el => { const st = rxSt(); st.gtFor = el.dataset.id; openModal('<h3>' + esc(x92('gtPick')) + '</h3><div class="searchbar"><input type="search" id="rxGtQ2" autocomplete="off" placeholder="' + esc(x92('ptGtPh')) + '"><button class="btn small" data-act="rxGtFind2">' + esc(x92('ptFind')) + '</button></div><div id="rxGtBox2"></div><div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button></div>'); },
+  rxGtFind2: async el => {
+    const q = String(($('#rxGtQ2') || {}).value || '').trim(); if (q.length < 2) return;
+    const r = await busy(el, () => rpcA('patientList', { q })).catch(() => null);
+    const list = r && r.ok ? (r.rows || r.patients || []).slice(0, 8) : [];
+    const b = $('#rxGtBox2'); if (b) b.innerHTML = list.length ? list.map(x => '<div class="list-row" data-act="rxGtPick" data-id="' + esc(x.id) + '" style="cursor:pointer"><span>📘</span><div class="grow"><b>' + esc([x.surname, x.name, x.patronymic].filter(Boolean).join(' ')) + '</b><div class="muted">' + esc(x.birthDate || '') + '</div></div></div>').join('') : '<div class="muted">' + esc(x92('ptNone')) + '</div>';
+  },
+  rxFirmNew: () => rxFeOpen(null),
+  rxFirmEdit: el => { const f = (rxSt().firms || []).find(x => x.id === el.dataset.id); if (f) rxFeOpen(f); },
+  rxFeMfrAdd: el => { const fe = rxSt().fe; if (fe.mfr.indexOf(el.dataset.m) === -1) fe.mfr.push(el.dataset.m); if (!String(($('#rxFeName') || {}).value || '').trim()) { const nm = $('#rxFeName'); if (nm) nm.value = rxMfrShort(el.dataset.m); } rxFeShow(); },
+  rxFeMfrDel: el => { const fe = rxSt().fe; fe.mfr.splice(Number(el.dataset.i), 1); rxFeShow(); },
+  rxFeItemAdd: el => { const fe = rxSt().fe; if (!fe.items.some(x => skel(x.b) === skel(el.dataset.b))) fe.items.push({ b: el.dataset.b, inn: el.dataset.inn || '', atc: el.dataset.atc || '' }); rxFeShow(); },
+  rxFeItemDel: el => { const fe = rxSt().fe; fe.items.splice(Number(el.dataset.i), 1); rxFeShow(); },
+  rxFeWeb: async el => {
+    const fe = rxSt().fe, nm = String(($('#rxFeName') || {}).value || '').trim(); fe.name = nm;
+    if (nm.length < 2) return toast(x92('firmName'), 'bad');
+    const r = await busy(el, () => rpcA('rxFirmRead', { name: nm, web: true }, { timeout: 180000 })).catch(() => null);
+    if (r && r.ok) { fe.found = rxFound(r); rxFeShow(); }
+  },
+  rxFeFoundAdd: () => {
+    const fe = rxSt().fe; if (!fe.found) return;
+    $$('.rx-fd').forEach(b => { if (!b.checked) return; const x = fe.found.items[Number(b.dataset.i)]; if (x && !fe.items.some(y => skel(y.b) === skel(x.b) && String(y.dose || '') === String(x.dose || ''))) fe.items.push({ b: x.b, inn: x.inn || '', atc: x.atc || '', form: x.form || '', dose: x.dose || '' }); });
+    fe.found = null; rxFeShow();
+  },
+  rxFeSave: async el => {
+    const st = rxSt(), fe = st.fe; fe.name = String(($('#rxFeName') || {}).value || '').trim();
+    if (fe.name.length < 2) return toast(x92('firmName'), 'bad');
+    const r = await busy(el, () => rpcA('rxFirmSave', { id: fe.id || '', name: fe.name, mfr: fe.mfr, items: fe.items })).catch(() => null);
+    if (!r || !r.ok) return;
+    st.firms = r.firms || null; closeModal(); toast(x92('firmSaved'), 'ok'); S.rxProdCache = {}; rxRender();
+  },
+  rxFeDel: () => { const fe = rxSt().fe; openModal('<h3>' + esc(x92('firmDelQ', { n: fe.name })) + '</h3><div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn danger" data-act="rxFeDelGo">' + esc(x92('firmDel')) + '</button></div>'); },
+  rxFeDelGo: async el => {
+    const st = rxSt(), fe = st.fe;
+    const r = await busy(el, () => rpcA('rxFirmSave', { id: fe.id, remove: true })).catch(() => null);
+    if (!r || !r.ok) return;
+    st.firms = r.firms || null; if (st.add.fid === fe.id) st.add.fid = ''; closeModal(); rxRender();
+  },
+  rxRepFor: el => { const st = rxSt(); st.view = 'rep'; st.rep = { fid: el.dataset.id }; rxRender(); },
+  rxRepGo: async el => {
+    const st = rxSt();
+    const fid = ($('#rxRepFirm') || {}).value, from = ($('#rxRepFrom') || {}).value, to = ($('#rxRepTo') || {}).value;
+    const r = await busy(el, () => rpcA('rxReport', { firmId: fid, from, to })).catch(() => null);
+    if (!r || !r.ok) return;
+    st.rep = { fid, from, to, res: r }; rxRender();
+  },
+  rxRepPrint: () => {
+    const x = rxSt().rep && rxSt().rep.res; if (!x) return;
+    $('#printRoot').innerHTML = '<div class="pf-page last" style="font-size:13px">' + rxRepTableHtml(x) + '<div style="margin-top:10px;font-size:11px">' + esc(x92('repPriv')) + '</div></div>';
+    document.body.classList.add('print-form');
+    setTimeout(() => { window.print(); setTimeout(() => { document.body.classList.remove('print-form'); $('#printRoot').innerHTML = ''; }, 800); }, 60);
+  },
+  rxRepCopy: async () => { const x = rxSt().rep && rxSt().rep.res; if (!x) return; try { await navigator.clipboard.writeText(rxRepText(x)); toast(x92('copied'), 'ok'); } catch (e) { } }
+});
+// выход: черновик рецепта (ФИО, аллергия, болезни пациента) с телефона — убрать
+(function () {
+  if (typeof logout !== 'function') return;
+  const o = logout;
+  logout = function () {
+    try { const pre = 'MED_RX_DRAFT:' + ((S.me && S.me.id) || '') + ':'; Object.keys(localStorage).forEach(k => { if (k.indexOf(pre) === 0) localStorage.removeItem(k); }); } catch (e) { }
+    S.rx = null;
+    return o.apply(this, arguments);
+  };
+  window.logout = logout;
+})();
+
 
 function init() {
   vizTipInit();
