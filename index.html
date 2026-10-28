@@ -40297,7 +40297,7 @@ const X92_T = {
     firmSaved: 'Фирма сохранена', firmDel: 'Удалить фирму', firmDelQ: 'Удалить фирму «{n}»? Рецепты останутся.', firmCnt: 'препаратов: {n}', firmUses: 'рецептов: {n}', firmDup: 'Такая фирма уже есть.',
     repFirm: 'Фирма', repFrom: 'С', repTo: 'По', repGo: '📊 Показать', repT: 'Отчёт: {f}', repNo: 'За этот период препаратов фирмы в ваших закрытых рецептах нет.',
     repCols: ['Препарат', 'Раз', 'Упаковок'], repDocs: 'Рецептов с препаратами фирмы: {n}', repPriv: 'В отчёте нет данных пациентов (ФИО, возраст, диагноз, номера) — его можно отдать представителю фирмы.', repCopy: '📋 Скопировать',
-    copied: 'Скопировано', toGtThis: '📘 Добавить рецепт в GT/098 «{n}»', toGtNew: '📘 Добавить рецепт в GT/098 (найти по FİN или завести новую)', gtClash: 'В карте с этим FİN — «{n}». Добавить рецепт в эту карту?', v_keep: 'оставлен', v_fix: 'изменён приём', v_remove: 'убран', undoRm: '↩ Вернуть', undoFix: '↩ Как было', undone: 'возвращено врачом', missT: 'Не хватает:', aiChanged: 'ИИ разобрал рецепт и поправил его — посмотрите итог и нажмите «Выписать» ещё раз.', gtThis: 'эта карта', gtHave: 'Есть GT/098 — найти', gtNewT: '＋ Новая GT/098 (нужен FİN)', gtNewHint: 'Без FİN новую карту не завести. Если карта с этим FİN уже есть — рецепт попадёт в неё.', birth: 'Дата рождения', gtNewGo: 'Создать GT/098 и добавить рецепт', gtCreated: 'Создана GT/098 «{n}», рецепт добавлен.', gtExisted: 'Карта с этим FİN уже есть — рецепт добавлен в неё: {n}.', E_PT_FIN_NEED: 'Для новой GT/098 нужен FİN пациента (7 латинских букв и цифр).', blank: '📄 Пустой бланк (вручную)', E_RX_PERIOD: 'Период — не меньше 7 дней (за день-два по одному препарату можно узнать пациента).', nameWarn: 'Рецепт на азербайджанском — укажите имя латиницей: 👤 Профиль → «Имя в документах».', E_RX_FIRM_DUP: 'Такая фирма уже есть.'
+    copied: 'Скопировано', repFirms: 'Фирмы — по каждой отдельный отчёт', repAll: 'Все фирмы', repPick: 'Отметьте хотя бы одну фирму.', repPrintAll: '🖨 Печать всех ({n}) — каждая фирма на своей странице', noEffect: 'Что уже не помогает (и цифры)', noEffectPh: 'например: Lorista 50 mq — АД 170/100; Metformin 1000 mq 2 р/д — сахар 14, HbA1c 9%', medsPhoto: '📷 Что принимает — с фото (упаковки, рецепты)', medsWait: 'ИИ читает, что принимает пациент…', medsDone: 'Добавлено в «Что уже принимает»: {n}', toGtThis: '📘 Добавить рецепт в GT/098 «{n}»', toGtNew: '📘 Добавить рецепт в GT/098 (найти по FİN или завести новую)', gtClash: 'В карте с этим FİN — «{n}». Добавить рецепт в эту карту?', v_keep: 'оставлен', v_fix: 'изменён приём', v_remove: 'убран', undoRm: '↩ Вернуть', undoFix: '↩ Как было', undone: 'возвращено врачом', missT: 'Не хватает:', aiChanged: 'ИИ разобрал рецепт и поправил его — посмотрите итог и нажмите «Выписать» ещё раз.', gtThis: 'эта карта', gtHave: 'Есть GT/098 — найти', gtNewT: '＋ Новая GT/098 (нужен FİN)', gtNewHint: 'Без FİN новую карту не завести. Если карта с этим FİN уже есть — рецепт попадёт в неё.', birth: 'Дата рождения', gtNewGo: 'Создать GT/098 и добавить рецепт', gtCreated: 'Создана GT/098 «{n}», рецепт добавлен.', gtExisted: 'Карта с этим FİN уже есть — рецепт добавлен в неё: {n}.', E_PT_FIN_NEED: 'Для новой GT/098 нужен FİN пациента (7 латинских букв и цифр).', blank: '📄 Пустой бланк (вручную)', E_RX_PERIOD: 'Период — не меньше 7 дней (за день-два по одному препарату можно узнать пациента).', nameWarn: 'Рецепт на азербайджанском — укажите имя латиницей: 👤 Профиль → «Имя в документах».', E_RX_FIRM_DUP: 'Такая фирма уже есть.'
   },
   az: {
     tabNew: '✍️ Yeni resept', tabRev: '🔍 Başqasının resepti', tabMine: '🗂 Reseptlərim', tabFirms: '🏢 Firmalarım', tabRep: '📊 Firma üzrə hesabat',
@@ -40326,7 +40326,7 @@ const X92_T = {
     firmSaved: 'Firma saxlanıldı', firmDel: 'Firmanı sil', firmDelQ: '«{n}» firması silinsin? Reseptlər qalacaq.', firmCnt: 'dərman: {n}', firmUses: 'resept: {n}', firmDup: 'Belə firma artıq var.',
     repFirm: 'Firma', repFrom: 'Başlanğıc', repTo: 'Son', repGo: '📊 Göstər', repT: 'Hesabat: {f}', repNo: 'Bu dövrdə bağlanmış reseptlərinizdə firmanın dərmanı yoxdur.',
     repCols: ['Dərman', 'Dəfə', 'Qutu'], repDocs: 'Firmanın dərmanı olan reseptlər: {n}', repPriv: 'Hesabatda pasiyent məlumatı yoxdur (ad, yaş, diaqnoz, nömrələr) — firma nümayəndəsinə vermək olar.', repCopy: '📋 Kopyala',
-    copied: 'Kopyalandı', toGtThis: '📘 Resepti GT/098 «{n}»-ə əlavə et', toGtNew: '📘 Resepti GT/098-ə əlavə et (FİN üzrə tap və ya yenisini aç)', gtClash: 'Bu FİN ilə kartda — «{n}». Resept bu karta əlavə edilsin?', v_keep: 'saxlanıldı', v_fix: 'qəbul qaydası dəyişdi', v_remove: 'çıxarıldı', undoRm: '↩ Qaytar', undoFix: '↩ Əvvəlki kimi', undone: 'həkim qaytardı', missT: 'Çatışmır:', aiChanged: 'Sİ resepti təhlil edib düzəltdi — nəticəyə baxın və «Yaz»-ı yenidən basın.', gtThis: 'bu kart', gtHave: 'GT/098 var — tapın', gtNewT: '＋ Yeni GT/098 (FİN lazımdır)', gtNewHint: 'FİN olmadan yeni kart açmaq olmaz. Bu FİN ilə kart artıq varsa — resept ora düşəcək.', birth: 'Doğum tarixi', gtNewGo: 'GT/098 yarat və resepti əlavə et', gtCreated: 'GT/098 «{n}» yaradıldı, resept əlavə olundu.', gtExisted: 'Bu FİN ilə kart artıq var — resept ora əlavə olundu: {n}.', E_PT_FIN_NEED: 'Yeni GT/098 üçün pasiyentin FİN-i lazımdır (7 latın hərfi və rəqəm).', blank: '📄 Boş blank (əl ilə)', E_RX_PERIOD: 'Dövr ən azı 7 gün olmalıdır (bir-iki gün üzrə pasiyenti tanımaq olar).', nameWarn: 'Resept azərbaycancadır — adınızı latınca yazın: 👤 Profil → «Sənədlərdə ad».', E_RX_FIRM_DUP: 'Belə firma artıq var.'
+    copied: 'Kopyalandı', repFirms: 'Firmalar — hər biri üçün ayrıca hesabat', repAll: 'Bütün firmalar', repPick: 'Ən azı bir firmanı qeyd edin.', repPrintAll: '🖨 Hamısını çap et ({n}) — hər firma öz səhifəsində', noEffect: 'Artıq kömək etməyənlər (və rəqəmlər)', noEffectPh: 'məs.: Lorista 50 mq — AT 170/100; Metformin 1000 mq gündə 2 dəfə — şəkər 14, HbA1c 9%', medsPhoto: '📷 Qəbul etdikləri — şəkildən (qutular, reseptlər)', medsWait: 'Sİ pasiyentin qəbul etdiklərini oxuyur…', medsDone: '«Qəbul etdiyi dərmanlar»-a əlavə olundu: {n}', toGtThis: '📘 Resepti GT/098 «{n}»-ə əlavə et', toGtNew: '📘 Resepti GT/098-ə əlavə et (FİN üzrə tap və ya yenisini aç)', gtClash: 'Bu FİN ilə kartda — «{n}». Resept bu karta əlavə edilsin?', v_keep: 'saxlanıldı', v_fix: 'qəbul qaydası dəyişdi', v_remove: 'çıxarıldı', undoRm: '↩ Qaytar', undoFix: '↩ Əvvəlki kimi', undone: 'həkim qaytardı', missT: 'Çatışmır:', aiChanged: 'Sİ resepti təhlil edib düzəltdi — nəticəyə baxın və «Yaz»-ı yenidən basın.', gtThis: 'bu kart', gtHave: 'GT/098 var — tapın', gtNewT: '＋ Yeni GT/098 (FİN lazımdır)', gtNewHint: 'FİN olmadan yeni kart açmaq olmaz. Bu FİN ilə kart artıq varsa — resept ora düşəcək.', birth: 'Doğum tarixi', gtNewGo: 'GT/098 yarat və resepti əlavə et', gtCreated: 'GT/098 «{n}» yaradıldı, resept əlavə olundu.', gtExisted: 'Bu FİN ilə kart artıq var — resept ora əlavə olundu: {n}.', E_PT_FIN_NEED: 'Yeni GT/098 üçün pasiyentin FİN-i lazımdır (7 latın hərfi və rəqəm).', blank: '📄 Boş blank (əl ilə)', E_RX_PERIOD: 'Dövr ən azı 7 gün olmalıdır (bir-iki gün üzrə pasiyenti tanımaq olar).', nameWarn: 'Resept azərbaycancadır — adınızı latınca yazın: 👤 Profil → «Sənədlərdə ad».', E_RX_FIRM_DUP: 'Belə firma artıq var.'
   }
 };
 Object.assign(I18N.ru, { E_RX_FIRM_DUP: X92_T.ru.E_RX_FIRM_DUP, E_RX_PERIOD: X92_T.ru.E_RX_PERIOD, E_PT_FIN_NEED: X92_T.ru.E_PT_FIN_NEED });
@@ -40463,9 +40463,21 @@ function rxFirmOf(st) {
 /* ---------- пациент для ИИ (без ФИО) ---------- */
 function rxPtAi(d) {
   const p = d.pt;
-  return { age: p.age, ageMonths: p.ageM, sex: p.sex, weight: p.weight, preg: p.preg, lact: p.lact, allergy: p.allergy, chronic: p.chronic, meds: p.meds, dx: [d.dxIcd, d.dx].filter(Boolean).join(' '), complaint: d.complaint };
+  return { age: p.age, ageMonths: p.ageM, sex: p.sex, weight: p.weight, preg: p.preg, lact: p.lact, allergy: p.allergy, chronic: p.chronic, meds: p.meds, noEffect: p.noEffect, dx: [d.dxIcd, d.dx].filter(Boolean).join(' '), complaint: d.complaint };
 }
-function rxItemAi(it) { return { b: it.b, inn: it.inn, dose: it.dose, form: it.formAz, atc: it.atc, signa: it.signa, qty: it.qty }; }
+function rxItemAi(it) { return { b: it.b, inn: it.inn, dose: it.dose, form: it.formAz, atc: it.atc, signa: it.signa, qty: it.qty, mine: !!it.firmId, doctor: it.src !== 'ai' }; }
+/** Другие фирмы (госреестр АР): торговые названия с этим веществом — когда у моих фирм нужного нет. */
+function rxBrandsByInn(inn, max) {
+  if (!S.cat || !inn) return [];
+  const k = qkeyEn(inn); if (k.length < 4) return [];
+  const by = {};
+  S.cat.forEach(e => { if (e.pack === 'TR' || !e.inn || RX_CONTROLLED.test(e.atc || '')) return; const q = qkeyEn(e.inn); if (q !== k && q.indexOf(k) !== 0) return; const s = skel(e.b); const x = by[s] = by[s] || { k: s, b: e.b, inn: e.inn, atc: e.atc || '', mfr: e.mfr || '', vars: [], seen: {} }; const vk = e.d + '|' + e.code; if (!x.seen[vk]) { x.seen[vk] = 1; x.vars.push({ d: e.d, code: e.code, cnt: e.cnt }); } });
+  return Object.keys(by).map(s => by[s]).sort((a, b) => (qkeyEn(a.inn) === k ? 0 : 1) - (qkeyEn(b.inn) === k ? 0 : 1) || b.vars.length - a.vars.length).slice(0, max || 4);
+}
+function rxOutHtml(inn) {
+  const L = rxBrandsByInn(inn, 4);
+  return L.length ? '<div class="chips" style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 6px 12px">' + L.map(x => '<button type="button" class="chip" data-act="rxOutAdd" data-inn="' + esc(inn) + '" data-k="' + esc(x.k) + '">＋ ' + esc(x.b) + ' <span class="muted">' + esc(rxMfrShort(x.mfr)) + '</span></button>').join('') + '</div>' : '';
+}
 /* ---------- проверка на телефоне: сочетания, аллергия, одно вещество дважды ---------- */
 function rxInnParts(inn) { return String(inn || '').toLowerCase().split(/\s*(?:\+|,|\/| and | və | и )\s*/).map(x => x.replace(/\b(hydrochloride|hcl|sodium|potassium|calcium|magnesium|maleate|besylate|besilate|mesylate|sulfate|sulphate|phosphate|citrate|succinate|tartrate|acetate|monohydrate|dihydrate|trihydrate)\b/g, '').replace(/\s+/g, ' ').trim()).filter(x => x.length >= 4); }
 function rxLocal(d) {
@@ -40496,9 +40508,9 @@ async function rxSigna(id) {
   } else cur.manual = true;
   rxSave(); rxRender();
 }
-function rxAddItem(prod, v, firm) {
+function rxAddItem(prod, v, firm, src) {
   const st = rxSt();
-  const it = { id: rxId(), b: prod.b, inn: prod.inn || '', atc: prod.atc || '', dose: rxUnitsAz(v ? v.d : ''), formAz: v ? (RX_FORM_AZ[v.code] || '') : '', cnt: v ? v.cnt || '' : '',
+  const it = { id: rxId(), src: src || '', b: prod.b, inn: prod.inn || '', atc: prod.atc || '', dose: rxUnitsAz(v ? v.d : ''), formAz: v ? (RX_FORM_AZ[v.code] || '') : '', cnt: v ? v.cnt || '' : '',
     firm: firm ? firm.name : '', firmId: firm && !firm.once ? firm.id : '', firmMfr: firm && firm.once && firm.mfr ? firm.mfr[0] : '', signa: '', qty: v && v.cnt ? '1 qutu (№' + v.cnt + ')' : '', packs: 1, warn: [], busy: false };
   st.d.items.push(it); st.check = null; st.sugg = st.sugg && Object.assign({}, st.sugg, { items: (st.sugg.items || []).filter(x => skel(x.b) !== skel(prod.b)) });
   rxSave();
@@ -40545,8 +40557,9 @@ function rxPtHtml(st) {
     '<div class="field" style="margin:4px 0 8px;padding:8px 10px;border:1px dashed var(--line);border-radius:10px"><label class="check" style="margin:0"><input type="checkbox" data-rx="pt.toGt"' + (p.toGt ? ' checked' : '') + '><span>' + esc(x92(p.pid ? 'toGtThis' : 'toGtNew', { n: p.pname || '' })) + '</span></label>' +
       '<div id="rxToGtBox"' + (p.toGt && !p.pid ? '' : ' style="display:none"') + '>' + rxField('pt.fin', 'FİN *', p.fin, { max: 7, ph: '7 simvol' }) + '<div class="muted" style="font-size:12.5px;margin-top:-4px">' + esc(x92('gtNewHint')) + '</div></div></div>' +
     rxField('pt.allergy', x92('allergy'), p.allergy, { max: 300, ph: x92('allergyNo') }) +
-    '<details' + (p.chronic || p.meds ? ' open' : '') + '><summary class="muted" style="cursor:pointer">' + esc(x92('more')) + '</summary>' +
-    rxField('pt.chronic', x92('chronic'), p.chronic, { ta: 1, max: 600 }) + rxField('pt.meds', x92('meds'), p.meds, { ta: 1, max: 600 }) + '</details>' +
+    '<details' + (p.chronic || p.meds || p.noEffect ? ' open' : '') + '><summary class="muted" style="cursor:pointer">' + esc(x92('more')) + '</summary>' +
+    rxField('pt.chronic', x92('chronic'), p.chronic, { ta: 1, max: 600 }) + rxField('pt.meds', x92('meds'), p.meds, { ta: 1, max: 1200 }) + rxField('pt.noEffect', x92('noEffect'), p.noEffect, { ta: 1, max: 800, ph: x92('noEffectPh') }) +
+    (typeof canAi === 'function' && canAi() ? '<button type="button" class="btn small ghost" data-act="rxMedsPhoto">' + esc(x92('medsPhoto')) + '</button><input type="file" accept="image/*" multiple id="rxMedsFile" style="display:none">' : '') + '</details>' +
     rxField('complaint', x92('compl'), st.d.complaint, { ta: 1, max: 800 }) +
     '<div class="grid2">' + rxField('dx', x92('dx'), st.d.dx, { max: 200 }) + rxField('dxIcd', x92('dxIcd'), st.d.dxIcd, { max: 10, w: '140px' }) + '</div></div>';
   return h;
@@ -40577,7 +40590,7 @@ function rxItemsHtml(st) {
       c.items.map(x => '<div style="margin-top:6px">' + ic[x.verdict] + ' <b>' + esc(x.b) + '</b> — ' + esc(x92('v_' + x.verdict)) + (x.why ? ': ' + esc(x.why) : '') +
         (x.verdict === 'remove' && x.item ? ' <button class="btn small ghost" style="min-height:28px;padding:2px 10px" data-act="rxUndo" data-id="' + esc(x.id) + '">' + esc(x92('undoRm')) + '</button>' : '') +
         (x.verdict === 'fix' && x.old !== undefined ? ' <button class="btn small ghost" style="min-height:28px;padding:2px 10px" data-act="rxUndo" data-id="' + esc(x.id) + '">' + esc(x92('undoFix')) + '</button>' : '') + '</div>').join('') +
-      ((c.missing || []).length ? '<div style="margin-top:8px"><b>' + esc(x92('missT')) + '</b> ' + c.missing.map(x => esc(x.inn) + (x.why ? ' — ' + esc(x.why) : '')).join('; ') + '</div>' : '') +
+      ((c.missing || []).length ? '<div style="margin-top:8px"><b>' + esc(x92('missT')) + '</b>' + c.missing.map(x => '<div>• ' + esc(x.inn) + (x.why ? ' — ' + esc(x.why) : '') + '</div>' + rxOutHtml(x.inn)).join('') + '</div>' : '') +
       (c.note ? '<div style="margin-top:6px">⚠️ ' + esc(c.note) + '</div>' : '') + '</div>';
   }
   if (typeof canAi === 'function' && canAi()) h += '<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px"><button class="btn small" data-act="rxSugg">' + esc(x92('sugg')) + '</button>' + (d.items.length ? '<button class="btn small ghost" data-act="rxCheck">' + esc(x92('check')) + '</button>' : '') + '</div>';
@@ -40586,7 +40599,7 @@ function rxItemsHtml(st) {
     h += '<div class="hint" style="display:block;margin:8px 0"><b>' + esc(x92('suggT')) + '</b>' +
       ((s.items || []).length ? s.items.map((x, i) => '<div class="rx-pr"><b>' + esc(x.b) + '</b><span class="rx-lvl ' + esc(x.level) + '">' + esc(x92('lvl_' + x.level)) + '</span>' + (x.firm ? ' <span class="muted">· ' + esc(x.firm) + '</span>' : '') +
         '<div style="font-size:13.5px;margin-top:2px">' + esc(x.why) + '</div><button class="btn small" style="margin-top:6px" data-act="rxSuggAdd" data-i="' + i + '">' + esc(x92('suggAdd')) + '</button></div>').join('') : '<div>' + esc(x92('suggNone')) + '</div>') +
-      ((s.notInFirms || []).length ? '<div style="margin-top:8px"><b>' + esc(x92('notIn')) + '</b>' + s.notInFirms.map(x => '<div>• ' + esc(x.inn) + ' — ' + esc(x.why) + '</div>').join('') + '</div>' : '') +
+      ((s.notInFirms || []).length ? '<div style="margin-top:8px"><b>' + esc(x92('notIn')) + '</b>' + s.notInFirms.map(x => '<div>• ' + esc(x.inn) + ' — ' + esc(x.why) + '</div>' + rxOutHtml(x.inn)).join('') + '</div>' : '') +
       (s.note ? '<div style="margin-top:8px">⚠️ ' + esc(s.note) + '</div>' : '') +
       '<div class="muted" style="font-size:12px;margin-top:4px">' + esc(x92('hint')) + '</div></div>';
   }
@@ -40683,11 +40696,16 @@ function rxRepHtml(st) {
   if (!st.firms) { rxFirmsLoad().then(rxRender); return '<div class="muted">⏳</div>'; }
   const r = st.rep || {};
   const today = rxToday(), from = r.from || today.slice(0, 8) + '01', to = r.to || today;
-  let h = '<div class="card"><div class="field"><label>' + esc(x92('repFirm')) + '</label><select id="rxRepFirm">' + st.firms.map(f => '<option value="' + esc(f.id) + '"' + (r.fid === f.id ? ' selected' : '') + '>' + esc(f.name) + '</option>').join('') + '</select></div>' +
+  const sel = r.fids || (r.fid ? [r.fid] : st.firms.map(f => f.id));
+  let h = '<div class="card"><div class="lbl">' + esc(x92('repFirms')) + '</div><div style="margin:4px 0 8px">' +
+    '<label class="check" style="margin:2px 0"><input type="checkbox" id="rxRepAll"' + (sel.length === st.firms.length ? ' checked' : '') + '><span><b>' + esc(x92('repAll')) + '</b></span></label>' +
+    st.firms.map(f => '<label class="check" style="margin:2px 0"><input type="checkbox" class="rx-rf" value="' + esc(f.id) + '"' + (sel.indexOf(f.id) !== -1 ? ' checked' : '') + '><span>' + esc(f.name) + '</span></label>').join('') + '</div>' +
     '<div class="grid2"><div class="field"><label>' + esc(x92('repFrom')) + '</label><input type="date" id="rxRepFrom" value="' + esc(from) + '"></div><div class="field"><label>' + esc(x92('repTo')) + '</label><input type="date" id="rxRepTo" value="' + esc(to) + '"></div></div>' +
     '<button class="btn primary" data-act="rxRepGo"' + (st.firms.length ? '' : ' disabled') + '>' + esc(x92('repGo')) + '</button>' +
     '<div class="muted" style="margin-top:6px;font-size:12.5px">🔒 ' + esc(x92('repPriv')) + '</div></div>';
-  if (r.res) h += '<div class="card" id="rxRepOut">' + rxRepTableHtml(r.res) + '<div class="row" style="gap:8px;margin-top:8px"><button class="btn small" data-act="rxRepPrint">' + esc(x92('print')) + '</button><button class="btn small ghost" data-act="rxRepCopy">' + esc(x92('repCopy')) + '</button></div></div>';
+  // по каждой фирме — отдельный отчёт (Саид, 21:29: «отдельно делать отчёт по выбору для каждой фирмы»)
+  (r.res || []).forEach((x, i) => { h += '<div class="card rx-rep-out" data-i="' + i + '">' + rxRepTableHtml(x) + '<div class="row" style="gap:8px;margin-top:8px"><button class="btn small" data-act="rxRepPrint" data-i="' + i + '">' + esc(x92('print')) + '</button><button class="btn small ghost" data-act="rxRepCopy" data-i="' + i + '">' + esc(x92('repCopy')) + '</button></div></div>'; });
+  if ((r.res || []).length > 1) h += '<button class="btn block" data-act="rxRepPrint" data-i="all">' + esc(x92('repPrintAll', { n: r.res.length })) + '</button>';
   return h;
 }
 function rxRepTableHtml(x) {
@@ -41019,8 +41037,13 @@ Object.assign(H, {
     const f = (st.firms || []).find(ff => ff.name === x.firm) || null;
     const p = f ? rxProducts(f).find(pp => skel(pp.b) === skel(x.b)) : null;
     if (!p) return;
-    rxAddItem(p, p.vars[0], f);
+    rxAddItem(p, p.vars[0], f, 'ai');
   },
+  rxOutAdd: el => {
+    const x = rxBrandsByInn(el.dataset.inn, 8).find(y => y.k === el.dataset.k); if (!x) return;
+    rxAddItem(x, x.vars[0], { id: 'mfr:' + x.mfr, name: rxMfrShort(x.mfr), mfr: [x.mfr], items: [], once: true }, 'ai');
+  },
+  rxMedsPhoto: () => { const i = $('#rxMedsFile'); if (i) i.click(); },
   rxCheck: el => rxCheck(el),
   rxUndo: el => {
     const st = rxSt(), c = st.check; if (!c) return;
@@ -41085,21 +41108,24 @@ Object.assign(H, {
     if (!r || !r.ok) return;
     st.firms = r.firms || null; if (st.add.fid === fe.id) st.add.fid = ''; closeModal(); rxRender();
   },
-  rxRepFor: el => { const st = rxSt(); st.view = 'rep'; st.rep = { fid: el.dataset.id }; rxRender(); },
+  rxRepFor: el => { const st = rxSt(); st.view = 'rep'; st.rep = { fids: [el.dataset.id] }; rxRender(); },
   rxRepGo: async el => {
     const st = rxSt();
-    const fid = ($('#rxRepFirm') || {}).value, from = ($('#rxRepFrom') || {}).value, to = ($('#rxRepTo') || {}).value;
-    const r = await busy(el, () => rpcA('rxReport', { firmId: fid, from, to })).catch(() => null);
-    if (!r || !r.ok) return;
-    st.rep = { fid, from, to, res: r }; rxRender();
+    const fids = $$('.rx-rf').filter(b => b.checked).map(b => b.value), from = ($('#rxRepFrom') || {}).value, to = ($('#rxRepTo') || {}).value;
+    if (!fids.length) return toast(x92('repPick'), 'bad');
+    const res = [];
+    const ok = await busy(el, async () => { for (const fid of fids) { const r = await rpcA('rxReport', { firmId: fid, from, to }).catch(() => null); if (!r || !r.ok) return false; res.push(r); } return true; });
+    if (!ok) return;
+    st.rep = { fids, from, to, res }; rxRender();
   },
-  rxRepPrint: () => {
-    const x = rxSt().rep && rxSt().rep.res; if (!x) return;
-    $('#printRoot').innerHTML = '<div class="pf-page last" style="font-size:13px">' + rxRepTableHtml(x) + '<div style="margin-top:10px;font-size:11px">' + esc(x92('repPriv')) + '</div></div>';
+  rxRepPrint: el => {
+    const all = (rxSt().rep && rxSt().rep.res) || []; const i = el && el.dataset ? el.dataset.i : '0';
+    const L = i === 'all' ? all : [all[Number(i) || 0]].filter(Boolean); if (!L.length) return;
+    $('#printRoot').innerHTML = L.map((x, k) => '<div class="pf-page' + (k === L.length - 1 ? ' last' : '') + '" style="font-size:13px">' + rxRepTableHtml(x) + '<div style="margin-top:10px;font-size:11px">' + esc(x92('repPriv')) + '</div></div>').join('');
     document.body.classList.add('print-form');
     setTimeout(() => { window.print(); setTimeout(() => { document.body.classList.remove('print-form'); $('#printRoot').innerHTML = ''; }, 800); }, 60);
   },
-  rxRepCopy: async () => { const x = rxSt().rep && rxSt().rep.res; if (!x) return; try { await navigator.clipboard.writeText(rxRepText(x)); toast(x92('copied'), 'ok'); } catch (e) { } }
+  rxRepCopy: async el => { const x = rxSt().rep && (rxSt().rep.res || [])[Number(el && el.dataset && el.dataset.i) || 0]; if (!x) return; try { await navigator.clipboard.writeText(rxRepText(x)); toast(x92('copied'), 'ok'); } catch (e) { } }
 });
 // выход: черновик рецепта (ФИО, аллергия, болезни пациента) с телефона — убрать
 (function () {
@@ -41112,6 +41138,25 @@ Object.assign(H, {
   };
   window.logout = logout;
 })();
+// «Что уже принимает» — с фото (Саид, 21:27): ИИ читает упаковки / рецепты / лист назначений → в поле, учитывается в проверке
+document.addEventListener('change', async e => {
+  const el = e.target; if (!el || el.id !== 'rxMedsFile') return;
+  const files = Array.from(el.files || []).slice(0, 4); if (!files.length) return;
+  const images = [];
+  for (const f of files) { try { images.push({ data: exPrep(await fileToImage(f)).data, type: 'image/jpeg' }); } catch (er) { } }
+  if (!images.length) return;
+  toast(x92('medsWait'));
+  const r = await rpcA('rxMedsRead', { images }, { timeout: 200000 }).catch(() => null);
+  if (!r || !r.ok) return;
+  const st = rxSt(), lines = (r.items || []).map(x => x.b + (x.inn ? ' (' + catInnName(x.inn) + ')' : '') + (x.dose ? ' ' + x.dose : '') + (x.how ? ' — ' + x.how : ''));
+  const have = String(st.d.pt.meds || '');
+  const add = lines.filter(l => have.toLowerCase().indexOf(String(l.split(' ')[0]).toLowerCase()) === -1);
+  st.d.pt.meds = (have.trim() ? have.trim() + '\n' : '') + add.join('\n');
+  st.check = null; rxSave(); rxRender();
+  const det = document.querySelector('#rxf_pt_meds'); if (det && det.closest('details')) det.closest('details').open = true;
+  toast(x92('medsDone', { n: add.length }), 'ok');
+});
+document.addEventListener('change', e => { const el = e.target; if (!el) return; if (el.id === 'rxRepAll') $$('.rx-rf').forEach(b => { b.checked = el.checked; }); else if (el.classList && el.classList.contains('rx-rf')) { const a = $('#rxRepAll'); if (a) a.checked = $$('.rx-rf').every(b => b.checked); } });
 
 /* =====================================================================
  * v93 (9.61): GT/098 без дублей и удаление неудачных попыток (Саид, 28.10, 19:06).
@@ -41323,7 +41368,7 @@ function rxRevHtml() {
   }
   h += '<div class="grid2">' + rvField('age', x92('age'), v.age, { max: 3 }) + rvField('weight', x92('weight'), v.weight, { max: 5 }) + '</div>' +
     '<div class="field"><label>' + esc(x92('sex')) + '</label>' + chips('sex', [['m', S.lang === 'az' ? 'Kişi' : 'Мужской'], ['f', S.lang === 'az' ? 'Qadın' : 'Женский']]) + '</div>' +
-    rvField('allergy', x92('allergy'), v.allergy, { max: 300 }) + rvField('chronic', x92('chronic'), v.chronic, { ta: 1, max: 600 }) + rvField('meds', x92('meds'), v.meds, { ta: 1, max: 600 }) +
+    rvField('allergy', x92('allergy'), v.allergy, { max: 300 }) + rvField('chronic', x92('chronic'), v.chronic, { ta: 1, max: 600 }) + rvField('meds', x92('meds'), v.meds, { ta: 1, max: 600 }) + rvField('noEffect', x92('noEffect'), v.noEffect, { ta: 1, max: 800, ph: x92('noEffectPh') }) +
     rvField('complaint', x94('compl'), v.complaint, { ta: 1, max: 1000 }) + '<div class="grid2">' + rvField('dx', x94('dx'), v.dx, { max: 200 }) + rvField('byDoc', x94('byDoc'), v.byDoc, { max: 120 }) + '</div>' +
     '<div class="lbl">' + esc(x94('photo')) + ' (' + v.photos.length + '/4)</div><div class="row" style="gap:6px;flex-wrap:wrap">' + v.photos.map((p, i) => '<span style="position:relative"><img src="' + p.thumb + '" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:8px"><button class="btn small ghost" style="min-height:26px;padding:0 8px" data-act="rvPhDel" data-i="' + i + '">✕</button></span>').join('') +
     (v.photos.length < 4 ? '<label class="btn small ghost" style="cursor:pointer">＋<input type="file" accept="image/*" multiple id="rvPhoto" style="display:none"></label>' : '') + '</div>' +
@@ -41380,7 +41425,7 @@ Object.assign(H, {
     toast(x94('wait'));
     let clash = null;
     const r = await busy(el, () => rpcA('rxReview', { confirm: !!el.dataset.confirm, patientId: v.pid || '', fin: v.fin, surname: v.surname, name: v.name, sex: v.sex, lang: S.lang, complaint: v.complaint, dx: v.dx, byDoc: v.byDoc, text: v.text,
-      images: v.photos.map(p => ({ data: p.data, type: 'image/jpeg' })), patient: { age: v.age, sex: v.sex, weight: v.weight, allergy: v.allergy, chronic: v.chronic, meds: v.meds } }, { timeout: 300000 })).catch(e => { if (e && e.res && e.res.code === 'E_PT_FIN_OTHER') clash = (e.res.info || {}).name || '?'; return null; });
+      images: v.photos.map(p => ({ data: p.data, type: 'image/jpeg' })), patient: { age: v.age, sex: v.sex, weight: v.weight, allergy: v.allergy, chronic: v.chronic, meds: v.meds, noEffect: v.noEffect } }, { timeout: 300000 })).catch(e => { if (e && e.res && e.res.code === 'E_PT_FIN_OTHER') clash = (e.res.info || {}).name || '?'; return null; });
     if (clash) { openModal('<h3>' + esc(x94('clashT', { n: clash })) + '</h3><div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(x94('clashFix')) + '</button><button class="btn primary" data-act="rvGo" data-confirm="1">' + esc(x94('clashGo')) + '</button></div>'); return; }
     if (el.dataset.confirm) closeModal();
     if (!r || !r.ok) return;
