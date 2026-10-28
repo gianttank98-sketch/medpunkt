@@ -39576,6 +39576,325 @@ Object.assign(H, {
   x89Ai: el => x89Run(b => aiFillDoc(b), el)
 });
 
+/* =====================================================================
+ * v90 (9.58): ночной разбор — читаемо в обеих темах и с кнопками; дневник — кнопками; исход стационара из дневника.
+ *  (Саид, 28.10, 04:20: «цвет трудно читать; „Уточнить“ — кликать и сохранять, чтобы следующий разбор знал, всё — в GT/098;
+ *  обследований, что он советует, у нас большинства нет — кнопка „нету / сейчас нельзя“, и советы должны меняться;
+ *  наблюдение — кликабельными кнопками, шаблон, „чуть лучше / чуть хуже“, витальные, жалобы со слов пациента;
+ *  кнопки „выписан, умер, переведён в другое отделение или больницу“».)
+ * ===================================================================== */
+const X90_T = {
+  ru: {
+    done: '✓ Назначено', no: '🚫 Нет у нас', later: '⏳ Не сейчас', undo: '↩︎', ans: '✍️ Ответить', ok: '✓ Уточнено', skip: '— Неважно', docDone: '✓ Сделано',
+    sDone: '✓ назначено', sNo: '🚫 нет в учреждении', sLater: '⏳ не сейчас', sAns: '✍️ ответ', sOk: '✓ уточнено', sSkip: '— неважно', sDocDone: '✓ сделано',
+    laterQ: 'Почему не сейчас? (необязательно)', ansT: 'Ответ на вопрос ИИ', ansHint: 'Ответ сохранится в GT/098 — следующий разбор и документы его учтут.', save: 'Сохранить',
+    quick: ['Да', 'Нет', 'Не знаю', 'Уточню позже'], need: 'Впишите ответ', saved: 'Сохранено в GT/098',
+    noList: '🚫 Нет в учреждении', noHint: 'ИИ не предлагает это обычным пунктом — ищет замену. Появилось — уберите из списка.', noEdit: 'Изменить', noDel: 'Появилось — убрать',
+    redo: '🤖 Пересчитать с учётом отметок', redoHint: 'После отметок разбор можно пересчитать — ИИ учтёт ответы и то, чего нет.', stock: '📦 есть: {n}',
+    // дневник
+    dyn: 'Динамика', dyns: ['↑ Значительно лучше', '↗ Чуть лучше', '→ Без изменений', '↘ Чуть хуже', '↓ Значительно хуже'],
+    complQ: ['Жалоб нет', 'Одышка меньше', 'Одышка прежняя', 'Одышка больше', 'Кашель', 'Мокрота', 'Боль в груди', 'Головная боль', 'Слабость', 'Температура', 'Тошнота', 'Плохо спал', 'Аппетит хороший'],
+    fromPt: '🗣 со слов пациента', tpl: '📋 Шаблон осмотра',
+    tplG: [['Состояние', ['удовлетворительное', 'средней тяжести', 'тяжёлое', 'крайне тяжёлое']], ['Сознание', ['ясное', 'оглушение', 'сопор', 'кома']], ['Положение', ['активное', 'вынужденное', 'пассивное']],
+      ['Кожа', ['обычной окраски', 'бледная', 'цианоз', 'желтушность', 'влажная']], ['Дыхание', ['везикулярное', 'жёсткое', 'ослаблено', 'хрипы сухие', 'хрипы влажные']],
+      ['Сердце', ['тоны ритмичные', 'аритмия', 'тоны приглушены']], ['Живот', ['мягкий, безболезненный', 'болезненный', 'вздут']], ['Отёки', ['нет', 'есть']], ['Диурез', ['адекватный', 'снижен', 'по катетеру']]],
+    doneQ: ['Назначения выполнены', 'Кислород через канюли', 'Ингаляция через небулайзер', 'Инфузионная терапия', 'Взяты анализы', 'Перевязка'],
+    planQ: ['Продолжить лечение', 'Контроль анализов', 'Контроль показателей', 'Консультация специалиста', 'Готовить к выписке'],
+    outT: 'Исход стационара', out: { home: '🏠 Выписан', move: '🔁 В другое отделение', transfer: '🚑 В другую больницу', death: '⚰️ Умер' },
+    outTitle: { home: '🏠 Выписка', move: '🔁 Перевод в другое отделение', transfer: '🚑 Перевод в другую больницу', death: '⚰️ Смерть' },
+    outAt: 'Дата и время', outWhy: { home: 'Рекомендации / куда (необязательно)', move: 'Причина перевода', transfer: 'Больница (куда) и причина', death: 'Причина / обстоятельства' },
+    outDept: 'В какое отделение', outNeed: 'Впишите, куда переводите', outAsk: 'Закончить стационар? Ночной разбор ИИ для пациента остановится.', outDone: 'Записано в GT/098', notStay: 'Пациент сейчас не в стационаре.', noteFirst: 'Запись дневника сохранена.'
+  },
+  az: {
+    done: '✓ Təyin edilib', no: '🚫 Bizdə yoxdur', later: '⏳ İndi yox', undo: '↩︎', ans: '✍️ Cavab ver', ok: '✓ Dəqiqləşdirildi', skip: '— Vacib deyil', docDone: '✓ Edilib',
+    sDone: '✓ təyin edilib', sNo: '🚫 müəssisədə yoxdur', sLater: '⏳ indi yox', sAns: '✍️ cavab', sOk: '✓ dəqiqləşdirildi', sSkip: '— vacib deyil', sDocDone: '✓ edilib',
+    laterQ: 'Niyə indi yox? (vacib deyil)', ansT: 'Sİ sualına cavab', ansHint: 'Cavab GT/098-də saxlanacaq — növbəti təhlil və sənədlər onu nəzərə alacaq.', save: 'Saxla',
+    quick: ['Bəli', 'Xeyr', 'Bilmirəm', 'Sonra dəqiqləşdirəcəyəm'], need: 'Cavabı yazın', saved: 'GT/098-də saxlanıldı',
+    noList: '🚫 Müəssisədə yoxdur', noHint: 'Sİ bunu adi bənd kimi təklif etmir — əvəzini axtarır. Yaranıbsa — siyahıdan çıxarın.', noEdit: 'Dəyiş', noDel: 'Yaranıb — çıxar',
+    redo: '🤖 Qeydlərə görə yenidən təhlil', redoHint: 'Qeydlərdən sonra təhlili yeniləmək olar — Sİ cavabları və olmayanları nəzərə alacaq.', stock: '📦 var: {n}',
+    dyn: 'Dinamika', dyns: ['↑ Xeyli yaxşı', '↗ Bir az yaxşı', '→ Dəyişiklik yoxdur', '↘ Bir az pis', '↓ Xeyli pis'],
+    complQ: ['Şikayəti yoxdur', 'Təngnəfəslik azalıb', 'Təngnəfəslik əvvəlki kimi', 'Təngnəfəslik artıb', 'Öskürək', 'Bəlğəm', 'Döş qəfəsində ağrı', 'Baş ağrısı', 'Halsızlıq', 'Hərarət', 'Ürəkbulanma', 'Pis yatıb', 'İştahı yaxşıdır'],
+    fromPt: '🗣 pasiyentin sözlərinə görə', tpl: '📋 Müayinə şablonu',
+    tplG: [['Vəziyyət', ['qənaətbəxş', 'orta ağırlıqda', 'ağır', 'çox ağır']], ['Şüur', ['aydın', 'karıxma', 'sopor', 'koma']], ['Vəziyyəti (yatağda)', ['aktiv', 'məcburi', 'passiv']],
+      ['Dəri', ['adi rəngdə', 'solğun', 'sianoz', 'sarılıq', 'nəm']], ['Tənəffüs', ['vezikulyar', 'sərt', 'zəifləyib', 'quru xırıltılar', 'yaş xırıltılar']],
+      ['Ürək', ['tonlar ritmik', 'aritmiya', 'tonlar boğuq']], ['Qarın', ['yumşaq, ağrısız', 'ağrılı', 'köpüb']], ['Ödem', ['yoxdur', 'var']], ['Diurez', ['adekvat', 'azalıb', 'kateterlə']]],
+    doneQ: ['Təyinatlar yerinə yetirilib', 'Kanyula ilə oksigen', 'Nebulayzerlə inhalyasiya', 'İnfuzion terapiya', 'Analizlər götürülüb', 'Sarğı'],
+    planQ: ['Müalicəni davam etdirmək', 'Analizlərə nəzarət', 'Göstəricilərə nəzarət', 'Mütəxəssis konsultasiyası', 'Yazılmağa hazırlamaq'],
+    outT: 'Stasionarın nəticəsi', out: { home: '🏠 Yazıldı', move: '🔁 Başqa şöbəyə', transfer: '🚑 Başqa xəstəxanaya', death: '⚰️ Öldü' },
+    outTitle: { home: '🏠 Yazılma', move: '🔁 Başqa şöbəyə köçürmə', transfer: '🚑 Başqa xəstəxanaya köçürmə', death: '⚰️ Ölüm' },
+    outAt: 'Tarix və saat', outWhy: { home: 'Tövsiyələr / hara (vacib deyil)', move: 'Köçürmənin səbəbi', transfer: 'Xəstəxana (hara) və səbəb', death: 'Səbəb / hallar' },
+    outDept: 'Hansı şöbəyə', outNeed: 'Hara köçürdüyünüzü yazın', outAsk: 'Stasionar bitsin? Pasiyent üçün gecə Sİ təhlili dayanacaq.', outDone: 'GT/098-ə yazıldı', notStay: 'Pasiyent hazırda stasionarda deyil.', noteFirst: 'Gündəlik qeydi saxlanıldı.'
+  }
+};
+function x90(k, v) { const L2 = X90_T[S.lang === 'az' ? 'az' : 'ru']; let s = L2[k] !== undefined ? L2[k] : X90_T.ru[k]; if (typeof s === 'string' && v) Object.keys(v).forEach(x => { s = s.split('{' + x + '}').join(v[x]); }); return s; }
+(function () {
+  if ($('#x90Css')) return;
+  const s = document.createElement('style'); s.id = 'x90Css';
+  s.textContent = '.nt-blk{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:8px;color:var(--ink)}' +
+    '.nt-h{font-size:13px;font-weight:700;color:var(--sub);margin:0 0 4px;text-transform:none}' +
+    '.nt-risk{display:inline-block;padding:3px 10px;border-radius:999px;font-weight:700}.nt-risk.high{background:var(--red-soft);color:var(--red)}.nt-risk.mid{background:var(--amber-soft);color:var(--amber)}.nt-risk.low{background:var(--green-soft);color:var(--green)}' +
+    '.nt-sum{white-space:pre-wrap;line-height:1.45;color:var(--ink)}' +
+    '.nt-flags{background:var(--red-soft);color:var(--red);border:none}.nt-flags .nt-h{color:var(--red)}.nt-flags li{margin:3px 0}' +
+    '.nt-it{padding:7px 0;border-top:1px solid var(--line)}.nt-it:first-of-type{border-top:none}.nt-it .t{font-weight:600;color:var(--ink)}.nt-it .w{font-size:13px;color:var(--sub);margin-top:2px}' +
+    '.nt-it .c{font-size:13.5px;color:var(--amber);margin-top:3px}.nt-it .src{font-size:12px;color:var(--sub);margin-top:2px;word-break:break-word}' +
+    '.nt-it.off .t{color:var(--sub);text-decoration:line-through}.nt-st{display:inline-block;font-size:12.5px;padding:1px 8px;border-radius:999px;margin-left:4px;background:var(--soft);color:var(--ink)}' +
+    '.nt-st.done{background:var(--green-soft);color:var(--green)}.nt-st.no{background:var(--soft);color:var(--sub)}.nt-st.later{background:var(--amber-soft);color:var(--amber)}' +
+    '.nt-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.nt-acts .btn{min-height:34px}.nt-note{font-size:13.5px;margin-top:4px;color:var(--ink)}' +
+    '.nt-no{font-size:13.5px;color:var(--sub)}.pn-q{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}.pn-q .chip{font-size:14px;padding:5px 10px;min-height:32px;margin:0}.pn-q .chip.on{background:var(--brand);color:var(--brand-ink)}.pn-tg .chip{font-size:14px;padding:5px 10px;min-height:32px}' +
+    '.pn-tg{margin:2px 0 6px}.pn-tg b{font-size:12.5px;color:var(--sub);display:block;margin:4px 0 2px}.pn-out{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0 4px}';
+  document.head.appendChild(s);
+})();
+/* ---------- 🤖 ночной разбор: отрисовка ---------- */
+function x90Stock(what) {
+  try {
+    const q = qk(what); if (!q || q.length < 5) return '';
+    const it = (S.view && S.view.items || []).find(i => i.category === 'med' && i.substance && qk(i.substance).length >= 5 && q.indexOf(qk(i.substance)) !== -1 && (typeof itemStats !== 'function' || (itemStats(i).total || 0) > 0));
+    return it ? it.name : '';
+  } catch (e) { return ''; }
+}
+function x90Key(s) { return String(s || '').toLowerCase().replace(/ё/g, 'е').replace(/\([^)]*\)/g, ' ').replace(/[^a-zа-яəğıöşüç0-9]+/g, ' ').trim().slice(0, 80); }
+function x90Marks(r) { return r && r.marks && typeof r.marks === 'object' ? r.marks : {}; }
+function x90St(mk, list) {
+  if (!mk) return '';
+  const lab = { done: list === 'docs' ? x90('sDocDone') : x90('sDone'), no: x90('sNo'), later: x90('sLater'), ans: x90('sAns'), ok: x90('sOk'), skip: x90('sSkip') }[mk.s] || '';
+  return '<span class="nt-st ' + esc(mk.s === 'ans' || mk.s === 'ok' ? 'done' : mk.s) + '">' + esc(lab) + '</span>' +
+    (mk.note && mk.s !== 'ans' ? '<div class="nt-note">— ' + esc(mk.note) + '</div>' : '') + (mk.s === 'ans' ? '<div class="nt-note"><b>→</b> ' + esc(mk.note) + '</div>' : '') +
+    '<div class="src">' + esc([mk.by, fmtDt(mk.at || '')].filter(Boolean).join(' · ')) + '</div>';
+}
+function x90Btns(r, list, i, mk, live) {
+  if (!live) return '';
+  const b = (s, lab, cls) => '<button class="btn small' + (cls ? ' ' + cls : '') + '" data-act="x90Mark" data-id="' + esc(r.id) + '" data-l="' + list + '" data-i="' + i + '" data-s="' + s + '">' + esc(lab) + '</button>';
+  if (mk) return '<div class="nt-acts">' + (list === 'questions' && mk.s !== 'ans' ? b('ans', x90('ans')) : '') + b('', x90('undo'), 'ghost') + '</div>';
+  if (list === 'questions') return '<div class="nt-acts">' + b('ans', x90('ans')) + b('ok', x90('ok'), 'ghost') + b('skip', x90('skip'), 'ghost') + '</div>';
+  if (list === 'docs') return '<div class="nt-acts">' + b('done', x90('docDone'), 'ghost') + '</div>';
+  if (list === 'drugs') return '<div class="nt-acts">' + b('done', x90('done'), 'ghost') + b('no', x90('no'), 'ghost') + '</div>';
+  return '<div class="nt-acts">' + b('done', x90('done'), 'ghost') + b('no', x90('no'), 'ghost') + b('later', x90('later'), 'ghost') + '</div>';
+}
+function x90Html(r, live) {
+  if (!r) return '';
+  const W = ntt('ntWhen'), M = x90Marks(r), e = esc;
+  const tag = w => w ? ' <span class="tag' + (w === 'now' ? ' red' : w === 'today' ? ' amber' : '') + '">' + e(W[w] || w) + '</span>' : '';
+  const blk = (title, arr, row, cls) => arr && arr.length ? '<div class="nt-blk' + (cls ? ' ' + cls : '') + '"><div class="nt-h">' + e(title) + '</div>' + arr.map(row).join('') + '</div>' : '';
+  // в новом разборе то, чего нет в учреждении (отмечено раньше), — сразу помечено
+  const cur = typeof ptSt === 'function' ? ptSt().cur : null;
+  const NO = {}; ((cur && cur.noTests) || []).forEach(x => { NO[x90Key(x.what)] = 1; });
+  const item = (list, x, i, inner) => {
+    const mk = M[list + '.' + i], auto = !mk && list !== 'questions' && list !== 'docs' && NO[x90Key(typeof x === 'string' ? x : x.what)];
+    return '<div class="nt-it' + ((mk && (mk.s === 'no' || mk.s === 'skip')) || auto ? ' off' : '') + '" data-k="' + list + '.' + i + '">' + inner + (auto ? '<span class="nt-st no">' + esc(x90('sNo')) + '</span>' : x90St(mk, list)) + (auto ? '' : x90Btns(r, list, i, mk, live)) + '</div>';
+  };
+  const wi = list => (x, i) => item(list, x, i, '<div class="t">' + e(x.what) + tag(x.when) + '</div>' + (x.why ? '<div class="w">' + e(x.why) + '</div>' : ''));
+  const risk = { high: 'high', mid: 'mid', low: 'low' }[r.risk] || 'mid';
+  return '<div><span class="nt-risk ' + risk + '">' + e((ntt('ntRisk') || {})[r.risk] || r.risk) + '</span></div>' +
+    '<div class="gt-src" style="margin-top:4px">' + e([fmtDt(r.at || r.createdAt || ''), r.day ? ntt('ntDay', { n: r.day }) : '', r.web ? ntt('ntWeb') : ''].filter(Boolean).join(' · ')) + '</div>' +
+    (r.summary ? '<div class="nt-blk nt-sum">' + e(r.summary) + '</div>' : '') +
+    (r.redFlags && r.redFlags.length ? '<div class="nt-blk nt-flags"><div class="nt-h">' + e(ntt('ntFlags')) + '</div><ul style="margin:0 0 0 18px;padding:0">' + r.redFlags.map(x => '<li>' + e(x) + '</li>').join('') + '</ul></div>' : '') +
+    blk(ntt('ntQ'), r.questions, (x, i) => item('questions', x, i, '<div class="t">' + e(x) + '</div>')) +
+    blk(ntt('ntTests'), r.tests, wi('tests')) + blk(ntt('ntExams'), r.exams, wi('exams')) +
+    blk(ntt('ntDrugs'), r.drugs, (x, i) => { const st = x90Stock(x.what); return item('drugs', x, i, '<div class="t">' + e(x.what) + (st ? ' <span class="nt-st done">' + e(x90('stock', { n: st })) + '</span>' : '') + '</div>' + (x.why ? '<div class="w">' + e(x.why) + '</div>' : '') + (x.caution ? '<div class="c">⚠ ' + e(x.caution) + '</div>' : '') + (x.source ? '<div class="src">📖 ' + e(x.source) + '</div>' : '')); }) +
+    blk(ntt('ntAvoid'), r.avoid, x => '<div class="nt-it"><div class="t">⛔ ' + e(x.what) + '</div>' + (x.why ? '<div class="w">' + e(x.why) + '</div>' : '') + '</div>') +
+    blk(ntt('ntDocs'), r.docs, (x, i) => item('docs', x, i, '<div class="t">' + e(x) + '</div>')) +
+    blk(ntt('ntSrc'), (r.sources || []).filter(x => x.url || x.title), x => '<div class="nt-it src">' + (x.url ? '<a href="' + e(x.url) + '" target="_blank" rel="noopener noreferrer">' + e(x.title || x.url) + '</a>' : e(x.title)) + '</div>') +
+    '<div class="f-alert" style="margin-top:10px">' + e(ntt('ntNote')) + '</div>';
+}
+// старые разборы (окно) — тоже новым видом, без кнопок
+ntHtml = function (r) { return x90Html(r, false); };
+(function () {
+  const o = window.ptCardHtml;
+  window.ptCardHtml = function () {
+    let h = o.apply(this, arguments);
+    try {
+      const g = ptSt().cur; if (!g || !g.patient) return h;
+      const nl = g.night || []; if (!nl.length) return h;
+      const A = g.access || {};
+      const live = !g.shared && can('forms') && A.canWrite !== false;
+      const i0 = h.indexOf('data-gt="night"'); if (i0 === -1) return h;
+      const s0 = h.lastIndexOf('<details', i0), b0 = h.indexOf('<div class="gt-body">', i0);
+      // весь раздел — без жёлтой заливки (риск — значком), тело — новым видом с кнопками
+      const head = h.slice(s0, b0).replace(' gt-warn', '');
+      const bodyStart = b0 + '<div class="gt-body">'.length;
+      const old = ntHtml(nl[0]);
+      const k = h.indexOf(old, bodyStart);
+      if (k === -1) return h.slice(0, s0) + head + h.slice(b0);
+      const M = x90Marks(nl[0]);
+      const noL = g.noTests || [];
+      const extra = (Object.keys(M).length && live && can('forms') && typeof canAi === 'function' && canAi() && (g.hosp || {}).on ? '<div class="muted" style="margin-top:8px">' + esc(x90('redoHint')) + '</div><button class="btn block" style="margin-top:6px" data-act="ntNow">' + esc(x90('redo')) + '</button>' : '') +
+        (noL.length ? '<div class="nt-blk"><div class="nt-h">' + esc(x90('noList')) + ' (' + noL.length + ')</div><div class="nt-no">' + esc(noL.map(x => x.what).join(' · ')) + '</div>' + (live ? '<div class="nt-acts"><button class="btn small ghost" data-act="x90NoEdit">' + esc(x90('noEdit')) + '</button></div>' : '') + '</div>' : '');
+      return h.slice(0, s0) + head + h.slice(b0, k) + x90Html(nl[0], live) + extra + h.slice(k + old.length);
+    } catch (e) { console.error(e); return h; }
+  };
+})();
+async function x90Send(id, list, i, s, note, el) {
+  const g = ptSt().cur; if (!g) return;
+  const r = await busy(el, () => rpcA('gtNightMark', { patientId: g.patient.id, id, list, i: Number(i), s, note: note || '' })).catch(() => null);
+  if (!r || !r.ok) return false;
+  const rv = (g.night || []).find(x => x.id === id); if (rv) rv.marks = r.marks;
+  g.noTests = r.noTests || g.noTests;
+  if (PT.cache) delete PT.cache[g.patient.id];
+  x90Rerender();
+  return true;
+}
+const X90 = {};
+function x90Rerender() { const y = window.scrollY; dsRender(); window.scrollTo(0, y); }
+Object.assign(H, {
+  x90Mark: async el => {
+    const { id, l, i, s } = el.dataset;
+    if (s === 'ans') {
+      const g = ptSt().cur; const rv = g && (g.night || []).find(x => x.id === id); const q = rv && (rv.questions || [])[Number(i)];
+      const mk = x90Marks(rv)['questions.' + i];
+      X90.m = { id, l, i };
+      openModal('<h3>' + esc(x90('ansT')) + '</h3><div class="nt-blk" style="margin-top:0"><b>' + esc(q || '') + '</b></div><div class="pn-q" style="margin-top:8px">' + x90('quick').map(w => '<button type="button" class="chip" data-act="x90Quick" data-v="' + esc(w) + '">' + esc(w) + '</button>').join('') + '</div>' +
+        '<div class="field"><textarea id="x90A" rows="3" maxlength="1000">' + esc(mk && mk.s === 'ans' ? mk.note : '') + '</textarea></div><div class="muted" style="font-size:13px">' + esc(x90('ansHint')) + '</div>' +
+        '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="x90AnsSave">' + esc(x90('save')) + '</button></div>');
+      const a = $('#x90A'); if (a) a.focus();
+      return;
+    }
+    if (s === 'later') {
+      X90.m = { id, l, i };
+      openModal('<h3>' + esc(x90('later')) + '</h3><div class="field"><label>' + esc(x90('laterQ')) + '</label><input id="x90R" type="text" maxlength="300"></div>' +
+        '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="x90LaterSave">' + esc(x90('save')) + '</button></div>');
+      return;
+    }
+    if (await x90Send(id, l, i, s, '', el)) toast(x90('saved'), 'ok');
+  },
+  x90Quick: el => { const a = $('#x90A'); if (!a) return; a.value = a.value.trim() ? a.value.trim() + '. ' + el.dataset.v : el.dataset.v; a.focus(); },
+  x90AnsSave: async el => {
+    const m = X90.m; if (!m) return; const v = String(($('#x90A') || {}).value || '').trim();
+    if (!v) return toast(x90('need'), 'bad');
+    if (await x90Send(m.id, m.l, m.i, 'ans', v, el)) { closeModal(); toast(x90('saved'), 'ok'); }
+  },
+  x90LaterSave: async el => {
+    const m = X90.m; if (!m) return;
+    if (await x90Send(m.id, m.l, m.i, 'later', String(($('#x90R') || {}).value || '').trim(), el)) { closeModal(); toast(x90('saved'), 'ok'); }
+  },
+  x90NoEdit: () => {
+    const g = ptSt().cur; const L = (g && g.noTests) || [];
+    openModal('<h3>' + esc(x90('noList')) + '</h3><div class="muted" style="margin-bottom:8px">' + esc(x90('noHint')) + '</div>' +
+      L.map(x => '<div class="nt-it"><div class="t">' + esc(x.what) + '</div><div class="src">' + esc([x.by, fmtDt(x.at || '')].filter(Boolean).join(' · ')) + '</div><div class="nt-acts"><button class="btn small ghost" data-act="x90NoDel" data-v="' + esc(x.what) + '">' + esc(x90('noDel')) + '</button></div></div>').join('') +
+      '<div class="acts"><button class="btn primary" data-act="closeModal">OK</button></div>');
+  },
+  x90NoDel: async el => {
+    const g = ptSt().cur; if (!g) return;
+    const r = await busy(el, () => rpcA('gtNoTests', { remove: el.dataset.v })).catch(() => null);
+    if (!r || !r.ok) return;
+    g.noTests = r.noTests || [];
+    (g.night || []).forEach(rv => { const M = x90Marks(rv); Object.keys(M).forEach(k => { const [ls, i] = k.split('.'); const x = (rv[ls] || [])[+i]; if (M[k].s === 'no' && x && (x.what || x) === el.dataset.v) delete M[k]; }); });
+    closeModal(); x90Rerender(); H.x90NoEdit();
+  }
+});
+/* ---------- 📝 дневник кнопками ---------- */
+function x90Append(ta, phrase, sep) {
+  if (!ta) return;
+  const cur = ta.value.trim();
+  if (cur.split(/[;,.\n]\s*/).map(s => s.trim().toLowerCase()).indexOf(phrase.toLowerCase()) !== -1) return;
+  ta.value = !cur ? phrase.charAt(0).toUpperCase() + phrase.slice(1) : /:$/.test(cur) ? cur + ' ' + phrase : cur.replace(/[.;,]\s*$/, '') + (sep || '; ') + phrase;
+  ta.dispatchEvent(new Event('input', { bubbles: true }));
+}
+/** «Группа: значение.» — одна строка на группу (повторное нажатие меняет значение). */
+function x90SetLine(ta, label, val) {
+  if (!ta) return;
+  const lines = ta.value.split('\n').filter(l => l.trim() !== '');
+  const re = new RegExp('^' + label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ':');
+  const line = label + ': ' + val + '.';
+  const j = lines.findIndex(l => re.test(l.trim()));
+  if (j !== -1) lines[j] = line; else if (label === x90('dyn')) lines.unshift(line); else lines.push(line);
+  ta.value = lines.join('\n');
+  ta.dispatchEvent(new Event('input', { bubbles: true }));
+}
+(function () {
+  if (typeof pnEdit !== 'function') return;
+  const o = pnEdit;
+  pnEdit = async function (pid, note) {
+    const r = await o.apply(this, arguments);
+    try {
+      const part = k => $('.pn-part[data-k="' + k + '"]');
+      const st = part('status'), cp = part('complaints'), dn = part('done'), pl = part('plan');
+      if (!st || $('#x90Dyn')) return r;
+      const chip = (act, v, extra) => '<button type="button" class="chip" data-act="' + act + '" data-v="' + esc(v) + '"' + (extra || '') + '>' + esc(v) + '</button>';
+      const curDyn = (String(st.value).match(new RegExp('^' + x90('dyn') + ':\\s*([^.\\n]+)', 'm')) || [])[1] || '';
+      // динамика — первой, над жалобами
+      const dynH = '<div id="x90Dyn" class="field"><label>' + esc(x90('dyn')) + '</label><div class="pn-q">' + x90('dyns').map(v => { const bare = v.replace(/^\S+\s/, ''); return '<button type="button" class="chip' + (curDyn.toLowerCase() === bare.toLowerCase() ? ' on' : '') + '" data-act="x90Dyn" data-v="' + esc(bare) + '">' + esc(v) + '</button>'; }).join('') + '</div></div>';
+      cp.closest('.field').insertAdjacentHTML('beforebegin', dynH);
+      cp.insertAdjacentHTML('afterend', '<div class="pn-q">' + chip('x90FromPt', x90('fromPt')) + x90('complQ').map(v => chip('x90Add', v, ' data-k="complaints"')).join('') + '</div>');
+      st.insertAdjacentHTML('afterend', '<details class="pn-tg"><summary class="chip" style="display:inline-block">' + esc(x90('tpl')) + '</summary>' +
+        x90('tplG').map(gp => '<b>' + esc(gp[0]) + '</b><div class="pn-q" style="margin:0">' + gp[1].map(v => '<button type="button" class="chip" data-act="x90Tpl" data-g="' + esc(gp[0]) + '" data-v="' + esc(v) + '">' + esc(v) + '</button>').join('') + '</div>').join('') + '</details>');
+      // показатели — сразу после осмотра (раньше были внизу, под свободным текстом)
+      const vit = $('.modal .cs-vit'), vl = vit && vit.previousElementSibling, tg = $('.modal .pn-tg');
+      if (vit && vl && tg) { tg.insertAdjacentElement('afterend', vit); vit.insertAdjacentElement('beforebegin', vl); }
+      if (dn) dn.insertAdjacentHTML('afterend', '<div class="pn-q">' + x90('doneQ').map(v => chip('x90Add', v, ' data-k="done"')).join('') + '</div>');
+      if (pl) pl.insertAdjacentHTML('afterend', '<div class="pn-q">' + x90('planQ').map(v => chip('x90Add', v, ' data-k="plan"')).join('') + '</div>');
+      // исход стационара — внизу
+      const cur = ptSt().cur, gc = cur && cur.patient && cur.patient.id === pid ? cur : (PT.cache && PT.cache[pid]) || null;
+      const on = gc && gc.hosp ? !!gc.hosp.on : true; // не знаем — показываем (сервер всё равно проверит)
+      const acts = $('.modal .acts');
+      if (acts && on && can('forms') && !(note && note.id)) acts.insertAdjacentHTML('beforebegin', '<div class="lbl" style="margin-top:8px">' + esc(x90('outT')) + '</div><div class="pn-out">' +
+        ['home', 'move', 'transfer', 'death'].map(k => '<button type="button" class="btn ghost" data-act="x90Out" data-k="' + k + '" data-pid="' + esc(pid) + '">' + esc(x90('out')[k]) + '</button>').join('') + '</div>');
+    } catch (e) { console.error(e); }
+    return r;
+  };
+})();
+function x90NoteHas() {
+  return $$('.pn-part').some(x => x.value.trim()) || !!((($('#pnText') || {}).value || '').trim()) || $$('.pn-v').some(i => i.value !== '') || $$('.pn-lab').some(r => ($('.pn-ln', r) || {}).value) || (PN.photos || []).length > 0;
+}
+function x90OutModal(pid, k) {
+  const nowL = nowLocal();
+  const az = S.lang === 'az';
+  openModal('<h3>' + esc(x90('outTitle')[k]) + '</h3>' +
+    (k === 'move' ? '<div class="field"><label>' + esc(x90('outDept')) + '</label><div class="chips f-chips" style="margin-bottom:6px">' + (typeof F_HOSP_DEPTS !== 'undefined' ? F_HOSP_DEPTS : []).map(x => '<button type="button" class="chip" data-act="x90Dept" data-v="' + esc(az ? x[1] : x[0]) + '">' + esc(az ? x[1] : x[0]) + '</button>').join('') + '</div><input type="text" id="x90Dept" maxlength="120"></div>' : '') +
+    '<div class="field"><label>' + esc(x90('outAt')) + '</label><input type="datetime-local" id="x90At" value="' + esc(nowL.slice(0, 16)) + '" max="' + esc(nowL) + '"></div>' +
+    '<div class="field"><label>' + esc(x90('outWhy')[k]) + '</label><textarea id="x90Why" rows="2" maxlength="300"></textarea></div>' +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="x90OutGo" data-k="' + k + '" data-pid="' + esc(pid) + '">' + esc(x90('save')) + '</button></div>');
+}
+Object.assign(H, {
+  x90Dyn: el => { x90SetLine($('.pn-part[data-k="status"]'), x90('dyn'), el.dataset.v.toLowerCase()); $$('#x90Dyn .chip').forEach(b => b.classList.toggle('on', b === el)); },
+  x90Add: el => x90Append($('.pn-part[data-k="' + el.dataset.k + '"]'), el.dataset.v.toLowerCase()),
+  x90FromPt: () => { const ta = $('.pn-part[data-k="complaints"]'); if (!ta) return; const p = x90('fromPt').replace(/^\S+\s/, ''); if (!ta.value.toLowerCase().startsWith(p.toLowerCase())) ta.value = p.charAt(0).toUpperCase() + p.slice(1) + ': ' + ta.value.trim(); ta.focus(); },
+  x90Tpl: el => x90SetLine($('.pn-part[data-k="status"]'), el.dataset.g, el.dataset.v),
+  x90Dept: el => { const i = $('#x90Dept'); if (i) i.value = el.dataset.v; },
+  x90Out: async el => {
+    const pid = el.dataset.pid, k = el.dataset.k;
+    if (x90NoteHas()) { await pnSaveGo(null); if ($('.modal .pn-part')) return; toast(x90('noteFirst'), 'ok'); } // запись дневника — сначала (не получилось — окно осталось)
+    x90OutModal(pid, k);
+  },
+  x90OutGo: async el => {
+    const pid = el.dataset.pid, k = el.dataset.k;
+    const at = String(($('#x90At') || {}).value || ''), why = String(($('#x90Why') || {}).value || '').trim();
+    let p;
+    if (k === 'move') { const dept = String(($('#x90Dept') || {}).value || '').trim(); if (!dept) return toast(x90('outNeed'), 'bad'); p = { patientId: pid, action: 'move', dept, at, why }; }
+    else {
+      if (k === 'transfer' && !why) return toast(x90('outNeed'), 'bad');
+      if (!confirm(x90('outAsk'))) return;
+      p = { patientId: pid, action: 'end', kind: k, at, why };
+    }
+    const r = await busy(el, () => rpcA('gtHosp', p)).catch(() => null);
+    if (!r || !r.ok) return;
+    closeModal(); toast(x90('outDone'), 'ok');
+    if (PT.cache) delete PT.cache[pid];
+    if (typeof NT === 'object') NT.at = 0;
+    const g = ptSt().cur; if (g && g.patient && g.patient.id === pid) ptOpen(pid, true);
+  }
+});
+// TQS 003: перевод между отделениями — «Переведён в отделение», «Дата перевода», строки «Переводы»
+(function () {
+  if (typeof gtDocPatch !== 'function') return;
+  const o = gtDocPatch;
+  gtDocPatch = function (type, g) {
+    const out = o.apply(this, arguments);
+    try {
+      const mv = ((g && g.hosp) || {}).moves || []; if (!mv.length) return out;
+      const keys = {}; dsFields(type).forEach(f => { keys[f.k] = f; });
+      const last = mv[mv.length - 1];
+      if (keys.transDept && !out.transDept) out.transDept = String(last.to || '').slice(0, 80);
+      if (keys.transAt && !out.transAt && /^\d{4}-\d{2}-\d{2}/.test(String(last.at || ''))) out.transAt = String(last.at).slice(0, 10);
+      if (keys.moves && keys.moves.type === 'rows') {
+        const rows = Object.assign({}, out.moves || {});
+        mv.forEach((m, i) => { rows['h' + i] = { ord: '1' + String(i).padStart(2, '0'), at: String(m.at || '').slice(0, 16), to: String(m.to || '').slice(0, 120), reason: String(m.why || '').slice(0, 200), acc: '' }; });
+        out.moves = rows;
+      }
+    } catch (e) { console.error(e); }
+    return out;
+  };
+})();
+
 
 function init() {
   vizTipInit();
