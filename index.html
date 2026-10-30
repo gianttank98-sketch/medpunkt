@@ -41647,6 +41647,81 @@ Object.assign(H, {
   window.logout = logout;
 })();
 
+/* =====================================================================
+ * v96 (9.66): месячный лимит ИИ — заранее видно, сколько осталось; аварийный запас для неотложки.
+ *  - «Сегодня» (главный админ): с 80% — плашка «ИИ: потрачено N% месячного лимита» → ⚙️ Настройки ИИ.
+ *  - ⚙️ Настройки ИИ: потрачено в этом месяце, сколько осталось.
+ *  - Лимит исчерпан: понятный текст — разбор пациента и жалобы ещё работают на запасе +10%.
+ * ===================================================================== */
+const X96_T = {
+  ru: {
+    E_AI_BUDGET: 'Исчерпан месячный лимит ИИ ({max}). Разбор пациента и жалобы ещё работают на аварийном запасе (+10%); склад, рецепты и документы — нет. Поднять лимит: ⚙️ Настройки ИИ (главный админ).',
+    E_AI_BUDGET_ALL: 'Исчерпан месячный лимит ИИ ({max}) и аварийный запас +10%. Поднять лимит: Справочник → 🤖 ИИ: склад → ⚙️ (главный админ). С 1-го числа ИИ заработает сам.',
+    sig: 'ИИ: потрачено {p}% месячного лимита', sigOver: 'ИИ: месячный лимит исчерпан — работает только аварийный запас', sigSub: '{u} из {m}. Нажмите — поднять лимит.',
+    used: 'Потрачено в этом месяце: {u} из {m} ({p}%). Счётчик обнуляется 1-го числа. Сверх лимита разбор пациента и жалобы работают ещё на {e}% (аварийный запас).'
+  },
+  az: {
+    E_AI_BUDGET: 'Sİ-nin aylıq limiti bitib ({max}). Pasiyent təhlili və şikayətlər ehtiyat hesabına (+10%) hələ işləyir; anbar, reseptlər, sənədlər — yox. Limiti artırmaq: ⚙️ Sİ ayarları (baş admin).',
+    E_AI_BUDGET_ALL: 'Sİ-nin aylıq limiti və +10% ehtiyat bitib ({max}). Limiti artırmaq: Məlumat kitabçası → 🤖 Sİ: anbar → ⚙️ (baş admin). Ayın 1-dən Sİ özü işləyəcək.',
+    sig: 'Sİ: aylıq limitin {p}%-i xərclənib', sigOver: 'Sİ: aylıq limit bitib — yalnız ehtiyat işləyir', sigSub: '{u} / {m}. Basın — limiti artırmaq.',
+    used: 'Bu ay xərclənib: {u} / {m} ({p}%). Sayğac ayın 1-də sıfırlanır. Limitdən sonra pasiyent təhlili və şikayətlər daha {e}% işləyir (ehtiyat).'
+  }
+};
+['ru', 'az'].forEach(l => { I18N[l].E_AI_BUDGET = X96_T[l].E_AI_BUDGET; I18N[l].E_AI_BUDGET_ALL = X96_T[l].E_AI_BUDGET_ALL; });
+function x96(k, o) { let s = (X96_T[S.lang === 'az' ? 'az' : 'ru'] || {})[k]; if (s === undefined) s = X96_T.ru[k]; return o ? s.replace(/\{(\w+)\}/g, (m, n) => o[n] !== undefined ? o[n] : m) : s; }
+function x96Mln(n) { n = Number(n) || 0; return n >= 1e6 ? (Math.round(n / 1e5) / 10).toLocaleString(S.lang === 'az' ? 'az' : 'ru') + (S.lang === 'az' ? ' mln' : ' млн') : Math.round(n / 1000) + (S.lang === 'az' ? ' min' : ' тыс.'); }
+function x96Use() {
+  const s = typeof aiSt === 'function' ? aiSt().status : null;
+  if (!s || !s.month || !(s.monthTok > 0)) return null;
+  const u = (s.month.inTok || 0) + (s.month.outTok || 0);
+  return { u, m: s.monthTok, p: Math.floor(u / s.monthTok * 100), e: s.emergPct || 10 };
+}
+// текст ошибки: «запас ещё есть» / «и запас исчерпан»; число — в млн
+(function () {
+  const e0 = errText;
+  errText = function (r) {
+    if (r && r.code === 'E_AI_BUDGET') { const info = r.info || {}; return t(info.emerg ? 'E_AI_BUDGET_ALL' : 'E_AI_BUDGET', { max: x96Mln(info.max) }); }
+    return e0.apply(this, arguments);
+  };
+  window.errText = errText;
+})();
+// «Сегодня»: плашка для главного админа с 80%
+const X96 = { at: 0 };
+(function () {
+  if (typeof tdSignals !== 'function') return;
+  const s0 = tdSignals;
+  tdSignals = function () {
+    const out = s0.apply(this, arguments);
+    try {
+      if (!(typeof isOwner === 'function' && isOwner())) return out;
+      if (Date.now() - X96.at > 20 * 60000 && typeof aiLoadStatus === 'function') {
+        X96.at = Date.now();
+        Promise.resolve(aiLoadStatus()).then(() => { if (S.screen === 'today' && x96Use() && x96Use().p >= 80) { TD.sig = null; renderToday(); } }).catch(() => { });
+      }
+      const x = x96Use();
+      if (!x || x.p < 80) return out;
+      return [{ k: 'aiBudget', cls: x.p >= 95 ? 'bad' : 'warn', ic: x.p >= 100 ? '⛔' : '⚠️', t: x.p >= 100 ? x96('sigOver') : x96('sig', { p: x.p }), s: x96('sigSub', { u: x96Mln(x.u), m: x96Mln(x.m) }) }].concat(out);
+    } catch (e) { return out; }
+  };
+  window.tdSignals = tdSignals;
+  const h0 = H.tdSig;
+  H.tdSig = function (el) { if (el && el.dataset && el.dataset.k === 'aiBudget') return aiSettingsModal(); return h0.apply(this, arguments); };
+})();
+// ⚙️ Настройки ИИ: сколько потрачено
+(function () {
+  if (typeof aiSettingsModal !== 'function') return;
+  const m0 = aiSettingsModal;
+  aiSettingsModal = function () {
+    const r = m0.apply(this, arguments);
+    try {
+      const x = x96Use(), inp = $('#aiTokIn');
+      if (x && inp && !$('.x96-used')) inp.closest('.field').insertAdjacentHTML('afterend', '<div class="hint x96-used" style="display:block;margin:-4px 0 10px' + (x.p >= 95 ? ';color:var(--red)' : '') + '">' + esc(x96('used', { u: x96Mln(x.u), m: x96Mln(x.m), p: x.p, e: x.e })) + '</div>');
+    } catch (e) { }
+    return r;
+  };
+  window.aiSettingsModal = aiSettingsModal;
+})();
+
 
 function init() {
   vizTipInit();
