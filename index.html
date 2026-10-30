@@ -40354,6 +40354,17 @@ const X92_T = {
 };
 Object.assign(I18N.ru, { E_RX_FIRM_DUP: X92_T.ru.E_RX_FIRM_DUP, E_RX_PERIOD: X92_T.ru.E_RX_PERIOD, E_PT_FIN_NEED: X92_T.ru.E_PT_FIN_NEED });
 Object.assign(I18N.az, { E_RX_FIRM_DUP: X92_T.az.E_RX_FIRM_DUP, E_RX_PERIOD: X92_T.az.E_RX_PERIOD, E_PT_FIN_NEED: X92_T.az.E_PT_FIN_NEED });
+// 9.67: «Составить рецепт» → «Проверить рецепт»; ручной выбор по фирме — свёрнут; чужая фирма не попадает в «Мои фирмы»
+Object.assign(X92_T.ru, { noItems: 'Пока пусто. Впишите жалобы или диагноз выше и нажмите «🤖 Составить рецепт» — или добавьте препарат вручную ниже.',
+  firmOnce: 'другая фирма — в «Мои фирмы» не добавится', compose: '🤖 Составить рецепт', composeMore: '🤖 Дополнить рецепт', composeWait: 'ИИ составляет рецепт…',
+  composed: 'Добавлено: {n}. ИИ пишет дозы — потом нажмите «🛡 Проверить рецепт».', composeNone: 'ИИ ничего не добавил — по этим жалобам показанного нет или уже всё назначено.',
+  checkBig: '🛡 Проверить рецепт', other: 'другая фирма', otherAlt: 'Другие торговые названия:', manualT: '➕ Добавить препарат вручную (по фирме / названию)',
+  pickGrp: 'Выберите группу или начните вводить название — появится список.', weakT: 'Можно ещё (польза слабая — не добавлено):' });
+Object.assign(X92_T.az, { noItems: 'Hələ boşdur. Yuxarıda şikayət və ya diaqnozu yazın və «🤖 Resepti tərtib et» basın — və ya aşağıda dərmanı əl ilə əlavə edin.',
+  firmOnce: 'başqa firma — «Firmalarım»a əlavə olunmayacaq', compose: '🤖 Resepti tərtib et', composeMore: '🤖 Resepti tamamla', composeWait: 'Sİ resepti tərtib edir…',
+  composed: 'Əlavə edildi: {n}. Sİ dozaları yazır — sonra «🛡 Resepti yoxla» basın.', composeNone: 'Sİ heç nə əlavə etmədi — bu şikayətlərə göstəriş yoxdur və ya hər şey artıq təyin olunub.',
+  checkBig: '🛡 Resepti yoxla', other: 'başqa firma', otherAlt: 'Digər ticarət adları:', manualT: '➕ Dərmanı əl ilə əlavə et (firma / ad üzrə)',
+  pickGrp: 'Qrup seçin və ya adı yazmağa başlayın — siyahı görünəcək.', weakT: 'Daha olar (faydası zəifdir — əlavə edilmədi):' });
 function x92(k, o) { let s = (X92_T[S.lang === 'az' ? 'az' : 'ru'] || {})[k]; if (s === undefined) s = X92_T.ru[k]; if (typeof s !== 'string') return s; return o ? s.replace(/\{(\w+)\}/g, (m, n) => o[n] !== undefined ? o[n] : m) : s; }
 /* ---------- группы (ATC) ---------- */
 // [ключ, az, ru, префиксы ATC, всегда показывать]
@@ -40534,7 +40545,7 @@ async function rxSigna(id) {
 function rxAddItem(prod, v, firm, src) {
   const st = rxSt();
   const it = { id: rxId(), src: src || '', b: prod.b, inn: prod.inn || '', atc: prod.atc || '', dose: rxUnitsAz(v ? v.d : ''), formAz: v ? (RX_FORM_AZ[v.code] || '') : '', cnt: v ? v.cnt || '' : '',
-    firm: firm ? firm.name : '', firmId: firm && !firm.once ? firm.id : '', firmMfr: firm && firm.once && firm.mfr ? firm.mfr[0] : '', signa: '', qty: v && v.cnt ? '1 qutu (№' + v.cnt + ')' : '', packs: 1, warn: [], busy: false };
+    firm: firm ? firm.name : '', firmId: firm && !firm.once ? firm.id : '', firmMfr: firm && firm.once && firm.mfr ? firm.mfr[0] : '', other: !!(firm && firm.once), signa: '', qty: v && v.cnt ? '1 qutu (№' + v.cnt + ')' : '', packs: 1, warn: [], busy: false };
   st.d.items.push(it); st.check = null; st.sugg = st.sugg && Object.assign({}, st.sugg, { items: (st.sugg.items || []).filter(x => skel(x.b) !== skel(prod.b)) });
   rxSave();
   rxSigna(it.id);
@@ -40594,7 +40605,8 @@ function rxItemsHtml(st) {
   d.items.forEach((it, i) => {
     h += '<div class="rx-it" data-id="' + esc(it.id) + '"><div class="t"><b>' + (i + 1) + '. ' + esc([it.b, it.dose].filter(Boolean).join(' ') + (it.formAz ? ', ' + it.formAz : '')) + '</b>' +
       '<button type="button" class="btn small ghost" data-act="rxDel" data-id="' + esc(it.id) + '" aria-label="' + esc(x92('del')) + '">' + esc(x92('del')) + '</button></div>' +
-      '<div class="muted" style="font-size:13px">' + esc([it.inn ? catInnName(it.inn) : '', it.firm].filter(Boolean).join(' · ')) + '</div>' +
+      '<div class="muted" style="font-size:13px">' + esc([it.inn ? catInnName(it.inn) : '', it.firm ? it.firm + (it.other ? ' (' + x92('other') + ')' : '') : ''].filter(Boolean).join(' · ')) + '</div>' +
+      (it.other && it.src === 'ai' && it.inn ? rxSwapHtml(it) : '') +
       (it.busy ? '<div class="muted" style="margin-top:6px">⏳ ' + esc(x92('signaWait')) + '</div>' :
         (it.manual && !it.signa ? '<div class="muted" style="margin-top:6px;color:var(--amber)">' + esc(x92('signaManual')) + '</div>' : '') +
         '<div class="field" style="margin-top:6px"><label>' + esc(x92('signa')) + '</label><textarea rows="2" maxlength="300" data-rxi="signa" data-id="' + esc(it.id) + '">' + esc(it.signa || '') + '</textarea></div>' +
@@ -40616,12 +40628,13 @@ function rxItemsHtml(st) {
       ((c.missing || []).length ? '<div style="margin-top:8px"><b>' + esc(x92('missT')) + '</b>' + c.missing.map(x => '<div>• ' + esc(x.inn) + (x.why ? ' — ' + esc(x.why) : '') + '</div>' + rxOutHtml(x.inn)).join('') + '</div>' : '') +
       (c.note ? '<div style="margin-top:6px">⚠️ ' + esc(c.note) + '</div>' : '') + '</div>';
   }
-  if (typeof canAi === 'function' && canAi()) h += '<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px"><button class="btn small" data-act="rxSugg">' + esc(x92('sugg')) + '</button>' + (d.items.length ? '<button class="btn small ghost" data-act="rxCheck">' + esc(x92('check')) + '</button>' : '') + '</div>';
+  if (typeof canAi === 'function' && canAi()) h += !d.items.length ? '<button class="btn primary block" style="margin-top:10px" data-act="rxCompose">' + esc(x92('compose')) + '</button>'
+    : '<button class="btn primary block" style="margin-top:10px" data-act="rxCheck">' + esc(x92('checkBig')) + '</button><button class="btn ghost block" style="margin-top:6px" data-act="rxCompose">' + esc(x92('composeMore')) + '</button>';
   if (st.sugg) {
     const s = st.sugg;
-    h += '<div class="hint" style="display:block;margin:8px 0"><b>' + esc(x92('suggT')) + '</b>' +
+    h += '<div class="hint" style="display:block;margin:8px 0"><b>' + esc(x92(s.compose ? 'weakT' : 'suggT')) + '</b>' +
       ((s.items || []).length ? s.items.map((x, i) => '<div class="rx-pr"><b>' + esc(x.b) + '</b><span class="rx-lvl ' + esc(x.level) + '">' + esc(x92('lvl_' + x.level)) + '</span>' + (x.firm ? ' <span class="muted">· ' + esc(x.firm) + '</span>' : '') +
-        '<div style="font-size:13.5px;margin-top:2px">' + esc(x.why) + '</div><button class="btn small" style="margin-top:6px" data-act="rxSuggAdd" data-i="' + i + '">' + esc(x92('suggAdd')) + '</button></div>').join('') : '<div>' + esc(x92('suggNone')) + '</div>') +
+        '<div style="font-size:13.5px;margin-top:2px">' + esc(x.why) + '</div><button class="btn small" style="margin-top:6px" data-act="rxSuggAdd" data-i="' + i + '">' + esc(x92('suggAdd')) + '</button></div>').join('') : (s.compose ? '' : '<div>' + esc(x92('suggNone')) + '</div>')) +
       ((s.notInFirms || []).length ? '<div style="margin-top:8px"><b>' + esc(x92('notIn')) + '</b>' + s.notInFirms.map(x => '<div>• ' + esc(x.inn) + ' — ' + esc(x.why) + '</div>' + rxOutHtml(x.inn)).join('') + '</div>' : '') +
       (s.note ? '<div style="margin-top:8px">⚠️ ' + esc(s.note) + '</div>' : '') +
       '<div class="muted" style="font-size:12px;margin-top:4px">' + esc(x92('hint')) + '</div></div>';
@@ -40630,8 +40643,9 @@ function rxItemsHtml(st) {
 }
 function rxAddHtml(st) {
   const a = st.add, firms = st.firms || [];
-  let h = '<div class="card"><div class="lbl">' + esc(x92('add')) + '</div>';
-  if (!S.cat) return h + '<div class="muted">⏳ ' + esc(x92('catWait')) + '</div></div>';
+  const open = a.open || a.fid || a.mfr || a.manual || !(typeof canAi === 'function' && canAi());
+  let h = '<details class="card rx-add"' + (open ? ' open' : '') + '><summary class="lbl" style="cursor:pointer">' + esc(x92('manualT')) + '</summary>';
+  if (!S.cat) return h + '<div class="muted">⏳ ' + esc(x92('catWait')) + '</div></details>';
   // фирма
   h += '<div class="field"><label>' + esc(x92('firm')) + '</label>' + (firms.length ? '<div class="chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">' + firms.map(f => '<button type="button" class="chip' + (a.fid === f.id ? ' on' : '') + '" data-act="rxFirmPick" data-id="' + esc(f.id) + '">' + esc(f.name) + '</button>').join('') + '</div>' : '') +
     '<input id="rxMfrQ" autocomplete="off" placeholder="' + esc(x92('firmFind')) + '" value="' + esc(a.mfrQ || '') + '"><div id="rxMfrBox">' + rxMfrBoxHtml(a.mfrQ || '') + '</div></div>';
@@ -40642,7 +40656,7 @@ function rxAddHtml(st) {
     const cnt = g => prods.filter(p => rxInGrp(p.atc, g)).length;
     const groups = RX_GROUPS.filter(g => g[4] || cnt(g) || a.more);
     h += '<div class="field"><label>' + esc(x92('grp')) + '</label><div class="chips" style="display:flex;gap:6px;flex-wrap:wrap">' +
-      '<button type="button" class="chip' + (!a.grp ? ' on' : '') + '" data-act="rxGrp" data-g="">' + esc(x92('grpAll')) + ' · ' + prods.length + '</button>' +
+      '<button type="button" class="chip' + (a.grp === 'all' ? ' on' : '') + '" data-act="rxGrp" data-g="all">' + esc(x92('grpAll')) + ' · ' + prods.length + '</button>' +
       groups.map(g => { const n = cnt(g); return '<button type="button" class="chip rx-g' + (n ? ' has' : '') + (a.grp === g[0] ? ' on' : '') + '" data-act="rxGrp" data-g="' + g[0] + '">' + esc(rxGrpName(g)) + (n ? ' · ' + n : '') + '</button>'; }).join('') +
       (!a.more ? '<button type="button" class="chip ghost" data-act="rxGrpMore">' + esc(x92('grpMore')) + ' ▾</button>' : '') + '</div></div>' +
       '<input type="search" id="rxProdQ" autocomplete="off" placeholder="' + esc(x92('q')) + '" value="' + esc(a.q || '') + '" style="margin-bottom:6px">' +
@@ -40650,7 +40664,7 @@ function rxAddHtml(st) {
   }
   h += a.manual ? '<div class="row" style="gap:6px;margin-top:8px"><input id="rxManual" maxlength="160" placeholder="' + esc(x92('manualPh')) + '" style="flex:1"><button class="btn small primary" data-act="rxManualAdd">＋</button></div>'
     : '<button class="btn small ghost" style="margin-top:8px" data-act="rxManual">' + esc(x92('manual')) + '</button>';
-  return h + '</div>';
+  return h + '</details>';
 }
 function rxMfrBoxHtml(q) {
   if (!q || q.length < 2) return '';
@@ -40659,8 +40673,9 @@ function rxMfrBoxHtml(q) {
   return list.map(x => '<div class="list-row" style="cursor:pointer" data-act="rxMfrPick" data-m="' + esc(x.m) + '"><span>🏭</span><div class="grow"><b>' + esc(rxMfrShort(x.m)) + '</b><div class="muted">' + esc(x.m) + ' · ' + esc(x92('firmCnt', { n: x.n })) + '</div></div></div>').join('');
 }
 function rxProdBoxHtml(st, firm, prods) {
-  const a = st.add, g = a.grp ? rxGrp(a.grp) : null;
+  const a = st.add, g = a.grp && a.grp !== 'all' ? rxGrp(a.grp) : null;
   const k = qkey(a.q || ''), ke = qkeyEn(a.q || '');
+  if (!a.grp && !k && !ke) return '<div class="muted" style="margin:2px 0 6px">' + esc(x92('pickGrp')) + '</div>';
   let list = prods.filter(p => (!g || rxInGrp(p.atc, g)) && (!k || qkey(p.b).indexOf(k) !== -1 || (ke && qkeyEn(p.inn).indexOf(ke) !== -1)));
   if (!list.length && g && !k) {
     // нет в группе у этой фирмы — что есть у других моих фирм
@@ -40769,6 +40784,7 @@ function rxRender() {
 }
 function rxBind() {
   const st = rxSt(), box = $('#formsBox'); if (!box) return;
+  const ad = box.querySelector('details.rx-add'); if (ad) ad.addEventListener('toggle', () => { st.add.open = ad.open; });
   const mq = $('#rxMfrQ'); if (mq) mq.addEventListener('input', () => { st.add.mfrQ = mq.value; const b = $('#rxMfrBox'); if (b) b.innerHTML = rxMfrBoxHtml(mq.value); });
   const pq = $('#rxProdQ'); if (pq) pq.addEventListener('input', () => { st.add.q = pq.value; const f = rxFirmOf(st), b = $('#rxProdBox'); if (f && b) b.innerHTML = rxProdBoxHtml(st, f, rxProducts(f)); });
   const gq = $('#rxGtQ'); if (gq) gq.addEventListener('keydown', e => { if (e.key === 'Enter') H.rxGtFind(); });
@@ -40857,6 +40873,40 @@ async function rxCheck(btn) {
   st.check = res;
   rxSave(); rxRender();
   return { changed };
+}
+/** 9.67: «🤖 Составить рецепт» — ИИ подбирает лечение (сначала мои фирмы, затем другие фирмы госреестра) и сразу вносит в рецепт;
+ *  дозы пишет по каждому препарату; дальше врач жмёт «🛡 Проверить рецепт». Слабая польза — не добавляется, только показывается. */
+function rxSwapHtml(it) {
+  const L = rxBrandsByInn(it.inn, 5).filter(x => skel(x.b) !== skel(it.b)).slice(0, 4);
+  return L.length ? '<div class="muted" style="font-size:12.5px;margin-top:4px">' + esc(x92('otherAlt')) + '</div><div class="chips" style="display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 4px">' + L.map(x => '<button type="button" class="chip" data-act="rxSwap" data-id="' + esc(it.id) + '" data-k="' + esc(x.k) + '">' + esc(x.b) + ' <span class="muted">' + esc(rxMfrShort(x.mfr)) + '</span></button>').join('') + '</div>' : '';
+}
+async function rxCompose(btn) {
+  const st = rxSt(), d = st.d;
+  if (!String(d.complaint || '').trim() && !String(d.dx || '').trim()) return toast(x92('suggNeed'), 'bad');
+  if (!S.cat) return toast(x92('catWait'));
+  const firms = await rxFirmsLoad().catch(() => []) || [];
+  const cands = [], seen = {};
+  firms.forEach(f => rxProducts(f).forEach(p => { const k = skel(p.b); if (seen[k] || d.items.some(it => skel(it.b) === k)) return; seen[k] = 1; cands.push({ b: p.b, inn: p.inn, atc: p.atc, form: p.vars.map(v => RX_FORM_AZ[v.code]).filter((x, i, a) => x && a.indexOf(x) === i).join('/'), dose: p.vars.slice(0, 3).map(v => rxUnitsAz(v.d)).filter(Boolean).join('; '), firm: f.name }); }));
+  toast(x92('composeWait'));
+  const r = await busy(btn, () => rpcA('rxAi', { mode: 'suggest', compose: true, lang: S.lang, patient: rxPtAi(d), items: d.items.map(rxItemAi), cands: cands.slice(0, 500) }, { timeout: 150000 })).catch(() => null);
+  if (!r || !r.ok) return;
+  let n = 0;
+  const weak = [];
+  (r.items || []).forEach(x => {
+    if (x.level === 'weak') { weak.push(x); return; }
+    const f = firms.find(ff => ff.name === x.firm); const p = f ? rxProducts(f).find(pp => skel(pp.b) === skel(x.b)) : null;
+    if (!p || rxSt().d.items.some(it => skel(it.b) === skel(p.b))) return;
+    rxAddItem(p, p.vars[0], f, 'ai'); n++;
+  });
+  const left = [];
+  (r.notInFirms || []).forEach(x => {
+    const b = rxBrandsByInn(x.inn, 1)[0];
+    if (!b || rxSt().d.items.some(it => skel(it.b) === skel(b.b))) { if (!b) left.push(x); return; }
+    rxAddItem(b, b.vars[0], { id: 'mfr:' + b.mfr, name: rxMfrShort(b.mfr), mfr: [b.mfr], items: [], once: true }, 'ai'); n++;
+  });
+  rxSt().sugg = weak.length || left.length || r.note ? { compose: true, items: weak, notInFirms: left, note: r.note || '' } : null;
+  rxRender();
+  toast(n ? x92('composed', { n }) : x92('composeNone'), n ? 'ok' : '');
 }
 async function rxSugg(btn) {
   const st = rxSt(), d = st.d;
@@ -41035,7 +41085,15 @@ Object.assign(H, {
     if (!sn || !nm) return toast(t('E_PT_NEED'), 'bad');
     rxGtLink({ fin, surname: sn, name: nm, birthDate: ($('#rxNwBirth') || {}).value || '', sex: (rxSt().done && rxSt().done.pt && rxSt().done.pt.sex) || '' });
   },
-  rxFirmPick: el => { const st = rxSt(); st.add.fid = st.add.fid === el.dataset.id && !el.dataset.g ? '' : el.dataset.id; st.add.mfr = ''; st.add.mfrQ = ''; st.add.q = ''; if (el.dataset.g !== undefined) st.add.grp = el.dataset.g || st.add.grp; rxRender(); },
+  rxFirmPick: el => { const st = rxSt(); st.add.fid = st.add.fid === el.dataset.id && !el.dataset.g ? '' : el.dataset.id; st.add.mfr = ''; st.add.mfrQ = ''; st.add.q = ''; st.add.grp = el.dataset.g !== undefined ? (el.dataset.g || '') : ''; st.add.open = true; rxRender(); },
+  rxCompose: el => rxCompose(el),
+  rxSwap: el => {
+    const st = rxSt(), it = st.d.items.find(x => x.id === el.dataset.id); if (!it) return;
+    const x = rxBrandsByInn(it.inn, 8).find(y => y.k === el.dataset.k); if (!x) return;
+    const v = x.vars[0];
+    Object.assign(it, { b: x.b, inn: x.inn || it.inn, atc: x.atc || it.atc, dose: rxUnitsAz(v ? v.d : ''), formAz: v ? (RX_FORM_AZ[v.code] || '') : '', cnt: v ? v.cnt || '' : '', firm: rxMfrShort(x.mfr), firmMfr: x.mfr, qty: v && v.cnt ? '1 qutu (№' + v.cnt + ')' : it.qty });
+    st.check = null; rxSave(); rxSigna(it.id);
+  },
   rxMfrPick: el => { const st = rxSt(), m = el.dataset.m; const mine = (st.firms || []).find(f => f.mfr.indexOf(m) !== -1); if (mine) { st.add.fid = mine.id; st.add.mfr = ''; } else { st.add.fid = ''; st.add.mfr = m; st.add.fname = rxMfrShort(m); } st.add.mfrQ = ''; st.add.q = ''; rxRender(); },
   rxGrp: el => { const st = rxSt(); st.add.grp = el.dataset.g; st.add.q = ''; rxRender(); },
   rxGrpMore: () => { rxSt().add.more = true; rxRender(); },
