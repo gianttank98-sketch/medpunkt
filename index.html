@@ -41481,7 +41481,10 @@ const X95_T = {
     mic: '🎤 Нажмите на поле — внизу справа кнопка микрофона.', go: '🤖 Оформить', wait: 'ИИ оформляет приём…', gtUsed: '📘 С данными GT/098', gtNo: 'Карта GT/098 не привязана — только по вашим словам.',
     prevT: 'ИИ предлагает внести — проверьте', fill: 'пусто → впишется', repl: 'заменить написанное', vit: 'Показатели', exam: 'Осмотр', rx: 'Введено / назначено', missT: 'Не хватает:', apply: '✅ Внести отмеченное', applied: 'Внесено: {n}. Проверьте бланк.', none: 'ИИ нечего добавить.',
     docBtn: '🎙 ИИ с моими словами', docT: '🎙 Документ: ИИ с вашими словами', docHint: 'Скажите или напишите, что важно (с чем пришёл, что делали, состояние, рекомендации). ИИ заполнит документ из GT/098 и ваших слов. Не помните — оставьте пустым: ИИ восстановит по GT/098.', docGo: '🤖 Заполнить',
-    E_FORM_AI_EMPTY: 'Скажите или напишите хоть что-то о приёме (или привяжите карту GT/098).'
+    E_FORM_AI_EMPTY: 'Скажите или напишите хоть что-то о приёме (или привяжите карту GT/098).',
+    boxT: '📝 Всё о приёме — как есть', boxHint: 'Пишите или говорите всё подряд: когда и как поступил, жалобы, давление, осмотр, что ввели, диагноз, куда. Можно писать и прямо в «Жалобы» — ИИ разнесёт по местам. ФИО и FİN сюда не пишите.',
+    boxGt: '📘 Всё написанное в приёме попадает в GT/098 пациента; ИИ берёт оттуда, что вводили, анализы и обследования.', boxNoGt: 'Впишите FİN пациента — приём и всё написанное попадут в его GT/098.',
+    tidy: '✨ Оформить приём по порядку (ИИ + GT/098)', tidyRepl: 'переписать по порядку', was: 'было:', undo: '↩ Вернуть как было до ИИ', undoAsk: 'Вернуть бланк, каким он был до «Оформить по порядку»?', undone: 'Возвращено как было.'
   },
   az: {
     btn: '🎙 Qəbulu Sİ ilə tərtib et (səs / mətn + GT/098)', t: '🎙 Qəbulu Sİ ilə tərtib et', hint: 'Olduğu kimi deyin və ya yazın: nə vaxt və necə gəlib, şikayətlər, təzyiq, nəbz, saturasiya, temperatur, müayinə, nə vurulub, diaqnoz, hara. Heç nə deməsəniz — Sİ GT/098-ə görə tərtib edəcək. Ad-soyad və FİN deməyin.',
@@ -41489,7 +41492,10 @@ const X95_T = {
     mic: '🎤 Sahəyə toxunun — sağ aşağıda mikrofon düyməsi.', go: '🤖 Tərtib et', wait: 'Sİ qəbulu tərtib edir…', gtUsed: '📘 GT/098 məlumatları ilə', gtNo: 'GT/098 kartı bağlı deyil — yalnız sözlərinizə görə.',
     prevT: 'Sİ yazmağı təklif edir — yoxlayın', fill: 'boşdur → yazılacaq', repl: 'yazılanı əvəz et', vit: 'Göstəricilər', exam: 'Müayinə', rx: 'Vurulub / təyin edilib', missT: 'Çatışmır:', apply: '✅ Qeyd olunanı yaz', applied: 'Yazıldı: {n}. Blankı yoxlayın.', none: 'Sİ-nin əlavə edəcəyi yoxdur.',
     docBtn: '🎙 Sİ mənim sözlərimlə', docT: '🎙 Sənəd: Sİ sizin sözlərinizlə', docHint: 'Vacib olanı deyin və ya yazın (nə ilə gəlib, nə edilib, vəziyyət, tövsiyələr). Sİ sənədi GT/098 və sözlərinizə görə dolduracaq. Xatırlamırsınızsa — boş qoyun.', docGo: '🤖 Doldur',
-    E_FORM_AI_EMPTY: 'Qəbul haqqında nəsə deyin və ya yazın (və ya GT/098 kartını bağlayın).'
+    E_FORM_AI_EMPTY: 'Qəbul haqqında nəsə deyin və ya yazın (və ya GT/098 kartını bağlayın).',
+    boxT: '📝 Qəbul haqqında hər şey — olduğu kimi', boxHint: 'Hamısını ardıcıl yazın və ya deyin: nə vaxt və necə gəlib, şikayətlər, təzyiq, müayinə, nə vurulub, diaqnoz, hara. Birbaşa «Şikayətlər»ə də yaza bilərsiniz — Sİ yerinə paylayacaq. Ad-soyad və FİN yazmayın.',
+    boxGt: '📘 Qəbulda yazılan hər şey pasiyentin GT/098-nə düşür; Sİ oradan nə vurulduğunu, analizləri və müayinələri götürür.', boxNoGt: 'Pasiyentin FİN-ni yazın — qəbul və yazılanlar onun GT/098-nə düşəcək.',
+    tidy: '✨ Qəbulu qaydaya sal (Sİ + GT/098)', tidyRepl: 'qaydaya salıb yenidən yaz', was: 'əvvəl:', undo: '↩ Sİ-dən əvvəlki kimi qaytar', undoAsk: 'Blankı «Qaydaya sal»dan əvvəlki vəziyyətə qaytaraq?', undone: 'Əvvəlki kimi qaytarıldı.'
   }
 };
 I18N.ru.E_FORM_AI_EMPTY = X95_T.ru.E_FORM_AI_EMPTY; I18N.az.E_FORM_AI_EMPTY = X95_T.az.E_FORM_AI_EMPTY;
@@ -41509,8 +41515,8 @@ function x95Empty(v) { return v === undefined || v === null || String(v).trim() 
     const r = o.apply(this, arguments);
     try {
       const box = $('#formsBox');
-      if (box && S.fv && fCanEdit(S.fv.id) && typeof canAi === 'function' && canAi() && !(typeof hpPiiOn === 'function' && hpPiiOn()) && !box.querySelector('[data-act=x95Open]')) {
-        const b = '<button type="button" class="btn primary block" style="margin:6px 0 8px" data-act="x95Open">' + esc(x95('btn')) + '</button>';
+      if (box && S.fv && fCanEdit(S.fv.id) && typeof canAi === 'function' && canAi() && !(typeof hpPiiOn === 'function' && hpPiiOn()) && !box.querySelector('.x95-box')) {
+        const b = x95BoxHtml(S.fv.id);
         // быстрый и полный бланк: под «📘 Взять из GT/098» / «GT/098 пациента», иначе — перед первым разделом
         const after = box.querySelector('[data-act=gtFillForm]') || box.querySelector('[data-act=gtFromVisit]');
         const first = box.querySelector('details.f-sec');
@@ -41521,6 +41527,18 @@ function x95Empty(v) { return v === undefined || v === null || String(v).trim() 
   };
   window.fRenderEditor = fRenderEditor;
 })();
+// 9.65: окно «Всё о приёме» прямо в бланке (поле story — сохраняется в приёме и уходит в GT/098)
+if (typeof MIC_FORM_OK !== 'undefined' && MIC_FORM_OK.indexOf('story') === -1) MIC_FORM_OK.push('story');
+function x95UndoKey(id) { return 'MED_X96_UNDO:' + id; }
+function x95BoxHtml(id) {
+  const d = fData(id), pid = x95Pid(id);
+  let undo = null; try { undo = LS.get(x95UndoKey(id), null); } catch (e) { }
+  return '<div class="card x95-box" style="margin:6px 0 8px"><div class="lbl">' + esc(x95('boxT')) + '</div><div class="muted" style="font-size:12.5px;margin-bottom:4px">' + esc(x95('boxHint')) + '</div>' +
+    '<div class="field" style="margin-bottom:4px"><textarea data-f="story" rows="4" maxlength="4000" placeholder="' + esc(x95('ph')) + '">' + esc(String(d.story || '')) + '</textarea></div>' +
+    '<div class="muted" style="font-size:12.5px;margin-bottom:6px">' + esc(pid ? x95('boxGt') : x95('boxNoGt')) + '</div>' +
+    '<button type="button" class="btn primary block" data-act="x95Go">' + esc(x95('tidy')) + '</button>' +
+    (undo ? '<button type="button" class="btn ghost block" style="margin-top:6px" data-act="x95Undo">' + esc(x95('undo')) + '</button>' : '') + '</div>';
+}
 function x95Modal() {
   const pid = S.fv && x95Pid(S.fv.id);
   openModal('<h3>' + esc(x95('t')) + '</h3><div class="muted" style="margin-bottom:6px">' + esc(x95('hint')) + '</div>' +
@@ -41530,7 +41548,8 @@ function x95Modal() {
 }
 function x95Preview() {
   const R = X95.res, d = fData(S.fv.id), L = k => (X95_LBL[k] || [k, k])[S.lang === 'az' ? 1 : 0];
-  const rows = Object.keys(R.fields).map(k => { const empty = x95Empty(d[k]); return '<label class="check" style="align-items:flex-start;margin:6px 0"><input type="checkbox" class="x95-f" data-k="' + esc(k) + '"' + (empty ? ' checked' : '') + '><span><b>' + esc(L(k)) + '</b> <span class="muted">' + esc(empty ? x95('fill') : x95('repl')) + '</span><div style="white-space:pre-wrap">' + esc(String(R.fields[k] === true ? '✓' : R.fields[k])) + '</div>' + (!empty ? '<div class="gt-src">' + esc(String(d[k]).slice(0, 200)) + '</div>' : '') + '</span></label>'; }).join('');
+  const same = k => String(d[k] === undefined || d[k] === null ? '' : d[k]).trim() === String(R.fields[k]).trim();
+  const rows = Object.keys(R.fields).filter(k => !same(k)).map(k => { const empty = x95Empty(d[k]); return '<label class="check" style="align-items:flex-start;margin:6px 0"><input type="checkbox" class="x95-f" data-k="' + esc(k) + '" checked><span><b>' + esc(L(k)) + '</b> <span class="muted">' + esc(empty ? x95('fill') : x95('tidyRepl')) + '</span><div style="white-space:pre-wrap">' + esc(String(R.fields[k] === true ? '✓' : R.fields[k])) + '</div>' + (!empty ? '<div class="gt-src">' + esc(x95('was')) + ' ' + esc(String(d[k]).slice(0, 400)) + '</div>' : '') + '</span></label>'; }).join('');
   const vit = (R.vitals || []).map((v, i) => '<label class="check" style="margin:4px 0"><input type="checkbox" class="x95-v" data-i="' + i + '" checked><span>' + esc([v.t, v.bpRs && v.bpRd ? 'АД ' + v.bpRs + '/' + v.bpRd : '', v.pulse ? 'PS ' + v.pulse : '', v.spo2 ? 'SpO₂ ' + v.spo2 + '%' : '', v.rr ? 'ЧД ' + v.rr : '', v.temp ? 't ' + v.temp : '', v.glu ? 'glu ' + v.glu : ''].filter(Boolean).join(' · ')) + '</span></label>').join('');
   const exL = (g, c) => { const G = FD.exam.find(x => x[0] === g); const O = G && G[3].find(x => x[0] === c); return (G ? (S.lang === 'az' ? G[2] : G[1]) : g) + ': ' + (O ? (S.lang === 'az' ? O[2] : O[1]) : c); };
   const ex = Object.keys(R.exam || {}).map(g => R.exam[g].map(c => '<label class="check" style="margin:2px 0"><input type="checkbox" class="x95-e" data-g="' + esc(g) + '" data-c="' + esc(c) + '"' + (isOn(d, 'ex_' + g, c) ? ' disabled' : ' checked') + '><span>' + esc(exL(g, c)) + '</span></label>').join('')).join('');
@@ -41543,32 +41562,52 @@ function x95Preview() {
     '<div class="acts"><button class="btn ghost" data-act="x95Open">↩</button>' + (any ? '<button class="btn primary" data-act="x95Apply">' + esc(x95('apply')) + '</button>' : '<button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button>') + '</div>');
 }
 Object.assign(H, {
-  x95Open: () => x95Modal(),
+  x95Open: () => { closeModal(); const ta = $('#formsBox [data-f=story]'); if (ta) { ta.scrollIntoView({ block: 'center' }); ta.focus(); } else x95Modal(); },
   x95Go: async el => {
     if (!S.fv) return;
-    X95.say = String(($('#vfText') || {}).value || '').trim();
+    const ta = $('#formsBox [data-f=story]') || $('#vfText');
+    try { fFlush(); } catch (e) { }
+    X95.say = String((ta || {}).value || '').trim();
     const id = S.fv.id, d = fData(id);
     const current = {}; Object.keys(X95_LBL).forEach(k => { if (!x95Empty(d[k])) current[k] = d[k]; });
-    current.vitalsCount = Object.keys(d.vit || {}).length; current.rx = Object.values(d.rx || {}).filter(Boolean).map(r => r.drug).slice(0, 20);
+    current.vitals = Object.values(d.vit || {}).filter(Boolean).map(v => [v.t, v.bpRs && v.bpRd ? v.bpRs + '/' + v.bpRd : '', v.pulse ? 'PS ' + v.pulse : '', v.spo2 ? 'SpO2 ' + v.spo2 : '', v.rr ? 'RR ' + v.rr : '', v.temp ? 't ' + v.temp : '', v.glu ? 'glu ' + v.glu : ''].filter(Boolean).join(' ')).slice(0, 12);
+    current.rx = Object.values(d.rx || {}).filter(Boolean).map(r => [r.at, r.drug, r.given ? '(дано)' : ''].filter(Boolean).join(' ')).slice(0, 30);
+    current.exam = Object.keys(d).filter(k => /^ex_[a-z]+_[a-z0-9]+$/i.test(k) && d[k] === true).map(k => k.slice(3)).slice(0, 60);
     const examKeys = {}; FD.exam.forEach(g => { examKeys[g[0]] = g[3].map(o => [o[0], o[1]]); });
     toast(x95('wait'));
-    const r = await busy(el, () => rpcA('formAiFill', { text: X95.say, patientId: x95Pid(id), lang: S.lang, current, examKeys }, { timeout: 180000 })).catch(() => null);
+    const r = await busy(el, () => rpcA('formAiFill', { text: X95.say, patientId: x95Pid(id), formId: id, lang: S.lang, current, examKeys }, { timeout: 180000 })).catch(() => null);
     if (!r || !r.ok) return;
     X95.res = r; X95.formId = id;
     x95Preview();
   },
   x95Apply: () => {
     const R = X95.res; if (!R || !S.fv || S.fv.id !== X95.formId) return closeModal();
-    const p = {}; let n = 0;
-    $$('.x95-f').forEach(b => { if (b.checked) { p[b.dataset.k] = R.fields[b.dataset.k]; n++; } });
-    $$('.x95-v').forEach(b => { if (!b.checked) return; const v = R.vitals[+b.dataset.i]; const rid = 'v' + Date.now().toString(36) + b.dataset.i; p.vit = p.vit || {}; p.vit[rid] = Object.assign({ ord: String(Date.now() + Number(b.dataset.i)) }, v); n++; });
-    $$('.x95-e').forEach(b => { if (b.checked && !b.disabled) { p['ex_' + b.dataset.g + '_' + b.dataset.c] = true; n++; } });
-    $$('.x95-r').forEach(b => { if (!b.checked) return; const x = R.rx[+b.dataset.i]; const rid = 'r' + Date.now().toString(36) + b.dataset.i; p.rx = p.rx || {}; p.rx[rid] = { drug: [x.drug, x.dose].filter(Boolean).join(' ') + (x.route ? ' ' + x.route : ''), at: x.at || '', ord: String(Date.now() + Number(b.dataset.i)), byName: S.me.name + ' (ИИ)' }; n++; }); // «дано» отмечает врач (со списанием со склада)
+    const p = {}; let n = 0; const d0 = fData(S.fv.id), undo = { f: {}, vit: [], rx: [], ex: [], at: Date.now() };
+    $$('.x95-f').forEach(b => { if (b.checked) { const k = b.dataset.k; undo.f[k] = d0[k] === undefined ? null : d0[k]; p[k] = R.fields[k]; n++; } });
+    $$('.x95-v').forEach(b => { if (!b.checked) return; const v = R.vitals[+b.dataset.i]; const rid = 'v' + Date.now().toString(36) + b.dataset.i; p.vit = p.vit || {}; p.vit[rid] = Object.assign({ ord: String(Date.now() + Number(b.dataset.i)) }, v); undo.vit.push(rid); n++; });
+    $$('.x95-e').forEach(b => { if (b.checked && !b.disabled) { p['ex_' + b.dataset.g + '_' + b.dataset.c] = true; undo.ex.push('ex_' + b.dataset.g + '_' + b.dataset.c); n++; } });
+    $$('.x95-r').forEach(b => { if (!b.checked) return; const x = R.rx[+b.dataset.i]; const rid = 'r' + Date.now().toString(36) + b.dataset.i; p.rx = p.rx || {}; p.rx[rid] = { drug: [x.drug, x.dose].filter(Boolean).join(' ') + (x.route ? ' ' + x.route : ''), at: x.at || '', ord: String(Date.now() + Number(b.dataset.i)), byName: S.me.name + ' (ИИ)' }; undo.rx.push(rid); n++; }); // «дано» отмечает врач (со списанием со склада)
     closeModal();
     if (!n) return;
+    try { LS.set(x95UndoKey(S.fv.id), undo); } catch (e) { }
     fSet(p, true); fFlush();
     X95.res = null; X95.say = '';
     toast(x95('applied', { n }), 'ok');
+  },
+  x95Undo: () => {
+    if (!S.fv || !fCanEdit(S.fv.id)) return;
+    let u = null; try { u = LS.get(x95UndoKey(S.fv.id), null); } catch (e) { }
+    if (!u || !confirm(x95('undoAsk'))) return;
+    const p = {};
+    Object.keys(u.f || {}).forEach(k => { p[k] = u.f[k] === '' ? null : u.f[k]; });
+    (u.ex || []).forEach(k => { p[k] = null; });
+    if ((u.vit || []).length) { p.vit = {}; u.vit.forEach(r => { p.vit[r] = null; }); }
+    const rx = fData(S.fv.id).rx || {};
+    const rxDel = (u.rx || []).filter(r => rx[r] && !rx[r].given); // уже отмеченное «дано» (списано со склада) не трогаем
+    if (rxDel.length) { p.rx = {}; rxDel.forEach(r => { p.rx[r] = null; }); }
+    LS.del(x95UndoKey(S.fv.id));
+    fSet(p, true); fFlush();
+    toast(x95('undone'), 'ok');
   },
   // документы: слова врача для «🤖 Заполнить с ИИ»
   x95DocOpen: () => {
@@ -41596,6 +41635,16 @@ Object.assign(H, {
     try { if (h.indexOf('data-act="aiFillDoc"') !== -1) h = h.replace('<button class="btn small" data-act="aiFillDoc">', '<button class="btn small" data-act="x95DocOpen">' + esc(x95('docBtn')) + '</button><button class="btn small" data-act="aiFillDoc">'); } catch (e) { }
     return h;
   };
+})();
+// 9.65: при выходе — убрать «как было до ИИ» (там тексты приёмов)
+(function () {
+  if (typeof logout !== 'function') return;
+  const o = logout;
+  logout = function () {
+    try { for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && k.indexOf('MED_X96_UNDO:') === 0) localStorage.removeItem(k); } } catch (e) { }
+    return o.apply(this, arguments);
+  };
+  window.logout = logout;
 })();
 
 
