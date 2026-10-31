@@ -41903,6 +41903,7 @@ const X97_T = {
     write: 'Выписать рецепт', print: 'Печать A5', wa: 'WhatsApp', waWait: 'Готовлю картинку…', waSaved: 'Картинка сохранена — отправьте её в WhatsApp из галереи.',
     ctlSig: 'Пора на контроль · {n}', ctlSub: 'Пациенты по вашим рецептам — нажмите, чтобы открыть', ctlT: 'Пора на контроль', ctlOpen: 'Открыть', ctlFrom: 'рецепт от {d}',
     recheck: 'Рецепт изменён вручную — ИИ проверяет ещё раз…',
+    nowT: 'Сейчас — измерено при осмотре', nowHint: 'Только то, что измерили сейчас. «Давление бывает до 180» пишите в жалобах — ИИ поймёт это как анамнез.', nowBp: 'АД', nowHr: 'Пульс', nowT2: 't °C',
     autoDose: 'Дозы {want} в продаже нет — взято {dose}, S. пересчитан на эту дозу', doseFix: 'ИИ рассчитал приём на {want}, а у {b} такой дозы нет. Выберите дозу — S. пересчитается:', doseNeed: 'Выберите дозу у препарата, отмеченного красным.'
   },
   az: {
@@ -41925,20 +41926,29 @@ const X97_T = {
     write: 'Resepti yaz', print: 'Çap A5', wa: 'WhatsApp', waWait: 'Şəkil hazırlanır…', waSaved: 'Şəkil saxlanıldı — qalereyadan WhatsApp-a göndərin.',
     ctlSig: 'Nəzarət vaxtıdır · {n}', ctlSub: 'Reseptlərinizə görə pasiyentlər — açmaq üçün basın', ctlT: 'Nəzarət vaxtıdır', ctlOpen: 'Aç', ctlFrom: '{d} resepti',
     recheck: 'Resept əl ilə dəyişdirilib — Sİ yenidən yoxlayır…',
+    nowT: 'İndi — müayinədə ölçülüb', nowHint: 'Yalnız indi ölçüləni. «Təzyiq 180-dək olur» — şikayətlərdə yazın, Sİ bunu anamnez kimi başa düşəcək.', nowBp: 'AT', nowHr: 'Nəbz', nowT2: 't °C',
     autoDose: '{want} dozası satışda yoxdur — {dose} götürülüb, S. bu dozaya görə yenidən hesablanıb', doseFix: 'Sİ qəbulu {want} üçün hesablayıb, amma {b}-də belə doza yoxdur. Dozanı seçin — S. yenidən hesablanacaq:', doseNeed: 'Qırmızı ilə qeyd olunan dərmanın dozasını seçin.'
   }
 };
 function x97(k, o) { let s = (X97_T[S.lang === 'az' ? 'az' : 'ru'] || {})[k]; if (s === undefined) s = X97_T.ru[k]; return o ? String(s).replace(/\{(\w+)\}/g, (m, n) => o[n] !== undefined ? o[n] : m) : s; }
 // частые случаи (шаг 2): заготовка жалоб — врач дописывает детали
+// частые случаи (шаг 2): кнопка добавляет в жалобы только название состояния — без заготовок с пропусками (Саид, 06:08);
+// цифры, измеренные сейчас, — в отдельные поля «Сейчас», цифры «со слов» в жалобах ИИ считает анамнезом
 const X97_CASES = [
-  ['orvi', 'ОРВИ', 'KRVİ', 'Температура до … °C, насморк, боль в горле, кашель — … дней', 'Temperatur … °C-dək, burun axması, boğaz ağrısı, öskürək — … gün'],
-  ['back', 'Боль в спине', 'Bel ağrısı', 'Боль в пояснице … дней, иррадиация в ногу: нет / да; онемения и слабости в ногах нет', 'Bel nahiyəsində ağrı … gün, ayağa yayılma: yox / var; ayaqlarda keyimə və zəiflik yoxdur'],
-  ['gastr', 'Гастрит', 'Qastrit', 'Боль и жжение в эпигастрии, связь с едой …, изжога — … недель; рвоты и чёрного стула нет', 'Epiqastriyada ağrı və göynəmə, yeməklə əlaqə …, qıcqırma — … həftə; qusma və qara nəcis yoxdur'],
-  ['htn', 'Гипертензия', 'Hipertenziya', 'АД до …/… мм рт. ст., головная боль …; боли в груди и одышки нет', 'AT …/… mm c.s.-dək, baş ağrısı …; döş ağrısı və təngnəfəslik yoxdur'],
-  ['dm', 'Диабет', 'Diabet', 'Глюкоза натощак … ммоль/л, HbA1c … %; принимает …', 'Acqarına qlükoza … mmol/l, HbA1c … %; qəbul edir …'],
-  ['allerg', 'Аллергия', 'Allergiya', 'Зуд, сыпь / ринит после …; отёка лица и затруднения дыхания нет', '… sonra qaşınma, səpki / rinit; üz ödemi və nəfəs çətinliyi yoxdur'],
-  ['cyst', 'Цистит', 'Sistit', 'Частое болезненное мочеиспускание … дней; температуры и боли в пояснице нет', 'Tez-tez ağrılı sidik ifrazı … gün; temperatur və bel ağrısı yoxdur']
+  ['orvi', 'ОРВИ', 'KRVİ', 'ОРВИ', 'KRVİ'],
+  ['back', 'Боль в спине', 'Bel ağrısı', 'Боль в спине', 'Bel ağrısı'],
+  ['gastr', 'Гастрит', 'Qastrit', 'Боль и жжение в эпигастрии', 'Epiqastriyada ağrı və göynəmə'],
+  ['htn', 'Гипертензия', 'Hipertenziya', 'Повышенное давление', 'Yüksək təzyiq'],
+  ['dm', 'Диабет', 'Diabet', 'Сахарный диабет — коррекция лечения', 'Şəkərli diabet — müalicənin korreksiyası'],
+  ['allerg', 'Аллергия', 'Allergiya', 'Аллергическая реакция', 'Allergik reaksiya'],
+  ['cyst', 'Цистит', 'Sistit', 'Частое болезненное мочеиспускание', 'Tez-tez ağrılı sidik ifrazı']
 ];
+/** Измерено сейчас (шаг 2) — одной строкой для ИИ и рецепта. */
+function x97Now(p) {
+  const bp = /^\s*(\d{2,3})\s*[\/\\-]\s*(\d{2,3})\s*$/.exec(String(p.now_bp || ''));
+  const L = [bp ? 'АД ' + bp[1] + '/' + bp[2] : '', String(p.now_hr || '').trim() ? 'ЧСС ' + String(p.now_hr).trim() : '', String(p.now_t || '').trim() ? 't ' + String(p.now_t).trim() : '', String(p.now_spo2 || '').trim() ? 'SpO2 ' + String(p.now_spo2).trim() + '%' : ''].filter(Boolean);
+  return L.join(', ');
+}
 /** Известные ФИО и FİN пациента — убрать из свободного текста ещё на телефоне (сервер дополнительно маскирует номера). */
 function x97Scrub(txt, p) {
   let s = String(txt || ''); if (!s || !p) return s;
@@ -41961,6 +41971,7 @@ function x97Sig(d) { const a = rxPtAi(d); Object.keys(a).forEach(k => { if (type
       const p = d.pt, L = X97_LABS.filter(x => String(p[x[0]] || '').trim()).map(x => X97_T.ru[x[1]] + ' ' + String(p[x[0]]).trim());
       if (L.length) o.labs = L.join('; ') + (o.labs ? '\n' + o.labs : '');
       ['complaint', 'chronic', 'meds', 'noEffect', 'labs', 'allergy', 'dx'].forEach(k => { if (typeof o[k] === 'string') o[k] = x97Scrub(o[k], p); });
+      const nw = x97Now(p); if (nw) o.now = nw;
     } catch (e) { }
     return o;
   };
@@ -41970,6 +41981,7 @@ function x97Sig(d) { const a = rxPtAi(d); Object.keys(a).forEach(k => { if (type
     try {
       const L = X97_LABS.filter(x => String(d.pt[x[0]] || '').trim()).map(x => X97_T.ru[x[1]] + ' ' + String(d.pt[x[0]]).trim());
       if (L.length) o.labs = L.join('\n') + (o.labs ? '\n' + o.labs : '');
+      const nw = x97Now(d.pt); if (nw) o.nowVitals = nw;
       if (/^\d{4}-\d{2}-\d{2}$/.test(String(d.control || ''))) { o.control = d.control; o.controlWhat = String(d.controlWhat || '').slice(0, 200); }
     } catch (e) { }
     return o;
@@ -42055,12 +42067,16 @@ function x97Step1(st, w) {
 /* ---------- шаг 2 ---------- */
 function x97Step2(st, w) {
   const d = st.d, p = d.pt;
-  const cs = X97_CASES.map(c => '<button type="button" class="chip" data-act="x97Case" data-k="' + c[0] + '">' + esc(S.lang === 'az' ? c[2] : c[1]) + '</button>').join('');
+  const cl = String(d.complaint || '').toLowerCase();
+  const cs = X97_CASES.map(c => '<button type="button" class="chip' + (cl.indexOf(String(S.lang === 'az' ? c[4] : c[3]).toLowerCase()) !== -1 ? ' on' : '') + '" data-act="x97Case" data-k="' + c[0] + '">' + esc(S.lang === 'az' ? c[2] : c[1]) + '</button>').join('');
   let h = '<div class="card" style="display:flex;flex-direction:column;gap:10px"><div class="row" style="justify-content:space-between;align-items:center"><div class="lbl">' + esc(x97('cases')) + '</div>' +
     (typeof canAi === 'function' && canAi() ? '<button type="button" class="btn small" data-act="x97Say">' + esc(x97('say')) + '</button>' : '') + '</div>' +
     '<div class="chips" style="display:flex;gap:8px;flex-wrap:wrap">' + cs + '</div>' +
     rxField('complaint', x92('compl'), d.complaint, { ta: 1, max: 800, rows: 3 }) +
-    '<div class="grid2">' + rxField('dx', x92('dx'), d.dx, { max: 200 }) + rxField('dxIcd', x92('dxIcd'), d.dxIcd, { max: 10 }) + '</div></div>';
+    '<div class="grid2">' + rxField('dx', x92('dx'), d.dx, { max: 200 }) + rxField('dxIcd', x92('dxIcd'), d.dxIcd, { max: 10 }) + '</div>' +
+    '<div class="lbl" style="margin-top:4px">' + esc(x97('nowT')) + '</div><div class="muted" style="font-size:12.5px;margin-top:-6px">' + esc(x97('nowHint')) + '</div>' +
+    '<div class="grid2">' + rxField('pt.now_bp', x97('nowBp'), p.now_bp, { max: 7, ph: '120/80' }) + rxField('pt.now_hr', x97('nowHr'), p.now_hr, { type: 'n', max: 3 }) + '</div>' +
+    '<div class="grid2">' + rxField('pt.now_t', x97('nowT2'), p.now_t, { type: 'n', max: 4 }) + rxField('pt.now_spo2', 'SpO₂, %', p.now_spo2, { type: 'n', max: 3 }) + '</div></div>';
   h += '<div class="card" style="display:flex;flex-direction:column;gap:10px"><div class="lbl">' + esc(x97('about')) + '</div>' + (p.pid && w.prev && w.prev.at ? '<div class="x97-gt">' + esc(x97('fromGt')) + '</div>' : '') +
     rxField('pt.chronic', x97('chronic'), p.chronic, { ta: 1, max: 600 }) +
     '<div class="field"><label for="rxf_pt_allergy">' + esc(x97('allergy')) + '</label><div class="row" style="gap:8px"><input id="rxf_pt_allergy" data-rx="pt.allergy" maxlength="300" style="flex:1;min-width:0" value="' + esc(p.allergy || '') + '"><button type="button" class="chip' + (/^(нет|yoxdur)$/i.test(String(p.allergy || '').trim()) ? ' on' : '') + '" data-act="x97NoAllergy">' + esc(x97('allergyNo')) + '</button></div></div>' +
@@ -42313,11 +42329,14 @@ Object.assign(H, {
   },
   x97Del: el => { const st = rxSt(); st.d.items = st.d.items.filter(x => x.id !== el.dataset.id); rxSave(); rxRender(); },
   x97NoAllergy: () => { const p = rxSt().d.pt; p.allergy = S.lang === 'az' ? 'yoxdur' : 'нет'; rxSave(); rxRender(); },
-  x97Case: el => {
+  x97Case: el => { // нажал — добавил название в жалобы, нажал ещё раз — убрал
     const c = X97_CASES.find(x => x[0] === el.dataset.k), d = rxSt().d; if (!c) return;
     const tpl = S.lang === 'az' ? c[4] : c[3];
-    d.complaint = String(d.complaint || '').trim() ? String(d.complaint).trim() + '\n' + tpl : tpl;
-    rxSave(); rxRender(); const ta = $('#rxf_complaint'); if (ta) { ta.focus(); const i = ta.value.indexOf('…'); if (i !== -1) ta.setSelectionRange(i, i + 1); }
+    const parts = String(d.complaint || '').split(/\s*[;\n]\s*/).map(x => x.trim()).filter(Boolean);
+    const i = parts.findIndex(x => x.toLowerCase() === tpl.toLowerCase());
+    if (i !== -1) parts.splice(i, 1); else parts.push(tpl);
+    d.complaint = parts.join('; ');
+    rxSave(); rxRender();
   },
   x97Say: () => {
     openModal('<h3>' + esc(x97('sayT')) + '</h3><div class="muted" style="margin-bottom:6px">' + esc(x97('sayHint')) + '</div><div class="field"><textarea id="rxSay" rows="7" maxlength="4000"></textarea></div><div class="muted" style="font-size:12.5px">' + esc(x95 ? x95('mic') : '') + '</div>' +
