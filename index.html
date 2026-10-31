@@ -40386,6 +40386,8 @@ function rxRenal(d) {
   else if (age >= 18 && w > 0 && (p.sex === 'm' || p.sex === 'f')) { out.crcl = Math.round((140 - age) * w / (72 * mg) * (p.sex === 'f' ? 0.85 : 1)); out.m = 'Cockcroft-Gault'; }
   return out;
 }
+Object.assign(X92_T.ru, { optT: 'На ваш выбор — препараты ваших фирм без вреда для этого пациента, но польза при этих жалобах не доказана (сами не добавляются):', optAdd: '＋ добавить (моё решение)' });
+Object.assign(X92_T.az, { optT: 'Sizin seçiminizə — firmalarınızın bu pasiyentə zərərsiz dərmanları, amma bu şikayətlərdə faydası sübut olunmayıb (özü əlavə olunmur):', optAdd: '＋ əlavə et (mənim qərarım)' });
 function x92(k, o) { let s = (X92_T[S.lang === 'az' ? 'az' : 'ru'] || {})[k]; if (s === undefined) s = X92_T.ru[k]; if (typeof s !== 'string') return s; return o ? s.replace(/\{(\w+)\}/g, (m, n) => o[n] !== undefined ? o[n] : m) : s; }
 /* ---------- группы (ATC) ---------- */
 // [ключ, az, ru, префиксы ATC, всегда показывать]
@@ -40672,11 +40674,13 @@ function rxItemsHtml(st) {
     : '<button class="btn primary block" style="margin-top:10px" data-act="rxCheck">' + esc(x92('checkBig')) + '</button><button class="btn ghost block" style="margin-top:6px" data-act="rxCompose">' + esc(x92('composeMore')) + '</button>';
   if (st.sugg) {
     const s = st.sugg;
-    h += '<div class="hint" style="display:block;margin:8px 0"><b>' + esc(x92(s.compose ? 'weakT' : 'suggT')) + '</b>' +
+    h += '<div class="hint" style="display:block;margin:8px 0">' + (s.compose && !(s.items || []).length ? '' : '<b>' + esc(x92(s.compose ? 'weakT' : 'suggT')) + '</b>') +
       ((s.items || []).length ? s.items.map((x, i) => '<div class="rx-pr"><b>' + esc(x.b) + '</b><span class="rx-lvl ' + esc(x.level) + '">' + esc(x92('lvl_' + x.level)) + '</span>' + (x.firm ? ' <span class="muted">· ' + esc(x.firm) + '</span>' : '') +
         '<div style="font-size:13.5px;margin-top:2px">' + esc(x.why) + '</div><button class="btn small" style="margin-top:6px" data-act="rxSuggAdd" data-i="' + i + '">' + esc(x92('suggAdd')) + '</button></div>').join('') : (s.compose ? '' : '<div>' + esc(x92('suggNone')) + '</div>')) +
       ((s.notInFirms || []).length ? '<div style="margin-top:8px"><b>' + esc(x92('notIn')) + '</b>' + s.notInFirms.map(x => '<div>• ' + esc(x.inn) + ' — ' + esc(x.why) + '</div>' + rxOutHtml(x.inn)).join('') + '</div>' : '') +
       (s.note ? '<div style="margin-top:8px">⚠️ ' + esc(s.note) + '</div>' : '') +
+      ((s.optional || []).length ? '<details style="margin-top:10px"><summary style="cursor:pointer"><b>' + esc(x92('optT')) + '</b></summary>' + s.optional.map((x, i) => '<div class="rx-pr"><b>' + esc(x.b) + '</b>' + (x.firm ? ' <span class="muted">· ' + esc(x.firm) + '</span>' : '') +
+        '<div style="font-size:13.5px;margin-top:2px">' + esc(x.why) + '</div><button class="btn small ghost" style="margin-top:6px" data-act="rxOptAdd" data-i="' + i + '">' + esc(x92('optAdd')) + '</button></div>').join('') + '</details>' : '') +
       '<div class="muted" style="font-size:12px;margin-top:4px">' + esc(x92('hint')) + '</div></div>';
   }
   return h + '</div>';
@@ -40946,7 +40950,8 @@ async function rxCompose(btn) {
     if (!b || rxSt().d.items.some(it => skel(it.b) === skel(b.b))) { if (!b) left.push(x); return; }
     rxAddItem(b, b.vars[0], { id: 'mfr:' + b.mfr, name: rxMfrShort(b.mfr), mfr: [b.mfr], items: [], once: true }, 'ai'); n++;
   });
-  rxSt().sugg = weak.length || left.length || r.note ? { compose: true, items: weak, notInFirms: left, note: r.note || '' } : null;
+  const opt = (r.optional || []).filter(x => !rxSt().d.items.some(it => skel(it.b) === skel(x.b)));
+  rxSt().sugg = weak.length || left.length || r.note || opt.length ? { compose: true, items: weak, notInFirms: left, note: r.note || '', optional: opt } : null;
   rxRender();
   toast(n ? x92('composed', { n }) : x92('composeNone'), n ? 'ok' : '');
 }
@@ -40960,7 +40965,7 @@ async function rxSugg(btn) {
   firms.forEach(f => rxProducts(f).forEach(p => { const k = skel(p.b); if (seen[k] || d.items.some(it => skel(it.b) === k)) return; seen[k] = 1; cands.push({ b: p.b, inn: p.inn, atc: p.atc, form: p.vars.map(v => RX_FORM_AZ[v.code]).filter((x, i, a) => x && a.indexOf(x) === i).join('/'), dose: p.vars.slice(0, 3).map(v => rxUnitsAz(v.d)).filter(Boolean).join('; '), firm: f.name }); }));
   const r = await busy(btn, () => rpcA('rxAi', { mode: 'suggest', lang: S.lang, patient: rxPtAi(d), items: d.items.map(rxItemAi), cands: cands.slice(0, 500), patientId: d.pt.pid || '' }, { timeout: 150000 })).catch(() => null);
   if (!r || !r.ok) return;
-  st.sugg = { items: r.items || [], notInFirms: r.notInFirms || [], note: r.note || '' };
+  st.sugg = { items: r.items || [], notInFirms: r.notInFirms || [], note: r.note || '', optional: r.optional || [] };
   rxRender();
 }
 /** Рецепт → GT/098 (по нажатию врача): существующая карта или новая по FİN. */
@@ -41136,6 +41141,14 @@ Object.assign(H, {
   },
   rxFirmPick: el => { const st = rxSt(); st.add.fid = st.add.fid === el.dataset.id && !el.dataset.g ? '' : el.dataset.id; st.add.mfr = ''; st.add.mfrQ = ''; st.add.q = ''; st.add.grp = el.dataset.g !== undefined ? (el.dataset.g || '') : ''; st.add.open = true; rxRender(); },
   rxCompose: el => rxCompose(el),
+  rxOptAdd: el => { // выбор врача: препарат своей фирмы (src='' — решение врача; разбор оставит его с пометкой «польза не доказана», если вреда нет)
+    const st = rxSt(), x = st.sugg && (st.sugg.optional || [])[Number(el.dataset.i)]; if (!x) return;
+    const f = (st.firms || []).find(ff => ff.name === x.firm) || null;
+    const p = f ? rxProducts(f).find(pp => skel(pp.b) === skel(x.b)) : null;
+    if (!p) return;
+    st.sugg.optional = st.sugg.optional.filter(y => y !== x);
+    rxAddItem(p, p.vars[0], f, '');
+  },
   rxSwap: el => {
     const st = rxSt(), it = st.d.items.find(x => x.id === el.dataset.id); if (!it) return;
     const x = rxBrandsByInn(it.inn, 8).find(y => y.k === el.dataset.k); if (!x) return;
