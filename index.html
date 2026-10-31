@@ -3168,7 +3168,7 @@ const I18N_V4 = {
     suspSpike: 'за день {n} {u}, обычно ≈{avg} в день — {who}', suspAudit: 'поправка {d} {u}', suspXferReturned: '{n} {u}, склад: {s}, вернул: {who}', suspXferStale: '{n} {u} → {s}, ждёт {d} дн.',
     suspLoginFail: 'неверных попыток: {n}',
     colXfer: 'Передано (отделения)', gs1Filled: 'С кода коробки: серия {s}, срок {d}.',
-    E_AUTH: 'Нужно войти заново.', E_FORBIDDEN: 'Нет прав на это действие.', E_NO_STORE: 'Склад не найден.', E_NO_STORE_ACCESS: 'Нет доступа к этому складу (права закончились или их забрали).',
+    E_AUTH: 'Нужно войти заново.', E_FORBIDDEN: 'Нет прав на это действие.', E_NO_STORE: 'Склад не найден.', E_STORE_ORG: 'Этот склад — другой организации, а сотрудник — в организации «{o}». Права даются только на склады его организации; чтобы работать там, перенесите сотрудника: карточка сотрудника → «Организация».', geOrgOnly: 'Показаны склады организации сотрудника («{o}»). Нужен склад другой организации — сначала перенесите сотрудника в неё (карточка → «Организация»).', E_NO_STORE_ACCESS: 'Нет доступа к этому складу (права закончились или их забрали).',
     E_BAD_LOGIN: 'Неверный логин или пароль. Осталось попыток: {left}.', E_SETUP_DONE: 'Главный админ уже создан — войдите.', E_WEAK_PASSWORD: 'Пароль — не меньше {min} знаков.',
     E_BAD_LOGIN_NAME: 'Логин: 3–30 латинских букв, цифр, точка, дефис.', E_LOGIN_TAKEN: 'Такой логин уже есть.', E_NO_USER: 'Пользователь не найден.',
     E_BAD_PERMS: 'Отметьте хотя бы одно право.', E_NO_GRANT: 'Права не найдены.', E_XFER_CLOSED: 'Эта передача уже принята или возвращена.', E_NO_XFER: 'Передача не найдена.',
@@ -3221,7 +3221,7 @@ const I18N_V4 = {
     suspSpike: 'gün ərzində {n} {u}, adətən gündə ≈{avg} — {who}', suspAudit: 'düzəliş {d} {u}', suspXferReturned: '{n} {u}, anbar: {s}, qaytaran: {who}', suspXferStale: '{n} {u} → {s}, {d} gündür gözləyir',
     suspLoginFail: 'yanlış cəhd: {n}',
     colXfer: 'Ötürülüb (şöbələr)', gs1Filled: 'Qutunun kodundan: seriya {s}, müddət {d}.',
-    E_AUTH: 'Yenidən daxil olmaq lazımdır.', E_FORBIDDEN: 'Bu əməliyyat üçün hüququnuz yoxdur.', E_NO_STORE: 'Anbar tapılmadı.', E_NO_STORE_ACCESS: 'Bu anbara giriş yoxdur (hüquqlar bitib və ya geri alınıb).',
+    E_AUTH: 'Yenidən daxil olmaq lazımdır.', E_FORBIDDEN: 'Bu əməliyyat üçün hüququnuz yoxdur.', E_NO_STORE: 'Anbar tapılmadı.', E_STORE_ORG: 'Bu anbar başqa təşkilatındır, əməkdaş isə «{o}» təşkilatındadır. Hüquq yalnız öz təşkilatının anbarlarına verilir; orada işləmək üçün əməkdaşı köçürün: əməkdaşın kartı → «Təşkilat».', geOrgOnly: 'Əməkdaşın təşkilatının («{o}») anbarları göstərilir. Başqa təşkilatın anbarı lazımdırsa — əvvəlcə əməkdaşı ora köçürün (kart → «Təşkilat»).', E_NO_STORE_ACCESS: 'Bu anbara giriş yoxdur (hüquqlar bitib və ya geri alınıb).',
     E_BAD_LOGIN: 'Login və ya şifrə yanlışdır. Qalan cəhd: {left}.', E_SETUP_DONE: 'Baş admin artıq yaradılıb — daxil olun.', E_WEAK_PASSWORD: 'Şifrə ən azı {min} simvol olmalıdır.',
     E_BAD_LOGIN_NAME: 'Login: 3–30 latın hərfi, rəqəm, nöqtə, defis.', E_LOGIN_TAKEN: 'Belə login artıq var.', E_NO_USER: 'İstifadəçi tapılmadı.',
     E_BAD_PERMS: 'Ən azı bir hüquq seçin.', E_NO_GRANT: 'Hüquq tapılmadı.', E_XFER_CLOSED: 'Bu ötürmə artıq qəbul edilib və ya qaytarılıb.', E_NO_XFER: 'Ötürmə tapılmadı.',
@@ -28523,8 +28523,18 @@ Object.assign(H, {
     const r = og.apply(this, arguments);
     try {
       const sel = $('#geStore'); if (!sel || !S.ua) return r;
-      const stores = (S.ua.stores || []).filter(s => s.active);
-      const cur = sel.value;
+      // 9.72.1 (Саид, 31.10, «Склад не найден»): права — только на склады организации ЭТОГО сотрудника (так проверяет сервер).
+      // Раньше главному админу показывались склады всех организаций, и по умолчанию выбирался первый — чужой.
+      const u = (S.ua.users || []).find(x => x.id === userId) || {};
+      const uOrg = u.orgId || '';
+      const stores = (S.ua.stores || []).filter(s => s.active && (!uOrg || !s.orgId || s.orgId === uOrg));
+      let cur = sel.value;
+      if (cur !== '*' && !stores.some(s => s.id === cur)) cur = (stores[0] || {}).id || '*';
+      const others = (S.ua.stores || []).filter(s => s.active && uOrg && s.orgId && s.orgId !== uOrg);
+      if (others.length) {
+        const on = (S.ua.orgs || []).find(o => o.id === uOrg);
+        sel.closest('.field').insertAdjacentHTML('beforeend', '<div class="muted" style="font-size:12.5px;margin-top:4px">' + esc(t('geOrgOnly', { o: on ? on.name : uOrg })) + '</div>');
+      }
       const tree = unTree(stores.map(s => Object.assign({}, s)));
       sel.innerHTML = '<option value="*"' + (cur === '*' ? ' selected' : '') + '>' + esc(t('allStores')) + '</option>' + tree.map(({ s, depth }) => '<option value="' + esc(s.id) + '"' + (s.id === cur ? ' selected' : '') + '>' + '· '.repeat(depth) + esc(storeName(s)) + '</option>').join('');
       sel.closest('.field').insertAdjacentHTML('afterend', '<label class="check hidden" id="geSubWrap"><input type="checkbox" id="geSub"><span id="geSubLbl"></span></label>');
