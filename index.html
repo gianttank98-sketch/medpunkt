@@ -41888,7 +41888,7 @@ const X97_T = {
     modeGt: 'Постоянный · GT/098', modeOnce: 'Разовый', modeGtHint: 'Постоянный — рецепт, анализы и схема лечения сохранятся в его GT/098. В следующий раз всё подставится само.', modeOnceHint: 'Разовый — рецепт не попадёт в GT/098.',
     find: 'FİN или фамилия', found: 'рецептов в GT/098: {n}', foundLast: ', последний {d}', renew: '↻ Как в прошлый раз — продлить схему от {d}', renewOn: '↻ Продлеваем схему от {d} — ИИ сверит с новыми данными',
     finNew: 'FİN — новая карта GT/098 заведётся при выписке', pt: 'Пациент', sexM: 'Муж', sexF: 'Жен', pregHint: 'Беременность и кормление спрашиваем только у женщин 12–55 лет.', classic: 'Всё на одном экране (старый вид)', wizard: '← Рецепт по шагам',
-    need1: 'Не хватает: {l}', need2: 'Впишите жалобы или диагноз.',
+    need1: 'Не хватает: {l}', need2: 'Выберите состояние, впишите жалобы или диагноз.', complFree: 'Дополнительно — своими словами (не обязательно)',
     cases: 'С чем пришёл', say: '🎙 Сказать всё сразу', sayT: '🎙 Состояние пациента — голосом или текстом', sayHint: 'Скажите всё подряд: жалобы, диагноз, болезни, аллергия, что принимает, рост, вес, анализы. ИИ разнесёт по полям (заполнит только пустые). ФИО и FİN не называйте.', sayGo: '🤖 Разнести по полям', sayDone: 'Заполнено полей: {n}',
     about: 'О пациенте', fromGt: 'Из GT/098 — болезни, лекарства, аллергия, рост, вес, анализы', chronic: 'Подтверждённые болезни', allergy: 'Аллергия', allergyNo: 'Нет', meds: 'Что принимает', noEffect: 'Что не помогает', medsPhoto: 'Лекарства — с фото упаковок',
     labsT: 'Рост, вес и анализы', k: 'Калий', alt: 'АЛТ', ast: 'АСТ', bili: 'Билирубин', hb: 'Гемоглобин', glu: 'Глюкоза', a1c: 'HbA1c', labsOther: 'Другие анализы', labsOtherPh: 'ТТГ, ферритин, липиды…', labsPhoto: 'Анализы / выписка — с фото',
@@ -41911,7 +41911,7 @@ const X97_T = {
     modeGt: 'Daimi · GT/098', modeOnce: 'Birdəfəlik', modeGtHint: 'Daimi — resept, analizlər və müalicə sxemi onun GT/098-ində saxlanılacaq. Növbəti dəfə hər şey özü dolacaq.', modeOnceHint: 'Birdəfəlik — resept GT/098-ə düşməyəcək.',
     find: 'FİN və ya soyad', found: 'GT/098-də resept: {n}', foundLast: ', sonuncu {d}', renew: '↻ Keçən dəfəki kimi — {d} sxemini uzat', renewOn: '↻ {d} sxemi uzadılır — Sİ yeni məlumatlarla tutuşduracaq',
     finNew: 'FİN — yeni GT/098 kartı resept yazılanda açılacaq', pt: 'Pasiyent', sexM: 'Kişi', sexF: 'Qadın', pregHint: 'Hamiləlik və əmizdirmə yalnız 12–55 yaşlı qadınlardan soruşulur.', classic: 'Hamısı bir ekranda (köhnə görünüş)', wizard: '← Addım-addım resept',
-    need1: 'Çatışmır: {l}', need2: 'Şikayət və ya diaqnozu yazın.',
+    need1: 'Çatışmır: {l}', need2: 'Vəziyyəti seçin, şikayət və ya diaqnozu yazın.', complFree: 'Əlavə — öz sözlərinizlə (məcburi deyil)',
     cases: 'Nə ilə gəlib', say: '🎙 Hamısını birdən de', sayT: '🎙 Pasiyentin vəziyyəti — səslə və ya yazı ilə', sayHint: 'Hamısını ardıcıl deyin: şikayətlər, diaqnoz, xəstəliklər, allergiya, nə qəbul edir, boy, çəki, analizlər. Sİ sahələrə paylayacaq (yalnız boş olanları). Ad-soyad və FİN deməyin.', sayGo: '🤖 Sahələrə payla', sayDone: 'Doldurulan sahələr: {n}',
     about: 'Pasiyent haqqında', fromGt: 'GT/098-dən — xəstəliklər, dərmanlar, allergiya, boy, çəki, analizlər', chronic: 'Təsdiqlənmiş xəstəliklər', allergy: 'Allergiya', allergyNo: 'Yoxdur', meds: 'Nə qəbul edir', noEffect: 'Nə kömək etmir', medsPhoto: 'Dərmanlar — qutuların fotosundan',
     labsT: 'Boy, çəki və analizlər', k: 'Kalium', alt: 'ALT', ast: 'AST', bili: 'Bilirubin', hb: 'Hemoqlobin', glu: 'Qlükoza', a1c: 'HbA1c', labsOther: 'Digər analizlər', labsOtherPh: 'TTH, ferritin, lipidlər…', labsPhoto: 'Analizlər / çıxarış — fotodan',
@@ -42071,8 +42071,8 @@ function x97Step2(st, w) {
   const cs = X97_CASES.map(c => '<button type="button" class="chip' + (cl.indexOf(String(S.lang === 'az' ? c[4] : c[3]).toLowerCase()) !== -1 ? ' on' : '') + '" data-act="x97Case" data-k="' + c[0] + '">' + esc(S.lang === 'az' ? c[2] : c[1]) + '</button>').join('');
   let h = '<div class="card" style="display:flex;flex-direction:column;gap:10px"><div class="row" style="justify-content:space-between;align-items:center"><div class="lbl">' + esc(x97('cases')) + '</div>' +
     (typeof canAi === 'function' && canAi() ? '<button type="button" class="btn small" data-act="x97Say">' + esc(x97('say')) + '</button>' : '') + '</div>' +
-    '<div class="chips" style="display:flex;gap:8px;flex-wrap:wrap">' + cs + '</div>' +
-    rxField('complaint', x92('compl'), d.complaint, { ta: 1, max: 800, rows: 3 }) +
+    (typeof x98Html === 'function' ? x98Html(st) : '<div class="chips" style="display:flex;gap:8px;flex-wrap:wrap">' + cs + '</div>') + // 9.71: по системам — кнопками
+    rxField('complaint', typeof x98Html === 'function' ? x97('complFree') : x92('compl'), d.complaint, { ta: 1, max: 800, rows: 3 }) +
     '<div class="grid2">' + rxField('dx', x92('dx'), d.dx, { max: 200 }) + rxField('dxIcd', x92('dxIcd'), d.dxIcd, { max: 10 }) + '</div>' +
     '<div class="lbl" style="margin-top:4px">' + esc(x97('nowT')) + '</div><div class="muted" style="font-size:12.5px;margin-top:-6px">' + esc(x97('nowHint')) + '</div>' +
     '<div class="grid2">' + rxField('pt.now_bp', x97('nowBp'), p.now_bp, { max: 7, ph: '120/80' }) + rxField('pt.now_hr', x97('nowHr'), p.now_hr, { type: 'n', max: 3 }) + '</div>' +
@@ -42289,7 +42289,7 @@ Object.assign(H, {
     const st = rxSt(), d = st.d, w = x97W(st);
     if (w.step === 1) { const L = x97Need1(d); if (L.length) return toast(x97('need1', { l: L.join(', ') }), 'bad'); d.pt.toGt = d.pt.mode !== 'once'; w.step = 2; }
     else if (w.step === 2) {
-      if (!String(d.complaint || '').trim() && !String(d.dx || '').trim()) return toast(x97('need2'), 'bad');
+      if (!String(d.complaint || '').trim() && !String(d.dx || '').trim() && !(d.conds || []).length) return toast(x97('need2'), 'bad');
       w.step = 3; w.max = Math.max(w.max, 3); rxSave(); rxRender(); window.scrollTo(0, 0);
       if (!w.res || w.sig !== x97Sig(d)) await x97Compose(el);
       return;
@@ -42457,6 +42457,231 @@ H.x97CtlOpen = el => { closeModal(); if (typeof ptOpen === 'function') ptOpen(el
 (function () {
   const t0 = rxTabsHtml;
   rxTabsHtml = function (st) { const h = t0.apply(this, arguments); return st && st.classic && st.view === 'new' && !st.done ? h + '<button type="button" class="btn small ghost" style="margin:0 0 8px" data-act="x97Wizard">' + esc(x97('wizard')) + '</button>' : h; };
+})();
+
+/* =====================================================================
+ * v98 (9.71): рецепт, шаг 2 — «С чем пришёл» кнопками: система → состояние → степень / класс / шкала.
+ *  Саид, 31.10, 06:12: «выбирать по системам тела или по областям… давление — зачем цифра, если есть степени,
+ *  функциональные классы… всё должно быть кликабельно».
+ *  Выбранное идёт к ИИ отдельно (conds) как проверенные врачом данные, сохраняется в рецепте и GT/098.
+ *  Опции с пометкой rf — красный флаг (неотложность): ИИ остановит рецепт и скажет почему.
+ * ===================================================================== */
+// [ключ, ru, az, мульти?, [[ключ, ru, az, rf?], …]]
+const X98_A = {
+  dur3: ['dur', 'Длительность', 'Müddət', 0, [['d1', '1–2 дня', '1–2 gün'], ['d3', '3–5 дней', '3–5 gün'], ['d6', 'больше 5 дней', '5 gündən çox']]],
+  temp: ['t', 'Температура', 'Temperatur', 0, [['no', 'нет', 'yoxdur'], ['38', 'до 38', '38-dək'], ['39', '38–39', '38–39'], ['40', 'выше 39', '39-dan yuxarı']]],
+  pain: ['pain', 'Боль (0–10)', 'Ağrı (0–10)', 0, [['p2', '1–3 слабая', '1–3 zəif'], ['p5', '4–6 умеренная', '4–6 orta'], ['p8', '7–10 сильная', '7–10 güclü']]]
+};
+const X98_SYS = [
+  ['cv', 'Сердце и сосуды', 'Ürək-damar', [
+    ['htn', 'Артериальная гипертензия', 'Arterial hipertenziya', 'I10', [
+      ['deg', 'Степень', 'Dərəcə', 0, [['1', '1 ст. (140–159/90–99)', '1 dər. (140–159/90–99)'], ['2', '2 ст. (160–179/100–109)', '2 dər. (160–179/100–109)'], ['3', '3 ст. (≥180/≥110)', '3 dər. (≥180/≥110)']]],
+      ['tx', 'Лечение', 'Müalicə', 0, [['new', 'впервые выявлена', 'ilk dəfə aşkarlanıb'], ['none', 'не лечится', 'müalicə almır'], ['ok', 'лечится, АД в цели', 'müalicə alır, AT hədəfdə'], ['fail', 'лечится, не помогает', 'müalicə alır, kömək etmir']]],
+      ['org', 'Поражение органов', 'Orqan zədələnməsi', 1, [['lvh', 'ГЛЖ', 'SMH'], ['ckd', 'ХБП', 'XBX'], ['ihd', 'ИБС', 'ÜİX'], ['stroke', 'инсульт в анамнезе', 'keçirilmiş insult']]]]],
+    ['hf', 'Сердечная недостаточность', 'Ürək çatışmazlığı', 'I50.9', [
+      ['nyha', 'Функциональный класс NYHA', 'NYHA funksional sinfi', 0, [['1', 'I — нагрузка без ограничений', 'I — məhdudiyyətsiz'], ['2', 'II — одышка при обычной нагрузке', 'II — adi yükdə təngnəfəslik'], ['3', 'III — при малой нагрузке', 'III — kiçik yükdə'], ['4', 'IV — в покое', 'IV — sakitlikdə', 1]]],
+      ['ef', 'Фракция выброса', 'Atım fraksiyası', 0, [['r', 'сниженная (≤40%)', 'azalmış (≤40%)'], ['m', 'умеренно сниженная (41–49%)', 'orta azalmış (41–49%)'], ['p', 'сохранённая (≥50%)', 'qorunmuş (≥50%)'], ['u', 'неизвестна', 'məlum deyil']]],
+      ['ed', 'Отёки', 'Ödemlər', 0, [['no', 'нет', 'yoxdur'], ['leg', 'голени', 'baldırlar'], ['up', 'выше колен', 'dizdən yuxarı']]]]],
+    ['ang', 'Стенокардия (стабильная)', 'Stenokardiya (stabil)', 'I20.8', [
+      ['fc', 'Функциональный класс (CCS)', 'Funksional sinif (CCS)', 0, [['1', 'I — только при большой нагрузке', 'I — yalnız böyük yükdə'], ['2', 'II — при ходьбе >200 м, подъёме', 'II — 200 m-dən çox yerişdə'], ['3', 'III — при ходьбе <200 м', 'III — 200 m-dən az yerişdə'], ['4', 'IV — при минимальной нагрузке', 'IV — minimal yükdə']]],
+      ['dyn', 'Приступы', 'Tutmalar', 0, [['st', 'как обычно', 'adi qaydada'], ['up', 'учащаются / в покое (нестабильная)', 'artır / sakitlikdə (qeyri-stabil)', 1]]]]],
+    ['af', 'Фибрилляция предсердий', 'Qulaqcıqların fibrilyasiyası', 'I48.9', [
+      ['form', 'Форма', 'Forma', 0, [['par', 'пароксизмальная', 'paroksizmal'], ['per', 'персистирующая', 'persistent'], ['perm', 'постоянная', 'daimi']]],
+      ['hr', 'Ритм сейчас', 'Hazırda ritm', 0, [['ok', 'ЧСС до 110', 'ÜVS 110-dək'], ['fast', 'ЧСС > 110 с жалобами', 'ÜVS > 110, şikayətlərlə', 1]]],
+      ['ac', 'Антикоагулянт', 'Antikoaqulyant', 0, [['yes', 'принимает', 'qəbul edir'], ['no', 'не принимает', 'qəbul etmir']]]]],
+    ['vv', 'Варикоз вен ног', 'Ayaqların varikozu', 'I83.9', [
+      ['ceap', 'Класс CEAP', 'CEAP sinfi', 0, [['c1', 'C1 — сосудистые звёздочки', 'C1 — damar ulduzcuqları'], ['c2', 'C2 — варикозные вены', 'C2 — varikoz venalar'], ['c3', 'C3 — отёк', 'C3 — ödem'], ['c4', 'C4–C6 — изменения кожи / язва', 'C4–C6 — dəri dəyişiklikləri / xora']]]]]
+  ]],
+  ['resp', 'Дыхание и ЛОР', 'Tənəffüs və LOR', [
+    ['orvi', 'ОРВИ', 'KRVİ', 'J06.9', [X98_A.dur3, X98_A.temp,
+      ['sym', 'Симптомы', 'Simptomlar', 1, [['rh', 'насморк', 'burun axması'], ['th', 'боль в горле', 'boğaz ağrısı'], ['dc', 'сухой кашель', 'quru öskürək'], ['wc', 'влажный кашель', 'yaş öskürək'], ['ach', 'ломота', 'bədən ağrısı'], ['ha', 'головная боль', 'baş ağrısı']]]]],
+    ['tons', 'Острый тонзиллофарингит', 'Kəskin tonzillofaringit', 'J03.9', [
+      ['cent', 'Критерии Centor (McIsaac)', 'Centor (McIsaac) meyarları', 1, [['t', 'температура > 38', 'temperatur > 38'], ['nc', 'нет кашля', 'öskürək yoxdur'], ['ex', 'налёты на миндалинах', 'badamcıqlarda ərp'], ['ln', 'болезненные шейные узлы', 'ağrılı boyun limfa düyünləri']]]]],
+    ['sin', 'Острый синусит', 'Kəskin sinusit', 'J01.9', [
+      ['dur', 'Течение', 'Gedişat', 0, [['v', 'до 10 дней, улучшается', '10 günədək, yaxşılaşır'], ['b', '≥ 10 дней или снова хуже', '≥ 10 gün və ya yenidən pisləşir'], ['sev', 't > 39 и гнойные выделения ≥ 3 дней', 't > 39 və irinli ifrazat ≥ 3 gün']]]]],
+    ['otit', 'Острый средний отит', 'Kəskin orta otit', 'H66.9', [X98_A.pain,
+      ['side', 'Сторона', 'Tərəf', 0, [['1', 'одно ухо', 'bir qulaq'], ['2', 'оба уха', 'hər iki qulaq']]],
+      ['dis', 'Выделения из уха', 'Qulaqdan ifrazat', 0, [['no', 'нет', 'yoxdur'], ['yes', 'есть', 'var']]]]],
+    ['bron', 'Острый бронхит', 'Kəskin bronxit', 'J20.9', [
+      ['cough', 'Кашель', 'Öskürək', 0, [['dry', 'сухой', 'quru'], ['wet', 'с мокротой', 'bəlğəmli']]],
+      ['dur', 'Длительность', 'Müddət', 0, [['w1', 'до 1 недели', '1 həftəyədək'], ['w3', '1–3 недели', '1–3 həftə'], ['w4', 'больше 3 недель', '3 həftədən çox']]],
+      ['dysp', 'Одышка', 'Təngnəfəslik', 0, [['no', 'нет', 'yoxdur'], ['ex', 'при нагрузке', 'yükdə'], ['rest', 'в покое', 'sakitlikdə', 1]]]]],
+    ['pneu', 'Внебольничная пневмония', 'Xəstəxanadankənar pnevmoniya', 'J18.9', [
+      ['crb', 'CRB-65', 'CRB-65', 1, [['c', 'спутанность сознания', 'şüur qarışıqlığı', 1], ['r', 'ЧДД ≥ 30', 'TS ≥ 30', 1], ['b', 'АД < 90/60', 'AT < 90/60', 1]]]]],
+    ['asth', 'Бронхиальная астма', 'Bronxial astma', 'J45.9', [
+      ['ctrl', 'Контроль (GINA)', 'Nəzarət (GINA)', 0, [['c', 'контролируемая', 'nəzarət altında'], ['p', 'частично контролируемая', 'qismən nəzarət altında'], ['u', 'неконтролируемая', 'nəzarətsiz']]],
+      ['step', 'Ступень терапии', 'Müalicə pilləsi', 0, [['1', '1–2', '1–2'], ['3', '3', '3'], ['4', '4–5', '4–5']]],
+      ['ex', 'Сейчас', 'Hazırda', 0, [['no', 'без обострения', 'kəskinləşməsiz'], ['mild', 'лёгкое обострение', 'yüngül kəskinləşmə'], ['sev', 'тяжёлое обострение (говорит фразами, SpO₂ < 92%)', 'ağır kəskinləşmə (SpO₂ < 92%)', 1]]]]],
+    ['copd', 'ХОБЛ', 'XOAX', 'J44.9', [
+      ['mmrc', 'Одышка mMRC', 'Təngnəfəslik mMRC', 0, [['0', '0–1', '0–1'], ['2', '2', '2'], ['3', '3–4', '3–4']]],
+      ['exa', 'Обострений за год', 'İl ərzində kəskinləşmə', 0, [['0', '0–1 без госпитализации', '0–1, hospitalizasiyasız'], ['2', '≥ 2 или госпитализация', '≥ 2 və ya hospitalizasiya']]]]]
+  ]],
+  ['gi', 'Пищеварение', 'Həzm sistemi', [
+    ['gerd', 'ГЭРБ / изжога', 'QERX / zəqə', 'K21.9', [
+      ['fr', 'Изжога', 'Zəqə', 0, [['r', 'реже 2 раз в неделю', 'həftədə 2 dəfədən az'], ['f', '2 и больше раз в неделю', 'həftədə 2 və daha çox'], ['d', 'ежедневно', 'hər gün']]],
+      ['al', 'Тревожные признаки', 'Həyəcan əlamətləri', 1, [['dys', 'трудно глотать', 'udmaq çətindir', 1], ['wl', 'похудание', 'arıqlama', 1], ['bl', 'рвота кровью / чёрный стул', 'qanlı qusma / qara nəcis', 1]]]]],
+    ['gast', 'Гастрит / диспепсия', 'Qastrit / dispepsiya', 'K29.7', [X98_A.pain,
+      ['nsaid', 'Принимает НПВС', 'QSİƏP qəbul edir', 0, [['no', 'нет', 'yox'], ['yes', 'да', 'bəli']]],
+      ['hp', 'H. pylori', 'H. pylori', 0, [['pos', 'положительный', 'müsbət'], ['neg', 'отрицательный', 'mənfi'], ['u', 'не проверяли', 'yoxlanılmayıb']]]]],
+    ['diar', 'Острая диарея', 'Kəskin diareya', 'A09', [X98_A.dur3,
+      ['deh', 'Обезвоживание', 'Susuzlaşma', 0, [['no', 'нет', 'yoxdur'], ['m', 'лёгкое', 'yüngül'], ['mod', 'умеренное', 'orta'], ['sev', 'тяжёлое', 'ağır', 1]]],
+      ['blood', 'Кровь в стуле', 'Nəcisdə qan', 0, [['no', 'нет', 'yoxdur'], ['yes', 'есть', 'var', 1]]], X98_A.temp]],
+    ['cons', 'Запор', 'Qəbizlik', 'K59.0', [
+      ['dur', 'Течение', 'Gedişat', 0, [['a', 'острый', 'kəskin'], ['c', 'хронический', 'xroniki']]]]],
+    ['hem', 'Геморрой', 'Hemorroy', 'K64.9', [
+      ['st', 'Стадия', 'Mərhələ', 0, [['1', 'I', 'I'], ['2', 'II', 'II'], ['3', 'III–IV', 'III–IV']]],
+      ['bl', 'Кровотечение', 'Qanaxma', 0, [['no', 'нет', 'yoxdur'], ['yes', 'есть', 'var']]]]]
+  ]],
+  ['uro', 'Почки и мочевые пути', 'Böyrəklər və sidik yolları', [
+    ['cyst', 'Острый цистит', 'Kəskin sistit', 'N30.0', [
+      ['type', 'Тип', 'Növ', 0, [['u', 'неосложнённый (женщина, не беременна)', 'ağırlaşmamış (qadın, hamilə deyil)'], ['c', 'осложнённый (мужчина, беременность, катетер, диабет)', 'ağırlaşmış (kişi, hamiləlik, kateter, diabet)']]],
+      ['ep', 'Эпизод', 'Epizod', 0, [['1', 'первый', 'ilk'], ['r', 'повторный (≥ 3 в год)', 'təkrarlanan (ildə ≥ 3)']]]]],
+    ['pyel', 'Острый пиелонефрит', 'Kəskin pielonefrit', 'N10', [
+      ['sev', 'Тяжесть', 'Ağırlıq', 0, [['m', 'лёгкий, пьёт и не рвёт', 'yüngül, içir və qusmur'], ['s', 'рвота / t > 39 / слабость', 'qusma / t > 39 / zəiflik', 1]]]]],
+    ['ckd', 'Хроническая болезнь почек', 'Xroniki böyrək xəstəliyi', 'N18.9', [
+      ['st', 'Стадия (СКФ)', 'Mərhələ (YFS)', 0, [['2', 'С1–С2 (≥ 60)', 'C1–C2 (≥ 60)'], ['3a', 'С3а (45–59)', 'C3a (45–59)'], ['3b', 'С3б (30–44)', 'C3b (30–44)'], ['4', 'С4 (15–29)', 'C4 (15–29)'], ['5', 'С5 (< 15)', 'C5 (< 15)']]]]],
+    ['bph', 'Аденома простаты', 'Prostat adenoması', 'N40', [
+      ['ipss', 'Симптомы (IPSS)', 'Simptomlar (IPSS)', 0, [['m', 'лёгкие (0–7)', 'yüngül (0–7)'], ['mod', 'умеренные (8–19)', 'orta (8–19)'], ['s', 'выраженные (20–35)', 'ağır (20–35)'], ['ret', 'задержка мочи', 'sidiyin saxlanması', 1]]]]]
+  ]],
+  ['endo', 'Эндокринная система', 'Endokrin sistem', [
+    ['dm2', 'Сахарный диабет 2 типа', 'Şəkərli diabet, 2 tip', 'E11.9', [
+      ['a1c', 'HbA1c', 'HbA1c', 0, [['7', 'до 7%', '7%-dək'], ['8', '7–8%', '7–8%'], ['9', '8–9%', '8–9%'], ['10', 'выше 9%', '9%-dən yuxarı'], ['u', 'неизвестен', 'məlum deyil']]],
+      ['tx', 'Лечение сейчас', 'Hazırkı müalicə', 0, [['diet', 'диета', 'pəhriz'], ['met', 'метформин', 'metformin'], ['two', '2 и более таблетки', '2 və daha çox həb'], ['ins', 'инсулин', 'insulin']]],
+      ['cx', 'Осложнения', 'Ağırlaşmalar', 1, [['neph', 'нефропатия', 'nefropatiya'], ['neur', 'нейропатия', 'neyropatiya'], ['ret', 'ретинопатия', 'retinopatiya'], ['ihd', 'ИБС', 'ÜİX'], ['foot', 'язва стопы', 'pəncə xorası']]],
+      ['hypo', 'Гипогликемии', 'Hipoqlikemiyalar', 0, [['no', 'нет', 'yoxdur'], ['yes', 'бывают', 'olur']]]]],
+    ['hypot', 'Гипотиреоз', 'Hipotireoz', 'E03.9', [
+      ['tsh', 'ТТГ', 'TTH', 0, [['n', 'в норме на лечении', 'müalicədə normada'], ['h', 'повышен', 'yüksəkdir'], ['u', 'неизвестен', 'məlum deyil']]],
+      ['tx', 'Лечение', 'Müalicə', 0, [['new', 'впервые', 'ilk dəfə'], ['lt4', 'на левотироксине', 'levotiroksin qəbul edir']]]]],
+    ['ob', 'Ожирение', 'Piylənmə', 'E66.9', [
+      ['bmi', 'ИМТ', 'BKİ', 0, [['1', '30–34,9 (I ст.)', '30–34,9 (I dər.)'], ['2', '35–39,9 (II ст.)', '35–39,9 (II dər.)'], ['3', '≥ 40 (III ст.)', '≥ 40 (III dər.)']]]]],
+    ['ida', 'Железодефицитная анемия', 'Dəmir çatışmazlığı anemiyası', 'D50.9', [
+      ['hb', 'Тяжесть по Hb', 'Hb-yə görə ağırlıq', 0, [['m', 'лёгкая (90–110)', 'yüngül (90–110)'], ['mod', 'средняя (70–89)', 'orta (70–89)'], ['s', 'тяжёлая (< 70)', 'ağır (< 70)', 1]]]]]
+  ]],
+  ['neuro', 'Нервная система и психика', 'Sinir sistemi və psixika', [
+    ['mig', 'Мигрень', 'Miqren', 'G43.9', [
+      ['fr', 'Приступов в месяц', 'Ayda tutma', 0, [['1', 'меньше 4', '4-dən az'], ['4', '4–14', '4–14'], ['15', '15 и больше', '15 və daha çox']]],
+      ['aura', 'Аура', 'Aura', 0, [['no', 'нет', 'yoxdur'], ['yes', 'есть', 'var']]], X98_A.pain]],
+    ['tth', 'Головная боль напряжения', 'Gərginlik tipli baş ağrısı', 'G44.2', [
+      ['type', 'Течение', 'Gedişat', 0, [['e', 'эпизодическая', 'epizodik'], ['c', 'хроническая (≥ 15 дней в месяц)', 'xroniki (ayda ≥ 15 gün)']]],
+      ['rf', 'Тревожные признаки', 'Həyəcan əlamətləri', 1, [['th', 'внезапная «самая сильная»', 'qəfil «ən güclü»', 1], ['neu', 'слабость / нарушение речи', 'zəiflik / nitq pozuntusu', 1], ['fev', 'температура и ригидность шеи', 'temperatur və boyun rigidliyi', 1]]]]],
+    ['vert', 'Головокружение', 'Başgicəllənmə', 'R42', [
+      ['type', 'Характер', 'Xarakter', 0, [['pos', 'при повороте головы (позиционное)', 'başı çevirəndə (pozisional)'], ['const', 'постоянное', 'daimi']]],
+      ['rf', 'Неврологические признаки', 'Nevroloji əlamətlər', 1, [['w', 'слабость в руке / ноге', 'qolda / ayaqda zəiflik', 1], ['sp', 'нарушение речи', 'nitq pozuntusu', 1], ['dip', 'двоение', 'ikigörmə', 1]]]]],
+    ['ins', 'Бессонница', 'Yuxusuzluq', 'G47.0', [
+      ['dur', 'Длительность', 'Müddət', 0, [['a', 'меньше 3 месяцев', '3 aydan az'], ['c', '3 месяца и больше', '3 ay və daha çox']]]]],
+    ['anx', 'Тревожное расстройство', 'Narahatlıq pozuntusu', 'F41.1', [
+      ['sev', 'Выраженность', 'Ağırlıq', 0, [['m', 'лёгкая', 'yüngül'], ['mod', 'умеренная', 'orta'], ['s', 'выраженная', 'ağır']]],
+      ['si', 'Мысли о самоповреждении', 'Özünə zərər fikirləri', 0, [['no', 'нет', 'yoxdur'], ['yes', 'есть', 'var', 1]]]]]
+  ]],
+  ['msk', 'Кости, суставы, спина', 'Sümüklər, oynaqlar, bel', [
+    ['lbp', 'Боль в пояснице', 'Bel ağrısı', 'M54.5', [X98_A.pain,
+      ['dur', 'Длительность', 'Müddət', 0, [['a', 'острая (< 6 нед.)', 'kəskin (< 6 həftə)'], ['s', 'подострая (6–12 нед.)', 'yarımkəskin (6–12 həftə)'], ['c', 'хроническая (> 12 нед.)', 'xroniki (> 12 həftə)']]],
+      ['rad', 'Иррадиация', 'İrradiasiya', 0, [['no', 'нет', 'yoxdur'], ['leg', 'в ногу ниже колена', 'dizdən aşağı ayağa']]],
+      ['rf', 'Красные флаги', 'Qırmızı bayraqlar', 1, [['cauda', 'онемение промежности / недержание', 'aralıqda keyimə / saxlaya bilməmə', 1], ['tr', 'травма', 'travma', 1], ['ca', 'онкология / похудание', 'onkologiya / arıqlama', 1], ['fev', 'температура', 'temperatur', 1]]]]],
+    ['neck', 'Боль в шее', 'Boyun ağrısı', 'M54.2', [X98_A.pain,
+      ['rad', 'Иррадиация', 'İrradiasiya', 0, [['no', 'нет', 'yoxdur'], ['arm', 'в руку', 'qola']]]]],
+    ['oa', 'Остеоартрит', 'Osteoartrit', 'M19.9', [X98_A.pain,
+      ['j', 'Суставы', 'Oynaqlar', 1, [['knee', 'коленный', 'diz'], ['hip', 'тазобедренный', 'bud'], ['hand', 'кисти', 'əl']]]]],
+    ['gout', 'Подагра', 'Podaqra', 'M10.9', [
+      ['ph', 'Сейчас', 'Hazırda', 0, [['att', 'острый приступ', 'kəskin tutma'], ['int', 'вне приступа', 'tutmadan kənar']]]]],
+    ['inj', 'Ушиб / растяжение', 'Əzilmə / burxulma', 'T14.0', [X98_A.pain,
+      ['def', 'Деформация, нельзя опереться', 'Deformasiya, dayaq ola bilmir', 0, [['no', 'нет', 'yoxdur'], ['yes', 'есть — нужен снимок', 'var — rentgen lazımdır', 1]]]]]
+  ]],
+  ['skin', 'Кожа и аллергия', 'Dəri və allergiya', [
+    ['arh', 'Аллергический ринит', 'Allergik rinit', 'J30.4', [
+      ['type', 'Тип', 'Növ', 0, [['s', 'сезонный', 'mövsümi'], ['p', 'круглогодичный', 'ilboyu']]],
+      ['sev', 'Тяжесть', 'Ağırlıq', 0, [['m', 'лёгкий (сон и работа не страдают)', 'yüngül'], ['mod', 'среднетяжёлый / тяжёлый', 'orta / ağır']]]]],
+    ['urt', 'Крапивница', 'Övrə (urtikariya)', 'L50.9', [
+      ['dur', 'Течение', 'Gedişat', 0, [['a', 'острая (< 6 нед.)', 'kəskin (< 6 həftə)'], ['c', 'хроническая', 'xroniki']]],
+      ['ana', 'Отёк губ / языка, трудно дышать', 'Dodaq / dil ödemi, nəfəs çətinliyi', 0, [['no', 'нет', 'yoxdur'], ['yes', 'есть', 'var', 1]]]]],
+    ['derm', 'Дерматит / экзема', 'Dermatit / ekzema', 'L30.9', [
+      ['type', 'Вид', 'Növ', 0, [['ct', 'контактный', 'kontakt'], ['at', 'атопический', 'atopik']]],
+      ['area', 'Площадь', 'Sahə', 0, [['l', 'локально', 'lokal'], ['w', 'распространённый', 'yayılmış']]]]],
+    ['fung', 'Грибок кожи / ногтей', 'Dəri / dırnaq göbələyi', 'B35.9', [
+      ['loc', 'Где', 'Harada', 1, [['foot', 'стопы', 'pəncələr'], ['nail', 'ногти', 'dırnaqlar'], ['body', 'кожа тела', 'bədən dərisi']]]]],
+    ['acne', 'Акне', 'Akne', 'L70.0', [
+      ['sev', 'Тяжесть', 'Ağırlıq', 0, [['m', 'лёгкое (комедоны)', 'yüngül (komedonlar)'], ['mod', 'среднее (папулы, пустулы)', 'orta (papula, pustula)'], ['s', 'тяжёлое (узлы)', 'ağır (düyünlər)']]]]]
+  ]]
+];
+function x98L(x, i) { return S.lang === 'az' ? x[i + 1] : x[i]; }
+function x98Find(k) { for (const s of X98_SYS) for (const c of s[3]) if (c[0] === k) return { sys: s, c }; return null; }
+/** Шкалы, которые считаются сами: Centor (McIsaac) — с поправкой на возраст; CRB-65 — с возрастом ≥ 65. */
+function x98Score(c, sel, d, az) {
+  const age = Number(d.pt.age);
+  if (c[0] === 'tons') { const n = (sel.cent || []).length + (age >= 3 && age <= 14 ? 1 : age >= 45 ? -1 : 0); return 'Centor (McIsaac) = ' + n + (n >= 4 ? (az ? ' — streptokok ehtimalı yüksəkdir (≈ 50%)' : ' — стрептококк вероятен (≈ 50%)') : n <= 1 ? (az ? ' — antibiotik lazım deyil' : ' — антибиотик не нужен') : (az ? ' — ekspress-test / klinikaya görə' : ' — экспресс-тест / по клинике')); }
+  if (c[0] === 'pneu') { const n = (sel.crb || []).length + (age >= 65 ? 1 : 0); return 'CRB-65 = ' + n + (n === 0 ? (az ? ' — ambulator' : ' — амбулаторно') : n === 1 ? (az ? ' — qiymətləndirin, hospitalizasiya mümkündür' : ' — оценить, возможна госпитализация') : (az ? ' — hospitalizasiya' : ' — госпитализация')); }
+  return '';
+}
+/** Выбранное — текстом для ИИ, рецепта и GT/098 (по-русски; для пациента в рецепт не печатается). */
+function x98Text(d) {
+  return (d.conds || []).map(x => {
+    const f = x98Find(x.k); if (!f) return '';
+    const c = f.c, sel = x.a || {};
+    const parts = c[4].map(a => { const v = sel[a[0]] || []; if (!v.length) return ''; const L = v.map(o => { const op = a[4].find(y => y[0] === o); return op ? op[1] + (op[3] ? ' (КРАСНЫЙ ФЛАГ)' : '') : ''; }).filter(Boolean); return L.length ? a[1] + ': ' + L.join(', ') : ''; }).filter(Boolean);
+    const sc = x98Score(c, sel, d);
+    return c[1] + ' (' + c[3] + ')' + (parts.length ? ' — ' + parts.join('; ') : '') + (sc ? '; ' + sc : '');
+  }).filter(Boolean).join('\n');
+}
+function x98Css() {
+  if ($('#x98Css')) return;
+  const s = document.createElement('style'); s.id = 'x98Css';
+  s.textContent = '.x98-sys{display:flex;gap:6px;flex-wrap:wrap}.x98-sys .chip{font-weight:600}' +
+    '.x98-c{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:var(--soft)}' +
+    '.x98-ch{display:flex;justify-content:space-between;align-items:center;gap:8px}.x98-ch b{font-size:15px}' +
+    '.x98-a{display:flex;flex-direction:column;gap:4px}.x98-a .t{font-size:12.5px;color:var(--sub);font-weight:600}' +
+    '.x98-a .chips{display:flex;gap:6px;flex-wrap:wrap}.x98-a .chip{font-size:13px;padding:6px 10px;min-height:36px}' +
+    '.x98-a .chip.rf.on{background:var(--red-soft);border-color:var(--red);color:var(--red)}' +
+    '.x98-sc{font-size:13px;font-weight:600;color:var(--brand)}';
+  document.head.appendChild(s);
+}
+function x98Html(st) {
+  x98Css();
+  const d = st.d; d.conds = Array.isArray(d.conds) ? d.conds : [];
+  const w = x97W(st), cur = w.sys || '';
+  let h = '<div class="x98-sys">' + X98_SYS.map(s => '<button type="button" class="chip' + (cur === s[0] ? ' on' : '') + '" data-act="x98Sys" data-k="' + s[0] + '">' + esc(x98L(s, 1)) + '</button>').join('') + '</div>';
+  if (cur) {
+    const s = X98_SYS.find(x => x[0] === cur);
+    if (s) h += '<div class="chips" style="display:flex;gap:6px;flex-wrap:wrap">' + s[3].map(c => '<button type="button" class="chip' + (d.conds.some(x => x.k === c[0]) ? ' on' : '') + '" data-act="x98Cond" data-k="' + c[0] + '">' + esc(x98L(c, 1)) + '</button>').join('') + '</div>';
+  }
+  h += d.conds.map(x => {
+    const f = x98Find(x.k); if (!f) return '';
+    const c = f.c, sel = x.a || {}, sc = x98Score(c, sel, d, S.lang === 'az');
+    return '<div class="x98-c"><div class="x98-ch"><b>' + esc(x98L(c, 1)) + ' <span class="muted" style="font-weight:400">' + esc(c[3]) + '</span></b><button type="button" class="btn small ghost" data-act="x98Cond" data-k="' + c[0] + '" aria-label="✕">✕</button></div>' +
+      c[4].map(a => '<div class="x98-a"><span class="t">' + esc(x98L(a, 1)) + (a[3] ? ' · ' + esc(S.lang === 'az' ? 'bir neçə' : 'можно несколько') : '') + '</span><div class="chips">' +
+        a[4].map(o => '<button type="button" class="chip' + (o[3] ? ' rf' : '') + ((sel[a[0]] || []).indexOf(o[0]) !== -1 ? ' on' : '') + '" data-act="x98Opt" data-c="' + c[0] + '" data-a="' + a[0] + '" data-o="' + o[0] + '">' + esc(x98L(o, 1)) + '</button>').join('') + '</div></div>').join('') +
+      (sc ? '<div class="x98-sc">' + esc(sc) + '</div>' : '') + '</div>';
+  }).join('');
+  return h;
+}
+Object.assign(H, {
+  x98Sys: el => { const w = x97W(rxSt()); w.sys = w.sys === el.dataset.k ? '' : el.dataset.k; rxSave(); rxRender(); },
+  x98Cond: el => {
+    const d = rxSt().d; d.conds = Array.isArray(d.conds) ? d.conds : [];
+    const i = d.conds.findIndex(x => x.k === el.dataset.k);
+    if (i !== -1) d.conds.splice(i, 1);
+    else {
+      const f = x98Find(el.dataset.k); if (!f) return;
+      d.conds.push({ k: f.c[0], a: {} });
+      // первый выбранный — диагноз рецепта (если врач его не вписал)
+      if (!String(d.dx || '').trim()) { d.dx = f.c[1]; d.dxIcd = f.c[3]; d.dxAuto = f.c[0]; }
+    }
+    if (i !== -1 && d.dxAuto === el.dataset.k) { const nx = d.conds[0] && x98Find(d.conds[0].k); d.dx = nx ? nx.c[1] : ''; d.dxIcd = nx ? nx.c[3] : ''; d.dxAuto = nx ? nx.c[0] : ''; }
+    rxSave(); rxRender();
+  },
+  x98Opt: el => {
+    const d = rxSt().d, x = (d.conds || []).find(y => y.k === el.dataset.c); if (!x) return;
+    const f = x98Find(x.k), a = f && f.c[4].find(y => y[0] === el.dataset.a); if (!a) return;
+    x.a = x.a || {}; const cur = x.a[a[0]] || [], o = el.dataset.o;
+    x.a[a[0]] = a[3] ? (cur.indexOf(o) !== -1 ? cur.filter(y => y !== o) : cur.concat([o])) : (cur[0] === o ? [] : [o]);
+    rxSave(); rxRender();
+  }
+});
+// к ИИ — отдельно (выбранное врачом кнопками); в рецепт и GT/098 — тоже
+(function () {
+  const a0 = rxPtAi;
+  rxPtAi = function (d) { const o = a0.apply(this, arguments); try { const t = x98Text(d); if (t) o.conds = t; } catch (e) { } return o; };
+  const dd0 = rxDocData;
+  rxDocData = function (d) { const o = dd0.apply(this, arguments); try { const t = x98Text(d); if (t) o.conds = t; } catch (e) { } return o; };
 })();
 
 
