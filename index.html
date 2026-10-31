@@ -40365,6 +40365,27 @@ Object.assign(X92_T.az, { noItems: 'Hələ boşdur. Yuxarıda şikayət və ya d
   composed: 'Əlavə edildi: {n}. Sİ dozaları yazır — sonra «🛡 Resepti yoxla» basın.', composeNone: 'Sİ heç nə əlavə etmədi — bu şikayətlərə göstəriş yoxdur və ya hər şey artıq təyin olunub.',
   checkBig: '🛡 Resepti yoxla', other: 'başqa firma', otherAlt: 'Digər ticarət adları:', manualT: '➕ Dərmanı əl ilə əlavə et (firma / ad üzrə)',
   pickGrp: 'Qrup seçin və ya adı yazmağa başlayın — siyahı görünəcək.', weakT: 'Daha olar (faydası zəifdir — əlavə edilmədi):' });
+// 9.68: жалобы и данные пациента (рост, креатинин, анализы, с фото); наблюдение и дообследование; витамины и минералы
+Object.assign(X92_T.ru, { complT: '🩺 Жалобы и данные пациента', height: 'Рост, см', creat: 'Креатинин', umol: 'мкмоль/л', mgdl: 'мг/дл', labs: 'Анализы (что есть: калий, глюкоза, АЛТ, гемоглобин, ферритин…)',
+  labsPh: 'например: K 5.2, глюкоза 9.1, АЛТ 60, Hb 105', labsPhoto: '📷 Анализы / выписка с фото', labsWait: 'ИИ читает анализы…', labsDone: 'Вписано из фото: {n}',
+  crcl: 'Клиренс креатинина (Кокрофт–Голт) ≈ {v} мл/мин', crclKid: 'СКФ (Шварц) ≈ {v} мл/мин/1,73 м²', crclLow: ' — дозы по почкам', bmi: 'ИМТ {v}', crclNeed: 'Для клиренса нужны: возраст, вес, пол и креатинин.',
+  monT: '📋 Наблюдение и контроль', examT: '🔬 Дообследование — назначить', toNote: '➕ В пояснение пациенту', toNoted: 'Добавлено в пояснение пациенту', vitmin: 'профилактика дефицита' });
+Object.assign(X92_T.az, { complT: '🩺 Şikayətlər və pasiyent haqqında məlumat', height: 'Boyu, sm', creat: 'Kreatinin', umol: 'mkmol/l', mgdl: 'mq/dl', labs: 'Analizlər (nə varsa: kalium, qlükoza, ALT, hemoqlobin, ferritin…)',
+  labsPh: 'məs.: K 5.2, qlükoza 9.1, ALT 60, Hb 105', labsPhoto: '📷 Analizlər / çıxarış — fotodan', labsWait: 'Sİ analizləri oxuyur…', labsDone: 'Fotodan yazıldı: {n}',
+  crcl: 'Kreatinin klirensi (Kokroft–Qolt) ≈ {v} ml/dəq', crclKid: 'YFS (Şvarts) ≈ {v} ml/dəq/1,73 m²', crclLow: ' — dozalar böyrəyə görə', bmi: 'BKİ {v}', crclNeed: 'Klirens üçün: yaş, çəki, cins və kreatinin lazımdır.',
+  monT: '📋 Müşahidə və nəzarət', examT: '🔬 Əlavə müayinə — təyin etmək', toNote: '➕ Pasiyentə izahata', toNoted: 'Pasiyentə izahata əlavə edildi', vitmin: 'çatışmazlığın profilaktikası' });
+/** Клиренс креатинина: взрослые — Кокрофт–Голт (мл/мин), до 18 лет — Шварц у постели (мл/мин/1,73 м²). */
+function rxRenal(d) {
+  const p = d.pt, age = Number(p.age), w = Number(p.weight), h = Number(p.height), v = Number(String(p.creat || '').replace(',', '.'));
+  const out = {};
+  if (w > 0 && h >= 50) out.bmi = Math.round(w / Math.pow(h / 100, 2) * 10) / 10;
+  if (!(v > 0)) return out;
+  const mg = p.creatU === 'mgdl' ? v : v / 88.4;
+  out.creatTxt = v + ' ' + (p.creatU === 'mgdl' ? 'mg/dL' : 'µmol/L');
+  if (String(p.age).trim() !== '' && age < 18 && h >= 40) { out.crcl = Math.round(0.413 * h / mg); out.m = 'Schwartz'; }
+  else if (age >= 18 && w > 0 && (p.sex === 'm' || p.sex === 'f')) { out.crcl = Math.round((140 - age) * w / (72 * mg) * (p.sex === 'f' ? 0.85 : 1)); out.m = 'Cockcroft-Gault'; }
+  return out;
+}
 function x92(k, o) { let s = (X92_T[S.lang === 'az' ? 'az' : 'ru'] || {})[k]; if (s === undefined) s = X92_T.ru[k]; if (typeof s !== 'string') return s; return o ? s.replace(/\{(\w+)\}/g, (m, n) => o[n] !== undefined ? o[n] : m) : s; }
 /* ---------- группы (ATC) ---------- */
 // [ключ, az, ru, префиксы ATC, всегда показывать]
@@ -40417,7 +40438,7 @@ function rxToday() { const d = new Date(); return d.getFullYear() + '-' + String
 function rxId() { return 'i' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36); }
 /* ---------- состояние и черновик ---------- */
 function rxDraftKey() { return 'MED_RX_DRAFT:' + ((S.me && S.me.id) || '') + ':' + (S.storeId || ''); }
-function rxEmpty() { return { pt: { surname: '', name: '', age: '', ageM: '', sex: '', weight: '', preg: '', lact: false, allergy: '', chronic: '', meds: '', pid: '', pname: '', toGt: false, fin: '' }, complaint: '', dx: '', dxIcd: '', items: [], rxNo: '', valid: '10 gün', note: '' }; }
+function rxEmpty() { return { pt: { surname: '', name: '', age: '', ageM: '', sex: '', weight: '', height: '', creat: '', creatU: 'umol', labs: '', preg: '', lact: false, allergy: '', chronic: '', meds: '', pid: '', pname: '', toGt: false, fin: '' }, complaint: '', dx: '', dxIcd: '', items: [], rxNo: '', valid: '10 gün', note: '' }; }
 function rxSt() {
   if (!S.rx) {
     let d = null; try { d = LS.get(rxDraftKey(), null); } catch (e) { d = null; }
@@ -40497,7 +40518,9 @@ function rxFirmOf(st) {
 /* ---------- пациент для ИИ (без ФИО) ---------- */
 function rxPtAi(d) {
   const p = d.pt;
-  return { age: p.age, ageMonths: p.ageM, sex: p.sex, weight: p.weight, preg: p.preg, lact: p.lact, allergy: p.allergy, chronic: p.chronic, meds: p.meds, noEffect: p.noEffect, dx: [d.dxIcd, d.dx].filter(Boolean).join(' '), complaint: d.complaint };
+  const rn = rxRenal(d);
+  return { age: p.age, ageMonths: p.ageM, sex: p.sex, weight: p.weight, preg: p.preg, lact: p.lact, allergy: p.allergy, chronic: p.chronic, meds: p.meds, noEffect: p.noEffect, dx: [d.dxIcd, d.dx].filter(Boolean).join(' '), complaint: d.complaint,
+    height: p.height, creat: rn.creatTxt || '', crcl: rn.crcl || '', crclM: rn.m || '', bmi: rn.bmi || '', labs: p.labs || '' };
 }
 function rxItemAi(it) { return { b: it.b, inn: it.inn, dose: it.dose, form: it.formAz, atc: it.atc, signa: it.signa, qty: it.qty, mine: !!it.firmId, doctor: it.src !== 'ai' }; }
 /** Другие фирмы (госреестр АР): торговые названия с этим веществом — когда у моих фирм нужного нет. */
@@ -40594,9 +40617,22 @@ function rxPtHtml(st) {
     '<details' + (p.chronic || p.meds || p.noEffect ? ' open' : '') + '><summary class="muted" style="cursor:pointer">' + esc(x92('more')) + '</summary>' +
     rxField('pt.chronic', x92('chronic'), p.chronic, { ta: 1, max: 600 }) + rxField('pt.meds', x92('meds'), p.meds, { ta: 1, max: 1200 }) + rxField('pt.noEffect', x92('noEffect'), p.noEffect, { ta: 1, max: 800, ph: x92('noEffectPh') }) +
     (typeof canAi === 'function' && canAi() ? '<button type="button" class="btn small ghost" data-act="rxMedsPhoto">' + esc(x92('medsPhoto')) + '</button><input type="file" accept="image/*" multiple id="rxMedsFile" style="display:none">' : '') + '</details>' +
+    '</div><div class="card"><div class="lbl">' + esc(x92('complT')) + '</div>' +
     rxField('complaint', x92('compl'), st.d.complaint, { ta: 1, max: 800 }) +
-    '<div class="grid2">' + rxField('dx', x92('dx'), st.d.dx, { max: 200 }) + rxField('dxIcd', x92('dxIcd'), st.d.dxIcd, { max: 10, w: '140px' }) + '</div></div>';
+    '<div class="grid2">' + rxField('dx', x92('dx'), st.d.dx, { max: 200 }) + rxField('dxIcd', x92('dxIcd'), st.d.dxIcd, { max: 10, w: '140px' }) + '</div>' +
+    '<div class="grid2">' + rxField('pt.height', x92('height'), p.height, { type: 'n', max: 3 }) + '<div class="field"><label>' + esc(x92('creat')) + '</label><input id="rxf_pt_creat" data-rx="pt.creat" inputmode="decimal" maxlength="6" value="' + esc(p.creat || '') + '"></div></div>' +
+    '<div style="margin:-6px 0 6px">' + chips('creatU', [['umol', x92('umol')], ['mgdl', x92('mgdl')]]) + '</div>' +
+    '<div id="rxRenalBox" class="muted" style="font-size:13px;margin:-4px 0 6px">' + rxRenalHtml(st.d) + '</div>' +
+    rxField('pt.labs', x92('labs'), p.labs, { ta: 1, max: 1500, ph: x92('labsPh') }) +
+    (typeof canAi === 'function' && canAi() ? '<button type="button" class="btn small ghost" data-act="rxLabsPhoto">' + esc(x92('labsPhoto')) + '</button><input type="file" accept="image/*" multiple id="rxLabsFile" style="display:none">' : '') + '</div>';
   return h;
+}
+function rxRenalHtml(d) {
+  const r = rxRenal(d), L = [];
+  if (r.crcl) L.push((r.m === 'Schwartz' ? x92('crclKid', { v: r.crcl }) : x92('crcl', { v: r.crcl })) + (r.crcl < 60 ? x92('crclLow') : ''));
+  else if (d.pt.creat) L.push(x92('crclNeed'));
+  if (r.bmi) L.push(x92('bmi', { v: String(r.bmi).replace('.', ',') }));
+  return L.map(x => (/дозы по почкам|böyrəyə/.test(x) ? '<b style="color:var(--amber)">' + esc(x) + '</b>' : esc(x))).join(' · ');
 }
 function rxItemsHtml(st) {
   const d = st.d;
@@ -40627,6 +40663,10 @@ function rxItemsHtml(st) {
         (x.verdict === 'fix' && x.old !== undefined ? ' <button class="btn small ghost" style="min-height:28px;padding:2px 10px" data-act="rxUndo" data-id="' + esc(x.id) + '">' + esc(x92('undoFix')) + '</button>' : '') + '</div>').join('') +
       ((c.missing || []).length ? '<div style="margin-top:8px"><b>' + esc(x92('missT')) + '</b>' + c.missing.map(x => '<div>• ' + esc(x.inn) + (x.why ? ' — ' + esc(x.why) : '') + '</div>' + rxOutHtml(x.inn)).join('') + '</div>' : '') +
       (c.note ? '<div style="margin-top:6px">⚠️ ' + esc(c.note) + '</div>' : '') + '</div>';
+    if ((c.monitor || []).length || (c.exams || []).length) h += '<div class="hint" style="display:block;margin:8px 0">' +
+      ((c.monitor || []).length ? '<b>' + esc(x92('monT')) + '</b>' + c.monitor.map(x => '<div>• ' + esc(x.text) + '</div>').join('') : '') +
+      ((c.exams || []).length ? '<div style="margin-top:6px"><b>' + esc(x92('examT')) + '</b></div>' + c.exams.map(x => '<div>• <b>' + esc(x.name) + '</b>' + (x.why ? ' — ' + esc(x.why) : '') + '</div>').join('') : '') +
+      ([].concat(c.monitor || [], c.exams || []).some(x => x.az) ? '<button class="btn small ghost" style="margin-top:6px" data-act="rxToNote">' + esc(x92('toNote')) + '</button>' : '') + '</div>';
   }
   if (typeof canAi === 'function' && canAi()) h += !d.items.length ? '<button class="btn primary block" style="margin-top:10px" data-act="rxCompose">' + esc(x92('compose')) + '</button>'
     : '<button class="btn primary block" style="margin-top:10px" data-act="rxCheck">' + esc(x92('checkBig')) + '</button><button class="btn ghost block" style="margin-top:6px" data-act="rxCompose">' + esc(x92('composeMore')) + '</button>';
@@ -40800,6 +40840,7 @@ document.addEventListener('input', e => {
     rxSave();
     if (k === 'pt.toGt') { const b = $('#rxToGtBox'); if (b) b.style.display = st.d.pt.toGt && !st.d.pt.pid ? '' : 'none'; }
     if (k === 'pt.fin') st.d.pt.fin = String(v).toUpperCase().replace(/\s+/g, '');
+    if (['pt.age', 'pt.weight', 'pt.height', 'pt.creat'].indexOf(k) !== -1) { const rb = $('#rxRenalBox'); if (rb) rb.innerHTML = rxRenalHtml(st.d); }
     if (k === 'pt.age') { const a = $('#rxAgeMBox'), b = $('#rxPregBox'); if (a) a.style.display = rxShowAgeM(st.d.pt) ? '' : 'none'; if (b) b.style.display = rxShowPreg(st.d.pt) ? '' : 'none'; }
   } else if (el.dataset.rxi) {
     const it = rxSt().d.items.find(x => x.id === el.dataset.id); if (!it) return;
@@ -40828,6 +40869,7 @@ function rxDocData(d, id) {
   return {
     rxNo: String(d.rxNo || '').trim() || 'R-' + String(id).slice(-8).toUpperCase(), inst: st ? (st.nameAz || st.nameRu || '') : '', date: rxToday(),
     surname: String(d.pt.surname).trim(), name: String(d.pt.name).trim(), age: d.pt.age, sex: d.pt.sex, weight: d.pt.weight, allergy: d.pt.allergy, complaint: d.complaint,
+    height: d.pt.height || '', creat: d.pt.creat || '', creatU: d.pt.creat ? (d.pt.creatU || 'umol') : '', crcl: rxRenal(d).crcl || '', labs: d.pt.labs || '', chronic: d.pt.chronic || '', meds: d.pt.meds || '', noEffect: d.pt.noEffect || '',
     dx: d.dx, dxIcd: String(d.dxIcd || '').toUpperCase().trim(), doctor: (typeof x91MyAz === 'function' && x91MyAz()) || (S.me && (S.me.nameAz || S.me.name)) || '', valid: d.valid, note: d.note, items
   };
 }
@@ -40858,9 +40900,9 @@ async function rxWrite(btn, force) {
 async function rxCheck(btn) {
   const st = rxSt(), d = st.d;
   if (!d.items.length) return { changed: false };
-  const r = await busy(btn, () => rpcA('rxAi', { mode: 'check', lang: S.lang, patient: rxPtAi(d), items: d.items.map(rxItemAi) }, { timeout: 150000 })).catch(() => null);
+  const r = await busy(btn, () => rpcA('rxAi', { mode: 'check', lang: S.lang, patient: rxPtAi(d), items: d.items.map(rxItemAi), patientId: d.pt.pid || '' }, { timeout: 150000 })).catch(() => null);
   if (!r || !r.ok) return null;
-  const res = { items: [], missing: r.missing || [], note: r.note || '' };
+  const res = { items: [], missing: r.missing || [], note: r.note || '', monitor: r.monitor || [], exams: r.exams || [] };
   let changed = false;
   (r.items || []).forEach(v => {
     const it = d.items.find(x => skel(x.b) === skel(v.b)); if (!it) return;
@@ -40888,12 +40930,12 @@ async function rxCompose(btn) {
   const cands = [], seen = {};
   firms.forEach(f => rxProducts(f).forEach(p => { const k = skel(p.b); if (seen[k] || d.items.some(it => skel(it.b) === k)) return; seen[k] = 1; cands.push({ b: p.b, inn: p.inn, atc: p.atc, form: p.vars.map(v => RX_FORM_AZ[v.code]).filter((x, i, a) => x && a.indexOf(x) === i).join('/'), dose: p.vars.slice(0, 3).map(v => rxUnitsAz(v.d)).filter(Boolean).join('; '), firm: f.name }); }));
   toast(x92('composeWait'));
-  const r = await busy(btn, () => rpcA('rxAi', { mode: 'suggest', compose: true, lang: S.lang, patient: rxPtAi(d), items: d.items.map(rxItemAi), cands: cands.slice(0, 500) }, { timeout: 150000 })).catch(() => null);
+  const r = await busy(btn, () => rpcA('rxAi', { mode: 'suggest', compose: true, lang: S.lang, patient: rxPtAi(d), items: d.items.map(rxItemAi), cands: cands.slice(0, 500), patientId: d.pt.pid || '' }, { timeout: 150000 })).catch(() => null);
   if (!r || !r.ok) return;
   let n = 0;
   const weak = [];
   (r.items || []).forEach(x => {
-    if (x.level === 'weak') { weak.push(x); return; }
+    if (x.level === 'weak' && x.kind !== 'vitmin') { weak.push(x); return; } // витамины и минералы при риске дефицита (регион) — вносятся
     const f = firms.find(ff => ff.name === x.firm); const p = f ? rxProducts(f).find(pp => skel(pp.b) === skel(x.b)) : null;
     if (!p || rxSt().d.items.some(it => skel(it.b) === skel(p.b))) return;
     rxAddItem(p, p.vars[0], f, 'ai'); n++;
@@ -40916,7 +40958,7 @@ async function rxSugg(btn) {
   if (!S.cat) return toast(x92('catWait'));
   const cands = [], seen = {};
   firms.forEach(f => rxProducts(f).forEach(p => { const k = skel(p.b); if (seen[k] || d.items.some(it => skel(it.b) === k)) return; seen[k] = 1; cands.push({ b: p.b, inn: p.inn, atc: p.atc, form: p.vars.map(v => RX_FORM_AZ[v.code]).filter((x, i, a) => x && a.indexOf(x) === i).join('/'), dose: p.vars.slice(0, 3).map(v => rxUnitsAz(v.d)).filter(Boolean).join('; '), firm: f.name }); }));
-  const r = await busy(btn, () => rpcA('rxAi', { mode: 'suggest', lang: S.lang, patient: rxPtAi(d), items: d.items.map(rxItemAi), cands: cands.slice(0, 500) }, { timeout: 150000 })).catch(() => null);
+  const r = await busy(btn, () => rpcA('rxAi', { mode: 'suggest', lang: S.lang, patient: rxPtAi(d), items: d.items.map(rxItemAi), cands: cands.slice(0, 500), patientId: d.pt.pid || '' }, { timeout: 150000 })).catch(() => null);
   if (!r || !r.ok) return;
   st.sugg = { items: r.items || [], notInFirms: r.notInFirms || [], note: r.note || '' };
   rxRender();
@@ -41060,6 +41102,13 @@ function rxFillPt(g) {
   try { const v = g.visitExam; if (v && Array.isArray(v.dxList) && v.dxList[0] && !st.d.dx) { st.d.dx = String(v.dxList[0].text || v.dxList[0].az || '').slice(0, 200); st.d.dxIcd = String(v.dxList[0].icd || v.dxList[0].code || '').slice(0, 10); } } catch (e) { }
   st.gtList = null;
   rxSave();
+  // 9.68: рост, вес, креатинин, анализы, болезни — из прошлых рецептов этого пациента (GT/098)
+  rpcA('rxPrev', { patientId: p.id }, { timeout: 30000 }).then(r => {
+    const x = r && r.prev; if (!x || rxSt().d.pt.pid !== p.id) return;
+    const q = rxSt().d.pt;
+    ['height', 'weight', 'creat', 'creatU', 'labs', 'chronic', 'meds'].forEach(k => { if (x[k] && !String(q[k] || '').trim()) q[k] = String(x[k]); });
+    rxSave(); rxRender();
+  }).catch(() => { });
 }
 Object.assign(H, {
   rxView: el => { const st = rxSt(); if (st.view === 'new' && el.dataset.v === 'new') st.done = null; st.view = el.dataset.v; if (st.view === 'mine') st.mine = null; rxRender(); window.scrollTo(0, 0); },
@@ -41125,6 +41174,16 @@ Object.assign(H, {
     rxAddItem(x, x.vars[0], { id: 'mfr:' + x.mfr, name: rxMfrShort(x.mfr), mfr: [x.mfr], items: [], once: true }, 'ai');
   },
   rxMedsPhoto: () => { const i = $('#rxMedsFile'); if (i) i.click(); },
+  rxLabsPhoto: () => { const i = $('#rxLabsFile'); if (i) i.click(); },
+  rxToNote: () => {
+    const st = rxSt(), c = st.check; if (!c) return;
+    const L = [].concat((c.monitor || []).map(x => x.az), (c.exams || []).map(x => x.az)).filter(Boolean);
+    const have = String(st.d.note || '');
+    const add = L.filter(l => have.indexOf(l) === -1);
+    if (!add.length) return;
+    st.d.note = (have.trim() ? have.trim() + '\n' : '') + add.join('\n');
+    rxSave(); rxRender(); toast(x92('toNoted'), 'ok');
+  },
   rxCheck: el => rxCheck(el),
   rxUndo: el => {
     const st = rxSt(), c = st.check; if (!c) return;
@@ -41219,6 +41278,28 @@ Object.assign(H, {
   };
   window.logout = logout;
 })();
+// 9.68: анализы / выписка — с фото → рост, вес, креатинин, анализы
+document.addEventListener('change', async e => {
+  const el = e.target; if (!el || el.id !== 'rxLabsFile') return;
+  const files = Array.from(el.files || []).slice(0, 4); if (!files.length) return;
+  const images = [];
+  for (const f of files) { try { images.push({ data: exPrep(await fileToImage(f)).data, type: 'image/jpeg' }); } catch (er) { } }
+  el.value = '';
+  if (!images.length) return;
+  toast(x92('labsWait'));
+  const r = await rpcA('rxLabsRead', { images }, { timeout: 200000 }).catch(() => null);
+  if (!r || !r.ok) return;
+  const p = rxSt().d.pt; let n = 0;
+  if (r.height && !p.height) { p.height = String(r.height); n++; }
+  if (r.weight && !p.weight) { p.weight = String(r.weight); n++; }
+  if (r.creat) { p.creat = String(r.creat); p.creatU = r.creatUnit || 'umol'; n++; }
+  const lines = (r.labs || []).filter(x => !/creatinin|kreatinin|креатинин/i.test(x.name)).map(x => x.name + ' ' + x.value + (x.unit ? ' ' + x.unit : '') + (x.flag === 'high' ? ' ↑' : x.flag === 'low' ? ' ↓' : '') + (x.date ? ' (' + x.date + ')' : ''));
+  const have = String(p.labs || '');
+  const add = lines.filter(l => have.indexOf(l.split(' ')[0] + ' ' + l.split(' ')[1]) === -1);
+  if (add.length) { p.labs = (have.trim() ? have.trim() + '\n' : '') + add.join('\n'); n += add.length; }
+  rxSt().check = null; rxSave(); rxRender();
+  toast(x92('labsDone', { n }), 'ok');
+});
 // «Что уже принимает» — с фото (Саид, 21:27): ИИ читает упаковки / рецепты / лист назначений → в поле, учитывается в проверке
 document.addEventListener('change', async e => {
   const el = e.target; if (!el || el.id !== 'rxMedsFile') return;
