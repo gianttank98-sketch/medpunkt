@@ -40923,7 +40923,8 @@ async function rxCheck(btn) {
 /** 9.67: «🤖 Составить рецепт» — ИИ подбирает лечение (сначала мои фирмы, затем другие фирмы госреестра) и сразу вносит в рецепт;
  *  дозы пишет по каждому препарату; дальше врач жмёт «🛡 Проверить рецепт». Слабая польза — не добавляется, только показывается. */
 function rxSwapHtml(it) {
-  const L = rxBrandsByInn(it.inn, 5).filter(x => skel(x.b) !== skel(it.b)).slice(0, 4);
+  const has = x => typeof x97Exact === 'function' && it.dose && x97Exact(x, it.dose, it.formAz) ? 0 : 1; // 9.70.1: сначала — с той же дозой
+  const L = rxBrandsByInn(it.inn, 20).filter(x => skel(x.b) !== skel(it.b)).sort((a, b) => has(a) - has(b)).slice(0, 4);
   return L.length ? '<div class="muted" style="font-size:12.5px;margin-top:4px">' + esc(x92('otherAlt')) + '</div><div class="chips" style="display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 4px">' + L.map(x => '<button type="button" class="chip" data-act="rxSwap" data-id="' + esc(it.id) + '" data-k="' + esc(x.k) + '">' + esc(x.b) + ' <span class="muted">' + esc(rxMfrShort(x.mfr)) + '</span></button>').join('') + '</div>' : '';
 }
 async function rxCompose(btn) {
@@ -41154,7 +41155,8 @@ Object.assign(H, {
   rxSwap: el => {
     const st = rxSt(), it = st.d.items.find(x => x.id === el.dataset.id); if (!it) return;
     const x = rxBrandsByInn(it.inn, 8).find(y => y.k === el.dataset.k); if (!x) return;
-    const v = x.vars[0];
+    const v = (typeof x97Exact === 'function' && x97Exact(x, it.dose, it.formAz)) || x.vars[0]; // 9.70.1: та же доза, если она есть у этой фирмы
+    it.doseFix = '';
     Object.assign(it, { b: x.b, inn: x.inn || it.inn, atc: x.atc || it.atc, dose: rxUnitsAz(v ? v.d : ''), formAz: v ? (RX_FORM_AZ[v.code] || '') : '', cnt: v ? v.cnt || '' : '', firm: rxMfrShort(x.mfr), firmMfr: x.mfr, qty: v && v.cnt ? '1 qutu (№' + v.cnt + ')' : it.qty });
     st.check = null; rxSave(); rxSigna(it.id);
   },
@@ -41900,7 +41902,8 @@ const X97_T = {
     editHint: 'Поля бланка можно исправить прямо здесь.', control: 'Контроль', controlWhat: 'Что проверить', monT: 'Наблюдение', examT: 'Дообследование — назначить', noteAdded: '✓ В пояснении пациенту', gtNote: 'Постоянный пациент: рецепт, анализы, рост, вес и схема сохранятся в GT/098.', ctlNote: ' Контроль {d} появится на «Сегодня».',
     write: 'Выписать рецепт', print: 'Печать A5', wa: 'WhatsApp', waWait: 'Готовлю картинку…', waSaved: 'Картинка сохранена — отправьте её в WhatsApp из галереи.',
     ctlSig: 'Пора на контроль · {n}', ctlSub: 'Пациенты по вашим рецептам — нажмите, чтобы открыть', ctlT: 'Пора на контроль', ctlOpen: 'Открыть', ctlFrom: 'рецепт от {d}',
-    recheck: 'Рецепт изменён вручную — ИИ проверяет ещё раз…'
+    recheck: 'Рецепт изменён вручную — ИИ проверяет ещё раз…',
+    autoDose: 'Дозы {want} в продаже нет — взято {dose}, S. пересчитан на эту дозу', doseFix: 'ИИ рассчитал приём на {want}, а у {b} такой дозы нет. Выберите дозу — S. пересчитается:', doseNeed: 'Выберите дозу у препарата, отмеченного красным.'
   },
   az: {
     s1: 'Pasiyent', s2: 'Vəziyyət', s3: 'Resept', s4: 'Yekun', next: 'Növbəti →', back: '← Geri', compose: 'Resepti tərtib et →', toFinal: 'Növbəti · yekun →',
@@ -41921,7 +41924,8 @@ const X97_T = {
     editHint: 'Blankın sahələrini burada düzəldə bilərsiniz.', control: 'Nəzarət', controlWhat: 'Nəyi yoxlamaq', monT: 'Müşahidə', examT: 'Əlavə müayinə — təyin etmək', noteAdded: '✓ Pasiyentə izahatda', gtNote: 'Daimi pasiyent: resept, analizlər, boy, çəki və sxem GT/098-də saxlanılacaq.', ctlNote: ' {d} nəzarəti «Bu gün»də görünəcək.',
     write: 'Resepti yaz', print: 'Çap A5', wa: 'WhatsApp', waWait: 'Şəkil hazırlanır…', waSaved: 'Şəkil saxlanıldı — qalereyadan WhatsApp-a göndərin.',
     ctlSig: 'Nəzarət vaxtıdır · {n}', ctlSub: 'Reseptlərinizə görə pasiyentlər — açmaq üçün basın', ctlT: 'Nəzarət vaxtıdır', ctlOpen: 'Aç', ctlFrom: '{d} resepti',
-    recheck: 'Resept əl ilə dəyişdirilib — Sİ yenidən yoxlayır…'
+    recheck: 'Resept əl ilə dəyişdirilib — Sİ yenidən yoxlayır…',
+    autoDose: '{want} dozası satışda yoxdur — {dose} götürülüb, S. bu dozaya görə yenidən hesablanıb', doseFix: 'Sİ qəbulu {want} üçün hesablayıb, amma {b}-də belə doza yoxdur. Dozanı seçin — S. yenidən hesablanacaq:', doseNeed: 'Qırmızı ilə qeyd olunan dərmanın dozasını seçin.'
   }
 };
 function x97(k, o) { let s = (X97_T[S.lang === 'az' ? 'az' : 'ru'] || {})[k]; if (s === undefined) s = X97_T.ru[k]; return o ? String(s).replace(/\{(\w+)\}/g, (m, n) => o[n] !== undefined ? o[n] : m) : s; }
@@ -42085,7 +42089,10 @@ function x97DrugCard(it) {
   return '<div class="x97-drug"><div class="row" style="justify-content:space-between;align-items:flex-start;gap:8px"><div style="display:flex;flex-direction:column;gap:2px"><span class="x97-nm">' + esc([it.b, it.dose].filter(Boolean).join(' ') + (it.formAz ? ', ' + it.formAz : '')) + '</span>' +
     '<span class="x97-firm">' + esc([it.firm, it.firmId ? x97('mine') : it.other ? x97('other') : '', it.kind === 'vitmin' ? x97('vitmin') : ''].filter(Boolean).join(' · ')) + '</span></div>' +
     '<button type="button" class="btn small ghost" data-act="x97Del" data-id="' + esc(it.id) + '" aria-label="' + esc(x92('del')) + '">✕</button></div>' +
-    (it.busy ? '<div class="muted">⏳ ' + esc(x92('signaWait')) + '</div>' : '<div class="x97-signa">' + esc(it.signa || '—') + ' · ' + esc(it.qty || '') + '</div>') +
+    (it.doseFix ? '<div class="x97-rf" style="padding:10px 12px;gap:6px"><b style="color:var(--red)">' + esc(x97('doseFix', { want: it.doseFix, b: it.b })) + '</b><div class="chips" style="display:flex;gap:6px;flex-wrap:wrap">' +
+      (it.vars || []).map((v, j) => '<button type="button" class="chip" data-act="x97Dose" data-id="' + esc(it.id) + '" data-j="' + j + '">' + esc([rxUnitsAz(v.d), RX_FORM_AZ[v.code] || '', v.cnt ? '№' + v.cnt : ''].filter(Boolean).join(' · ')) + '</button>').join('') + '</div></div>' :
+    it.busy ? '<div class="muted">⏳ ' + esc(x92('signaWait')) + '</div>' : '<div class="x97-signa">' + esc(it.signa || '—') + ' · ' + esc(it.qty || '') + '</div>') +
+    (it.autoDose && !it.busy ? '<div class="x97-tag y">' + esc(x97('autoDose', { want: it.autoDose, dose: it.dose })) + '</div>' : '') +
     (it.why ? '<span style="font-size:13.5px">' + esc(it.why) + '</span>' : '') +
     '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">' + (it.safety ? '<span class="x97-tag ' + (it.safety === 'caution' ? 'y' : 'g') + '">' + esc(it.safety === 'caution' ? x97('caution') + (it.safetyText ? ': ' + it.safetyText : '') : x97('safe')) + '</span>' : '') +
     '<span class="muted">' + esc(pk) + '</span></div>' + (it.other && it.inn && typeof rxSwapHtml === 'function' ? rxSwapHtml(it) : '') + '</div>';
@@ -42178,21 +42185,33 @@ function x97Need1(d) {
 }
 function x97Cands(firms, d) {
   const cands = [], seen = {};
-  firms.forEach(f => rxProducts(f).forEach(p => { const k = skel(p.b); if (seen[k] || d.items.some(it => skel(it.b) === k)) return; seen[k] = 1; cands.push({ b: p.b, inn: p.inn, atc: p.atc, form: p.vars.map(v => RX_FORM_AZ[v.code]).filter((x, i, a) => x && a.indexOf(x) === i).join('/'), dose: p.vars.slice(0, 3).map(v => rxUnitsAz(v.d)).filter(Boolean).join('; '), firm: f.name }); }));
+  firms.forEach(f => rxProducts(f).forEach(p => { const k = skel(p.b); if (seen[k] || d.items.some(it => skel(it.b) === k)) return; seen[k] = 1; cands.push({ b: p.b, inn: p.inn, atc: p.atc, form: p.vars.map(v => RX_FORM_AZ[v.code]).filter((x, i, a) => x && a.indexOf(x) === i).join('/'), dose: p.vars.slice(0, 12).map(v => [rxUnitsAz(v.d), RX_FORM_AZ[v.code] || ''].filter(Boolean).join(' ')).filter(Boolean).join('; '), firm: f.name }); }));
   return cands.slice(0, 500);
 }
-/** Вариант препарата под дозу, которую назвал ИИ (цифры дозы совпадают), иначе первый. */
-function x97Var(prod, dose) {
-  const n = s => String(s || '').replace(/[^0-9.,]+/g, ' ').replace(/,/g, '.').trim().split(/\s+/).filter(Boolean).map(Number).join('/');
-  const k = n(dose);
-  const hit = k && prod.vars.find(v => n(rxUnitsAz(v.d)) === k);
-  if (!hit && k) X97_MISMATCH = true; // доза у ИИ не совпала с вариантом в реестре — перед итогом ИИ проверит ещё раз
-  return hit || prod.vars[0];
+/** Цифры дозы: «(50 + 12,5) мг» и «50/12,5 mq» → «50/12.5». */
+function x97Dn(s) { return String(s || '').replace(/[^0-9.,]+/g, ' ').replace(/,/g, '.').trim().split(/\s+/).filter(Boolean).map(Number).join('/'); }
+/** 9.70.1: вариант препарата ТОЧНО под дозу ИИ (и по возможности под форму). Нет такой дозы — null (врач выберет; S. пересчитается).
+ *  Саид, 05:37: «пишет 250 мг, а в описании — по 1000 мг дважды в день» — раньше брался первый вариант. */
+function x97Exact(prod, dose, form) {
+  const k = x97Dn(dose); if (!k || !prod || !(prod.vars || []).length) return null;
+  const fw = String(form || '').toLowerCase().slice(0, 4);
+  const L = prod.vars.filter(v => x97Dn(rxUnitsAz(v.d)) === k);
+  return (fw && L.find(v => String(RX_FORM_AZ[v.code] || '').toLowerCase().indexOf(fw) === 0)) || L[0] || null;
 }
+/** Нужной дозы нет (например амоксициллин 1000 мг в реестре АР — только 250 / 500): вариант, который делит дозу без остатка (500 × 2), не больше 4 штук. */
+function x97Div(prod, dose, form) {
+  const T = Number(x97Dn(dose)); if (!(T > 0) || !prod) return null;
+  const fw = String(form || '').toLowerCase().slice(0, 4);
+  const L = (prod.vars || []).map(v => ({ v, n: Number(x97Dn(rxUnitsAz(v.d))) })).filter(x => x.n > 0 && x.n < T && Math.abs(T / x.n - Math.round(T / x.n)) < 1e-6 && T / x.n <= 4 && !/\/|мл|ml/.test(String(x.v.d)))
+    .sort((a, b) => b.n - a.n || ((fw && String(RX_FORM_AZ[b.v.code] || '').toLowerCase().indexOf(fw) === 0 ? 1 : 0) - (fw && String(RX_FORM_AZ[a.v.code] || '').toLowerCase().indexOf(fw) === 0 ? 1 : 0)));
+  return L[0] ? L[0].v : null;
+}
+function x97Var(prod, dose, form) { const v = x97Exact(prod, dose, form); if (!v && x97Dn(dose)) X97_MISMATCH = true; return v || prod.vars[0]; }
 let X97_MISMATCH = false;
 function x97Item(prod, v, firm, src, x) {
   const it = { id: rxId(), src: src, b: prod.b, inn: prod.inn || x.inn || '', atc: prod.atc || '', dose: v ? rxUnitsAz(v.d) : (x.dose || ''), formAz: v ? (RX_FORM_AZ[v.code] || '') : (x.form || ''), cnt: v ? v.cnt || '' : '',
     firm: firm ? firm.name : '', firmId: firm && !firm.once ? firm.id : '', firmMfr: firm && firm.once && firm.mfr ? firm.mfr[0] : '', other: !!(firm && firm.once) || !!x.other,
+    doseFix: v && x.dose && x97Dn(x.dose) && x97Dn(rxUnitsAz(v.d)) !== x97Dn(x.dose) ? String(x.dose) : '', vars: (prod.vars || []).slice(0, 12),
     signa: x.signa || '', qty: x.qty || (v && v.cnt ? '1 qutu (№' + v.cnt + ')' : ''), packs: x.packs || 1, days: x.days || '', why: x.why || '', safety: x.safety || '', safetyText: x.safetyText || '', kind: x.kind || 'drug', warn: [], busy: false, aiOk: true };
   return it;
 }
@@ -42208,13 +42227,28 @@ async function x97Compose(btn, force) {
   const r = await rpcA('rxCompose', { lang: S.lang, patient: rxPtAi(d), items: d.items.map(rxItemAi), cands: x97Cands(firms, d), patientId: d.pt.pid || '', renew: !!w.renew, force: !!force }, { timeout: 200000 }).catch(() => null);
   clearInterval(tm); w.busy = false; X97_RUN = false;
   if (!r || !r.ok) { rxRender(); return; }
+  const redo = []; // доза взята другая (500 × 2 вместо 1000) — S. и количество пересчитает ИИ по этому препарату
   (r.items || []).forEach(x => {
     if (x.mine) {
       const f = firms.find(ff => ff.name === x.firm); const p = f ? rxProducts(f).find(pp => skel(pp.b) === skel(x.b)) : null;
-      if (p && !d.items.some(it => skel(it.b) === skel(p.b))) { d.items.push(x97Item(p, x97Var(p, x.dose), f, 'ai', x)); return; }
+      if (p && !d.items.some(it => skel(it.b) === skel(p.b))) {
+        const dv = !x97Exact(p, x.dose, x.form) && x97Div(p, x.dose, x.form);
+        const it = x97Item(p, dv || x97Var(p, x.dose, x.form), f, 'ai', x);
+        if (dv) { it.doseFix = ''; it.autoDose = String(x.dose); it.signa = ''; X97_MISMATCH = true; redo.push(it.id); }
+        d.items.push(it); return;
+      }
     }
-    const b = rxBrandsByInn(x.inn, 6)[0];
-    if (b && !d.items.some(it => skel(it.b) === skel(b.b))) d.items.push(x97Item(b, x97Var(b, x.dose), { id: 'mfr:' + b.mfr, name: rxMfrShort(b.mfr), mfr: [b.mfr], items: [], once: true }, 'ai', x));
+    // другая фирма: торговое название, у которого ЕСТЬ доза (и форма), рассчитанная ИИ
+    const BL = rxBrandsByInn(x.inn, 40).filter(y => !d.items.some(it => skel(it.b) === skel(y.b)));
+    const fw = String(x.form || '').toLowerCase().slice(0, 4);
+    let b = BL.find(y => { const v = x97Exact(y, x.dose, x.form); return v && (!fw || String(RX_FORM_AZ[v.code] || '').toLowerCase().indexOf(fw) === 0); }) || BL.find(y => x97Exact(y, x.dose, x.form));
+    let dv = null;
+    if (!b) { b = BL.find(y => x97Div(y, x.dose, x.form)) || BL[0]; dv = b && x97Div(b, x.dose, x.form); } // такой дозы в АР нет — 500 × 2 вместо 1000
+    if (b) {
+      const it = x97Item(b, dv || x97Var(b, x.dose, x.form), { id: 'mfr:' + b.mfr, name: rxMfrShort(b.mfr), mfr: [b.mfr], items: [], once: true }, 'ai', x);
+      if (dv) { it.doseFix = ''; it.autoDose = String(x.dose); it.signa = ''; X97_MISMATCH = true; redo.push(it.id); }
+      d.items.push(it);
+    }
     else if (!b) d.items.push(x97Item({ b: typeof catInnName === 'function' ? catInnName(x.inn) : x.inn, inn: x.inn, vars: [] }, null, null, 'ai', Object.assign({}, x, { other: true })));
   });
   w.res = r; w.sig = x97Sig(d); w.noteSet = false;
@@ -42225,6 +42259,7 @@ async function x97Compose(btn, force) {
   w.okSig = keepN || X97_MISMATCH ? '' : x97BaseSig(d);
   st.check = { items: [], missing: [], note: r.note || '', monitor: r.monitor || [], exams: r.exams || [], sig: w.okSig ? rxSig(d) : '' };
   rxSave(); rxRender();
+  redo.forEach(id => rxSigna(id));
 }
 Object.assign(H, {
   rxPtUnlink: () => { const st = rxSt(), p = st.d.pt, w = x97W(st); p.pid = ''; p.pname = ''; w.renew = false; w.prev = null; w.prevFor = ''; rxSave(); rxRender(); },
@@ -42244,12 +42279,13 @@ Object.assign(H, {
       return;
     } else if (w.step === 3) {
       if (d.items.some(x => x.busy)) return toast(x92('signaWait'));
+      if (d.items.some(x => x.doseFix)) return toast(x97('doseNeed'), 'bad');
       if (w.sig && w.sig !== x97Sig(d)) return toast(x97('changed'), 'bad'); // данные шагов 1–2 изменились — сначала «составить заново»
       const r = w.res || {};
       // отмеченное «на ваш выбор» — в рецепт как решение врача (совместимость уже проверена в том же запросе)
       (r.optional || []).forEach((x, i) => {
         const on = !!w.opt[i], has = d.items.find(it => it.src === 'opt' && skel(it.b) === skel(x.b));
-        if (on && !has) { const f = (st.firms || []).find(ff => ff.name === x.firm); const p = f ? rxProducts(f).find(pp => skel(pp.b) === skel(x.b)) : null; if (p) d.items.push(x97Item(p, x97Var(p, x.dose), f, 'opt', x)); }
+        if (on && !has) { const f = (st.firms || []).find(ff => ff.name === x.firm); const p = f ? rxProducts(f).find(pp => skel(pp.b) === skel(x.b)) : null; if (p) d.items.push(x97Item(p, x97Var(p, x.dose, x.form), f, 'opt', x)); }
         if (!on && has) d.items = d.items.filter(it => it !== has);
       });
       if (!d.items.length) return toast(x92('needFields', { l: x92('items') }), 'bad');
@@ -42269,6 +42305,12 @@ Object.assign(H, {
   x97Force: el => x97Compose(el, true),
   x97Emerg: () => { try { setScreen('clinic'); } catch (e) { } },
   x97Manual: () => { const st = rxSt(); x97W(st).manual = true; st.add.open = true; rxRender(); },
+  x97Dose: el => { // врач выбрал дозу, которая есть у препарата, — S. и количество пересчитает ИИ
+    const st = rxSt(), it = st.d.items.find(x => x.id === el.dataset.id); if (!it) return;
+    const v = (it.vars || [])[Number(el.dataset.j)]; if (!v) return;
+    Object.assign(it, { dose: rxUnitsAz(v.d), formAz: RX_FORM_AZ[v.code] || '', cnt: v.cnt || '', qty: v.cnt ? '1 qutu (№' + v.cnt + ')' : '', doseFix: '', signa: '' });
+    rxSave(); rxSigna(it.id);
+  },
   x97Del: el => { const st = rxSt(); st.d.items = st.d.items.filter(x => x.id !== el.dataset.id); rxSave(); rxRender(); },
   x97NoAllergy: () => { const p = rxSt().d.pt; p.allergy = S.lang === 'az' ? 'yoxdur' : 'нет'; rxSave(); rxRender(); },
   x97Case: el => {
