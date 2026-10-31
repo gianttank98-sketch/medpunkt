@@ -42762,7 +42762,17 @@ function x98Text(d) {
 function x98Css() {
   if ($('#x98Css')) return;
   const s = document.createElement('style'); s.id = 'x98Css';
-  s.textContent = '.x98-sys{display:flex;gap:6px;flex-wrap:wrap}.x98-sys .chip{font-weight:600}' +
+  s.textContent = '.x98-sys{display:flex;gap:6px;flex-wrap:wrap}.x98-sys .chip{font-weight:600;display:inline-flex;align-items:center;gap:6px}.x98-sys .chip .n{font-weight:400;color:var(--sub);font-size:12px}.x98-sys .chip .ico{font-size:16px}' +
+    '.x98-sys.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}.x98-sys.grid .chip{justify-content:flex-start;text-align:left;min-height:44px;border-radius:12px}' +
+    '.x98-sys.strip{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}.x98-sys.strip .chip{flex:none;font-size:13px;padding:6px 10px;min-height:36px}.x98-sys.strip .chip:not(.on){opacity:.75}' +
+    '.x98-sys .chip.on{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}.x98-sys .chip.on .n{color:var(--brand-ink)}' +
+    '.x98-pan{margin-top:8px;border:2px solid var(--brand);border-radius:14px;overflow:hidden;background:var(--card)}' +
+    '.x98-ph{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--brand-soft,var(--soft));border-bottom:1px solid var(--line)}.x98-ph b{font-size:15.5px;flex:1}.x98-ph .ico{font-size:20px}.x98-ph .n{font-size:12.5px;color:var(--sub)}' +
+    '.x98-pl{display:flex;flex-direction:column;max-height:55vh;overflow-y:auto}' +
+    '.x98-ci{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;padding:10px 12px;min-height:44px;border-bottom:1px solid var(--line)}.x98-ci:last-child{border-bottom:0}' +
+    '.x98-ci .ck{width:24px;height:24px;flex:none;border-radius:50%;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--sub)}' +
+    '.x98-ci .nm{flex:1;font-size:14.5px;line-height:1.3}.x98-ci .cd{font-size:12px;color:var(--sub);flex:none}' +
+    '.x98-ci.on{background:var(--soft)}.x98-ci.on .ck{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}.x98-ci.on .nm{font-weight:600}' +
     '.x98-c{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:var(--soft)}' +
     '.x98-ch{display:flex;justify-content:space-between;align-items:center;gap:8px}.x98-ch b{font-size:15px}' +
     '.x98-a{display:flex;flex-direction:column;gap:4px}.x98-a .t{font-size:12.5px;color:var(--sub);font-weight:600}' +
@@ -42778,6 +42788,9 @@ function x98RedFlags(d, az) {
     x98Attrs(f).forEach(a => (sel[a[0]] || []).forEach(o => { const op = a[4].find(y => y[0] === o); if (op && op[3]) out.push(x98L(f.c, 1) + ': ' + x98L(op, 1)); })); });
   return out;
 }
+/** Иконки систем и областей — чтобы разделы различались с первого взгляда. */
+const X98_ICO = { cv: '❤️', resp: '🫁', ent: '👂', eye: '👁️', gi: '🍽️', uro: '💧', men: '♂️', wom: '♀️', endo: '🦋', blood: '🩸', neuro: '🧠', psy: '💭', msk: '🦴', trauma: '🩹', skin: '🧴', allergy: '🤧', inf: '🦠', dent: '🦷', kids: '👶',
+  sgen: '🌡️', shead: '🙂', schest: '🫀', sabd: '🫃', suro: '🚻', sback: '🧍', slimb: '🦵', sskin: '✋', smind: '💭' };
 function x98Html(st) {
   x98Css();
   const d = st.d; d.conds = Array.isArray(d.conds) ? d.conds : [];
@@ -42790,9 +42803,16 @@ function x98Html(st) {
   h += '<div id="x98Res"' + (q.length >= 2 || mode === 'icd' ? '' : ' hidden') + '>' + (q.length >= 2 || mode === 'icd' ? x98ResHtml(q, d) : '') + '</div>';
   if (mode !== 'icd') {
     const src = mode === 'sym' ? X98_SYMP : x98Sys();
-    h += '<div id="x98Browse"' + (q.length >= 2 ? ' hidden' : '') + '><div class="x98-sys">' + src.map(s => '<button type="button" class="chip' + (cur === s[0] ? ' on' : '') + '" data-act="x98Sys" data-k="' + s[0] + '">' + esc(x98L(s, 1)) + (cur === s[0] ? '' : ' <span class="muted" style="font-weight:400">' + s[3].length + '</span>') + '</button>').join('') + '</div>';
     const s = src.find(x => x[0] === cur);
-    if (s) h += '<div class="chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">' + s[3].map(c => '<button type="button" class="chip' + (d.conds.some(x => x.k === c[0]) ? ' on' : '') + '" data-act="x98Cond" data-k="' + c[0] + '">' + esc(x98L(c, 1)) + '</button>').join('') + '</div>';
+    // 9.72.2 (Саид, 13:58: «выпадающий список не различить от других разделов»): выбрана система — системы сворачиваются в полосу-вкладки,
+    // её состояния — в отдельной рамке с заголовком и иконкой; без выбора — сетка систем с иконками
+    h += '<div id="x98Browse"' + (q.length >= 2 ? ' hidden' : '') + '><div class="x98-sys' + (s ? ' strip' : ' grid') + '">' + src.map(x => '<button type="button" class="chip' + (cur === x[0] ? ' on' : '') + '" data-act="x98Sys" data-k="' + x[0] + '">' + (X98_ICO[x[0]] ? '<span class="ico">' + X98_ICO[x[0]] + '</span>' : '') + '<span>' + esc(x98L(x, 1)) + '</span>' + (cur === x[0] ? '' : ' <span class="n">' + x[3].length + '</span>') + '</button>').join('') + '</div>';
+    if (s) {
+      const nOn = s[3].filter(c => d.conds.some(x => x.k === c[0])).length;
+      h += '<div class="x98-pan"><div class="x98-ph"><span class="ico">' + (X98_ICO[s[0]] || '📂') + '</span><b>' + esc(x98L(s, 1)) + '</b><span class="n">' + s[3].length + (nOn ? ' · ✓ ' + nOn : '') + '</span>' +
+        '<button type="button" class="btn small ghost" data-act="x98Sys" data-k="' + s[0] + '" aria-label="' + esc(az ? 'Bağla' : 'Закрыть') + '">✕</button></div>' +
+        '<div class="x98-pl">' + s[3].map(c => '<button type="button" class="x98-ci' + (d.conds.some(x => x.k === c[0]) ? ' on' : '') + '" data-act="x98Cond" data-k="' + c[0] + '"><span class="ck">' + (d.conds.some(x => x.k === c[0]) ? '✓' : '＋') + '</span><span class="nm">' + esc(x98L(c, 1)) + '</span><span class="cd">' + esc(c[3] || '') + '</span></button>').join('') + '</div></div>';
+    }
     else h += '<div class="muted" style="font-size:13px">' + esc(mode === 'sym' ? (az ? 'Bədən nahiyəsini seçin — şikayətlər çıxacaq' : 'Выберите область тела — появятся жалобы') : (az ? 'Sistemi seçin — vəziyyətlər çıxacaq (' + x98Sys().reduce((n, s2) => n + s2[3].length, 0) + ')' : 'Выберите систему — появятся состояния (всего ' + x98Sys().reduce((n, s2) => n + s2[3].length, 0) + ')')) + '</div>';
     h += '</div>';
   }
@@ -42870,6 +42890,15 @@ document.addEventListener('input', e => {
   rxPtAi = function (d) { const o = a0.apply(this, arguments); try { const t = x98Text(d); if (t) o.conds = t; } catch (e) { } return o; };
   const dd0 = rxDocData;
   rxDocData = function (d) { const o = dd0.apply(this, arguments); try { const t = x98Text(d); if (t) o.conds = t; } catch (e) { } return o; };
+})();
+// 9.72.2: в полосе систем выбранная — всегда на виду (после каждой перерисовки)
+(function () {
+  const r0 = rxRender;
+  rxRender = function () {
+    const out = r0.apply(this, arguments);
+    try { const st = document.querySelector('.x98-sys.strip'), c = st && st.querySelector('.chip.on'); if (c) st.scrollLeft = Math.max(0, c.offsetLeft - st.offsetLeft - (st.clientWidth - c.clientWidth) / 2); } catch (e) { }
+    return out;
+  };
 })();
 
 // 9.72: каталог шага 2 — сердце и сосуды, лёгкие и дыхание, ЛОР, глаза
