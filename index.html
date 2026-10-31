@@ -41021,7 +41021,7 @@ dsPrintRx = function (c) {
   const one = '<div style="border:1.5px solid #000;padding:12px 14px;font-size:13px;line-height:1.5">' +
     '<div style="display:flex;justify-content:space-between;gap:8px"><div>' + v('inst') + '</div><div style="text-align:right"><b style="font-size:17px;letter-spacing:.5px">RESEPT</b><br>№ <b>' + v('rxNo') + '</b></div></div>' +
     '<div style="margin-top:6px">Tarix: <b>' + esc(d.date ? fmtDate(String(d.date).slice(0, 10)) : '') + '</b></div>' +
-    '<div>Xəstənin soyadı, adı: <b>' + esc(fio) + '</b>' + (age !== '' && age !== undefined ? ' &nbsp; Yaşı: <b>' + esc(String(age)) + '</b>' : '') + (d.weight ? ' &nbsp; Çəkisi: <b>' + v('weight') + ' kq</b>' : '') + '</div>' +
+    '<div>Xəstənin soyadı, adı: <b>' + esc(fio) + '</b>' + (age !== '' && age !== undefined ? ' &nbsp; Yaşı: <b>' + esc(String(age)) + '</b>' : '') + (d.weight ? ' &nbsp; Çəkisi: <b>' + v('weight') + ' kq</b>' : '') + (typeof x99AllergyAz === 'function' && x99AllergyAz(d.allergy) ? ' &nbsp; Allergiya: <b>' + esc(x99AllergyAz(d.allergy)) + '</b>' : '') + '</div>' + // 9.73: как в превью и картинке
     (d.dx || d.dxIcd ? '<div>Diaqnoz: ' + (d.dxIcd ? '<b>' + v('dxIcd') + '</b> ' : '') + v('dx') + '</div>' : '') +
     '<div style="margin-top:10px">' + items.map(r => '<div style="margin-bottom:10px;padding-left:4px"><div><b>Rp.:</b> ' + esc(r.rp || '') + '</div><div style="padding-left:30px">D.t.d.: ' + esc(r.dtd || '') + '</div><div style="padding-left:30px"><b>S.:</b> ' + esc(r.signa || '') + '</div>' + (r.brand ? '<div style="padding-left:30px;font-size:11.5px">(aptekdə: ' + esc(r.brand) + ')</div>' : '') + '</div>').join('') + '</div>' +
     (d.note ? '<div style="font-size:12px;margin-top:4px;white-space:pre-wrap">' + v('note') + '</div>' : '') +
@@ -42163,7 +42163,8 @@ function x97DrugCard(it) {
     (it.autoDose && !it.busy ? '<div class="x97-tag y">' + esc(x97('autoDose', { want: it.autoDose, dose: it.dose })) + '</div>' : '') +
     (it.why ? '<span style="font-size:13.5px">' + esc(it.why) + '</span>' : '') +
     '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">' + (it.safety ? '<span class="x97-tag ' + (it.safety === 'caution' ? 'y' : 'g') + '">' + esc(it.safety === 'caution' ? x97('caution') + (it.safetyText ? ': ' + it.safetyText : '') : x97('safe')) + '</span>' : '') +
-    '<span class="muted">' + esc(pk) + '</span></div>' + (it.other && it.inn && typeof rxSwapHtml === 'function' ? rxSwapHtml(it) : '') + '</div>';
+    '<span class="muted">' + esc(pk) + '</span>' + (!it.other && it.inn && typeof rxSwapHtml === 'function' ? '<button type="button" class="btn small ghost" style="min-height:30px;padding:2px 10px;margin-left:auto" data-act="x100Swap" data-id="' + esc(it.id) + '">⇄ ' + esc(S.lang === 'az' ? 'başqa firma' : 'другая фирма') + '</button>' : '') + '</div>' +
+    ((it.other || it.swapOpen) && it.inn && typeof rxSwapHtml === 'function' ? rxSwapHtml(it) : '') + '</div>';
 }
 function x97Step3(st, w) {
   const d = st.d;
@@ -42177,7 +42178,13 @@ function x97Step3(st, w) {
       '<button type="button" class="btn danger block" data-act="x97Emerg">' + esc(x97('rfGo')) + '</button><button type="button" class="btn ghost block" data-act="x97Force">' + esc(x97('rfForce')) + '</button>' + x97Foot(true, '', '');
   }
   h += '<div class="lbl" style="margin:4px 2px 0">' + esc(x97('checked')) + '</div>';
-  h += d.items.length ? d.items.map(x97DrugCard).join('') : '<div class="hint" style="display:block">' + esc(x97('none')) + '</div>';
+  // 9.73: по диагнозам — видно, зачем каждый препарат
+  if (!d.items.length) h += '<div class="hint" style="display:block">' + esc(x97('none')) + '</div>';
+  else {
+    const G = [], byG = {};
+    d.items.forEach(it => { const g = it.forDx || (it.src === 'ai' || it.src === 'opt' || it.src === 'set' ? (typeof x100 === 'function' ? x100('other') : '') : (typeof x100 === 'function' ? x100('byDoc') : '')); if (!byG[g]) { byG[g] = []; G.push(g); } byG[g].push(it); });
+    h += G.length > 1 || (G[0] && d.items.some(it => it.forDx)) ? G.map(g => '<div class="x100-grp"><div class="x100-gh">' + esc(g || '—') + ' <span class="muted" style="font-weight:400">· ' + byG[g].length + '</span></div>' + byG[g].map(x97DrugCard).join('') + '</div>').join('') : d.items.map(x97DrugCard).join('');
+  }
   const loc = typeof rxLocal === 'function' ? rxLocal(d) : [];
   if (loc.length && typeof ixHtml === 'function') h += ixHtml(loc, x92('localT'));
   if ((r.optional || []).length) {
@@ -42208,14 +42215,18 @@ function x97Step4(st, w) {
   const d = st.d, p = d.pt, inst = (typeof myStores === 'function' && (myStores().find(x => x.id === S.storeId) || {})) || {};
   const doc = (typeof x91MyAz === 'function' && x91MyAz()) || (S.me && (S.me.nameAz || S.me.name)) || '';
   const r = w.res || {};
-  let h = '<span class="muted">' + esc(x97('editHint')) + '</span><div class="x97-paper"><div class="x97-hd"><span style="font-size:12px">' + esc(inst.nameAz || inst.nameRu || '') + '</span><div style="text-align:right"><b style="font-size:16px;letter-spacing:.5px">RESEPT</b></div></div>' +
-    '<span>Tarix: <b>' + esc(fmtDate(rxToday())) + '</b></span><span>Xəstə: <b>' + esc([p.surname, p.name].filter(Boolean).join(' ')) + '</b>' + (p.age ? ' · Yaşı: <b>' + esc(p.age) + '</b>' : '') + (p.weight ? ' · Çəkisi: <b>' + esc(p.weight) + ' kq</b>' : '') + '</span>' +
+  // 9.73: превью = печать = картинка WhatsApp (те же строки и подписи)
+  const algAz = typeof x99AllergyAz === 'function' ? x99AllergyAz(p.allergy) : '';
+  let h = '<span class="muted">' + esc(x97('editHint')) + '</span><div class="x97-paper"><div class="x97-hd"><span style="font-size:12px;font-weight:700">' + esc(inst.nameAz || inst.nameRu || '') + '</span><div style="text-align:right;line-height:1.2"><b style="font-size:16px;letter-spacing:.5px">RESEPT</b><br><span style="font-size:11.5px">№ ' + esc(d.rxNo || '…') + '</span></div></div>' +
+    '<span>Tarix: <b>' + esc(fmtDate(rxToday())) + '</b></span><span>Xəstənin soyadı, adı: <b>' + esc([p.surname, p.name].filter(Boolean).join(' ')) + '</b></span>' +
+    '<span>' + [p.age ? 'Yaşı: <b>' + esc(p.age) + '</b>' : '', p.weight ? 'Çəkisi: <b>' + esc(p.weight) + ' kq</b>' : '', algAz ? 'Allergiya: <b>' + esc(algAz) + '</b>' : ''].filter(Boolean).join(' &nbsp; ') + '</span>' +
     (d.dx || d.dxIcd ? '<span>Diaqnoz: <b>' + esc(d.dxIcd || '') + '</b> ' + esc(d.dx || '') + '</span>' : '') +
     d.items.map(it => '<div class="rp"><span><b>Rp.:</b> ' + esc([it.b, it.dose].filter(Boolean).join(' ') + (it.formAz ? ', ' + it.formAz : '')) + '</span>' +
       '<label style="display:flex;gap:6px;align-items:center"><span style="flex:none">D.t.d.:</span><input data-rxi="qty" data-id="' + esc(it.id) + '" maxlength="60" value="' + esc(it.qty || '') + '"></label>' +
       '<label style="display:flex;gap:6px;align-items:flex-start"><span style="flex:none;padding-top:4px">S.:</span><textarea rows="2" data-rxi="signa" data-id="' + esc(it.id) + '" maxlength="300">' + esc(it.signa || '') + '</textarea></label></div>').join('') +
     '<textarea rows="3" data-rx="note" maxlength="600" style="margin-top:6px" placeholder="Pasiyentə izahat">' + esc(d.note || '') + '</textarea>' +
-    '<span style="margin-top:8px">Həkim: <b>' + esc(doc) + '</b> · İmza: ________</span></div>';
+    '<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-top:10px"><span>Həkim: <b>' + esc(doc) + '</b><br>İmza: ________________</span><span style="width:70px;height:46px;border:1px dashed #777;display:flex;align-items:center;justify-content:center;font-size:11px;flex:none">M.Y.</span></div>' +
+    '<span style="font-size:11.5px">Resept etibarlıdır: ' + esc(d.valid || '10 gün') + '</span></div>';
   if (typeof x91MyAz === 'function' && !x91MyAz() && typeof x92 === 'function') h += '<div class="hint" style="display:block">' + esc(x92('nameWarn')) + '</div>'; // 9.72: имя врача кириллицей на азербайджанском бланке
   // 9.72 (Саид, 06:53): контроль, наблюдение и анализы — только для врача: в бланк не печатаются; в GT/098 — только у постоянного пациента
   h += '<div class="card" style="display:flex;flex-direction:column;gap:6px;border-style:dashed"><div class="lbl">' + esc(x97('drOnly')) + '</div>' +
@@ -42326,7 +42337,7 @@ function x97Item(prod, v, firm, src, x) {
   const it = { id: rxId(), src: src, b: prod.b, inn: prod.inn || x.inn || '', atc: prod.atc || '', dose: v ? rxUnitsAz(v.d) : (x.dose || ''), formAz: v ? (RX_FORM_AZ[v.code] || '') : (x.form || ''), cnt: v ? v.cnt || '' : '',
     firm: firm ? firm.name : '', firmId: firm && !firm.once ? firm.id : '', firmMfr: firm && firm.once && firm.mfr ? firm.mfr[0] : '', other: !!(firm && firm.once) || !!x.other,
     doseFix: v && x.dose && x97Dn(x.dose) && x97Dn(rxUnitsAz(v.d)) !== x97Dn(x.dose) ? String(x.dose) : '', vars: (prod.vars || []).slice(0, 12),
-    signa: x.signa || '', qty: x.qty || (v && v.cnt ? '1 qutu (№' + v.cnt + ')' : ''), packs: x.packs || 1, days: x.days || '', why: x.why || '', safety: x.safety || '', safetyText: x.safetyText || '', kind: x.kind || 'drug', warn: [], busy: false, aiOk: true };
+    signa: x.signa || '', qty: x.qty || (v && v.cnt ? '1 qutu (№' + v.cnt + ')' : ''), packs: x.packs || 1, days: x.days || '', why: x.why || '', safety: x.safety || '', safetyText: x.safetyText || '', kind: x.kind || 'drug', forDx: x.forDx || '', warn: [], busy: false, aiOk: true };
   return it;
 }
 async function x97Compose(btn, force) {
@@ -42574,6 +42585,8 @@ H.x97CtlOpen = el => { closeModal(); if (typeof ptOpen === 'function') ptOpen(el
   rxTabsHtml = function (st) { const h = t0.apply(this, arguments); return st && st.classic && st.view === 'new' && !st.done ? h + '<button type="button" class="btn small ghost" style="margin:0 0 8px" data-act="x97Wizard">' + esc(x97('wizard')) + '</button>' : h; };
 })();
 
+Object.assign(H, { x100Swap: el => { const it = rxSt().d.items.find(x => x.id === el.dataset.id); if (!it) return; it.swapOpen = !it.swapOpen; rxRender(); } });
+
 /* =====================================================================
  * v98 (9.71): рецепт, шаг 2 — «С чем пришёл» кнопками: система → состояние → степень / класс / шкала.
  *  Саид, 31.10, 06:12: «выбирать по системам тела или по областям… давление — зачем цифра, если есть степени,
@@ -42739,6 +42752,13 @@ function x98Find(k) {
   return null;
 }
 function x98Attrs(f) { return f.kind === 'sym' ? f.c[4] : f.c[4].concat(X98_GEN); }
+/** 9.73: в карточке сначала главное — 2 первых признака состояния, шкалы и всё уже выбранное; остальное — «Ещё признаки ▾». */
+function x98AttrsShown(f, sel, w) {
+  const all = x98Attrs(f);
+  if (f.kind !== 'cond' || (w.more && w.more[f.c[0]])) return all;
+  const own = f.c[4] || [];
+  return all.filter(a => own.indexOf(a) < 2 && own.indexOf(a) !== -1 || ['mci', 'cent', 'crb'].indexOf(a[0]) !== -1 || ((sel || {})[a[0]] || []).length);
+}
 /** Шкалы, которые считаются сами: Centor (McIsaac) — с поправкой на возраст; CRB-65 — с возрастом ≥ 65. */
 function x98Score(c, sel, d, az) {
   const age = Number(d.pt.age);
@@ -42825,8 +42845,9 @@ function x98Html(st) {
     const c = f.c, sel = x.a || {}, sc = x98Score(c, sel, d, az), open = w.open === c[0] || w.open === undefined;
     const crf = []; x98Attrs(f).forEach(a => (sel[a[0]] || []).forEach(o => { const op = a[4].find(y => y[0] === o); if (op && op[3]) crf.push(x98L(op, 1)); }));
     return '<div class="x98-c"><div class="x98-ch"><button type="button" class="x98-tg" data-act="x98Open" data-k="' + esc(c[0]) + '"><b>' + esc(x98L(c, 1)) + ' <span class="muted" style="font-weight:400">' + esc(c[3]) + '</span></b>' + x98Sum(f, sel) + '</button><button type="button" class="btn small ghost" data-act="x98Cond" data-k="' + esc(c[0]) + '" aria-label="✕">✕</button></div>' +
-      (w.open === c[0] ? x98Attrs(f).map(a => '<div class="x98-a"><span class="t">' + esc(x98L(a, 1)) + (a[3] ? ' · ' + esc(az ? 'bir neçə' : 'можно несколько') : '') + '</span><div class="chips">' +
+      (w.open === c[0] ? x98AttrsShown(f, sel, w).map(a => '<div class="x98-a"><span class="t">' + esc(x98L(a, 1)) + (a[3] ? ' · ' + esc(az ? 'bir neçə' : 'можно несколько') : '') + '</span><div class="chips">' +
         a[4].map(o => '<button type="button" class="chip' + (o[3] ? ' rf' : '') + ((sel[a[0]] || []).indexOf(o[0]) !== -1 ? ' on' : '') + '" data-act="x98Opt" data-c="' + esc(c[0]) + '" data-a="' + a[0] + '" data-o="' + o[0] + '">' + esc(x98L(o, 1)) + '</button>').join('') + '</div></div>').join('') : '') +
+      (w.open === c[0] && x98AttrsShown(f, sel, w).length < x98Attrs(f).length ? '<button type="button" class="btn small ghost" style="align-self:flex-start" data-act="x100More" data-k="' + esc(c[0]) + '">' + esc((az ? 'Daha çox əlamət' : 'Ещё признаки') + ' (' + (x98Attrs(f).length - x98AttrsShown(f, sel, w).length) + ') ▾') + '</button>' : '') +
       (sc ? '<div class="x98-sc">' + esc(sc) + '</div>' : '') +
       (crf.length ? '<div class="x98-sc" style="color:var(--red)">⚠ ' + esc((az ? 'Təcili əlamət: ' : 'Признак неотложности: ') + crf.join(', ')) + '</div>' : '') + '</div>';
   }).join('');
@@ -42842,7 +42863,11 @@ function x98ResHtml(q, d) {
   q = String(q || '').trim(); if (q.length < 2) return '<div class="muted">' + esc(S.lang === 'az' ? 'Ən azı 2 hərf' : 'Минимум 2 буквы') + '</div>';
   if (typeof icdLoad === 'function' && !S.icd) { icdLoad().then(() => { const b = $('#x98Res'); if (b) b.innerHTML = x98ResHtml(($('#x98Q') || {}).value || q, rxSt().d); }); }
   const k = qk(q), own = [], sysOf = {};
-  [x98Sys(), X98_SYMP].forEach(src => src.forEach(s => s[3].forEach(c => { if (own.length < 14 && (qk(c[1]).indexOf(k) !== -1 || qk(c[2]).indexOf(k) !== -1 || String(c[3]).toUpperCase().indexOf(q.toUpperCase()) === 0)) { own.push(c); sysOf[c[0]] = x98L(s, 1); } })));
+  // 9.73: и разговорными словами («давление», «сахар», «təzyiq») — сначала прямые совпадения, потом по смыслу
+  const syn = typeof x100Syn === 'function' ? x100Syn(q).map(qk).filter(Boolean) : [];
+  const hit = (c, ks) => ks.some(kk => qk(c[1]).indexOf(kk) !== -1 || qk(c[2]).indexOf(kk) !== -1);
+  [x98Sys(), X98_SYMP].forEach(src => src.forEach(s => s[3].forEach(c => { if (own.length < 14 && (hit(c, [k]) || String(c[3]).toUpperCase().indexOf(q.toUpperCase()) === 0)) { own.push(c); sysOf[c[0]] = x98L(s, 1); } })));
+  if (syn.length) [x98Sys(), X98_SYMP].forEach(src => src.forEach(s => s[3].forEach(c => { if (own.length < 24 && !own.includes(c) && hit(c, syn)) { own.push(c); sysOf[c[0]] = x98L(s, 1); } })));
   // сначала — точное начало названия, потом остальное
   own.sort((a, b) => (qk(x98L(a, 1)).indexOf(k) === 0 ? 0 : 1) - (qk(x98L(b, 1)).indexOf(k) === 0 ? 0 : 1));
   const ownIcd = {}; own.forEach(c => { ownIcd[c[3]] = 1; });
@@ -42900,6 +42925,8 @@ document.addEventListener('input', e => {
     return out;
   };
 })();
+
+Object.assign(H, { x100More: el => { const w = x97W(rxSt()); w.more = w.more || {}; w.more[el.dataset.k] = true; rxSave(); rxRender(); } });
 
 // 9.72: каталог шага 2 — сердце и сосуды, лёгкие и дыхание, ЛОР, глаза
 X98_PARTS.push(
@@ -48946,6 +48973,316 @@ Object.assign(H, {
     x99dAsk(d.id, x93TplName(d.type) + (d.docNo ? ' № ' + d.docNo : ''), () => ptOpen(g.patient.id, true));
   };
 })();
+
+/* =====================================================================
+ * v100 (9.73) — рецепт по шагам: интерфейс (Саид, 31.10 14:39: «Сделай все 12»).
+ *  1. Внутри мастера — без лишнего: кнопки раздела — одной строкой, нижнее меню на шагах 2–4 скрыто (🏠 — выйти).
+ *  2. Шапка пациента на шагах 2–4 (закреплена сверху), нажал — шаг 1.
+ *  3. Шаг 2 — разделы-гармошки со сводкой: «Измерено сейчас», «Болезни, аллергия, лекарства», «Рост, вес, анализы».
+ *  4. Полоса выбранного: состояния чипами (нажал — карточка, ✕ — убрал) и ⚠ флаг.
+ *  5. Поиск разговорными словами (ru / az): «давление», «сахар», «təzyiq», «şəkər»…
+ *  6. «⭐ Часто у меня» — состояния, которые этот врач выбирал чаще всего (по его рецептам).
+ *  7. «📋 Мои наборы» — сохранить рецепт как набор, применить другому пациенту (ИИ сверяет одним запросом).
+ *  8. Карточка состояния — сначала главное, остальное «ещё признаки ▾» (в v98-rxcond.js).
+ *  9. Анализы с динамикой из прошлых рецептов (было … от …, ↑ / ↓).
+ * 10. Шаг 3 — по диагнозам; «⇄ другая фирма» у каждого препарата (в v97-rxwiz.js).
+ * 11. Шаг 4 — превью как печать и картинка WhatsApp (в v97-rxwiz.js, v92-rx.js).
+ * 12. После «Выписать» — экран крупных кнопок.
+ * ===================================================================== */
+const X100_T = {
+  ru: { home: '🏠', homeT: 'Выйти на главную (черновик сохранится)', secNow: 'Измерено сейчас', secHist: 'Болезни, аллергия, что принимает', secLabs: 'Рост, вес, анализы', empty: 'не заполнено',
+    meds: 'принимает: {n}', noeff: 'не помогает: {n}', freq: '⭐ Часто у меня', sets: '📋 Мои наборы', setsT: 'Мои наборы', setsEmpty: 'Наборов пока нет. Выпишите рецепт и нажмите «💾 Сохранить как набор».',
+    setApply: 'Применить', setDel: 'Удалить набор', setNote: 'Набор «{n}» — ИИ сверил его с этим пациентом. Проверьте и при необходимости поправьте.', setSave: '💾 Сохранить как набор', setName: 'Название набора (например «ОРВИ взрослый»)',
+    setSaved: 'Набор сохранён', setUses: 'применён {n} раз', was: 'было {v} · {d}', from: 'от {d}', rfOn: '⚠ флаг', other: 'Другое', byDoc: 'Добавлено врачом',
+    done: '✅ Рецепт выписан', print: '🖨 Печать', wa: '📲 WhatsApp', toGt: '📘 В GT/098', inGt: '📘 В GT/098: {n}', openEd: '✏️ Открыть документ', newRx: '＋ Новый рецепт', del: '🗑 Удалить',
+    E_RX_SET_DUP: 'Набор с таким названием уже есть.', setNeed: 'В рецепте нет препаратов для набора.', setCheck: 'ИИ сверяет набор с пациентом…', strip: 'Выбрано' },
+  az: { home: '🏠', homeT: 'Əsas səhifəyə (qaralama saxlanılır)', secNow: 'İndi ölçülüb', secHist: 'Xəstəliklər, allergiya, nə qəbul edir', secLabs: 'Boy, çəki, analizlər', empty: 'doldurulmayıb',
+    meds: 'qəbul edir: {n}', noeff: 'kömək etmir: {n}', freq: '⭐ Mənim tez-tez', sets: '📋 Dəstlərim', setsT: 'Dəstlərim', setsEmpty: 'Hələ dəst yoxdur. Resept yazın və «💾 Dəst kimi saxla» basın.',
+    setApply: 'Tətbiq et', setDel: 'Dəsti sil', setNote: '«{n}» dəsti — Sİ bu pasiyentlə yoxladı. Baxın, lazım olsa düzəldin.', setSave: '💾 Dəst kimi saxla', setName: 'Dəstin adı (məsələn «KRVİ böyük»)',
+    setSaved: 'Dəst saxlandı', setUses: '{n} dəfə tətbiq olunub', was: 'əvvəl {v} · {d}', from: '{d} tarixli', rfOn: '⚠ bayraq', other: 'Digər', byDoc: 'Həkim əlavə edib',
+    done: '✅ Resept yazıldı', print: '🖨 Çap', wa: '📲 WhatsApp', toGt: '📘 GT/098-ə', inGt: '📘 GT/098-də: {n}', openEd: '✏️ Sənədi aç', newRx: '＋ Yeni resept', del: '🗑 Sil',
+    E_RX_SET_DUP: 'Bu adla dəst artıq var.', setNeed: 'Reseptdə dəst üçün dərman yoxdur.', setCheck: 'Sİ dəsti pasiyentlə yoxlayır…', strip: 'Seçilib' }
+};
+Object.assign(I18N.ru, { E_RX_SET_DUP: X100_T.ru.E_RX_SET_DUP }); Object.assign(I18N.az, { E_RX_SET_DUP: X100_T.az.E_RX_SET_DUP });
+function x100(k, o) { let s = X100_T[S.lang === 'az' ? 'az' : 'ru'][k]; if (s === undefined) s = X100_T.ru[k]; return o ? String(s).replace(/\{(\w+)\}/g, (m, n) => o[n] !== undefined ? o[n] : m) : s; }
+function x100Css() {
+  if ($('#x100Css')) return;
+  const s = document.createElement('style'); s.id = 'x100Css';
+  s.textContent = 'body.x100-wiz nav.bottom{display:none!important}body.x100-wiz .x97-foot{bottom:0!important}body.x100-wiz:not(.kb){padding-bottom:84px}body.x100-wiz #toasts{bottom:calc(86px + env(safe-area-inset-bottom))!important}' + // всплывающие строки — над «Назад / Далее», не на них
+    '.x100-tabs{flex-wrap:nowrap!important;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}.x100-tabs::-webkit-scrollbar{display:none}.x100-tabs .chip{flex:none;font-size:13px;padding:6px 10px;min-height:36px}' +
+    '.x100-pt{position:sticky;top:var(--x100top,0px);z-index:15;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 10px;display:flex;flex-direction:column;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,.06)}' +
+    '.x100-pl{all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;min-height:32px}.x100-pl .av{width:30px;height:30px;flex:none;border-radius:50%;background:var(--brand-soft,var(--soft));color:var(--brand);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12.5px}' +
+    '.x100-pl .t{font-size:14px;line-height:1.3}.x100-pl .t b{font-size:14.5px}.x100-pl .t .m{color:var(--sub);font-size:12.5px}' +
+    '.x100-sel{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}.x100-sel::-webkit-scrollbar{display:none}.x100-sel .c{flex:none;display:inline-flex;align-items:center;gap:4px;border:1px solid var(--brand);border-radius:999px;padding:2px 4px 2px 10px;font-size:12.5px;background:var(--brand-soft,var(--soft));color:var(--ink)}' +
+    '.x100-sel .c button{all:unset;cursor:pointer;padding:2px 6px;font-size:13px;color:var(--sub)}.x100-sel .c.rf{border-color:var(--red);background:var(--red-soft);color:var(--red);padding-right:10px}' +
+    '.x100-sec{border:1px solid var(--line);border-radius:14px;background:var(--card);overflow:hidden}.x100-sh{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;min-height:52px}' +
+    '.x100-sh .ti{flex:1;display:flex;flex-direction:column;gap:2px}.x100-sh .ti b{font-size:15px}.x100-sh .ti span{font-size:12.5px;color:var(--sub);line-height:1.35}.x100-sh .ar{color:var(--sub);font-size:18px;transition:transform .15s}.x100-sec.open .x100-sh .ar{transform:rotate(180deg)}' +
+    '.x100-sb{padding:0 14px 14px;display:flex;flex-direction:column;gap:10px}' +
+    '.x100-row{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.x100-row::-webkit-scrollbar{display:none}.x100-row .chip{flex:none}' +
+    '.x100-was{font-size:12px;color:var(--sub)}.x100-was b{font-weight:600}' +
+    '.x100-grp{display:flex;flex-direction:column;gap:8px}.x100-gh{font-size:13px;font-weight:700;color:var(--brand);margin:6px 2px -2px;display:flex;align-items:center;gap:6px}' +
+    '.x100-done{display:grid;grid-template-columns:1fr 1fr;gap:10px}.x100-done .btn{min-height:64px;font-size:15.5px;border-radius:14px;justify-content:center;text-align:center;white-space:normal}.x100-done .wide{grid-column:1/-1}' +
+    '.x100-set{display:flex;flex-direction:column;gap:4px;padding:10px 0;border-bottom:1px solid var(--line)}.x100-set:last-child{border-bottom:0}';
+  document.head.appendChild(s);
+}
+/* ---------- 1. без лишнего ---------- */
+function x100WizOn() {
+  try {
+    const ds = typeof dsSt === 'function' ? dsSt() : null, st = S.rx;
+    return !!(S.screen === 'forms' && ds && ds.seg === 'rx' && !ds.cur && st && st.view === 'new' && !st.done && !st.classic && st.d && st.d.wiz && st.d.wiz.step >= 2);
+  } catch (e) { return false; }
+}
+function x100Body() { try { document.body.classList.toggle('x100-wiz', x100WizOn()); const h = document.querySelector('header.top'); if (h) document.documentElement.style.setProperty('--x100top', h.offsetHeight + 'px'); } catch (e) { } }
+(function () {
+  const t0 = rxTabsHtml;
+  rxTabsHtml = function (st) {
+    x100Css();
+    let h = t0.apply(this, arguments);
+    h = h.replace('<div class="chips" style="margin-bottom:10px;flex-wrap:wrap;display:flex;gap:6px">', '<div class="chips x100-tabs" style="margin-bottom:10px;display:flex;gap:6px">');
+    if (x100WizOn()) h = h.replace('<div class="chips x100-tabs" style="margin-bottom:10px;display:flex;gap:6px">', '$&<button class="chip" data-act="x100Home" title="' + esc(x100('homeT')) + '" aria-label="' + esc(x100('homeT')) + '">🏠</button>');
+    return h;
+  };
+  const r0 = rxRender;
+  rxRender = function () { const o = r0.apply(this, arguments); x100Body(); return o; };
+  if (typeof setScreen === 'function') { const s0 = setScreen; window.setScreen = setScreen = function () { const o = s0.apply(this, arguments); x100Body(); return o; }; }
+  if (typeof dsRender === 'function') { const d0 = dsRender; window.dsRender = dsRender = function () { const o = d0.apply(this, arguments); x100Body(); return o; }; }
+})();
+/* ---------- 2 и 4. шапка пациента и полоса выбранного ---------- */
+function x100PtBar(st, w) {
+  const d = st.d, p = d.pt, az = S.lang === 'az';
+  const rn = typeof rxRenal === 'function' ? rxRenal(d) : {};
+  const alg = String(p.allergy || '').trim();
+  const meta = [p.age ? (az ? p.age + ' yaş' : p.age + ' лет') : '', p.sex === 'f' ? '♀' : p.sex === 'm' ? '♂' : '', p.weight ? p.weight + (az ? ' kq' : ' кг') : '', rn.crcl ? 'CrCl ' + rn.crcl : '',
+    alg ? (/^(нет|yoxdur)$/i.test(alg) ? (az ? 'allergiya yoxdur' : 'аллергии нет') : '🚫 ' + alg.slice(0, 40)) : ''].filter(Boolean).join(' · ');
+  const ini = ((String(p.surname || '?')[0] || '') + (String(p.name || '')[0] || '')).toUpperCase();
+  let h = '<div class="x100-pt"><button type="button" class="x100-pl" data-act="x97Go" data-n="1"><span class="av">' + esc(ini) + '</span><span class="t"><b>' + esc([p.surname, p.name].filter(Boolean).join(' ') || '—') + '</b>' + (p.pid ? ' 📘' : '') + '<br><span class="m">' + esc(meta) + '</span></span></button>';
+  if (w.step === 2 && (d.conds || []).length) {
+    const rf = typeof x98RedFlags === 'function' ? x98RedFlags(d, az) : [];
+    h += '<div class="x100-sel">' + (rf.length ? '<span class="c rf">' + esc(x100('rfOn')) + '</span>' : '') + d.conds.map(x => { const f = typeof x98Find === 'function' ? x98Find(x.k) : null; if (!f) return '';
+      return '<span class="c"><button type="button" data-act="x100Go" data-k="' + esc(x.k) + '" style="padding:2px 0;color:inherit">' + esc((X98_ICO && f.sys && X98_ICO[f.sys[0]] ? X98_ICO[f.sys[0]] + ' ' : '') + x98L(f.c, 1).slice(0, 34)) + '</button><button type="button" data-act="x100Rm" data-k="' + esc(x.k) + '" aria-label="✕">✕</button></span>'; }).join('') + '</div>';
+  }
+  return h + '</div>';
+}
+(function () {
+  const h0 = x97Html;
+  x97Html = function (st) {
+    let h = h0.apply(this, arguments);
+    const w = x97W(st);
+    if (w.step >= 2) { const i = h.indexOf('</div>', h.indexOf('class="x97-steps"')); const bar = x100PtBar(st, w); if (i !== -1) h = h.slice(0, i + 6) + bar + h.slice(i + 6); }
+    return h;
+  };
+})();
+/* ---------- 5. поиск разговорными словами ---------- */
+const X100_SYN = [
+  [/давлен|гипертон|təzyiq|hipertoni|tezyiq/, ['гипертенз', 'гипотенз', 'криз', 'hipertenziya', 'hipotenziya']],
+  [/сахар|диабет|şəkər|seker|diabet|глюкоз/, ['диабет', 'гипоглик', 'diabet']],
+  [/почк|böyrək|boyrek/, ['почк', 'пиелонеф', 'нефр', 'мочекам', 'böyrək']],
+  [/понос|диаре|ishal|понос/, ['диаре', 'гастроэнтер', 'колит', 'ishal']],
+  [/запор|qəbiz|qebiz/, ['запор', 'qəbiz']],
+  [/изжог|zəqə|zeqe|qıcqırma|рефлюкс/, ['гэрб', 'рефлюкс', 'изжог', 'reflüks']],
+  [/щитовид|qalxanabənzər|qalxanabenzer|tireo|зоб/, ['тиреоз', 'щитовид', 'зоб', 'tireoz', 'zob']],
+  [/голов.*бол|баш агр|baş ağr|bas agr|мигрен/, ['мигрен', 'головн', 'baş ağrısı', 'miqren']],
+  [/кашел|öskür|oskur/, ['кашел', 'бронхит', 'öskür', 'bronxit']],
+  [/температур|лихорад|qızdırma|qizdirma/, ['лихорад', 'орви', 'грипп', 'qızdırma', 'krvi']],
+  [/горл|boğaz|bogaz|ангин/, ['тонзил', 'фаринг', 'ларинг', 'tonzil', 'farinq']],
+  [/насморк|нос забит|burun|zökəm|zokem/, ['ринит', 'синусит', 'орви', 'rinit', 'sinusit']],
+  [/ух[оа]|qulaq/, ['отит', 'серная', 'otit']],
+  [/глаз|göz|goz/, ['конъюнкт', 'блефар', 'konyunktiv']],
+  [/спин|поясниц|bel |bel$|kürək|kurek/, ['спин', 'люмб', 'поясн', 'дорс', 'радикул', 'bel']],
+  [/сустав|oynaq|артрит|артроз/, ['артрит', 'артроз', 'подагр', 'artrit', 'artroz']],
+  [/сып|səpgi|sepgi|зуд|qaşın|qasin/, ['дерматит', 'крапивн', 'экзем', 'зуд', 'dermatit', 'övrə']],
+  [/аллерг|allerg/, ['аллерг', 'крапивн', 'ринит аллерг', 'allerg']],
+  [/груд.*бол|давит в груди|sinə ağr|sine agr|döş ağr/, ['стенокард', 'боль в груди', 'stenokard']],
+  [/одышк|задыха|təngnəfəs|tengnefes/, ['одышк', 'астм', 'хобл', 'сердечн', 'astma', 'təngnəfəs']],
+  [/мочеисп|моча|sidik|цистит/, ['цистит', 'дгпж', 'гиперплаз', 'недержан', 'sistit']],
+  [/простат|prostat/, ['простат', 'дгпж', 'prostat']],
+  [/месячн|менстр|aybaşı|aybasi|hayız/, ['дисменор', 'аменор', 'маточн', 'менстр', 'dismenor']],
+  [/беремен|hamilə|hamile/, ['беремен', 'hamilə']],
+  [/нерв|стресс|тревог|паник|əsəb|eseb|narahat|stress/, ['тревож', 'паник', 'депресс', 'невроз', 'narahat', 'depress']],
+  [/бессон|не спит|yuxusuz|uyku/, ['бессон', 'инсомн', 'сна', 'yuxu']],
+  [/вес|ожирен|артыг|piylən|çəki/, ['ожирен', 'piylən']],
+  [/холестер|xolester/, ['дислипид', 'холестер', 'dislipid']],
+  [/анеми|малокров|гемоглоб|qanazlığı|qanazligi/, ['анеми', 'anemiya']],
+  [/живот|желуд|qarın|qarin|mədə|mede/, ['боль в животе', 'гастрит', 'диспепс', 'язв', 'qastrit', 'qarın']],
+  [/зуб|diş|dis /, ['зуб', 'пульпит', 'кариес', 'стоматит', 'diş']],
+  [/печен|qaraciyər|qaraciyer/, ['печен', 'гепат', 'цирроз', 'hepat']],
+  [/сердц|ürək|urek|сердцебиен|аритм/, ['аритм', 'фибрилляц', 'тахикард', 'сердечн', 'aritmiya']],
+  [/головокруж|başgicəl|basgicel/, ['головокруж', 'вертиго', 'дппг', 'başgicəl']],
+  [/ребён|ребен|uşaq|usaq|дет/, ['у ребёнка', 'детск', 'uşaq']]
+];
+function x100Syn(q) { const s = String(q || '').toLowerCase(); const out = []; X100_SYN.forEach(x => { if (x[0].test(s)) out.push.apply(out, x[1]); }); return out; }
+/* ---------- 6. «Часто у меня» ---------- */
+function x100FreqLoad() {
+  if (S.x100f || S.x100fL) return;
+  S.x100fL = true;
+  rpcA('rxMine', { limit: 300 }).then(r => {
+    const f = {};
+    (r && r.ok ? r.rows || [] : []).forEach(x => String(x.condK || '').split(',').map(k => k.trim()).filter(Boolean).forEach(k => { f[k] = (f[k] || 0) + 1; }));
+    S.x100f = f; S.x100fL = false; if (x100WizOn()) rxRender();
+  }).catch(() => { S.x100fL = false; S.x100f = {}; });
+}
+function x100FreqHtml(d) {
+  x100FreqLoad();
+  const f = S.x100f || {};
+  const L = Object.keys(f).filter(k => typeof x98Find === 'function' && x98Find(k)).sort((a, b) => f[b] - f[a]).slice(0, 12);
+  if (!L.length) return '';
+  return '<div class="lbl" style="margin:2px 0 -4px">' + esc(x100('freq')) + '</div><div class="x100-row">' + L.map(k => { const fd = x98Find(k); const on = (d.conds || []).some(x => x.k === k);
+    return '<button type="button" class="chip' + (on ? ' on' : '') + '" data-act="x98Cond" data-k="' + esc(k) + '">' + esc((fd.sys && X98_ICO[fd.sys[0]] ? X98_ICO[fd.sys[0]] + ' ' : '') + x98L(fd.c, 1)) + '</button>'; }).join('') + '</div>';
+}
+/* ---------- 3 и 9. шаг 2 — разделы-гармошки; анализы с динамикой ---------- */
+function x100Sec(w, k, title, sum, bodyFn, def) {
+  w.sec = w.sec && typeof w.sec === 'object' ? w.sec : {};
+  const open = w.sec[k] === undefined ? !!def : !!w.sec[k];
+  return '<div class="x100-sec' + (open ? ' open' : '') + '" data-sec="' + k + '"><button type="button" class="x100-sh" data-act="x100Sec" data-k="' + k + '" aria-expanded="' + open + '"><span class="ti"><b>' + esc(title) + '</b><span>' + esc(sum || x100('empty')) + '</span></span><span class="ar">▾</span></button>' +
+    (open ? '<div class="x100-sb">' + bodyFn() + '</div>' : '') + '</div>';
+}
+function x100Base(code, v, u) { const L = x99Lab(code); if (!L) return NaN; const uu = L[3].find(x => x[0] === u) || L[3][0]; return Number(String(v || '').replace(',', '.')) * uu[2]; }
+function x100Was(code, cur, prev) {
+  if (!prev || !String(prev.v || '').trim()) return '';
+  const d = prev.at ? fmtDate(prev.at) : '';
+  const same = String(prev.v).replace(',', '.') === String(cur && cur.v || '').replace(',', '.') && (prev.u || '') === (cur && cur.u || '');
+  if (same) return '<div class="x100-was">' + esc(x100('from', { d })) + '</div>';
+  let ar = '';
+  const a = code === 'creat' ? Number(String(cur && cur.v || '').replace(',', '.')) * (cur && cur.u === 'mgdl' ? 88.4 : 1) : x100Base(code, cur && cur.v, cur && cur.u);
+  const b = code === 'creat' ? Number(String(prev.v).replace(',', '.')) * (prev.u === 'mgdl' ? 88.4 : 1) : x100Base(code, prev.v, prev.u);
+  if (isFinite(a) && isFinite(b) && a > 0 && b > 0) ar = a > b * 1.03 ? ' ↑' : a < b * 0.97 ? ' ↓' : ' =';
+  const L = code === 'creat' ? null : x99Lab(code), uu = L ? (L[3].find(x => x[0] === prev.u) || L[3][0])[1] : (prev.u === 'mgdl' ? 'mg/dL' : 'µmol/L');
+  return '<div class="x100-was">' + esc(x100('was', { v: prev.v + (uu ? ' ' + uu : ''), d })) + '<b>' + esc(ar) + '</b></div>';
+}
+x97Step2 = function (st, w) {
+  x99Css(); x100Css();
+  const d = st.d, p = d.pt; x99Migrate(p);
+  const az = S.lang === 'az', lp = (w.prev && w.prev.labPrev) || {};
+  // А. С чем пришёл — всегда открыт
+  let h = '<div class="card" style="display:flex;flex-direction:column;gap:10px"><div class="row" style="justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap"><div class="lbl">' + esc(x97('cases')) + '</div><div class="row" style="gap:6px">' +
+    '<button type="button" class="btn small ghost" data-act="x100Sets">' + esc(x100('sets')) + '</button>' +
+    (typeof canAi === 'function' && canAi() ? '<button type="button" class="btn small" data-act="x97Say">' + esc(x97('say')) + '</button>' : '') + '</div></div>' +
+    x100FreqHtml(d) + x98Html(st) +
+    rxField('complaint', x97('complFree'), d.complaint, { ta: 1, max: 800, rows: 2 }) +
+    '<div class="grid2">' + rxField('dx', x92('dx'), d.dx, { max: 300 }) + rxField('dxIcd', x92('dxIcd'), d.dxIcd, { max: 60 }) + '</div></div>';
+  // Б. Измерено сейчас
+  h += x100Sec(w, 'now', x97('nowT'), x97Now(p), () => '<div class="muted" style="font-size:12.5px">' + esc(x97('nowHint')) + '</div>' +
+    '<div class="grid2">' + rxField('pt.now_bp', x97('nowBp'), p.now_bp, { max: 7, ph: '120/80' }) + rxField('pt.now_hr', x97('nowHr'), p.now_hr, { type: 'n', max: 3 }) + '</div>' +
+    '<div class="grid2">' + rxField('pt.now_t', x97('nowT2'), p.now_t, { type: 'n', max: 4 }) + rxField('pt.now_spo2', 'SpO₂, %', p.now_spo2, { type: 'n', max: 3 }) + '</div>', true);
+  // В. Болезни, аллергия, что принимает
+  const ml = x99MedLines(p);
+  const chrN = p.chr.map(k => { const c = X99_CHR.find(x => x[0] === k); return c ? (az ? c[2] : c[1]) : ''; }).filter(Boolean);
+  const sumH = [chrN.concat(String(p.chronic || '').trim() ? [String(p.chronic).trim().slice(0, 40)] : []).join(', '),
+    String(p.allergy || '').trim() ? (az ? 'allergiya: ' : 'аллергия: ') + String(p.allergy).trim().slice(0, 40) : '',
+    ml.length ? x100('meds', { n: ml.length }) : '', p.noEff.length ? x100('noeff', { n: p.noEff.length }) : ''].filter(Boolean).join(' · ');
+  h += x100Sec(w, 'hist', x100('secHist'), sumH, () => (p.pid && w.prev && w.prev.at ? '<div class="x97-gt">' + esc(x97('fromGt')) + '</div>' : '') +
+    '<div class="field" style="margin:0"><label>' + esc(x99('chrT')) + '</label><div class="x99-chips">' + X99_CHR.map(c => '<button type="button" class="chip' + (p.chr.indexOf(c[0]) !== -1 ? ' on' : '') + '" data-act="x99Chr" data-k="' + c[0] + '">' + esc(az ? c[2] : c[1]) + '</button>').join('') + '</div></div>' +
+    rxField('pt.chronic', x99('chrMore'), p.chronic, { ta: 1, max: 600 }) +
+    '<div class="field" style="margin:0"><label>' + esc(x99('algT')) + '</label><div class="x99-chips"><button type="button" class="chip' + (/^(нет|yoxdur)$/i.test(String(p.allergy || '').trim()) ? ' on' : '') + '" data-act="x97NoAllergy">' + esc(x99('algNo')) + '</button>' +
+      X99_ALG.map(a => '<button type="button" class="chip bad' + (String(p.allergy || '').toLowerCase().indexOf(a[1]) !== -1 || String(p.allergy || '').toLowerCase().indexOf(a[2].toLowerCase()) !== -1 ? ' on' : '') + '" data-act="x99Alg" data-k="' + a[0] + '">' + esc(az ? a[2] : a[1]) + '</button>').join('') + '</div></div>' +
+    rxField('pt.allergy', x97('allergy'), p.allergy, { max: 300 }) +
+    rxField('pt.meds', x99('medsT'), p.meds, { ta: 1, max: 1200 }) + x99PhotoBtns('meds') +
+    (ml.length ? '<div class="field" style="margin:0"><label>' + esc(x99('noeffT')) + '</label><div class="x99-chips">' + ml.map((m, i) => '<button type="button" class="chip bad' + (p.noEff.indexOf(m) !== -1 ? ' on' : '') + '" data-act="x99NoEff" data-i="' + i + '">' + esc(m.slice(0, 50)) + (p.noEff.indexOf(m) !== -1 ? ' — ' + esc(x99('nf')) : '') + '</button>').join('') + '</div></div>' : '') +
+    rxField('pt.noEffect', x99('noeffMore'), p.noEffect, { ta: 1, max: 800 }), false);
+  // Г. Рост, вес, анализы
+  const rn = typeof rxRenal === 'function' ? rxRenal(d) : {}, added = Object.keys(p.labv);
+  const sumL = [p.height ? p.height + (az ? ' sm' : ' см') : '', p.weight ? p.weight + (az ? ' kq' : ' кг') : '', rn.crcl ? 'CrCl ' + rn.crcl : (p.creat ? (az ? 'kreatinin ' : 'креатинин ') + p.creat : ''),
+    added.map(code => { const L = x99Lab(code), x = p.labv[code]; if (!L || !String(x.v || '').trim()) return ''; return (az ? L[2] : L[1]) + ' ' + x.v + x99Flag(code, x.v, x.u); }).filter(Boolean).join(', ')].filter(Boolean).join(' · ');
+  h += x100Sec(w, 'labs', x100('secLabs'), sumL, () =>
+    '<div class="grid2">' + rxField('pt.height', x92('height'), p.height, { type: 'n', max: 3 }) + rxField('pt.weight', x92('weight'), p.weight, { type: 'n', max: 5 }) + '</div>' +
+    '<div class="grid2">' + rxField('pt.creat', x92('creat'), p.creat, { type: 'n', max: 6 }) + '<div class="field"><label>&nbsp;</label>' + x97Chips(p, 'creatU', [['umol', x92('umol')], ['mgdl', x92('mgdl')]]) + '</div></div>' +
+    x100Was('creat', { v: p.creat, u: p.creatU }, lp.creat) +
+    '<div id="rxRenalBox" class="x97-calc"' + (rxRenalHtml(d) ? '' : ' style="display:none"') + '>' + rxRenalHtml(d) + '</div>' +
+    added.map(code => { const L = x99Lab(code); if (!L) return ''; const x = p.labv[code]; const f = x99Flag(code, x.v, x.u);
+      return '<div class="x99-lab"><span class="nm">' + esc(az ? L[2] : L[1]) + '</span><input inputmode="decimal" data-x99lab="' + code + '" maxlength="8" value="' + esc(x.v || '') + '" aria-label="' + esc(L[1]) + '">' +
+        '<span><span class="fl" id="x99f_' + code + '">' + esc(f) + '</span> <button type="button" class="btn small ghost" style="min-height:32px;padding:2px 8px" data-act="x99LabDel" data-k="' + code + '" aria-label="' + esc(x99('del')) + '">✕</button></span>' +
+        '<div class="u">' + (L[3].length > 1 || L[3][0][1] ? L[3].map(u => '<button type="button" class="chip' + ((x.u || L[3][0][0]) === u[0] ? ' on' : '') + '" data-act="x99Unit" data-k="' + code + '" data-u="' + u[0] + '">' + esc(u[1] || '—') + '</button>').join('') : '') +
+        (L[4] ? '<span class="muted" style="font-size:12px;align-self:center">' + esc(x99('ref')) + ' ' + L[4][0] + '–' + L[4][1] + ' ' + L[3][0][1] + '</span>' : '') + '</div>' + x100Was(code, x, lp[code]) + '</div>'; }).join('') +
+    '<div class="field" style="margin:0"><label>' + esc(x99('labsAdd')) + '</label><div class="x99-chips">' + X99_LABS.filter(L => added.indexOf(L[0]) === -1).map(L => '<button type="button" class="chip" data-act="x99LabAdd" data-k="' + L[0] + '">＋ ' + esc(az ? L[2] : L[1]) + (lp[L[0]] ? ' · ' + esc(lp[L[0]].v) : '') + '</button>').join('') + '</div></div>' +
+    rxField('pt.labs', x99('labsOther'), p.labs, { ta: 1, max: 1500, ph: x97('labsOtherPh') }) + x99PhotoBtns('labs'), false);
+  return h + x97Foot(true, x97('compose'), 'x97Next');
+};
+/* ---------- 7. мои наборы ---------- */
+async function x100SetsLoad(force) {
+  if (S.x100sets && !force) return S.x100sets;
+  const r = await rpcA('rxSets', {}).catch(() => null);
+  S.x100sets = r && r.ok ? r.rows || [] : [];
+  return S.x100sets;
+}
+function x100SetsModal(list) {
+  openModal('<h3>' + esc(x100('setsT')) + '</h3>' + (!list.length ? '<div class="muted">' + esc(x100('setsEmpty')) + '</div>' :
+    list.map(s => '<div class="x100-set"><div class="row" style="justify-content:space-between;align-items:center;gap:8px"><b style="font-size:15px">' + esc(s.name) + '</b><span class="muted" style="font-size:12px">' + esc(s.uses ? x100('setUses', { n: s.uses }) : '') + '</span></div>' +
+      '<div class="muted" style="font-size:13px">' + esc(s.items.map(x => [x.b, x.dose].filter(Boolean).join(' ')).join(' · ')) + '</div>' +
+      '<div class="row" style="gap:8px;margin-top:4px"><button class="btn small primary" data-act="x100SetGo" data-id="' + esc(s.id) + '">' + esc(x100('setApply')) + '</button><button class="btn small ghost" style="color:var(--red)" data-act="x100SetDel" data-id="' + esc(s.id) + '">' + esc(x100('setDel')) + '</button></div></div>').join('')) +
+    '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close') || '✕') + '</button></div>');
+}
+async function x100SetApply(set, btn) {
+  const st = rxSt(), d = st.d, w = x97W(st);
+  const firms = (await rxFirmsLoad().catch(() => [])) || [];
+  d.items = d.items.filter(it => it.src !== 'ai' && it.src !== 'opt' && it.src !== 'set');
+  set.items.forEach(x => {
+    if (d.items.some(it => skel(it.b) === skel(x.b))) return;
+    const f = firms.find(ff => ff.name === x.firm && rxProducts(ff).some(pp => skel(pp.b) === skel(x.b)));
+    d.items.push({ id: rxId(), src: 'set', b: x.b, inn: x.inn || '', atc: x.atc || '', dose: x.dose || '', formAz: x.formAz || '', cnt: x.cnt || '', firm: x.firm || '', firmId: f ? f.id : '', other: !f, signa: x.signa || '', qty: x.qty || '', packs: x.packs || 1, days: x.days || '',
+      why: '', safety: '', safetyText: '', kind: x.kind || 'drug', forDx: x.forDx || '', warn: [], busy: false, aiOk: true });
+  });
+  d.conds = Array.isArray(d.conds) ? d.conds : [];
+  (set.conds || []).forEach(c => { if (!d.conds.some(x => x.k === c.k) && typeof x98Find === 'function' && x98Find(c.k)) d.conds.push({ k: c.k, a: c.a || {} }); });
+  if (typeof x98SyncDx === 'function') x98SyncDx(d);
+  w.res = { items: [], optional: [], missing: [], monitor: [], exams: [], note: x100('setNote', { n: set.name }), fromSet: set.name };
+  w.sig = x97Sig(d); w.okSig = ''; st.check = null; w.step = 3; w.max = 3; w.opt = {};
+  rxSave(); closeModal(); rxRender(); window.scrollTo(0, 0);
+  rpcA('rxSetSave', { id: set.id, used: true }).catch(() => null);
+  if (typeof canAi === 'function' && canAi()) { toast(x100('setCheck')); await rxCheck(null); rxRender(); }
+}
+/* ---------- 12. после «Выписать» ---------- */
+rxDoneHtml = function (st) {
+  x100Css();
+  const x = st.done; if (!x) return '';
+  return '<div class="card" style="display:flex;flex-direction:column;gap:12px"><h3 style="margin:0">' + esc(x100('done')) + '</h3><div class="muted">' + esc([x.patient, x.date].filter(Boolean).join(' · ')) + '</div>' +
+    '<div class="x100-done"><button class="btn primary" data-act="rxPrint" data-id="' + esc(x.id) + '">' + esc(x100('print')) + '</button><button class="btn" data-act="x97Wa">' + esc(x100('wa')) + '</button>' +
+    (x.pid ? '<div class="btn ghost" style="pointer-events:none;opacity:.85">' + esc(x100('inGt', { n: x.pname || '' })) + '</div>' : '<button class="btn" data-act="rxToGt" data-id="' + esc(x.id) + '">' + esc(x100('toGt')) + '</button>') +
+    '<button class="btn" data-act="rxNew">' + esc(x100('newRx')) + '</button>' +
+    (st.x100last && st.x100last.items.length ? '<button class="btn ghost wide" data-act="x100SetSave">' + esc(x100('setSave')) + '</button>' : '') +
+    '<button class="btn ghost" data-act="rxOpenDoc" data-id="' + esc(x.id) + '">' + esc(x100('openEd')) + '</button><button class="btn ghost" style="color:var(--red)" data-act="x99dDel" data-id="' + esc(x.id) + '">' + esc(x100('del')) + '</button></div></div>';
+};
+(function () {
+  const w0 = rxWrite;
+  rxWrite = async function () {
+    const st = rxSt(), before = st.done;
+    const snap = { items: (st.d.items || []).map(it => Object.assign({}, it)), conds: (st.d.conds || []).map(c => ({ k: c.k, a: c.a || {} })) };
+    const r = await w0.apply(this, arguments);
+    if (st.done && st.done !== before) {
+      st.x100last = snap;
+      if (S.x100f) snap.conds.forEach(c => { S.x100f[c.k] = (S.x100f[c.k] || 0) + 1; });
+      rxRender();
+    }
+    return r;
+  };
+  const dd0 = rxDocData;
+  rxDocData = function (d) { const o = dd0.apply(this, arguments); try { o.condK = (d.conds || []).map(c => c.k).join(',').slice(0, 600); } catch (e) { } return o; };
+})();
+/* ---------- обработчики ---------- */
+Object.assign(H, {
+  x100Home: () => { try { setScreen('today'); } catch (e) { } x100Body(); },
+  x100Sec: el => { const w = x97W(rxSt()); w.sec = w.sec || {}; const k = el.dataset.k; const cur = w.sec[k] === undefined ? k === 'now' : !!w.sec[k]; w.sec[k] = !cur; rxSave(); rxRender(); },
+  x100Go: el => { const st = rxSt(), w = x97W(st); w.open = el.dataset.k; w.q = ''; rxSave(); rxRender();
+    const b = document.querySelector('.x98-c [data-act=x98Open][data-k="' + CSS.escape(el.dataset.k) + '"]'); if (b) b.scrollIntoView({ block: 'center', behavior: 'smooth' }); },
+  x100Rm: el => { const st = rxSt(), d = st.d; d.conds = (d.conds || []).filter(x => x.k !== el.dataset.k); if (typeof x98SyncDx === 'function') x98SyncDx(d); rxSave(); rxRender(); },
+  x100Sets: async el => { const L = await busy(el, () => x100SetsLoad(true)); x100SetsModal(L || []); },
+  x100SetGo: async el => { const s = (S.x100sets || []).find(x => x.id === el.dataset.id); if (!s) return; await x100SetApply(s, el); },
+  x100SetDel: async el => { const r = await busy(el, () => rpcA('rxSetSave', { id: el.dataset.id, remove: true })).catch(() => null); if (!r || !r.ok) return; const L = await x100SetsLoad(true); x100SetsModal(L); },
+  x100SetSave: () => {
+    const st = rxSt(), L = st.x100last; if (!L || !L.items.length) return toast(x100('setNeed'), 'bad');
+    const name0 = (L.conds[0] && typeof x98Find === 'function' && x98Find(L.conds[0].k) ? x98L(x98Find(L.conds[0].k).c, 1) : '');
+    openModal('<h3>' + esc(x100('setSave')) + '</h3><div class="field"><label>' + esc(x100('setName')) + '</label><input id="x100SetName" maxlength="60" value="' + esc(name0) + '"></div>' +
+      '<div class="muted" style="font-size:13px">' + esc(L.items.map(x => [x.b, x.dose].filter(Boolean).join(' ')).join(' · ')) + '</div>' +
+      '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="x100SetSaveGo">' + esc(t('save')) + '</button></div>');
+  },
+  x100SetSaveGo: async el => {
+    const st = rxSt(), L = st.x100last; if (!L) return;
+    const name = String(($('#x100SetName') || {}).value || '').trim(); if (name.length < 2) return toast(x100('setName'), 'bad');
+    const items = L.items.map(x => ({ b: x.b, inn: x.inn, atc: x.atc, dose: x.dose, formAz: x.formAz, cnt: x.cnt, firm: x.firm, signa: x.signa, qty: x.qty, packs: x.packs, days: x.days, kind: x.kind, forDx: x.forDx }));
+    const r = await busy(el, () => rpcA('rxSetSave', { name, items, conds: L.conds })).catch(() => null);
+    if (!r || !r.ok) return;
+    S.x100sets = null; closeModal(); toast(x100('setSaved'), 'ok');
+  }
+});
 
 
 function init() {
