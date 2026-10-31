@@ -41006,10 +41006,12 @@ dsPrintRx = function (c) {
     (d.dx || d.dxIcd ? '<div>Diaqnoz: ' + (d.dxIcd ? '<b>' + v('dxIcd') + '</b> ' : '') + v('dx') + '</div>' : '') +
     '<div style="margin-top:10px">' + items.map(r => '<div style="margin-bottom:10px;padding-left:4px"><div><b>Rp.:</b> ' + esc(r.rp || '') + '</div><div style="padding-left:30px">D.t.d.: ' + esc(r.dtd || '') + '</div><div style="padding-left:30px"><b>S.:</b> ' + esc(r.signa || '') + '</div>' + (r.brand ? '<div style="padding-left:30px;font-size:11.5px">(aptekdə: ' + esc(r.brand) + ')</div>' : '') + '</div>').join('') + '</div>' +
     (d.note ? '<div style="font-size:12px;margin-top:4px;white-space:pre-wrap">' + v('note') + '</div>' : '') +
+    (d.control ? '<div style="font-size:12.5px;margin-top:4px"><b>Kontrol: ' + esc(fmtDate(String(d.control).slice(0, 10))) + '</b>' + (d.controlWhat ? ' — ' + v('controlWhat') : '') + '</div>' : '') +
     '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:16px;gap:10px"><div>Həkim: <b>' + v('doctor') + '</b><br><br>İmza: ________________</div><div style="width:90px;height:60px;border:1px dashed #000;display:flex;align-items:center;justify-content:center;font-size:11px">M.Y.</div></div>' +
     (d.valid ? '<div style="font-size:11.5px;margin-top:6px">Resept etibarlıdır: ' + v('valid') + '</div>' : '') +
     '<div style="font-size:8px;margin-top:6px">ID ' + esc(c.id) + (c.doc && c.doc.createdAt ? ' · ' + esc(c.doc.createdAt) : '') + '</div></div>';
-  return '<div class="pf-page last">' + one + '</div>';
+  // 9.70: бланк как обычный рецепт — вертикальный A5
+  return '<style>@page{size:A5 portrait;margin:8mm}</style><div class="pf-page last">' + one + '</div>';
 };
 /* ---------- фирма: редактор ---------- */
 function rxFeHtml() {
@@ -41872,6 +41874,528 @@ const X96 = { at: 0 };
     return r;
   };
   window.aiSettingsModal = aiSettingsModal;
+})();
+
+/* =====================================================================
+ * v97 (9.70): 💊 рецепт по шагам — 1 Пациент → 2 Состояние → 3 Рецепт (ИИ, один запрос) → 4 Итог.
+ *  Макет одобрен Саидом 31.10, 04:35. «Всё на одном экране» (старый вид) — ссылка внизу шага 1.
+ * ===================================================================== */
+const X97_T = {
+  ru: {
+    s1: 'Пациент', s2: 'Состояние', s3: 'Рецепт', s4: 'Итог', next: 'Далее →', back: '← Назад', compose: 'Составить рецепт →', toFinal: 'Далее · итог →',
+    modeGt: 'Постоянный · GT/098', modeOnce: 'Разовый', modeGtHint: 'Постоянный — рецепт, анализы и схема лечения сохранятся в его GT/098. В следующий раз всё подставится само.', modeOnceHint: 'Разовый — рецепт не попадёт в GT/098.',
+    find: 'FİN или фамилия', found: 'рецептов в GT/098: {n}', foundLast: ', последний {d}', renew: '↻ Как в прошлый раз — продлить схему от {d}', renewOn: '↻ Продлеваем схему от {d} — ИИ сверит с новыми данными',
+    finNew: 'FİN — новая карта GT/098 заведётся при выписке', pt: 'Пациент', sexM: 'Муж', sexF: 'Жен', pregHint: 'Беременность и кормление спрашиваем только у женщин 12–55 лет.', classic: 'Всё на одном экране (старый вид)', wizard: '← Рецепт по шагам',
+    need1: 'Не хватает: {l}', need2: 'Впишите жалобы или диагноз.',
+    cases: 'С чем пришёл', say: '🎙 Сказать всё сразу', sayT: '🎙 Состояние пациента — голосом или текстом', sayHint: 'Скажите всё подряд: жалобы, диагноз, болезни, аллергия, что принимает, рост, вес, анализы. ИИ разнесёт по полям (заполнит только пустые). ФИО и FİN не называйте.', sayGo: '🤖 Разнести по полям', sayDone: 'Заполнено полей: {n}',
+    about: 'О пациенте', fromGt: 'Из GT/098 — болезни, лекарства, аллергия, рост, вес, анализы', chronic: 'Подтверждённые болезни', allergy: 'Аллергия', allergyNo: 'Нет', meds: 'Что принимает', noEffect: 'Что не помогает', medsPhoto: 'Лекарства — с фото упаковок',
+    labsT: 'Рост, вес и анализы', k: 'Калий', alt: 'АЛТ', ast: 'АСТ', bili: 'Билирубин', hb: 'Гемоглобин', glu: 'Глюкоза', a1c: 'HbA1c', labsOther: 'Другие анализы', labsOtherPh: 'ТТГ, ферритин, липиды…', labsPhoto: 'Анализы / выписка — с фото',
+    wT: 'ИИ составляет рецепт', w1: 'Смотрю историю в GT/098', w2: 'Подбираю из ваших фирм', w3: 'Считаю дозы по почкам и печени', w4: 'Проверяю совместимость и аллергию', w5: 'План наблюдения и анализы', wHint: 'Обычно 20–40 секунд. Один запрос к ИИ.',
+    rfT: 'Это не для рецепта', rfGo: 'Открыть разбор неотложки', rfForce: 'Всё равно составить рецепт (решение врача)',
+    changed: 'Данные на шагах 1–2 изменились после составления.', recompose: '↻ Составить заново', checked: 'Рецепт · проверено ИИ', none: 'ИИ ничего не назначил. Посмотрите примечание ниже или добавьте вручную.',
+    mine: 'ваша фирма', other: 'другая фирма', vitmin: 'профилактика дефицита', safe: 'Безопасно', caution: 'С осторожностью', packs: '{p} уп. на {d} дн.', packs1: '{p} уп.',
+    optT: 'На ваш выбор', optHint: 'Препараты ваших фирм, которые этому пациенту не вредят и совместимы с рецептом, но при его жалобах польза не доказана. Сами не добавляются — решаете вы.',
+    oWhat: 'Что это', oUsual: 'Зачем обычно', oNot: 'Ему не нужно', oPay: 'Пациент', oPayV: 'Платит за курс без доказанной пользы', oCompat: 'Совместимость',
+    missT: 'Чего не хватило ИИ', missGo: 'Вписать', manual: '＋ Добавить препарат вручную', recheckHint: 'Только отметили галочки — повторной проверки не будет. Добавили вручную или правили — ИИ проверит ещё раз.',
+    editHint: 'Поля бланка можно исправить прямо здесь.', control: 'Контроль', controlWhat: 'Что проверить', monT: 'Наблюдение', examT: 'Дообследование — назначить', noteAdded: '✓ В пояснении пациенту', gtNote: 'Постоянный пациент: рецепт, анализы, рост, вес и схема сохранятся в GT/098.', ctlNote: ' Контроль {d} появится на «Сегодня».',
+    write: 'Выписать рецепт', print: 'Печать A5', wa: 'WhatsApp', waWait: 'Готовлю картинку…', waSaved: 'Картинка сохранена — отправьте её в WhatsApp из галереи.',
+    ctlSig: 'Пора на контроль · {n}', ctlSub: 'Пациенты по вашим рецептам — нажмите, чтобы открыть', ctlT: 'Пора на контроль', ctlOpen: 'Открыть', ctlFrom: 'рецепт от {d}',
+    recheck: 'Рецепт изменён вручную — ИИ проверяет ещё раз…'
+  },
+  az: {
+    s1: 'Pasiyent', s2: 'Vəziyyət', s3: 'Resept', s4: 'Yekun', next: 'Növbəti →', back: '← Geri', compose: 'Resepti tərtib et →', toFinal: 'Növbəti · yekun →',
+    modeGt: 'Daimi · GT/098', modeOnce: 'Birdəfəlik', modeGtHint: 'Daimi — resept, analizlər və müalicə sxemi onun GT/098-ində saxlanılacaq. Növbəti dəfə hər şey özü dolacaq.', modeOnceHint: 'Birdəfəlik — resept GT/098-ə düşməyəcək.',
+    find: 'FİN və ya soyad', found: 'GT/098-də resept: {n}', foundLast: ', sonuncu {d}', renew: '↻ Keçən dəfəki kimi — {d} sxemini uzat', renewOn: '↻ {d} sxemi uzadılır — Sİ yeni məlumatlarla tutuşduracaq',
+    finNew: 'FİN — yeni GT/098 kartı resept yazılanda açılacaq', pt: 'Pasiyent', sexM: 'Kişi', sexF: 'Qadın', pregHint: 'Hamiləlik və əmizdirmə yalnız 12–55 yaşlı qadınlardan soruşulur.', classic: 'Hamısı bir ekranda (köhnə görünüş)', wizard: '← Addım-addım resept',
+    need1: 'Çatışmır: {l}', need2: 'Şikayət və ya diaqnozu yazın.',
+    cases: 'Nə ilə gəlib', say: '🎙 Hamısını birdən de', sayT: '🎙 Pasiyentin vəziyyəti — səslə və ya yazı ilə', sayHint: 'Hamısını ardıcıl deyin: şikayətlər, diaqnoz, xəstəliklər, allergiya, nə qəbul edir, boy, çəki, analizlər. Sİ sahələrə paylayacaq (yalnız boş olanları). Ad-soyad və FİN deməyin.', sayGo: '🤖 Sahələrə payla', sayDone: 'Doldurulan sahələr: {n}',
+    about: 'Pasiyent haqqında', fromGt: 'GT/098-dən — xəstəliklər, dərmanlar, allergiya, boy, çəki, analizlər', chronic: 'Təsdiqlənmiş xəstəliklər', allergy: 'Allergiya', allergyNo: 'Yoxdur', meds: 'Nə qəbul edir', noEffect: 'Nə kömək etmir', medsPhoto: 'Dərmanlar — qutuların fotosundan',
+    labsT: 'Boy, çəki və analizlər', k: 'Kalium', alt: 'ALT', ast: 'AST', bili: 'Bilirubin', hb: 'Hemoqlobin', glu: 'Qlükoza', a1c: 'HbA1c', labsOther: 'Digər analizlər', labsOtherPh: 'TTH, ferritin, lipidlər…', labsPhoto: 'Analizlər / çıxarış — fotodan',
+    wT: 'Sİ resepti tərtib edir', w1: 'GT/098 tarixçəsinə baxıram', w2: 'Firmalarınızdan seçirəm', w3: 'Dozaları böyrək və qaraciyərə görə hesablayıram', w4: 'Uyğunluğu və allergiyanı yoxlayıram', w5: 'Müşahidə planı və analizlər', wHint: 'Adətən 20–40 saniyə. Sİ-yə bir sorğu.',
+    rfT: 'Bu resept üçün deyil', rfGo: 'Təcili təhlili aç', rfForce: 'Yenə də resept yaz (həkimin qərarı)',
+    changed: '1–2-ci addımlardakı məlumatlar tərtibdən sonra dəyişib.', recompose: '↻ Yenidən tərtib et', checked: 'Resept · Sİ yoxlayıb', none: 'Sİ heç nə təyin etmədi. Aşağıdakı qeydə baxın və ya əl ilə əlavə edin.',
+    mine: 'sizin firma', other: 'başqa firma', vitmin: 'çatışmazlığın profilaktikası', safe: 'Təhlükəsiz', caution: 'Ehtiyatla', packs: '{p} qutu, {d} gün', packs1: '{p} qutu',
+    optT: 'Sizin seçiminizə', optHint: 'Firmalarınızın bu pasiyentə zərərsiz və reseptlə uyğun dərmanları, amma bu şikayətlərdə faydası sübut olunmayıb. Özü əlavə olunmur — siz qərar verirsiniz.',
+    oWhat: 'Nədir', oUsual: 'Adətən nə üçün', oNot: 'Ona lazım deyil', oPay: 'Pasiyent', oPayV: 'Sübut olunmamış fayda üçün pul ödəyir', oCompat: 'Uyğunluq',
+    missT: 'Sİ-yə nə çatmadı', missGo: 'Yaz', manual: '＋ Dərmanı əl ilə əlavə et', recheckHint: 'Yalnız işarə qoydunuz — təkrar yoxlama olmayacaq. Əl ilə əlavə etdiniz və ya dəyişdiniz — Sİ yenidən yoxlayacaq.',
+    editHint: 'Blankın sahələrini burada düzəldə bilərsiniz.', control: 'Nəzarət', controlWhat: 'Nəyi yoxlamaq', monT: 'Müşahidə', examT: 'Əlavə müayinə — təyin etmək', noteAdded: '✓ Pasiyentə izahatda', gtNote: 'Daimi pasiyent: resept, analizlər, boy, çəki və sxem GT/098-də saxlanılacaq.', ctlNote: ' {d} nəzarəti «Bu gün»də görünəcək.',
+    write: 'Resepti yaz', print: 'Çap A5', wa: 'WhatsApp', waWait: 'Şəkil hazırlanır…', waSaved: 'Şəkil saxlanıldı — qalereyadan WhatsApp-a göndərin.',
+    ctlSig: 'Nəzarət vaxtıdır · {n}', ctlSub: 'Reseptlərinizə görə pasiyentlər — açmaq üçün basın', ctlT: 'Nəzarət vaxtıdır', ctlOpen: 'Aç', ctlFrom: '{d} resepti',
+    recheck: 'Resept əl ilə dəyişdirilib — Sİ yenidən yoxlayır…'
+  }
+};
+function x97(k, o) { let s = (X97_T[S.lang === 'az' ? 'az' : 'ru'] || {})[k]; if (s === undefined) s = X97_T.ru[k]; return o ? String(s).replace(/\{(\w+)\}/g, (m, n) => o[n] !== undefined ? o[n] : m) : s; }
+// частые случаи (шаг 2): заготовка жалоб — врач дописывает детали
+const X97_CASES = [
+  ['orvi', 'ОРВИ', 'KRVİ', 'Температура до … °C, насморк, боль в горле, кашель — … дней', 'Temperatur … °C-dək, burun axması, boğaz ağrısı, öskürək — … gün'],
+  ['back', 'Боль в спине', 'Bel ağrısı', 'Боль в пояснице … дней, иррадиация в ногу: нет / да; онемения и слабости в ногах нет', 'Bel nahiyəsində ağrı … gün, ayağa yayılma: yox / var; ayaqlarda keyimə və zəiflik yoxdur'],
+  ['gastr', 'Гастрит', 'Qastrit', 'Боль и жжение в эпигастрии, связь с едой …, изжога — … недель; рвоты и чёрного стула нет', 'Epiqastriyada ağrı və göynəmə, yeməklə əlaqə …, qıcqırma — … həftə; qusma və qara nəcis yoxdur'],
+  ['htn', 'Гипертензия', 'Hipertenziya', 'АД до …/… мм рт. ст., головная боль …; боли в груди и одышки нет', 'AT …/… mm c.s.-dək, baş ağrısı …; döş ağrısı və təngnəfəslik yoxdur'],
+  ['dm', 'Диабет', 'Diabet', 'Глюкоза натощак … ммоль/л, HbA1c … %; принимает …', 'Acqarına qlükoza … mmol/l, HbA1c … %; qəbul edir …'],
+  ['allerg', 'Аллергия', 'Allergiya', 'Зуд, сыпь / ринит после …; отёка лица и затруднения дыхания нет', '… sonra qaşınma, səpki / rinit; üz ödemi və nəfəs çətinliyi yoxdur'],
+  ['cyst', 'Цистит', 'Sistit', 'Частое болезненное мочеиспускание … дней; температуры и боли в пояснице нет', 'Tez-tez ağrılı sidik ifrazı … gün; temperatur və bel ağrısı yoxdur']
+];
+/** Известные ФИО и FİN пациента — убрать из свободного текста ещё на телефоне (сервер дополнительно маскирует номера). */
+function x97Scrub(txt, p) {
+  let s = String(txt || ''); if (!s || !p) return s;
+  const L = [p.surname, p.name, p.fin].concat(String(p.pname || '').split(/\s+/)).map(x => String(x || '').trim()).filter(x => x.length >= 3);
+  L.forEach(w => { const re = new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'); s = s.replace(re, '[…]'); });
+  return s;
+}
+const X97_LABS = [['lab_k', 'k'], ['lab_alt', 'alt'], ['lab_ast', 'ast'], ['lab_bili', 'bili'], ['lab_hb', 'hb'], ['lab_glu', 'glu'], ['lab_a1c', 'a1c']];
+let X97_RUN = false; // идёт составление (после перезагрузки «busy» из черновика сбрасывается)
+function x97W(st) { const d = st.d; if (!d.wiz || typeof d.wiz !== 'object') d.wiz = { step: 1, max: 1, res: null, sig: '', okSig: '', opt: {}, renew: false, noteSet: false }; if (d.wiz.busy && !X97_RUN) d.wiz.busy = false; if (!d.pt.mode) d.pt.mode = 'gt'; return d.wiz; }
+/** Подпись рецепта без «на ваш выбор» — то, что ИИ проверил в том же запросе. */
+function x97BaseSig(d) { return rxSig(Object.assign({}, d, { items: d.items.filter(it => it.src !== 'opt') })); }
+function x97Sig(d) { const a = rxPtAi(d); Object.keys(a).forEach(k => { if (typeof a[k] === 'string') a[k] = a[k].trim(); }); return JSON.stringify([a, !!(d.wiz && d.wiz.renew)]); }
+// анализы шага 2 — в данные для ИИ и в рецепт (GT/098)
+(function () {
+  const a0 = rxPtAi;
+  rxPtAi = function (d) {
+    const o = a0.apply(this, arguments);
+    try {
+      const p = d.pt, L = X97_LABS.filter(x => String(p[x[0]] || '').trim()).map(x => X97_T.ru[x[1]] + ' ' + String(p[x[0]]).trim());
+      if (L.length) o.labs = L.join('; ') + (o.labs ? '\n' + o.labs : '');
+      ['complaint', 'chronic', 'meds', 'noEffect', 'labs', 'allergy', 'dx'].forEach(k => { if (typeof o[k] === 'string') o[k] = x97Scrub(o[k], p); });
+    } catch (e) { }
+    return o;
+  };
+  const dd0 = rxDocData;
+  rxDocData = function (d) {
+    const o = dd0.apply(this, arguments);
+    try {
+      const L = X97_LABS.filter(x => String(d.pt[x[0]] || '').trim()).map(x => X97_T.ru[x[1]] + ' ' + String(d.pt[x[0]]).trim());
+      if (L.length) o.labs = L.join('\n') + (o.labs ? '\n' + o.labs : '');
+      if (/^\d{4}-\d{2}-\d{2}$/.test(String(d.control || ''))) { o.control = d.control; o.controlWhat = String(d.controlWhat || '').slice(0, 200); }
+    } catch (e) { }
+    return o;
+  };
+})();
+// голос на шаге 2 и в окне «сказать всё сразу»
+(function () {
+  if (typeof micTargetOk !== 'function') return;
+  const m0 = micTargetOk;
+  micTargetOk = function (el) { if (el && !el.disabled && /^(rxf_complaint|rxf_pt_chronic|rxf_pt_meds|rxf_pt_noEffect|rxf_pt_labs|rxSay)$/.test(el.id || '')) return true; return m0.apply(this, arguments); };
+  window.micTargetOk = micTargetOk;
+})();
+function x97Css() {
+  if ($('#x97Css')) return;
+  const s = document.createElement('style'); s.id = 'x97Css';
+  s.textContent = '.x97{display:flex;flex-direction:column;gap:12px;padding-bottom:96px}' +
+    '.x97-steps{display:flex;justify-content:space-between;padding:10px 6px;background:var(--card);border:1px solid var(--line);border-radius:14px}' +
+    '.x97-st{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11.5px;color:var(--sub);width:72px;background:none;border:0;font-family:inherit;padding:0}' +
+    '.x97-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;border:2px solid var(--line);color:var(--sub);background:var(--card)}' +
+    '.x97-st.on{color:var(--ink);font-weight:600}.x97-st.on .x97-dot{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}.x97-st.done .x97-dot{background:var(--brand-soft);border-color:var(--brand);color:var(--brand)}' +
+    '.x97-seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));background:var(--soft);border-radius:12px;padding:4px;gap:4px}' +
+    '.x97-seg button{border:0;border-radius:9px;padding:10px 6px;font:inherit;font-size:14px;background:transparent;color:var(--sub);min-height:44px}.x97-seg button.on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgba(20,30,40,.12)}' +
+    '.x97-found{display:flex;gap:12px;align-items:center;padding:12px;border-radius:12px;background:var(--green-soft);border:1px solid var(--line)}' +
+    '.x97-av{width:40px;height:40px;border-radius:50%;background:var(--green);color:var(--card);display:flex;align-items:center;justify-content:center;font-weight:700;flex:none}' +
+    '.x97-g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.x97-g3 .field,.x97 .grid2 .field{margin:0}' +
+    '.x97-calc{padding:10px 12px;border-radius:10px;background:var(--amber-soft);color:var(--amber);font-size:13.5px}' +
+    '.x97-gt{font-size:12.5px;color:var(--green);background:var(--green-soft);border-radius:8px;padding:6px 10px}' +
+    '.x97-foot{position:fixed;left:0;right:0;bottom:0;display:flex;gap:10px;padding:10px 14px calc(12px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line);z-index:40;max-width:760px;margin:0 auto}' +
+    'body.td-on:not(.kb) .x97-foot{bottom:var(--tdh)}@media (min-width:1100px){body.td-on .x97-foot{bottom:0}}@media print{.x97-foot{display:none}}' +
+    '.x97-foot .btn{min-height:50px}.x97-foot .x97-back{flex:0 0 112px}.x97-foot .x97-next{flex:1;font-size:16px;font-weight:700}' +
+    '.x97-drug{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}' +
+    '.x97-drug .chip{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-sizing:border-box}.x97-drug .chips{min-width:0}' +
+    '.x97-nm{font-size:17px;font-weight:700;line-height:1.25}.x97-firm{font-size:12.5px;color:var(--sub)}' +
+    '.x97-signa{background:var(--soft);border-radius:10px;padding:10px 12px;font-size:14.5px;line-height:1.4}' +
+    '.x97-tag{display:inline-flex;border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:600;align-self:flex-start}.x97-tag.g{background:var(--green-soft);color:var(--green)}.x97-tag.y{background:var(--amber-soft);color:var(--amber)}' +
+    '.x97-opt{background:var(--soft);border:1px dashed var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px}' +
+    '.x97-oi{display:flex;gap:12px;align-items:flex-start;padding:12px;background:var(--card);border-radius:12px;cursor:pointer}.x97-oi input{width:22px;height:22px;margin-top:2px;flex:none}' +
+    '.x97-kv{display:grid;grid-template-columns:110px minmax(0,1fr);gap:4px 8px;font-size:13px;line-height:1.35}.x97-kv span:nth-child(odd){color:var(--sub)}' +
+    '.x97-rf{background:var(--red-soft);border:2px solid var(--red);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}.x97-rf h3{margin:0;color:var(--red)}' +
+    '.x97-wl{display:flex;align-items:center;gap:12px;font-size:15px}.x97-ok{width:24px;height:24px;border-radius:50%;background:var(--green-soft);color:var(--green);display:flex;align-items:center;justify-content:center;font-weight:700;flex:none}' +
+    '.x97-now{width:24px;height:24px;border-radius:50%;border:3px solid var(--brand-soft);border-top-color:var(--brand);box-sizing:border-box;flex:none;animation:x97spin 1s linear infinite}.x97-wait{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);box-sizing:border-box;flex:none}' +
+    '@keyframes x97spin{to{transform:rotate(360deg)}}' +
+    '.x97-paper{background:#fff;color:#111;border-radius:6px;box-shadow:0 2px 10px rgba(20,30,40,.14);border:1px solid #d9dfe2;padding:18px 16px;font-family:Georgia,"Times New Roman",serif;display:flex;flex-direction:column;gap:6px;font-size:13.5px;line-height:1.45}' +
+    '.x97-paper textarea,.x97-paper input{font-family:inherit;font-size:13.5px;color:#111;background:#f6f8f9;border:1px solid #d9dfe2;border-radius:6px;padding:4px 6px;width:100%;box-sizing:border-box;min-height:0}' +
+    '.x97-paper .rp{display:flex;flex-direction:column;gap:3px;padding:6px 0;border-top:1px dashed #ccd4d8}.x97-hd{display:flex;justify-content:space-between;border-bottom:1.5px solid #111;padding-bottom:8px;margin-bottom:4px}';
+  document.head.appendChild(s);
+}
+function x97Steps(w) {
+  const L = [['s1', 1], ['s2', 2], ['s3', 3], ['s4', 4]];
+  return '<div class="x97-steps">' + L.map(x => { const n = x[1], cls = n === w.step ? ' on' : n < w.step || n <= w.max ? ' done' : ''; return '<button type="button" class="x97-st' + cls + '" data-act="x97Go" data-n="' + n + '"' + (n > w.max ? ' disabled' : '') + '><span class="x97-dot">' + (n < w.step || (n <= w.max && n !== w.step) ? '✓' : n) + '</span>' + esc(x97(x[0])) + '</button>'; }).join('') + '</div>';
+}
+function x97Foot(back, nextLbl, nextAct) {
+  return '<div class="x97-foot">' + (back ? '<button type="button" class="btn ghost x97-back" data-act="x97Back">' + esc(x97('back')) + '</button>' : '') + (nextAct ? '<button type="button" class="btn primary x97-next" data-act="' + nextAct + '">' + esc(nextLbl) + '</button>' : '') + '</div>';
+}
+function x97Chips(p, k, list) { return '<div class="chips" style="display:flex;gap:8px;flex-wrap:wrap">' + list.map(x => '<button type="button" class="chip' + (p[k] === x[0] ? ' on' : '') + '" data-act="rxPtSet" data-k="' + k + '" data-v="' + x[0] + '">' + esc(x[1]) + '</button>').join('') + '</div>'; }
+/* ---------- шаг 1 ---------- */
+function x97Step1(st, w) {
+  const p = st.d.pt, gt = p.mode !== 'once';
+  let h = '<div class="card" style="display:flex;flex-direction:column;gap:10px"><div class="x97-seg"><button type="button" class="' + (gt ? 'on' : '') + '" data-act="x97Mode" data-v="gt">' + esc(x97('modeGt')) + '</button><button type="button" class="' + (!gt ? 'on' : '') + '" data-act="x97Mode" data-v="once">' + esc(x97('modeOnce')) + '</button></div>' +
+    '<div class="muted">' + esc(x97(gt ? 'modeGtHint' : 'modeOnceHint')) + '</div>';
+  if (gt) {
+    if (p.pid) {
+      const pv = w.prev || {};
+      h += '<div class="x97-found"><span class="x97-av">' + esc(((p.surname || '?')[0] + (p.name || '')[0]).toUpperCase()) + '</span><div style="display:flex;flex-direction:column;gap:2px;flex:1"><b>' + esc(p.pname || [p.surname, p.name].join(' ')) + '</b>' +
+        '<span class="muted">' + esc(pv.at ? x97('found', { n: pv.n || 1 }) + x97('foundLast', { d: fmtDate(pv.at) }) : '') + '</span></div><button type="button" class="btn small ghost" data-act="rxPtUnlink">✕</button></div>';
+      if (pv.last && pv.last.items && pv.last.items.length) h += '<button type="button" class="btn ' + (w.renew ? 'primary' : 'ghost') + '" data-act="x97Renew">' + esc(x97(w.renew ? 'renewOn' : 'renew', { d: fmtDate(pv.last.date) })) + '</button>';
+    } else {
+      h += '<div class="searchbar"><input type="search" id="rxGtQ" autocomplete="off" placeholder="' + esc(x97('find')) + '"><button class="btn small" data-act="rxGtFind">' + esc(x92('ptGt')) + '</button></div>' +
+        (st.gtList ? (st.gtList.length ? st.gtList.map(x => '<div class="list-row" data-act="rxGtPick" data-id="' + esc(x.id) + '" style="cursor:pointer"><span>📘</span><div class="grow"><b>' + esc([x.surname, x.name, x.patronymic].filter(Boolean).join(' ')) + '</b><div class="muted">' + esc([x.birthDate, x.fin ? '•••' + String(x.fin).slice(-2) : ''].filter(Boolean).join(' · ')) + '</div></div></div>').join('') : '<div class="muted">' + esc(x92('ptNone')) + '</div>') : '') +
+        rxField('pt.fin', x97('finNew'), p.fin, { max: 7, ph: '7 simvol' });
+    }
+  }
+  h += '</div><div class="card" style="display:flex;flex-direction:column;gap:10px"><div class="lbl">' + esc(x97('pt')) + '</div>' +
+    '<div class="grid2">' + rxField('pt.surname', x92('surname'), p.surname, { max: 60 }) + rxField('pt.name', x92('name'), p.name, { max: 60 }) + '</div>' +
+    '<div class="grid2">' + rxField('pt.age', x92('age'), p.age, { type: 'n', max: 3 }) + '<div class="field"><label>' + esc(x92('sex')) + '</label>' + x97Chips(p, 'sex', [['m', x97('sexM')], ['f', x97('sexF')]]) + '</div></div>' +
+    '<div id="rxAgeMBox"' + (rxShowAgeM(p) ? '' : ' style="display:none"') + '>' + rxField('pt.ageM', x92('ageM'), p.ageM, { type: 'n', max: 2, w: '160px' }) + '</div>' +
+    '<div class="field" id="rxPregBox"' + (rxShowPreg(p) ? '' : ' style="display:none"') + '><label>' + esc(x92('preg')) + '</label>' + x97Chips(p, 'preg', [['no', x92('pregNo')], ['yes', x92('pregYes')], ['unk', x92('pregUnk')]]) +
+    '<label class="check" style="margin-top:6px"><input type="checkbox" data-rx="pt.lact"' + (p.lact ? ' checked' : '') + '><span>' + esc(x92('lact')) + '</span></label></div>' +
+    '<div class="muted">' + esc(x97('pregHint')) + '</div></div>' +
+    '<button type="button" class="btn small ghost" style="align-self:center" data-act="x97Classic">' + esc(x97('classic')) + '</button>';
+  return h + x97Foot(false, x97('next'), 'x97Next');
+}
+/* ---------- шаг 2 ---------- */
+function x97Step2(st, w) {
+  const d = st.d, p = d.pt;
+  const cs = X97_CASES.map(c => '<button type="button" class="chip" data-act="x97Case" data-k="' + c[0] + '">' + esc(S.lang === 'az' ? c[2] : c[1]) + '</button>').join('');
+  let h = '<div class="card" style="display:flex;flex-direction:column;gap:10px"><div class="row" style="justify-content:space-between;align-items:center"><div class="lbl">' + esc(x97('cases')) + '</div>' +
+    (typeof canAi === 'function' && canAi() ? '<button type="button" class="btn small" data-act="x97Say">' + esc(x97('say')) + '</button>' : '') + '</div>' +
+    '<div class="chips" style="display:flex;gap:8px;flex-wrap:wrap">' + cs + '</div>' +
+    rxField('complaint', x92('compl'), d.complaint, { ta: 1, max: 800, rows: 3 }) +
+    '<div class="grid2">' + rxField('dx', x92('dx'), d.dx, { max: 200 }) + rxField('dxIcd', x92('dxIcd'), d.dxIcd, { max: 10 }) + '</div></div>';
+  h += '<div class="card" style="display:flex;flex-direction:column;gap:10px"><div class="lbl">' + esc(x97('about')) + '</div>' + (p.pid && w.prev && w.prev.at ? '<div class="x97-gt">' + esc(x97('fromGt')) + '</div>' : '') +
+    rxField('pt.chronic', x97('chronic'), p.chronic, { ta: 1, max: 600 }) +
+    '<div class="field"><label for="rxf_pt_allergy">' + esc(x97('allergy')) + '</label><div class="row" style="gap:8px"><input id="rxf_pt_allergy" data-rx="pt.allergy" maxlength="300" style="flex:1;min-width:0" value="' + esc(p.allergy || '') + '"><button type="button" class="chip' + (/^(нет|yoxdur)$/i.test(String(p.allergy || '').trim()) ? ' on' : '') + '" data-act="x97NoAllergy">' + esc(x97('allergyNo')) + '</button></div></div>' +
+    rxField('pt.meds', x97('meds'), p.meds, { ta: 1, max: 1200 }) + rxField('pt.noEffect', x97('noEffect'), p.noEffect, { ta: 1, max: 800, ph: x92('noEffectPh') }) +
+    (typeof canAi === 'function' && canAi() ? '<button type="button" class="btn small ghost" data-act="rxMedsPhoto">' + esc(x97('medsPhoto')) + '</button><input type="file" accept="image/*" multiple id="rxMedsFile" style="display:none">' : '') + '</div>';
+  const lab = (k, lbl) => rxField('pt.' + k, x97(lbl), p[k], { type: 'n', max: 8 });
+  h += '<div class="card" style="display:flex;flex-direction:column;gap:10px"><div class="lbl">' + esc(x97('labsT')) + '</div>' +
+    '<div class="grid2">' + rxField('pt.height', x92('height'), p.height, { type: 'n', max: 3 }) + rxField('pt.weight', x92('weight'), p.weight, { type: 'n', max: 5 }) + '</div>' +
+    '<div class="x97-g3">' + rxField('pt.creat', x92('creat'), p.creat, { type: 'n', max: 6 }) + '<div class="field"><label>&nbsp;</label>' + x97Chips(p, 'creatU', [['umol', x92('umol')], ['mgdl', x92('mgdl')]]) + '</div>' + lab('lab_k', 'k') + '</div>' +
+    '<div id="rxRenalBox" class="x97-calc"' + (rxRenalHtml(d) ? '' : ' style="display:none"') + '>' + rxRenalHtml(d) + '</div>' +
+    '<div class="x97-g3">' + lab('lab_alt', 'alt') + lab('lab_ast', 'ast') + lab('lab_bili', 'bili') + '</div>' +
+    '<div class="x97-g3">' + lab('lab_hb', 'hb') + lab('lab_glu', 'glu') + lab('lab_a1c', 'a1c') + '</div>' +
+    rxField('pt.labs', x97('labsOther'), p.labs, { ta: 1, max: 1500, ph: x97('labsOtherPh') }) +
+    (typeof canAi === 'function' && canAi() ? '<button type="button" class="btn small ghost" data-act="rxLabsPhoto">' + esc(x97('labsPhoto')) + '</button><input type="file" accept="image/*" multiple id="rxLabsFile" style="display:none">' : '') + '</div>';
+  return h + x97Foot(true, x97('compose'), 'x97Next');
+}
+/* ---------- шаг 3 ---------- */
+function x97Wait(w) {
+  const L = ['w1', 'w2', 'w3', 'w4', 'w5'], i = Math.min(L.length - 1, w.waitI || 0);
+  return '<div class="card" style="display:flex;flex-direction:column;gap:14px"><b style="font-size:16px">' + esc(x97('wT')) + '</b>' +
+    L.map((k, j) => '<div class="x97-wl"' + (j > i ? ' style="color:var(--sub)"' : '') + '><span class="' + (j < i ? 'x97-ok">✓' : j === i ? 'x97-now">' : 'x97-wait">') + '</span>' + esc(x97(k)) + '</div>').join('') +
+    '<span class="muted">' + esc(x97('wHint')) + '</span></div>';
+}
+function x97DrugCard(it) {
+  const pk = it.days ? x97('packs', { p: it.packs || 1, d: it.days }) : x97('packs1', { p: it.packs || 1 });
+  return '<div class="x97-drug"><div class="row" style="justify-content:space-between;align-items:flex-start;gap:8px"><div style="display:flex;flex-direction:column;gap:2px"><span class="x97-nm">' + esc([it.b, it.dose].filter(Boolean).join(' ') + (it.formAz ? ', ' + it.formAz : '')) + '</span>' +
+    '<span class="x97-firm">' + esc([it.firm, it.firmId ? x97('mine') : it.other ? x97('other') : '', it.kind === 'vitmin' ? x97('vitmin') : ''].filter(Boolean).join(' · ')) + '</span></div>' +
+    '<button type="button" class="btn small ghost" data-act="x97Del" data-id="' + esc(it.id) + '" aria-label="' + esc(x92('del')) + '">✕</button></div>' +
+    (it.busy ? '<div class="muted">⏳ ' + esc(x92('signaWait')) + '</div>' : '<div class="x97-signa">' + esc(it.signa || '—') + ' · ' + esc(it.qty || '') + '</div>') +
+    (it.why ? '<span style="font-size:13.5px">' + esc(it.why) + '</span>' : '') +
+    '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">' + (it.safety ? '<span class="x97-tag ' + (it.safety === 'caution' ? 'y' : 'g') + '">' + esc(it.safety === 'caution' ? x97('caution') + (it.safetyText ? ': ' + it.safetyText : '') : x97('safe')) + '</span>' : '') +
+    '<span class="muted">' + esc(pk) + '</span></div>' + (it.other && it.inn && typeof rxSwapHtml === 'function' ? rxSwapHtml(it) : '') + '</div>';
+}
+function x97Step3(st, w) {
+  const d = st.d;
+  if (w.busy) return x97Wait(w) + x97Foot(true, '', '');
+  const r = w.res;
+  if (!r) return '<div class="card"><button type="button" class="btn primary block" data-act="x97Compose">' + esc(x97('compose')) + '</button></div>' + x97Foot(true, '', '');
+  let h = '';
+  if (w.sig && w.sig !== x97Sig(d)) h += '<div class="hint" style="display:block">' + esc(x97('changed')) + ' <button type="button" class="btn small" data-act="x97Compose">' + esc(x97('recompose')) + '</button></div>';
+  if (r.redFlag) {
+    return h + '<div class="x97-rf"><h3>⚠ ' + esc(x97('rfT')) + '</h3><span style="font-size:14.5px;line-height:1.45">' + esc(r.redFlag.why) + '</span></div>' +
+      '<button type="button" class="btn danger block" data-act="x97Emerg">' + esc(x97('rfGo')) + '</button><button type="button" class="btn ghost block" data-act="x97Force">' + esc(x97('rfForce')) + '</button>' + x97Foot(true, '', '');
+  }
+  h += '<div class="lbl" style="margin:4px 2px 0">' + esc(x97('checked')) + '</div>';
+  h += d.items.length ? d.items.map(x97DrugCard).join('') : '<div class="hint" style="display:block">' + esc(x97('none')) + '</div>';
+  const loc = typeof rxLocal === 'function' ? rxLocal(d) : [];
+  if (loc.length && typeof ixHtml === 'function') h += ixHtml(loc, x92('localT'));
+  if ((r.optional || []).length) {
+    h += '<div class="lbl" style="margin:4px 2px 0">' + esc(x97('optT')) + '</div><div class="x97-opt"><span style="font-size:13.5px;line-height:1.4">' + esc(x97('optHint')) + '</span>' +
+      r.optional.map((x, i) => '<label class="x97-oi"><input type="checkbox" class="x97-o" data-i="' + i + '"' + (w.opt[i] ? ' checked' : '') + '><div style="display:flex;flex-direction:column;gap:8px;flex:1"><div style="display:flex;flex-direction:column;gap:1px"><b style="font-size:15.5px">' + esc([x.b, x.dose].filter(Boolean).join(' ')) + '</b><span class="x97-firm">' + esc(x.firm) + '</span></div>' +
+        '<div class="x97-kv">' + (x.what ? '<span>' + esc(x97('oWhat')) + '</span><span>' + esc(x.what) + '</span>' : '') + (x.usual ? '<span>' + esc(x97('oUsual')) + '</span><span>' + esc(x.usual) + '</span>' : '') +
+        '<span>' + esc(x97('oNot')) + '</span><span>' + esc(x.whyNot) + '</span><span>' + esc(x97('oPay')) + '</span><span>' + esc(x97('oPayV')) + '</span>' + (x.compat ? '<span>' + esc(x97('oCompat')) + '</span><span>' + esc(x.compat) + '</span>' : '') + '</div></div></label>').join('') + '</div>';
+  }
+  if ((r.missing || []).length) h += '<div class="card" style="display:flex;flex-direction:column;gap:6px"><b>' + esc(x97('missT')) + '</b>' + r.missing.map(x => '<div style="font-size:13.5px">• <b>' + esc(x.what) + '</b>' + (x.why ? ' — ' + esc(x.why) : '') + '</div>').join('') +
+    '<button type="button" class="btn small ghost" style="align-self:flex-start" data-act="x97Go" data-n="2">' + esc(x97('missGo')) + '</button></div>';
+  if (r.note) h += '<div class="hint" style="display:block">⚠️ ' + esc(r.note) + '</div>';
+  h += (w.manual ? rxAddHtml(Object.assign(st, { add: Object.assign(st.add, { open: true }) })) : '<button type="button" class="btn ghost block" data-act="x97Manual">' + esc(x97('manual')) + '</button>') +
+    '<div class="muted" style="text-align:center">' + esc(x97('recheckHint')) + '</div>';
+  return h + x97Foot(true, x97('toFinal'), 'x97Next');
+}
+/* ---------- шаг 4 ---------- */
+function x97Step4(st, w) {
+  const d = st.d, p = d.pt, inst = (typeof myStores === 'function' && (myStores().find(x => x.id === S.storeId) || {})) || {};
+  const doc = (typeof x91MyAz === 'function' && x91MyAz()) || (S.me && (S.me.nameAz || S.me.name)) || '';
+  const r = w.res || {};
+  let h = '<span class="muted">' + esc(x97('editHint')) + '</span><div class="x97-paper"><div class="x97-hd"><span style="font-size:12px">' + esc(inst.nameAz || inst.nameRu || '') + '</span><div style="text-align:right"><b style="font-size:16px;letter-spacing:.5px">RESEPT</b></div></div>' +
+    '<span>Tarix: <b>' + esc(fmtDate(rxToday())) + '</b></span><span>Xəstə: <b>' + esc([p.surname, p.name].filter(Boolean).join(' ')) + '</b>' + (p.age ? ' · Yaşı: <b>' + esc(p.age) + '</b>' : '') + (p.weight ? ' · Çəkisi: <b>' + esc(p.weight) + ' kq</b>' : '') + '</span>' +
+    (d.dx || d.dxIcd ? '<span>Diaqnoz: <b>' + esc(d.dxIcd || '') + '</b> ' + esc(d.dx || '') + '</span>' : '') +
+    d.items.map(it => '<div class="rp"><span><b>Rp.:</b> ' + esc([it.b, it.dose].filter(Boolean).join(' ') + (it.formAz ? ', ' + it.formAz : '')) + '</span>' +
+      '<label style="display:flex;gap:6px;align-items:center"><span style="flex:none">D.t.d.:</span><input data-rxi="qty" data-id="' + esc(it.id) + '" maxlength="60" value="' + esc(it.qty || '') + '"></label>' +
+      '<label style="display:flex;gap:6px;align-items:flex-start"><span style="flex:none;padding-top:4px">S.:</span><textarea rows="2" data-rxi="signa" data-id="' + esc(it.id) + '" maxlength="300">' + esc(it.signa || '') + '</textarea></label></div>').join('') +
+    '<textarea rows="3" data-rx="note" maxlength="600" style="margin-top:6px" placeholder="' + esc(x92('note')) + '">' + esc(d.note || '') + '</textarea>' +
+    '<div class="grid2" style="gap:8px;margin-top:4px"><label style="display:flex;flex-direction:column;gap:2px;font-size:12px"><b>Kontrol</b><input type="date" data-rx="control" value="' + esc(d.control || '') + '"></label><label style="display:flex;flex-direction:column;gap:2px;font-size:12px"><b>' + esc(x97('controlWhat')) + '</b><input data-rx="controlWhat" maxlength="200" value="' + esc(d.controlWhat || '') + '"></label></div>' +
+    '<span style="margin-top:8px">Həkim: <b>' + esc(doc) + '</b> · İmza: ________</span></div>';
+  if ((r.monitor || []).length || (r.exams || []).length) h += '<div class="card" style="display:flex;flex-direction:column;gap:6px">' + ((r.monitor || []).length ? '<div class="lbl">' + esc(x97('monT')) + '</div>' + r.monitor.map(x => '<div style="font-size:14px">• ' + esc(x.text) + '</div>').join('') : '') +
+    ((r.exams || []).length ? '<div class="lbl" style="margin-top:6px">' + esc(x97('examT')) + '</div>' + r.exams.map(x => '<div style="font-size:14px">• <b>' + esc(x.name) + '</b>' + (x.why ? ' — ' + esc(x.why) : '') + '</div>').join('') : '') +
+    (w.noteSet ? '<span class="muted">' + esc(x97('noteAdded')) + '</span>' : '') + '</div>';
+  if (st.check && (st.check.items || []).some(x => x.verdict !== 'keep')) h += '<div class="hint" style="display:block">' + st.check.items.filter(x => x.verdict !== 'keep').map(x => esc(x.b + ' — ' + x92('v_' + x.verdict) + (x.why ? ': ' + x.why : ''))).join('<br>') + '</div>';
+  if (p.mode !== 'once') h += '<div class="x97-gt" style="font-size:13px;padding:10px 12px">' + esc(x97('gtNote') + (d.control ? x97('ctlNote', { d: fmtDate(d.control) }) : '')) + '</div>';
+  return h + '<div class="x97-foot"><button type="button" class="btn ghost x97-back" data-act="x97Back">' + esc(x97('back')) + '</button><button type="button" class="btn primary x97-next" data-act="x97Write">' + esc(x97('write')) + '</button></div>';
+}
+function x97Html(st) {
+  x97Css();
+  const w = x97W(st);
+  const body = w.step === 1 ? x97Step1(st, w) : w.step === 2 ? x97Step2(st, w) : w.step === 3 ? x97Step3(st, w) : x97Step4(st, w);
+  return '<div class="x97">' + x97Steps(w) + body + '</div>';
+}
+// раздел «Новый рецепт»: по шагам (старый вид — по ссылке «Всё на одном экране»)
+(function () {
+  const h0 = rxHtml;
+  rxHtml = function () {
+    const st = rxSt();
+    if (st.view !== 'new' || st.done || st.classic) return h0.apply(this, arguments);
+    rxCss();
+    if (st.firms === null && !st.firmsLoading) { st.firmsLoading = true; rxFirmsLoad().then(() => { st.firmsLoading = false; rxRender(); }); }
+    if (!S.cat && !S.catLoading && typeof loadCatalog === 'function') loadCatalog().then(() => rxRender());
+    const w = x97W(st);
+    if (st.d.pt.pid && w.prevFor !== st.d.pt.pid) x97LoadPrev(st.d.pt.pid);
+    return '<div class="rx-scope">' + rxTabsHtml(st) + x97Html(st) + '</div>';
+  };
+})();
+async function x97LoadPrev(pid) {
+  const w = x97W(rxSt()); w.prevFor = pid;
+  const r = await rpcA('rxPrev', { patientId: pid }, { timeout: 30000 }).catch(() => null);
+  if (!r || !r.ok || rxSt().d.pt.pid !== pid) return;
+  w.prev = r.prev || {};
+  rxSave(); rxRender();
+}
+/* ---------- переходы ---------- */
+function x97Need1(d) {
+  const p = d.pt, L = [];
+  if (!String(p.surname || '').trim()) L.push(x92('surname'));
+  if (!String(p.name || '').trim()) L.push(x92('name'));
+  if (String(p.age || '').trim() === '') L.push(x92('age'));
+  if (p.sex !== 'm' && p.sex !== 'f') L.push(x92('sex'));
+  if (p.mode !== 'once' && !p.pid && !/^[0-9A-Z]{7}$/.test(String(p.fin || '').toUpperCase().replace(/\s+/g, ''))) L.push('FİN');
+  return L;
+}
+function x97Cands(firms, d) {
+  const cands = [], seen = {};
+  firms.forEach(f => rxProducts(f).forEach(p => { const k = skel(p.b); if (seen[k] || d.items.some(it => skel(it.b) === k)) return; seen[k] = 1; cands.push({ b: p.b, inn: p.inn, atc: p.atc, form: p.vars.map(v => RX_FORM_AZ[v.code]).filter((x, i, a) => x && a.indexOf(x) === i).join('/'), dose: p.vars.slice(0, 3).map(v => rxUnitsAz(v.d)).filter(Boolean).join('; '), firm: f.name }); }));
+  return cands.slice(0, 500);
+}
+/** Вариант препарата под дозу, которую назвал ИИ (цифры дозы совпадают), иначе первый. */
+function x97Var(prod, dose) {
+  const n = s => String(s || '').replace(/[^0-9.,]+/g, ' ').replace(/,/g, '.').trim().split(/\s+/).filter(Boolean).map(Number).join('/');
+  const k = n(dose);
+  const hit = k && prod.vars.find(v => n(rxUnitsAz(v.d)) === k);
+  if (!hit && k) X97_MISMATCH = true; // доза у ИИ не совпала с вариантом в реестре — перед итогом ИИ проверит ещё раз
+  return hit || prod.vars[0];
+}
+let X97_MISMATCH = false;
+function x97Item(prod, v, firm, src, x) {
+  const it = { id: rxId(), src: src, b: prod.b, inn: prod.inn || x.inn || '', atc: prod.atc || '', dose: v ? rxUnitsAz(v.d) : (x.dose || ''), formAz: v ? (RX_FORM_AZ[v.code] || '') : (x.form || ''), cnt: v ? v.cnt || '' : '',
+    firm: firm ? firm.name : '', firmId: firm && !firm.once ? firm.id : '', firmMfr: firm && firm.once && firm.mfr ? firm.mfr[0] : '', other: !!(firm && firm.once) || !!x.other,
+    signa: x.signa || '', qty: x.qty || (v && v.cnt ? '1 qutu (№' + v.cnt + ')' : ''), packs: x.packs || 1, days: x.days || '', why: x.why || '', safety: x.safety || '', safetyText: x.safetyText || '', kind: x.kind || 'drug', warn: [], busy: false, aiOk: true };
+  return it;
+}
+async function x97Compose(btn, force) {
+  const st = rxSt(), d = st.d, w = x97W(st);
+  if (!(typeof canAi === 'function' && canAi())) { w.manual = true; w.res = { items: [], optional: [] }; rxRender(); return; }
+  if (!S.cat) { toast(x92('catWait')); if (typeof loadCatalog === 'function') await loadCatalog().catch(() => null); }
+  const firms = (await rxFirmsLoad().catch(() => [])) || [];
+  const keep = d.items.filter(it => it.src !== 'ai' && it.src !== 'opt'); // выбранное врачом вручную остаётся
+  const keepN = keep.length; // keep — тот же массив, что d.items (дальше в него добавляется составленное)
+  d.items = keep; w.opt = {}; w.busy = true; X97_RUN = true; w.waitI = 0; w.res = null; w.okSig = ''; st.check = null; X97_MISMATCH = false; rxRender();
+  const tm = setInterval(() => { w.waitI = Math.min(4, (w.waitI || 0) + 1); if (w.step === 3) rxRender(); }, 6000);
+  const r = await rpcA('rxCompose', { lang: S.lang, patient: rxPtAi(d), items: d.items.map(rxItemAi), cands: x97Cands(firms, d), patientId: d.pt.pid || '', renew: !!w.renew, force: !!force }, { timeout: 200000 }).catch(() => null);
+  clearInterval(tm); w.busy = false; X97_RUN = false;
+  if (!r || !r.ok) { rxRender(); return; }
+  (r.items || []).forEach(x => {
+    if (x.mine) {
+      const f = firms.find(ff => ff.name === x.firm); const p = f ? rxProducts(f).find(pp => skel(pp.b) === skel(x.b)) : null;
+      if (p && !d.items.some(it => skel(it.b) === skel(p.b))) { d.items.push(x97Item(p, x97Var(p, x.dose), f, 'ai', x)); return; }
+    }
+    const b = rxBrandsByInn(x.inn, 6)[0];
+    if (b && !d.items.some(it => skel(it.b) === skel(b.b))) d.items.push(x97Item(b, x97Var(b, x.dose), { id: 'mfr:' + b.mfr, name: rxMfrShort(b.mfr), mfr: [b.mfr], items: [], once: true }, 'ai', x));
+    else if (!b) d.items.push(x97Item({ b: typeof catInnName === 'function' ? catInnName(x.inn) : x.inn, inn: x.inn, vars: [] }, null, null, 'ai', Object.assign({}, x, { other: true })));
+  });
+  w.res = r; w.sig = x97Sig(d); w.noteSet = false;
+  if (r.redFlag) { w.max = 3; st.check = null; rxSave(); rxRender(); return; }
+  if (r.control && r.control.days && !d.control) { const t = new Date(); t.setDate(t.getDate() + r.control.days); d.control = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); d.controlWhat = r.control.what || ''; }
+  // проверено этим же запросом — «Выписать» без повторной проверки, пока рецепт именно такой, каким его составил ИИ.
+  // Остались препараты, добавленные врачом раньше, или доза не совпала с вариантом реестра — проверка будет перед итогом.
+  w.okSig = keepN || X97_MISMATCH ? '' : x97BaseSig(d);
+  st.check = { items: [], missing: [], note: r.note || '', monitor: r.monitor || [], exams: r.exams || [], sig: w.okSig ? rxSig(d) : '' };
+  rxSave(); rxRender();
+}
+Object.assign(H, {
+  rxPtUnlink: () => { const st = rxSt(), p = st.d.pt, w = x97W(st); p.pid = ''; p.pname = ''; w.renew = false; w.prev = null; w.prevFor = ''; rxSave(); rxRender(); },
+  x97Mode: el => { const p = rxSt().d.pt; p.mode = el.dataset.v; p.toGt = p.mode !== 'once'; rxSave(); rxRender(); },
+  x97Renew: () => { const w = x97W(rxSt()); w.renew = !w.renew; rxSave(); rxRender(); },
+  x97Classic: () => { rxSt().classic = true; rxRender(); window.scrollTo(0, 0); },
+  x97Wizard: () => { rxSt().classic = false; rxRender(); window.scrollTo(0, 0); },
+  x97Go: el => { const w = x97W(rxSt()), n = Number(el.dataset.n); if (n >= 1 && n <= w.max && !w.busy) { w.step = n; rxSave(); rxRender(); window.scrollTo(0, 0); } },
+  x97Back: () => { const w = x97W(rxSt()); if (w.step > 1 && !w.busy) { w.step--; rxSave(); rxRender(); window.scrollTo(0, 0); } },
+  x97Next: async el => {
+    const st = rxSt(), d = st.d, w = x97W(st);
+    if (w.step === 1) { const L = x97Need1(d); if (L.length) return toast(x97('need1', { l: L.join(', ') }), 'bad'); d.pt.toGt = d.pt.mode !== 'once'; w.step = 2; }
+    else if (w.step === 2) {
+      if (!String(d.complaint || '').trim() && !String(d.dx || '').trim()) return toast(x97('need2'), 'bad');
+      w.step = 3; w.max = Math.max(w.max, 3); rxSave(); rxRender(); window.scrollTo(0, 0);
+      if (!w.res || w.sig !== x97Sig(d)) await x97Compose(el);
+      return;
+    } else if (w.step === 3) {
+      if (d.items.some(x => x.busy)) return toast(x92('signaWait'));
+      if (w.sig && w.sig !== x97Sig(d)) return toast(x97('changed'), 'bad'); // данные шагов 1–2 изменились — сначала «составить заново»
+      const r = w.res || {};
+      // отмеченное «на ваш выбор» — в рецепт как решение врача (совместимость уже проверена в том же запросе)
+      (r.optional || []).forEach((x, i) => {
+        const on = !!w.opt[i], has = d.items.find(it => it.src === 'opt' && skel(it.b) === skel(x.b));
+        if (on && !has) { const f = (st.firms || []).find(ff => ff.name === x.firm); const p = f ? rxProducts(f).find(pp => skel(pp.b) === skel(x.b)) : null; if (p) d.items.push(x97Item(p, x97Var(p, x.dose), f, 'opt', x)); }
+        if (!on && has) d.items = d.items.filter(it => it !== has);
+      });
+      if (!d.items.length) return toast(x92('needFields', { l: x92('items') }), 'bad');
+      // проверку пропускаем, только если рецепт (без отмеченного «на ваш выбор», проверенного тем же запросом) — ровно тот, что составил ИИ
+      if (w.okSig && w.okSig === x97BaseSig(d)) { if (st.check) st.check.sig = rxSig(d); }
+      else if (typeof canAi === 'function' && canAi() && !(st.check && st.check.sig === rxSig(d))) {
+        toast(x97('recheck')); const c = await rxCheck(el); if (!c) return;
+        if (st.check) Object.assign(st.check, { monitor: (st.check.monitor || []).length ? st.check.monitor : r.monitor || [], exams: (st.check.exams || []).length ? st.check.exams : r.exams || [] });
+        if (c.changed) { rxSave(); rxRender(); return; } // ИИ что-то убрал или изменил — врач видит это на шаге 3
+      }
+      if (!w.noteSet && !String(d.note || '').trim()) { const L = [].concat((r.monitor || []).map(x => x.az), (r.exams || []).map(x => x.az)).filter(Boolean); if (L.length) { d.note = L.join('\n'); w.noteSet = true; } }
+      w.step = 4;
+    }
+    w.max = Math.max(w.max, w.step); rxSave(); rxRender(); window.scrollTo(0, 0);
+  },
+  x97Compose: el => x97Compose(el, false),
+  x97Force: el => x97Compose(el, true),
+  x97Emerg: () => { try { setScreen('clinic'); } catch (e) { } },
+  x97Manual: () => { const st = rxSt(); x97W(st).manual = true; st.add.open = true; rxRender(); },
+  x97Del: el => { const st = rxSt(); st.d.items = st.d.items.filter(x => x.id !== el.dataset.id); rxSave(); rxRender(); },
+  x97NoAllergy: () => { const p = rxSt().d.pt; p.allergy = S.lang === 'az' ? 'yoxdur' : 'нет'; rxSave(); rxRender(); },
+  x97Case: el => {
+    const c = X97_CASES.find(x => x[0] === el.dataset.k), d = rxSt().d; if (!c) return;
+    const tpl = S.lang === 'az' ? c[4] : c[3];
+    d.complaint = String(d.complaint || '').trim() ? String(d.complaint).trim() + '\n' + tpl : tpl;
+    rxSave(); rxRender(); const ta = $('#rxf_complaint'); if (ta) { ta.focus(); const i = ta.value.indexOf('…'); if (i !== -1) ta.setSelectionRange(i, i + 1); }
+  },
+  x97Say: () => {
+    openModal('<h3>' + esc(x97('sayT')) + '</h3><div class="muted" style="margin-bottom:6px">' + esc(x97('sayHint')) + '</div><div class="field"><textarea id="rxSay" rows="7" maxlength="4000"></textarea></div><div class="muted" style="font-size:12.5px">' + esc(x95 ? x95('mic') : '') + '</div>' +
+      '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('cancel')) + '</button><button class="btn primary" data-act="x97SayGo">' + esc(x97('sayGo')) + '</button></div>');
+  },
+  x97SayGo: async el => {
+    const text = String(($('#rxSay') || {}).value || '').trim(); if (!text) return;
+    const r = await busy(el, () => rpcA('rxFill', { text: x97Scrub(text, rxSt().d.pt), lang: S.lang }, { timeout: 120000 })).catch(() => null);
+    if (!r || !r.ok) return;
+    const d = rxSt().d, F = r.fields || {}; let n = 0;
+    Object.keys(F).forEach(k => {
+      if (k === 'creatU') return;
+      const top = ['complaint', 'dx', 'dxIcd'].indexOf(k) !== -1;
+      const cur = top ? d[k] : d.pt[k];
+      if (String(cur || '').trim()) return;
+      if (top) d[k] = F[k]; else d.pt[k] = F[k];
+      if (k === 'creat') d.pt.creatU = F.creatU || 'umol'; // единица — только вместе со своим числом
+      n++;
+    });
+    closeModal(); rxSave(); rxRender(); toast(x97('sayDone', { n }), 'ok');
+  },
+  x97Write: el => rxWrite(el, false)
+});
+// галочки «на ваш выбор» — без перерисовки
+document.addEventListener('change', e => { const el = e.target; if (!el || !el.classList || !el.classList.contains('x97-o')) return; const w = x97W(rxSt()); w.opt[el.dataset.i] = el.checked; rxSave(); });
+// ручная правка рецепта (добавили препарат вручную или исправили S. / D.t.d.) — перед итогом / выпиской ИИ проверит ещё раз
+(function () {
+  const a0 = rxAddItem;
+  rxAddItem = function () { return a0.apply(this, arguments); }; // 9.70: «правил ли врач» определяется по подписи рецепта (x97BaseSig), а не флагом
+})();
+document.addEventListener('input', e => {
+  const el = e.target; if (!el || !el.dataset) return;
+  if (el.dataset.rx === 'control' || el.dataset.rx === 'controlWhat') { const d = rxSt().d; d[el.dataset.rx] = el.value; rxSave(); }
+  if (['pt.age', 'pt.weight', 'pt.height', 'pt.creat'].indexOf(el.dataset.rx) !== -1) { const rb = $('#rxRenalBox'); if (rb) rb.style.display = rxRenalHtml(rxSt().d) ? '' : 'none'; }
+});
+// выписан — печать A5 и картинка в WhatsApp
+(function () {
+  const d0 = rxDoneHtml;
+  rxDoneHtml = function (st) {
+    const x = st.done;
+    if (!x) return d0.apply(this, arguments);
+    return '<div class="card"><h3 style="margin:0 0 6px">' + esc(x92('done')) + '</h3><div class="muted">' + esc([x.patient, x.date].filter(Boolean).join(' · ')) + '</div>' +
+      (x.data && x.data.control ? '<div class="x97-gt" style="margin-top:8px">Kontrol: ' + esc(fmtDate(x.data.control)) + (x.data.controlWhat ? ' — ' + esc(x.data.controlWhat) : '') + '</div>' : '') +
+      '<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn primary" data-act="rxPrint" data-id="' + esc(x.id) + '">' + esc(x97('print')) + '</button><button class="btn" data-act="x97Wa">' + esc(x97('wa')) + '</button>' +
+      (x.pid ? '<span class="muted" style="align-self:center">' + esc(x92('inGt', { n: x.pname || '' })) + '</span>' : '<button class="btn ghost" data-act="rxToGt" data-id="' + esc(x.id) + '">' + esc(x92('toGt')) + '</button>') +
+      '<button class="btn ghost" data-act="rxOpenDoc" data-id="' + esc(x.id) + '">' + esc(x92('openEd')) + '</button><button class="btn ghost" data-act="rxNew">' + esc(x92('newRx')) + '</button></div></div>';
+  };
+})();
+/** Бланк A5 картинкой (1120×1588, как печать) — рисуется на телефоне, в сеть не уходит. */
+function x97Canvas(data) {
+  const W = 1120, Hh = 1588, c = document.createElement('canvas'); c.width = W; c.height = Hh;
+  const g = c.getContext('2d');
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, W, Hh); g.fillStyle = '#111111'; g.textBaseline = 'top';
+  const F = (sz, b) => { g.font = (b ? 'bold ' : '') + sz + 'px Georgia, "Times New Roman", serif'; };
+  const wrap = (txt, x, y, maxW, lh) => { const words = String(txt || '').split(/\s+/); let line = ''; for (const w of words) { const t2 = line ? line + ' ' + w : w; if (g.measureText(t2).width > maxW && line) { g.fillText(line, x, y); y += lh; line = w; } else line = t2; } if (line) { g.fillText(line, x, y); y += lh; } return y; };
+  const M = 68; let y = 60;
+  F(26, true); g.fillText(String(data.inst || ''), M, y);
+  F(44, true); const rt = 'RESEPT'; g.fillText(rt, W - M - g.measureText(rt).width, y - 6);
+  F(26); const no = '№ ' + (data.rxNo || ''); g.fillText(no, W - M - g.measureText(no).width, y + 46);
+  y += 96; g.fillRect(M, y, W - 2 * M, 4); y += 26;
+  F(30); g.fillText('Tarix: ' + fmtDate(data.date || ''), M, y); y += 46;
+  y = wrap('Xəstənin soyadı, adı: ' + [data.surname, data.name].filter(Boolean).join(' '), M, y, W - 2 * M, 44);
+  y = wrap([data.age ? 'Yaşı: ' + data.age : '', data.weight ? 'Çəkisi: ' + data.weight + ' kq' : '', data.allergy ? 'Allergiya: ' + (/^(нет|нету|не известна)$/i.test(String(data.allergy).trim()) ? 'yoxdur' : data.allergy) : ''].filter(Boolean).join('    '), M, y, W - 2 * M, 44);
+  if (data.dx || data.dxIcd) y = wrap('Diaqnoz: ' + [data.dxIcd, data.dx].filter(Boolean).join(' '), M, y, W - 2 * M, 44);
+  y += 16;
+  const items = Object.keys(data.items || {}).map(k => data.items[k]).sort((a, b) => String(a.ord || '').localeCompare(String(b.ord || '')));
+  items.forEach(r => { F(30, true); g.fillText('Rp.:', M, y); F(30); y = wrap(r.rp || '', M + 70, y, W - 2 * M - 70, 42); y = wrap('D.t.d.: ' + (r.dtd || ''), M + 70, y, W - 2 * M - 70, 42); y = wrap('S.: ' + (r.signa || ''), M + 70, y, W - 2 * M - 70, 42); y += 18; });
+  if (data.note) { F(26); g.fillStyle = '#999999'; g.fillRect(M, y, W - 2 * M, 2); g.fillStyle = '#111111'; y += 16; String(data.note).split('\n').forEach(l => { y = wrap(l, M, y, W - 2 * M, 36); }); }
+  if (data.control) { F(26, true); y = wrap('Kontrol: ' + fmtDate(data.control) + (data.controlWhat ? ' — ' + data.controlWhat : ''), M, y + 8, W - 2 * M, 36); }
+  F(30); g.fillText('Həkim: ' + (data.doctor || ''), M, Hh - 170); g.fillText('İmza: ________________', M, Hh - 120);
+  g.setLineDash([8, 6]); g.strokeStyle = '#777777'; g.lineWidth = 2; g.strokeRect(W - M - 200, Hh - 210, 200, 140); g.setLineDash([]); F(22); g.fillText('M.Y.', W - M - 125, Hh - 152);
+  if (data.valid) { F(22); g.fillText('Resept etibarlıdır: ' + data.valid, M, Hh - 64); }
+  return c;
+}
+Object.assign(H, {
+  x97Wa: async el => {
+    const x = rxSt().done; if (!x || !x.data) return;
+    toast(x97('waWait'));
+    const c = x97Canvas(x.data);
+    const blob = await new Promise(res => c.toBlob(res, 'image/png'));
+    if (!blob) return;
+    const name = 'Resept_' + String(x.data.rxNo || x.id).replace(/[^A-Za-z0-9_-]/g, '') + '.png';
+    const file = new File([blob], name, { type: 'image/png' });
+    try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'Resept' }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+    toast(x97('waSaved'), 'ok');
+  }
+});
+/* ---------- «Сегодня»: пора на контроль ---------- */
+const X97C = { at: 0, rows: [] };
+(function () {
+  if (typeof tdSignals !== 'function') return;
+  const s0 = tdSignals;
+  tdSignals = function () {
+    const out = s0.apply(this, arguments);
+    try {
+      if (!can('forms') || (typeof hpPiiOn === 'function' && hpPiiOn())) return out;
+      if (Date.now() - X97C.at > 20 * 60000) {
+        X97C.at = Date.now();
+        rpcA('rxControls', {}, { timeout: 30000, silent: true }).then(r => { const n = r && r.ok ? (r.rows || []) : []; const ch = n.length !== X97C.rows.length; X97C.rows = n; if (ch && S.screen === 'today') { TD.sig = null; renderToday(); } }).catch(() => { });
+      }
+      if (!X97C.rows.length) return out;
+      return [{ k: 'rxCtl', cls: 'warn', ic: '🩺', t: x97('ctlSig', { n: X97C.rows.length }), s: x97('ctlSub') }].concat(out);
+    } catch (e) { return out; }
+  };
+  window.tdSignals = tdSignals;
+  const h0 = H.tdSig;
+  H.tdSig = function (el) {
+    if (el && el.dataset && el.dataset.k === 'rxCtl') {
+      return openModal('<h3>' + esc(x97('ctlT')) + '</h3>' + X97C.rows.map(x => '<div class="list-row"><span>🩺</span><div class="grow"><b>' + esc(x.patient + (x.age ? ', ' + x.age : '')) + '</b><div class="muted">' + esc([fmtDate(x.control), x.what, x97('ctlFrom', { d: fmtDate(x.rxDate) })].filter(Boolean).join(' · ')) + '</div></div>' +
+        '<button class="btn small" data-act="x97CtlOpen" data-id="' + esc(x.patientId) + '">' + esc(x97('ctlOpen')) + '</button></div>').join('') + '<div class="acts"><button class="btn ghost" data-act="closeModal">' + esc(t('close')) + '</button></div>');
+    }
+    return h0.apply(this, arguments);
+  };
+})();
+H.x97CtlOpen = el => { closeModal(); if (typeof ptOpen === 'function') ptOpen(el.dataset.id, true); };
+// «Всё на одном экране» → назад к шагам
+(function () {
+  const t0 = rxTabsHtml;
+  rxTabsHtml = function (st) { const h = t0.apply(this, arguments); return st && st.classic && st.view === 'new' && !st.done ? h + '<button type="button" class="btn small ghost" style="margin:0 0 8px" data-act="x97Wizard">' + esc(x97('wizard')) + '</button>' : h; };
 })();
 
 
